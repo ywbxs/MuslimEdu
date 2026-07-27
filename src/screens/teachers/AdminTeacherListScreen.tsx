@@ -1,0 +1,620 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+  Modal,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
+import { useAuth } from '../../context/AuthContext';
+import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../services/adminTeacherService';
+import { Skeleton } from '../../components/Skeleton';
+import UserAvatar from '../../components/UserAvatar';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
+const INK = COLORS.ink;
+const SUBTLE = COLORS.subtle;
+const HAIRLINE = COLORS.border;
+const CANVAS = COLORS.canvas;
+const GLASS_SURFACE = GLASS.fillOnLight;
+const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
+const GLASS_BORDER = GLASS.borderOnLight;
+const DANGER = COLORS.danger;
+
+// --- Icons (matches the app's existing inline-SVG icon style) ---
+function ChevronLeftIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function SearchIcon({ color }: { color: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
+      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function ChevronRightIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function CloseIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IdCardIcon({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6h18v12H3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx={8} cy={12} r={2} stroke={color} strokeWidth={1.5} />
+      <Line x1={13} y1={10} x2={18} y2={10} stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <Line x1={13} y1={14} x2={18} y2={14} stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function DocumentIcon({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M14 3v4h4M9 12h6M9 16h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function ReportIcon({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Rect x="4" y="3" width="16" height="18" rx="2" stroke={color} strokeWidth={1.8} />
+      <Path d="M8 8h8M8 12h8M8 16h5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function PlusIcon({ color }: { color: string }) {
+  return (
+    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
+      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function EmptyIcon() {
+  return (
+    <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={3.6} stroke="#C4C9CF" strokeWidth={1.6} />
+      <Path d="M4.5 20c0-3.6 3.4-6.4 7.5-6.4s7.5 2.8 7.5 6.4" stroke="#C4C9CF" strokeWidth={1.6} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// --- Teacher row ---------------------------------------------------------
+const TeacherRow = React.memo(function TeacherRow({
+  item,
+  onPress,
+}: {
+  item: TeacherOverview;
+  onPress: (item: TeacherOverview) => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={() => onPress(item)}>
+      <UserAvatar
+        name={item.name}
+        photo={item.photo}
+        size={48}
+        ringColor={HAIRLINE}
+        dotColor={item.submitted ? EMERALD : DANGER}
+      />
+      <View style={[styles.flex1, { marginLeft: 14 }]}>
+        <Text style={styles.rowName} numberOfLines={1}>{item.name || 'Unnamed teacher'}</Text>
+        {item.submitted ? (
+          <View style={[styles.statusPill, styles.statusPillOk]}>
+            <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
+            <Text style={styles.statusPillTextOk} numberOfLines={1}>
+              Report submitted{item.submitted_by ? ` · ${item.submitted_by}` : ''}
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.statusPill, styles.statusPillMissing]}>
+            <View style={[styles.statusDot, { backgroundColor: DANGER }]} />
+            <Text style={styles.statusPillTextMissing}>Missing report</Text>
+          </View>
+        )}
+      </View>
+      <ChevronRightIcon color="#C4C9CF" />
+    </TouchableOpacity>
+  );
+});
+
+// --- Action modal: Profile / Documents / Monthly Report -------------------
+function TeacherActionModal({
+  visible,
+  teacher,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  teacher: TeacherOverview | null;
+  onClose: () => void;
+  onSelect: (action: 'profile' | 'documents' | 'report') => void;
+}) {
+  const options: { key: 'profile' | 'documents' | 'report'; label: string; desc: string; icon: (c: string) => React.ReactElement }[] = [
+    { key: 'profile', label: 'Profile', desc: 'View contact info and role details', icon: (c) => <IdCardIcon color={c} /> },
+    { key: 'documents', label: 'Documents', desc: 'ID, certificates, and other files', icon: (c) => <DocumentIcon color={c} /> },
+    { key: 'report', label: 'Monthly Report', desc: 'View this teacher\u2019s report history', icon: (c) => <ReportIcon color={c} /> },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
+        <View style={styles.actionSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeaderRow}>
+            <View style={[styles.flex1, { flexDirection: 'row', alignItems: 'center' }]}>
+              <UserAvatar name={teacher?.name ?? ''} photo={teacher?.photo} size={38} ringColor={HAIRLINE} dotColor={null} />
+              <Text style={styles.sheetTitle} numberOfLines={1}>{teacher?.name ?? ''}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.sheetCloseBtn}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
+          </View>
+
+          {options.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={styles.actionRow}
+              activeOpacity={0.7}
+              onPress={() => onSelect(opt.key)}
+            >
+              <View style={styles.actionIconWrap}>{opt.icon(EMERALD)}</View>
+              <View style={styles.flex1}>
+                <Text style={styles.actionLabel}>{opt.label}</Text>
+                <Text style={styles.actionDesc}>{opt.desc}</Text>
+              </View>
+              <ChevronRightIcon color="#C4C9CF" />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// --- Add Teacher sheet ---------------------------------------------------
+function AddTeacherSheet({
+  visible,
+  onClose,
+  onCreated,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const { token } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPassword('');
+    setPhone('');
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    resetForm();
+    onClose();
+  };
+
+  const handleCreate = async () => {
+    if (!token) return;
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Almost done', 'Name, email, and password are required.');
+      return;
+    }
+    if (password.trim().length < 6) {
+      Alert.alert('Almost done', 'Password must be at least 6 characters.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await addTeacher(token, {
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        phone: phone.trim() || undefined,
+      });
+      resetForm();
+      onClose();
+      onCreated();
+      Alert.alert('Teacher added', `${name.trim()} can now log in with the email and password you set.`);
+    } catch (err) {
+      Alert.alert('Could not add teacher', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
+        <View style={styles.formSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeaderRow}>
+            <Text style={styles.sheetTitle}>Add Teacher</Text>
+            <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={styles.fieldLabel}>Full Name</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder="e.g. Ahmad bin Abdullah"
+              placeholderTextColor={SUBTLE}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.fieldLabel}>Email</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder="teacher@example.com"
+              placeholderTextColor={SUBTLE}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+
+            <Text style={styles.fieldLabel}>Password</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder="At least 6 characters"
+              placeholderTextColor={SUBTLE}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.fieldLabel}>Phone (optional)</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder="e.g. 012-345 6789"
+              placeholderTextColor={SUBTLE}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
+              onPress={handleCreate}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>Add Teacher</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+export default function AdminTeacherListScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const { token } = useAuth();
+
+  const [teachers, setTeachers] = useState<TeacherOverview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState<TeacherOverview | null>(null);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      const data = await fetchTeacherOverview(token);
+      setTeachers(data.teachers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load teachers.');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    load().finally(() => setIsLoading(false));
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return teachers;
+    return teachers.filter((t) => t.name.toLowerCase().includes(q));
+  }, [teachers, query]);
+
+  const keyExtractor = useCallback((item: TeacherOverview) => String(item.teacher_id), []);
+
+  const handleSelect = (action: 'profile' | 'documents' | 'report') => {
+    const teacher = selectedTeacher;
+    setSelectedTeacher(null);
+    if (!teacher) return;
+
+    if (action === 'report') {
+      (navigation as any).navigate('AdminTeacherReportDetail', {
+        teacherId: teacher.teacher_id,
+        teacherName: teacher.name,
+      });
+      return;
+    }
+
+    if (action === 'profile') {
+      (navigation as any).navigate('AdminTeacherProfile', {
+        teacherId: teacher.teacher_id,
+        teacherName: teacher.name,
+      });
+      return;
+    }
+
+    // action === 'documents'
+    (navigation as any).navigate('AdminUserDocuments', {
+      userId: teacher.teacher_id,
+      userName: teacher.name,
+    });
+  };
+
+  return (
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
+          <ChevronLeftIcon color={EMERALD} />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>Teachers</Text>
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
+          <PlusIcon color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <SearchIcon color={SUBTLE} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search teachers..."
+          placeholderTextColor={SUBTLE}
+          value={query}
+          onChangeText={setQuery}
+        />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.listContent}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.row}>
+              <Skeleton width={44} height={44} borderRadius={22} />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
+                <Skeleton width="40%" height={11} />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={load} style={styles.retryButton}>
+            <Text style={styles.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+          renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <EmptyIcon />
+              <Text style={styles.emptyTitle}>No teachers found</Text>
+              <Text style={styles.emptyBody}>
+                {query ? 'Try a different search term.' : 'Teachers added to your school will show up here.'}
+              </Text>
+            </View>
+          }
+        />
+      )}
+
+      <TeacherActionModal
+        visible={!!selectedTeacher}
+        teacher={selectedTeacher}
+        onClose={() => setSelectedTeacher(null)}
+        onSelect={handleSelect}
+      />
+
+      <AddTeacherSheet
+        visible={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onCreated={load}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: 'transparent' },
+  flex1: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    backgroundColor: GLASS_SURFACE,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
+  },
+  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 72 },
+  backText: { color: EMERALD, fontSize: 16, fontWeight: '600', marginLeft: 2 },
+  headerTitleWrap: { alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: INK },
+  addBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: EMERALD,
+  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  errorText: { color: DANGER, textAlign: 'center', marginBottom: 12 },
+  retryButton: { backgroundColor: '#EEF0F2', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
+  retryText: { color: INK, fontWeight: '600' },
+
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GLASS_SURFACE,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    paddingHorizontal: 16,
+    height: 48,
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 6,
+  ...SHADOW.level1,
+  },
+  searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },
+
+  listContent: { padding: 16, paddingBottom: 40 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GLASS_SURFACE,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    padding: 16,
+    marginBottom: 12,
+  ...SHADOW.level2,
+  },
+  rowName: { fontSize: 15.5, fontWeight: '700', color: INK },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginTop: 6,
+    gap: 6,
+  },
+  statusPillOk: { backgroundColor: EMERALD_SOFT },
+  statusPillMissing: { backgroundColor: 'rgba(239,68,68,0.1)' },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusPillTextOk: { fontSize: 11.5, color: EMERALD, fontWeight: '700' },
+  statusPillTextMissing: { fontSize: 11.5, color: DANGER, fontWeight: '700' },
+
+  emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
+  emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },
+  emptyBody: { fontSize: 13, color: SUBTLE, textAlign: 'center', marginTop: 6, lineHeight: 19 },
+
+  // --- Sheets ---
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
+  actionSheet: { backgroundColor: GLASS_SURFACE_STRONG, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, paddingBottom: 34, paddingHorizontal: 20 },
+  sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  sheetTitle: { fontSize: 17, fontWeight: '700', color: INK, marginLeft: 10, flexShrink: 1 },
+  sheetCloseBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: HAIRLINE,
+    gap: 14,
+  },
+  actionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionLabel: { fontSize: 15.5, fontWeight: '700', color: INK },
+  actionDesc: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+
+  formSheet: {
+    backgroundColor: GLASS_SURFACE_STRONG,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingBottom: 34,
+    paddingHorizontal: 20,
+    maxHeight: '85%',
+  },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8, marginTop: 14 },
+  fieldInput: {
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: INK,
+  },
+  submitButton: {
+    backgroundColor: EMERALD,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  submitButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+});

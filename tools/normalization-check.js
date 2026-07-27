@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+const fs=require('fs'),path=require('path');const root=process.cwd();const bad=[];function walk(d){for(const n of fs.readdirSync(d)){const p=path.join(d,n);const s=fs.statSync(p);if(s.isDirectory()&&!['node_modules','.git','android','ios'].includes(n))walk(p);else if(/\.(phpo|phpz|php1|phpq)$/.test(n)||/^backend\d*\.zip$/.test(n)||/^src\.zip$/.test(n))bad.push(path.relative(root,p));}}walk(root);console.log(JSON.stringify({scan_only:true,candidates:bad},null,2));

@@ -1,0 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'; import * as Config from '../../src/config/api';
+const c:any=Config as any, base=(c.API_BASE_URL||c.BASE_URL||c.API_URL||'').replace(/\/$/,'');
+async function post(path:string,body:any={}){let t=null;for(const k of ['token','auth_token','authToken','user_token']){t=await AsyncStorage.getItem(k);if(t)break}const r=await fetch(base+'/'+path,{method:'POST',headers:{Accept:'application/json','Content-Type':'application/json',...(t?{Authorization:'Bearer '+t}:{})},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.message||'Request failed');return j}
+export const authorizationService={scope:()=>post('academic_my_scope'),authorizeStudent:(student_id:number)=>post('academic_authorize_student',{student_id}),audit:(p:any={})=>post('admin_academic_access_audit',p)}; export default authorizationService;

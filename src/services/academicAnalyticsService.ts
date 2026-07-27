@@ -1,0 +1,6 @@
+import {API_BASE_URL} from '../config/api';
+export interface Analytics{period:string;summary:{students:number;teachers:number;sections:number;subjects:number;attendance_rate:number|null;grade_average:number|null;active_enrollments:number};attendance:{rate:number|null;present:number;late:number;absent:number;excused:number;total:number};grades:{average:number|null;graded_records:number};enrollment:{active:number;statuses:Record<string,number>};generated_at:string;}
+export interface TrendPoint{month:string;present:number;late:number;absent:number;excused:number;}
+async function post<T>(p:string,t:string,b:Record<string,any>={}){const r=await fetch(`${API_BASE_URL}${p}`,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:`Bearer ${t}`},body:JSON.stringify(b)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.message??`Request failed (${r.status})`);return d as T;}
+export async function fetchAcademicAnalytics(t:string,period='current'){return post<Analytics>('/admin_academic_analytics_dashboard',t,{period});}
+export async function fetchAttendanceTrend(t:string){return(await post<{trend:TrendPoint[]}>('/admin_academic_analytics_attendance_trend',t)).trend??[];}

@@ -1,0 +1,777 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Modal,
+  ActivityIndicator,
+  TextInput,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import { useAuth } from '../../context/AuthContext';
+import {
+  fetchClassSubjects,
+  assignClassSubject,
+  removeClassSubject,
+  createSubject,
+  ClassSubjectRow,
+  SubjectOption,
+  AssignableTeacher,
+  RoomOption,
+  SemesterTermOption,
+} from '../../services/teacherClassService';
+import { Skeleton } from '../../components/Skeleton';
+import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
+import GlassBackground from '../../components/glass/GlassBackground';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// Colors now come from academicTheme.ts (emerald variant) for light/dark support.
+
+const DAYS: { key: string; label: string }[] = [
+  { key: 'sunday', label: 'Sun' },
+  { key: 'monday', label: 'Mon' },
+  { key: 'tuesday', label: 'Tue' },
+  { key: 'wednesday', label: 'Wed' },
+  { key: 'thursday', label: 'Thu' },
+  { key: 'friday', label: 'Fri' },
+  { key: 'saturday', label: 'Sat' },
+];
+
+function IconChevronLeft({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconClose({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconCheck({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Polyline points="5 13 10 18 19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconPerson({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
+      <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconDoor({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1={6} y1={21} x2={20} y2={21} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx={13} cy={13} r={0.8} stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+function IconClock({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
+      <Path d="M12 7v5l3.5 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconPlus({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconTrash({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-8 0 1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function RowSkeleton({ styles, theme }: { styles: any; theme: AcademicGlassTheme }) {
+  return (
+    <View style={styles.card}>
+      <Skeleton width="45%" height={15} borderRadius={4} baseColor={theme.skeletonBase} />
+      <Skeleton width="60%" height={12} borderRadius={4} style={{ marginTop: 10 }} baseColor={theme.skeletonBase} />
+    </View>
+  );
+}
+
+function timeLabel(row: ClassSubjectRow): string | null {
+  if (!row.day_of_week && !row.start_time) return null;
+  const dayLabel = DAYS.find((d) => d.key === row.day_of_week)?.label;
+  const time = row.start_time && row.end_time ? `${row.start_time}-${row.end_time}` : row.start_time;
+  return [dayLabel, time].filter(Boolean).join(' · ');
+}
+
+// --- Edit sheet: pick/create subject, pick teacher, pick day + time ---
+
+function SubjectEditSheet({
+  visible,
+  onClose,
+  onSave,
+  onDelete,
+  isSaving,
+  editingRow,
+  subjects,
+  teachers,
+  rooms,
+  semesterTerms,
+  onCreateSubject,
+  styles,
+  theme,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (args: {
+    subjectId: number;
+    teacherId: number | null;
+    dayOfWeek: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    roomId: number | null;
+    semesterTermId: number | null;
+  }) => void;
+  onDelete: (() => void) | null;
+  isSaving: boolean;
+  editingRow: ClassSubjectRow | null;
+  subjects: SubjectOption[];
+  teachers: AssignableTeacher[];
+  rooms: RoomOption[];
+  semesterTerms: SemesterTermOption[];
+  onCreateSubject: (name: string) => Promise<SubjectOption | null>;
+  styles: any;
+  theme: AcademicGlassTheme;
+}) {
+  const [subjectId, setSubjectId] = useState<number | null>(editingRow?.subject_id ?? null);
+  const [teacherId, setTeacherId] = useState<number | null>(editingRow?.teacher_id ?? null);
+  const [day, setDay] = useState<string | null>(editingRow?.day_of_week ?? null);
+  const [startTime, setStartTime] = useState(editingRow?.start_time ?? '');
+  const [endTime, setEndTime] = useState(editingRow?.end_time ?? '');
+  const [roomId, setRoomId] = useState<number | null>(editingRow?.room_id ?? null);
+  const [semesterTermId, setSemesterTermId] = useState<number | null>(editingRow?.semester_term_id ?? null);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [isCreatingSubject, setIsCreatingSubject] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setSubjectId(editingRow?.subject_id ?? null);
+      setTeacherId(editingRow?.teacher_id ?? null);
+      setDay(editingRow?.day_of_week ?? null);
+      setStartTime(editingRow?.start_time ?? '');
+      setEndTime(editingRow?.end_time ?? '');
+      setRoomId(editingRow?.room_id ?? null);
+      setSemesterTermId(editingRow?.semester_term_id ?? null);
+      setNewSubjectName('');
+    }
+  }, [visible, editingRow]);
+
+  const timeValid =
+    (!startTime && !endTime) ||
+    (/^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime));
+
+  const canSave = !!subjectId && timeValid;
+
+  const handleCreateSubject = async () => {
+    if (!newSubjectName.trim()) return;
+    setIsCreatingSubject(true);
+    const created = await onCreateSubject(newSubjectName.trim());
+    setIsCreatingSubject(false);
+    if (created) {
+      setSubjectId(created.id);
+      setNewSubjectName('');
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.modalBackdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{editingRow ? 'Edit Subject' : 'Add Subject'}</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={10}>
+              <IconClose color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {isSaving ? (
+            <View style={styles.savingWrap}>
+              <ActivityIndicator color={theme.accent} />
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
+              <Text style={styles.fieldLabel}>Subject</Text>
+              <View style={styles.chipsWrap}>
+                {subjects.map((s) => {
+                  const active = s.id === subjectId;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setSubjectId(s.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{s.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.newSubjectRow}>
+                <TextInput
+                  style={styles.newSubjectInput}
+                  placeholder="New subject name"
+                  placeholderTextColor={theme.textSecondary}
+                  value={newSubjectName}
+                  onChangeText={setNewSubjectName}
+                />
+                <TouchableOpacity
+                  style={styles.newSubjectBtn}
+                  onPress={handleCreateSubject}
+                  disabled={!newSubjectName.trim() || isCreatingSubject}
+                  activeOpacity={0.75}
+                >
+                  {isCreatingSubject ? (
+                    <ActivityIndicator size="small" color={theme.onAccent} />
+                  ) : (
+                    <IconPlus color={theme.onAccent} />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.fieldLabel}>Teacher</Text>
+              <View style={styles.chipsWrap}>
+                <TouchableOpacity
+                  style={[styles.chip, teacherId === null && styles.chipActive]}
+                  onPress={() => setTeacherId(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.chipText, teacherId === null && styles.chipTextActive]}>Unassigned</Text>
+                </TouchableOpacity>
+                {teachers.map((t) => {
+                  const active = t.id === teacherId;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setTeacherId(t.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Day</Text>
+              <View style={styles.chipsWrap}>
+                <TouchableOpacity
+                  style={[styles.chip, day === null && styles.chipActive]}
+                  onPress={() => setDay(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.chipText, day === null && styles.chipTextActive]}>None</Text>
+                </TouchableOpacity>
+                {DAYS.map((d) => {
+                  const active = d.key === day;
+                  return (
+                    <TouchableOpacity
+                      key={d.key}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setDay(d.key)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Time (24h, e.g. 09:00)</Text>
+              <View style={styles.timeRow}>
+                <TextInput
+                  style={styles.timeInput}
+                  placeholder="Start"
+                  placeholderTextColor={theme.textSecondary}
+                  value={startTime}
+                  onChangeText={setStartTime}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={5}
+                />
+                <Text style={styles.timeDash}>-</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  placeholder="End"
+                  placeholderTextColor={theme.textSecondary}
+                  value={endTime}
+                  onChangeText={setEndTime}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={5}
+                />
+              </View>
+              {!timeValid ? (
+                <Text style={styles.timeError}>Use HH:MM for both start and end, e.g. 09:00 and 09:45.</Text>
+              ) : null}
+
+              <Text style={styles.fieldLabel}>Room</Text>
+              <View style={styles.chipsWrap}>
+                <TouchableOpacity
+                  style={[styles.chip, roomId === null && styles.chipActive]}
+                  onPress={() => setRoomId(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.chipText, roomId === null && styles.chipTextActive]}>None</Text>
+                </TouchableOpacity>
+                {rooms.map((r) => {
+                  const active = r.id === roomId;
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setRoomId(r.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{r.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Semester Term</Text>
+              <View style={styles.chipsWrap}>
+                <TouchableOpacity
+                  style={[styles.chip, semesterTermId === null && styles.chipActive]}
+                  onPress={() => setSemesterTermId(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.chipText, semesterTermId === null && styles.chipTextActive]}>None</Text>
+                </TouchableOpacity>
+                {semesterTerms.map((t) => {
+                  const active = t.id === semesterTermId;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setSemesterTermId(t.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
+                disabled={!canSave}
+                activeOpacity={0.85}
+                onPress={() =>
+                  subjectId &&
+                  onSave({
+                    subjectId,
+                    teacherId,
+                    dayOfWeek: day,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    roomId,
+                    semesterTermId,
+                  })
+                }
+              >
+                <Text style={styles.saveBtnText}>Save</Text>
+              </TouchableOpacity>
+
+              {onDelete ? (
+                <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.75} onPress={onDelete}>
+                  <IconTrash color={theme.danger} />
+                  <Text style={styles.deleteBtnText}>Remove subject from class</Text>
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+export default function AdminClassSubjectsScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const route = useRoute<any>();
+  const { sectionId, classLabel } = route.params ?? {};
+  const { token } = useAuth();
+  const theme = useAcademicGlassTheme('emerald');
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  const [sectionName, setSectionName] = useState<string | null>(classLabel ?? null);
+  const [rows, setRows] = useState<ClassSubjectRow[]>([]);
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [teachers, setTeachers] = useState<AssignableTeacher[]>([]);
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  const [semesterTerms, setSemesterTerms] = useState<SemesterTermOption[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [editingRow, setEditingRow] = useState<ClassSubjectRow | null | 'new'>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const load = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!token || !sectionId) return;
+      if (!opts.silent) setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchClassSubjects(token, sectionId);
+        setSectionName(data.sectionName ?? classLabel ?? null);
+        setRows(data.classSubjects);
+        setSubjects(data.subjects);
+        setTeachers(data.teachers);
+        setRooms(data.rooms);
+        setSemesterTerms(data.semesterTerms);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load subjects.');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [token, sectionId, classLabel]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    load({ silent: true });
+  };
+
+  const handleCreateSubject = async (name: string): Promise<SubjectOption | null> => {
+    if (!token || !sectionId) return null;
+    try {
+      const created = await createSubject(token, sectionId, name);
+      setSubjects((prev) => (prev.some((s) => s.id === created.id) ? prev : [...prev, created]));
+      return created;
+    } catch (err) {
+      Alert.alert('Could not add subject', err instanceof Error ? err.message : 'Please try again.');
+      return null;
+    }
+  };
+
+  const handleSave = async (args: {
+    subjectId: number;
+    teacherId: number | null;
+    dayOfWeek: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    roomId: number | null;
+    semesterTermId: number | null;
+  }) => {
+    if (!token || !sectionId) return;
+    setIsSaving(true);
+    try {
+      await assignClassSubject(token, {
+        sectionId,
+        subjectId: args.subjectId,
+        teacherId: args.teacherId,
+        dayOfWeek: args.dayOfWeek,
+        startTime: args.startTime,
+        endTime: args.endTime,
+        roomId: args.roomId,
+        semesterTermId: args.semesterTermId,
+      });
+      setEditingRow(null);
+      await load({ silent: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this subject.');
+      setEditingRow(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (row: ClassSubjectRow) => {
+    if (!token || !sectionId) return;
+    setIsSaving(true);
+    try {
+      await removeClassSubject(token, sectionId, row.subject_id);
+      setEditingRow(null);
+      await load({ silent: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove this subject.');
+      setEditingRow(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const sheetVisible = editingRow !== null;
+  const sheetRow = editingRow === 'new' ? null : editingRow;
+
+  return (
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+          <IconChevronLeft color={theme.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Subjects & Schedule
+          </Text>
+          {sectionName ? (
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {sectionName}
+            </Text>
+          ) : null}
+        </View>
+        <TouchableOpacity onPress={() => setEditingRow('new')} hitSlop={10} style={styles.addButton}>
+          <IconPlus color={theme.accent} />
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.listContent}>
+          <RowSkeleton styles={styles} theme={theme} />
+          <RowSkeleton styles={styles} theme={theme} />
+          <RowSkeleton styles={styles} theme={theme} />
+        </View>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
+          ListHeaderComponent={
+            error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            !error ? (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyTitle}>No subjects yet</Text>
+                <Text style={styles.emptyDesc}>
+                  Tap the + button to add a subject, assign a teacher, and set its weekly time slot.
+                </Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item }) => {
+            const assigned = !!item.teacher_id;
+            const schedule = timeLabel(item);
+            return (
+              <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => setEditingRow(item)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{item.subject_name ?? 'Subject'}</Text>
+                  <View style={styles.metaRow}>
+                    <View style={[styles.badge, assigned ? styles.badgeAssigned : styles.badgeUnassigned]}>
+                      <IconPerson color={assigned ? theme.accent : theme.warning} />
+                      <Text style={[styles.badgeText, assigned ? styles.badgeTextAssigned : styles.badgeTextUnassigned]}>
+                        {assigned ? item.teacher_name : 'No teacher'}
+                      </Text>
+                    </View>
+                    {schedule ? (
+                      <View style={[styles.badge, styles.badgeSchedule]}>
+                        <IconClock color={theme.textSecondary} />
+                        <Text style={[styles.badgeText, styles.badgeTextSchedule]}>{schedule}</Text>
+                      </View>
+                    ) : null}
+                    {item.room_name ? (
+                      <View style={[styles.badge, styles.badgeSchedule]}>
+                        <IconDoor color={theme.textSecondary} />
+                        <Text style={[styles.badgeText, styles.badgeTextSchedule]}>{item.room_name}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <Text style={styles.changeText}>Edit</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
+
+      <SubjectEditSheet
+        visible={sheetVisible}
+        onClose={() => setEditingRow(null)}
+        onSave={handleSave}
+        onDelete={sheetRow ? () => handleDelete(sheetRow) : null}
+        isSaving={isSaving}
+        editingRow={sheetRow}
+        subjects={subjects}
+        teachers={teachers}
+        rooms={rooms}
+        semesterTerms={semesterTerms}
+        onCreateSubject={handleCreateSubject}
+        styles={styles}
+        theme={theme}
+      />
+    </View>
+  );
+}
+
+const makeStyles = (theme: AcademicGlassTheme) =>
+  StyleSheet.create({
+  flex: { flex: 1, backgroundColor: theme.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  backButton: { width: 32 },
+  addButton: { width: 32, alignItems: 'flex-end' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: theme.textPrimary, textAlign: 'center' },
+  headerSubtitle: { fontSize: 12.5, color: theme.textSecondary, textAlign: 'center', marginTop: 2 },
+  listContent: { padding: 16 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: theme.textPrimary, marginBottom: 8 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  badgeAssigned: { backgroundColor: theme.accentSoft },
+  badgeUnassigned: { backgroundColor: theme.warningSoft },
+  badgeSchedule: { backgroundColor: theme.background },
+  badgeText: { fontSize: 12, fontWeight: '600' },
+  badgeTextAssigned: { color: theme.accent },
+  badgeTextUnassigned: { color: theme.warning },
+  badgeTextSchedule: { color: theme.textSecondary },
+  changeText: { fontSize: 13, fontWeight: '700', color: theme.accent },
+  emptyWrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.textPrimary, marginBottom: 8 },
+  emptyDesc: { fontSize: 13.5, color: theme.textSecondary, textAlign: 'center', lineHeight: 19 },
+  errorBanner: { backgroundColor: theme.dangerSoft, borderRadius: 12, padding: 14, marginBottom: 12 },
+  errorText: { color: theme.danger, fontSize: 13.5, textAlign: 'center' },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: theme.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingTop: 18,
+    paddingHorizontal: 20,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sheetTitle: { fontSize: 16.5, fontWeight: '700', color: theme.textPrimary },
+  savingWrap: { paddingVertical: 40, alignItems: 'center' },
+  fieldLabel: { fontSize: 12.5, fontWeight: '700', color: theme.textSecondary, marginTop: 14, marginBottom: 8, textTransform: 'uppercase' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: theme.background,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chipActive: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+  chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
+  chipTextActive: { color: theme.accent },
+  newSubjectRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  newSubjectInput: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: theme.textPrimary,
+  },
+  newSubjectBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: theme.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  timeInput: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: theme.textPrimary,
+    textAlign: 'center',
+  },
+  timeDash: { color: theme.textSecondary, fontSize: 14 },
+  timeError: { color: theme.danger, fontSize: 12, marginTop: 8 },
+  saveBtn: {
+    marginTop: 22,
+    backgroundColor: theme.accent,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.45 },
+  saveBtnText: { color: theme.onAccent, fontSize: 14.5, fontWeight: '700' },
+  deleteBtn: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  deleteBtnText: { color: theme.danger, fontSize: 13.5, fontWeight: '700' },
+});

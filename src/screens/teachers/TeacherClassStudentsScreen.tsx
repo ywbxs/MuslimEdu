@@ -1,0 +1,273 @@
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Modal,
+  ScrollView,
+} from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import { useAuth } from '../../context/AuthContext';
+import { fetchClassStudents, ClassStudent } from '../../services/teacherClassService';
+import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
+import UserAvatar from '../../components/UserAvatar';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
+const INK = COLORS.ink;
+const SUBTLE = COLORS.subtle;
+const HAIRLINE = COLORS.border;
+const CANVAS = COLORS.canvas;
+
+function IconChevronLeft({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconChevronRight({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconClose({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconMail({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 5h16v14H4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M4 7l8 6 8-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconPhone({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h3l1.5 4.5L8 9.5a12 12 0 0 0 6.5 6.5l2-2.5L21 15v3a2 2 0 0 1-2 2C10.5 20 4 13.5 4 5a2 2 0 0 1 2-2z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconPin({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={12} cy={9.5} r={2.3} stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactElement; label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <View style={styles.detailRow}>
+      {icon}
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function StudentSheet({ student, onClose }: { student: ClassStudent | null; onClose: () => void }) {
+  return (
+    <Modal visible={!!student} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.sheet}>
+          <TouchableOpacity style={styles.sheetClose} onPress={onClose} hitSlop={10}>
+            <IconClose color={SUBTLE} />
+          </TouchableOpacity>
+          {student ? (
+            <ScrollView contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
+              <UserAvatar name={student.name} photo={student.photo} size={84} dotColor={null} style={{ alignSelf: 'center', marginBottom: 16 }} />
+              <Text style={styles.sheetName}>{student.name}</Text>
+              <View style={styles.detailCard}>
+                <DetailRow icon={<IconMail color={SUBTLE} />} label="Email" value={student.email} />
+                <DetailRow icon={<IconPhone color={SUBTLE} />} label="Phone" value={student.phone} />
+                <DetailRow icon={<IconPin color={SUBTLE} />} label="Address" value={student.address} />
+              </View>
+            </ScrollView>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function StudentRowSkeleton() {
+  return (
+    <View style={styles.row}>
+      <SkeletonCircle size={44} />
+      <View style={{ flex: 1, marginLeft: 14 }}>
+        <Skeleton width="55%" height={14} borderRadius={4} />
+        <Skeleton width="35%" height={11} borderRadius={4} style={{ marginTop: 7 }} />
+      </View>
+    </View>
+  );
+}
+
+export default function TeacherClassStudentsScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const route = useRoute<any>();
+  const { sectionId, classLabel } = route.params ?? {};
+  const { token } = useAuth();
+
+  const [students, setStudents] = useState<ClassStudent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ClassStudent | null>(null);
+
+  const load = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!token || !sectionId) return;
+      if (!opts.silent) setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchClassStudents(token, sectionId);
+        setStudents(data.students);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load the class roster.');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [token, sectionId]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    load({ silent: true });
+  };
+
+  return (
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+          <IconChevronLeft color={INK} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? 'Class Roster'}</Text>
+        <View style={{ width: 32 }} />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.listContent}>
+          <StudentRowSkeleton />
+          <StudentRowSkeleton />
+          <StudentRowSkeleton />
+          <StudentRowSkeleton />
+        </View>
+      ) : (
+        <FlatList
+          data={students}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+          ListEmptyComponent={
+            !error ? (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyTitle}>No students enrolled yet</Text>
+                <Text style={styles.emptyDesc}>Once students are admitted into this section, they'll show up here.</Text>
+              </View>
+            ) : null
+          }
+          ListHeaderComponent={
+            error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.row} activeOpacity={0.8} onPress={() => setSelected(item)}>
+              <UserAvatar name={item.name} photo={item.photo} size={44} dotColor={null} />
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={styles.rowName}>{item.name}</Text>
+                <Text style={styles.rowEmail} numberOfLines={1}>{item.email}</Text>
+              </View>
+              <IconChevronRight color={SUBTLE} />
+            </TouchableOpacity>
+          )}
+        />
+      )}
+
+      <StudentSheet student={selected} onClose={() => setSelected(null)} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: 'transparent' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
+  },
+  backButton: { width: 32 },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: INK, marginHorizontal: 8 },
+  listContent: { padding: 16 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    padding: 16,
+    marginBottom: 10,
+  ...SHADOW.level2,
+  },
+  rowName: { fontSize: 14.5, fontWeight: '700', color: INK },
+  rowEmail: { fontSize: 12.5, color: SUBTLE, marginTop: 3 },
+  emptyWrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: INK, marginBottom: 8 },
+  emptyDesc: { fontSize: 13.5, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
+  errorBanner: { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: RADIUS.md, padding: 14, marginBottom: 12 },
+  errorText: { color: COLORS.danger, fontSize: 13.5, textAlign: 'center' },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(17,24,39,0.4)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    maxHeight: '75%',
+    paddingTop: 14,
+  },
+  sheetClose: { alignSelf: 'flex-end', marginRight: 16, marginBottom: 4 },
+  sheetContent: { paddingHorizontal: 24, paddingBottom: 40 },
+  sheetName: { fontSize: 19, fontWeight: '800', color: INK, textAlign: 'center', marginBottom: 20 },
+  detailCard: { backgroundColor: 'transparent', borderRadius: RADIUS.md, padding: 16, gap: 14 },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailLabel: { fontSize: 11.5, color: SUBTLE, marginBottom: 2 },
+  detailValue: { fontSize: 14, color: INK, fontWeight: '600' },
+});
