@@ -37,6 +37,7 @@ const DepartmentFormScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [campuses, setCampuses] = useState([]);
+  const [faculties, setFaculties] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -45,6 +46,7 @@ const DepartmentFormScreen = () => {
     description: '',
     school_level: '',
     campus_id: '',
+    faculty_id: '',
     head_of_department_id: '',
     status: 'active',
   });
@@ -52,10 +54,30 @@ const DepartmentFormScreen = () => {
   useEffect(() => {
     fetchTeachers();
     fetchCampuses();
+    fetchFaculties();
     if (isEditing) {
       fetchDepartment();
     }
   }, []);
+
+  const fetchFaculties = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/admin_faculty_list`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      setFaculties(response.data.faculties || []);
+    } catch (error) {
+      console.error('Error fetching faculties:', error);
+    }
+  };
 
   const fetchCampuses = async () => {
     try {
@@ -119,6 +141,7 @@ const DepartmentFormScreen = () => {
           description: dept.description || '',
           school_level: dept.school_level || '',
           campus_id: dept.campus_id ? String(dept.campus_id) : '',
+          faculty_id: dept.faculty_id ? String(dept.faculty_id) : '',
           head_of_department_id: dept.head_of_department_id ? String(dept.head_of_department_id) : '',
           status: dept.status || 'active',
         });
@@ -164,6 +187,7 @@ const DepartmentFormScreen = () => {
         description: formData.description || null,
         school_level: formData.school_level || null,
         campus_id: formData.campus_id ? parseInt(formData.campus_id) : null,
+        faculty_id: formData.faculty_id ? parseInt(formData.faculty_id) : null,
         head_of_department_id: formData.head_of_department_id
           ? parseInt(formData.head_of_department_id)
           : null,
@@ -212,6 +236,8 @@ const DepartmentFormScreen = () => {
         return formData.school_level ? labelize(formData.school_level) : 'Select...';
       case 'campus_id':
         return campuses.find((c) => c.id === parseInt(formData.campus_id))?.name || 'Select...';
+      case 'faculty_id':
+        return faculties.find((f) => f.id === parseInt(formData.faculty_id))?.name || 'None';
       case 'head_of_department_id':
         return (
           teachers.find((t) => t.id === parseInt(formData.head_of_department_id))?.name ||
@@ -282,6 +308,16 @@ const DepartmentFormScreen = () => {
             onPress={() => setActiveModal('campus_id')}
           >
             <Text style={styles.selectButtonText}>{getDisplayValue('campus_id')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Faculty / College / Institute</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setActiveModal('faculty_id')}
+          >
+            <Text style={styles.selectButtonText}>{getDisplayValue('faculty_id')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -362,6 +398,38 @@ const DepartmentFormScreen = () => {
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id.toString()}
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setActiveModal(null)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Faculty/College/Institute modal */}
+      <Modal
+        visible={activeModal === 'faculty_id'}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Faculty / College / Institute</Text>
+            <FlatList
+              data={[{ id: null, name: 'None' }, ...faculties]}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => handleSelectOption('faculty_id', item.id)}
+                >
+                  <Text style={styles.modalItemText}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => (item.id === null ? 'none' : item.id.toString())}
             />
             <TouchableOpacity
               style={styles.modalCloseButton}

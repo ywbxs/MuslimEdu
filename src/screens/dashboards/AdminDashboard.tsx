@@ -491,6 +491,22 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'orgStructure',
+      title: 'Org Structure',
+      desc: 'Faculties, colleges, institutes, streams',
+      variant: 'soft',
+      route: 'OrgStructure',
+      icon: (c) => <CatalogIcon color={c} />,
+    },
+    {
+      key: 'behaviorIncidents',
+      title: 'Behavior & Discipline',
+      desc: 'School-wide behavior incidents',
+      variant: 'soft',
+      route: 'BehaviorIncidents',
+      icon: (c) => <GearIcon color={c} />,
+    },
+    {
       key: 'integrationSettings',
       title: 'Integrations',
       desc: 'Finance, library and third-party connections',

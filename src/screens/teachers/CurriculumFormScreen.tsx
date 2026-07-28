@@ -35,12 +35,13 @@ const CurriculumFormScreen = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
-  const [referenceData, setReferenceData] = useState({ departments: [], school_years: [] });
+  const [referenceData, setReferenceData] = useState({ departments: [], school_years: [], programs: [] });
 
   const [formData, setFormData] = useState({
     name: '',
     code: '',
     department_id: '',
+    program_id: '',
     effective_school_year_id: '',
     description: '',
     status: 'active',
@@ -53,10 +54,30 @@ const CurriculumFormScreen = () => {
   const init = async () => {
     setLoading(true);
     await fetchReferenceData();
+    await fetchPrograms();
     if (isEditing) {
       await fetchCurriculum();
     }
     setLoading(false);
+  };
+
+  const fetchPrograms = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/admin_programs_list`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      setReferenceData((prev) => ({ ...prev, programs: response.data.programs || [] }));
+    } catch (error) {
+      console.error('Error fetching programs:', error);
+    }
   };
 
   const fetchReferenceData = async () => {
@@ -100,6 +121,7 @@ const CurriculumFormScreen = () => {
           name: curriculum.name || '',
           code: curriculum.code || '',
           department_id: curriculum.department_id ? String(curriculum.department_id) : '',
+          program_id: curriculum.program_id ? String(curriculum.program_id) : '',
           effective_school_year_id: curriculum.effective_school_year_id
             ? String(curriculum.effective_school_year_id)
             : '',
@@ -144,6 +166,7 @@ const CurriculumFormScreen = () => {
         name: formData.name,
         code: formData.code || null,
         department_id: formData.department_id ? parseInt(formData.department_id) : null,
+        program_id: formData.program_id ? parseInt(formData.program_id) : null,
         effective_school_year_id: formData.effective_school_year_id
           ? parseInt(formData.effective_school_year_id)
           : null,
@@ -192,6 +215,11 @@ const CurriculumFormScreen = () => {
       case 'department_id':
         return (
           referenceData.departments.find((d) => d.id === parseInt(formData.department_id))?.name ||
+          'None'
+        );
+      case 'program_id':
+        return (
+          referenceData.programs.find((p) => p.id === parseInt(formData.program_id))?.name ||
           'None'
         );
       case 'effective_school_year_id': {
@@ -255,6 +283,16 @@ const CurriculumFormScreen = () => {
             onPress={() => setActiveModal('department_id')}
           >
             <Text style={styles.selectButtonText}>{getDisplayValue('department_id')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Program</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setActiveModal('program_id')}
+          >
+            <Text style={styles.selectButtonText}>{getDisplayValue('program_id')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -342,6 +380,47 @@ const CurriculumFormScreen = () => {
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('department_id', '')}
+            >
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setActiveModal(null)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Program modal */}
+      <Modal
+        visible={activeModal === 'program_id'}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Program</Text>
+            <FlatList
+              data={referenceData.programs}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => handleSelectOption('program_id', String(item.id))}
+                >
+                  <Text style={styles.modalItemText}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={styles.modalEmptyText}>No programs found</Text>
+              }
+            />
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => handleSelectOption('program_id', '')}
             >
               <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
             </TouchableOpacity>

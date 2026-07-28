@@ -110,6 +110,8 @@ import LocalizationSettingsScreen from '../screens/admin/LocalizationSettingsScr
 import StudentIdConfigScreen from '../screens/admin/StudentIdConfigScreen';
 import AttendanceConfigScreen from '../screens/admin/AttendanceConfigScreen';
 import PermissionsScreen from '../screens/admin/PermissionsScreen';
+import OrgStructureScreen from '../screens/admin/OrgStructureScreen';
+import BehaviorIncidentsScreen from '../screens/admin/BehaviorIncidentsScreen';
 import StudentLifecycleScreen from '../screens/admin/StudentLifecycleScreen';
 import TimetableConflictScreen from '../screens/admin/TimetableConflictScreen';
 import CommunicationScreen from '../screens/common/CommunicationScreen';
@@ -550,6 +552,8 @@ export default function RootNavigator() {
       <Stack.Screen name="StudentIdConfig" component={StudentIdConfigScreen} />
       <Stack.Screen name="AttendanceConfig" component={AttendanceConfigScreen} />
       <Stack.Screen name="Permissions" component={PermissionsScreen} />
+      <Stack.Screen name="OrgStructure" component={OrgStructureScreen} />
+      <Stack.Screen name="BehaviorIncidents" component={BehaviorIncidentsScreen} />
       <Stack.Screen name="StudentLifecycle" component={StudentLifecycleScreen} />
       <Stack.Screen name="TimetableConflicts" component={TimetableConflictScreen} />
       <Stack.Screen name="Notifications" component={CommunicationScreen} />

@@ -520,6 +520,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             onPress={() => (navigation as any).navigate('TeacherAnnouncements')}
           />
           <QuickActionCard
+            icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
+            title="Behavior & Discipline"
+            description="Log and track student behavior incidents"
+            onPress={() => (navigation as any).navigate('BehaviorIncidents')}
+          />
+          <QuickActionCard
             icon={<LessonPlanIcon color={EMERALD} size={20} />}
             title="Lesson Plans"
             description="Draft, submit, and revise your lesson plans"
