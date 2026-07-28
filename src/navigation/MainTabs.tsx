@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
@@ -14,14 +13,12 @@ import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportSc
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
-import { COLORS, GLASS, SHADOW } from '../theme/glass';
+import { COLORS, BRAND } from '../theme/glass';
 
-// Active pill now matches BottomNavBar.tsx (solid COLORS.ink) instead of the
-// old emerald gradient - the two bars were on two different color systems,
-// which is part of what made the overlap bug so visible when both showed
-// at once. One source of truth for "what does the active tab look like".
-const ACTIVE_PILL = COLORS.ink;
-const ACTIVE_FG = '#FFFFFF';
+// Docked bar, no floating/pill styling - matches BottomNavBar.tsx (same
+// icons/labels/order/colors) so there's one source of truth for "what does
+// the active tab look like" whichever bar happens to be on screen.
+const ACTIVE = BRAND.emerald;
 const SUBTLE = COLORS.subtle;
 
 const Tab = createBottomTabNavigator();
@@ -59,7 +56,7 @@ function ChatIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M20 12a7 7 0 0 1-9.9 6.36L5 19.5l1.14-4.1A7 7 0 1 1 20 12z"
+        d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z"
         stroke={color}
         strokeWidth={1.9}
         strokeLinejoin="round"
@@ -86,9 +83,9 @@ const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Menu: (c) => <MenuIcon color={c} />,
 };
 
-// Floating frosted-glass pill bar, anchored above the safe area with a gap
-// on every side so the mesh background shows around it (true "spatial" nav —
-// the bar reads as an object floating over the screen, not a docked strip).
+// Docked bar attached to the bottom edge of the screen - full width, square
+// corners, no shadow/blur/margins. Active tab is indicated by icon+label
+// color and a small top indicator bar, not a pill background.
 function TabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
 
@@ -106,42 +103,40 @@ function TabBar({ state, navigation }: any) {
   }
 
   return (
-    <View pointerEvents="box-none" style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-      <View style={[styles.tabBar, SHADOW.level3]}>
-        <BlurView blurType="light" blurAmount={GLASS.blurAmount.strong} reducedTransparencyFallbackColor="rgba(255,255,255,0.92)" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, styles.tabBarTint]} />
-        {state.routes.map((route: any, index: number) => {
-          const isRouteFocused = state.index === index;
-          const renderIcon = ICONS[route.name];
+    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {state.routes.map((route: any, index: number) => {
+        const isRouteFocused = state.index === index;
+        const renderIcon = ICONS[route.name];
+        const color = isRouteFocused ? ACTIVE : SUBTLE;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isRouteFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isRouteFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
 
-          return (
-            <TouchableOpacity
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isRouteFocused ? { selected: true } : {}}
-              onPress={onPress}
-              style={styles.tabItem}
-              activeOpacity={0.7}
-            >
-              {isRouteFocused && <View style={styles.activePill} pointerEvents="none" />}
-              <View style={styles.iconWrap}>
-                {renderIcon && renderIcon(isRouteFocused ? ACTIVE_FG : SUBTLE)}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        return (
+          <TouchableOpacity
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={isRouteFocused ? { selected: true } : {}}
+            onPress={onPress}
+            style={styles.tabItem}
+            activeOpacity={0.7}
+          >
+            {isRouteFocused && <View style={styles.activeIndicator} pointerEvents="none" />}
+            <View style={styles.iconWrap}>{renderIcon && renderIcon(color)}</View>
+            <Text style={[styles.label, { color }]} numberOfLines={1}>
+              {route.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -202,45 +197,35 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  tabBarWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
   tabBar: {
     flexDirection: 'row',
     width: '100%',
-    maxWidth: 480,
-    borderRadius: 999,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.06)',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-  tabBarTint: {
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 8,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 999,
+    paddingVertical: 4,
   },
-  activePill: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: ACTIVE_PILL,
-    borderRadius: 999,
-    margin: 2,
-    zIndex: 0,
+  activeIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: ACTIVE,
   },
   iconWrap: {
-    zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 3,
   },
 });
