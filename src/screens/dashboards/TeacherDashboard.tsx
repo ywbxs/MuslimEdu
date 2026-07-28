@@ -89,6 +89,16 @@ function ClipboardCheckIcon({ color = EMERALD, size = 20 }: { color?: string; si
     </Svg>
   );
 }
+function ExamIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h12v18H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1={9} y1={8} x2={15} y2={8} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={9} y1={12} x2={15} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M9 16.5 10.5 18 15 14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function GradeIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -524,6 +534,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             title="Behavior & Discipline"
             description="Log and track student behavior incidents"
             onPress={() => (navigation as any).navigate('BehaviorIncidents')}
+          />
+          <QuickActionCard
+            icon={<ExamIcon color={EMERALD} size={20} />}
+            title="Examinations"
+            description="Schedule, publish, and mark your examinations"
+            onPress={() => (navigation as any).navigate('TeacherExaminations')}
           />
           <QuickActionCard
             icon={<LessonPlanIcon color={EMERALD} size={20} />}

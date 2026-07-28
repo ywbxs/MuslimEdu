@@ -112,6 +112,9 @@ import AttendanceConfigScreen from '../screens/admin/AttendanceConfigScreen';
 import PermissionsScreen from '../screens/admin/PermissionsScreen';
 import OrgStructureScreen from '../screens/admin/OrgStructureScreen';
 import BehaviorIncidentsScreen from '../screens/admin/BehaviorIncidentsScreen';
+import TeacherExaminationsScreen from '../screens/teachers/TeacherExaminationsScreen';
+import TeacherExaminationFormScreen from '../screens/teachers/TeacherExaminationFormScreen';
+import TeacherExaminationGradingScreen from '../screens/teachers/TeacherExaminationGradingScreen';
 import StudentLifecycleScreen from '../screens/admin/StudentLifecycleScreen';
 import TimetableConflictScreen from '../screens/admin/TimetableConflictScreen';
 import CommunicationScreen from '../screens/common/CommunicationScreen';
@@ -554,6 +557,9 @@ export default function RootNavigator() {
       <Stack.Screen name="Permissions" component={PermissionsScreen} />
       <Stack.Screen name="OrgStructure" component={OrgStructureScreen} />
       <Stack.Screen name="BehaviorIncidents" component={BehaviorIncidentsScreen} />
+      <Stack.Screen name="TeacherExaminations" component={TeacherExaminationsScreen} options={{ title: 'Examinations' }} />
+      <Stack.Screen name="TeacherExaminationForm" component={TeacherExaminationFormScreen} options={{ title: 'Examination' }} />
+      <Stack.Screen name="TeacherExaminationGrading" component={TeacherExaminationGradingScreen} options={{ title: 'Enter marks' }} />
       <Stack.Screen name="StudentLifecycle" component={StudentLifecycleScreen} />
       <Stack.Screen name="TimetableConflicts" component={TimetableConflictScreen} />
       <Stack.Screen name="Notifications" component={CommunicationScreen} />
