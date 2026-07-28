@@ -475,6 +475,22 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <CalendarIcon color={c} />,
     },
     {
+      key: 'attendanceConfig',
+      title: 'Attendance Config',
+      desc: 'Statuses and capture methods for your school',
+      variant: 'soft',
+      route: 'AttendanceConfig',
+      icon: (c) => <GearIcon color={c} />,
+    },
+    {
+      key: 'permissions',
+      title: 'Permissions',
+      desc: 'Role capabilities and optional modules',
+      variant: 'soft',
+      route: 'Permissions',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'integrationSettings',
       title: 'Integrations',
       desc: 'Finance, library and third-party connections',

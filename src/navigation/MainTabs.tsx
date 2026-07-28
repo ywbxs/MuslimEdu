@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from '@react-native-community/blur';
-import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
@@ -14,12 +14,15 @@ import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportSc
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
-import { BRAND, GLASS, SHADOW } from '../theme/glass';
+import { COLORS, GLASS, SHADOW } from '../theme/glass';
 
-const EMERALD = BRAND.emerald;
-// Was rgba(19,42,32,0.45) - too low-contrast against the frosted white tab
-// bar, so inactive icons barely showed. Bumped opacity for visibility.
-const SUBTLE = 'rgba(17,24,39,0.75)';
+// Active pill now matches BottomNavBar.tsx (solid COLORS.ink) instead of the
+// old emerald gradient - the two bars were on two different color systems,
+// which is part of what made the overlap bug so visible when both showed
+// at once. One source of truth for "what does the active tab look like".
+const ACTIVE_PILL = COLORS.ink;
+const ACTIVE_FG = '#FFFFFF';
+const SUBTLE = COLORS.subtle;
 
 const Tab = createBottomTabNavigator();
 
@@ -88,13 +91,27 @@ const ICONS: Record<string, (color: string) => React.ReactElement> = {
 // the bar reads as an object floating over the screen, not a docked strip).
 function TabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
+
+  // MainTabs stays mounted underneath every screen pushed on top of it in
+  // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
+  // that render their own <BottomNavBar/>). Without this check, this bar
+  // renders too, so two bottom bars are visible/overlapping at once.
+  // useIsFocused() here tracks whether MainTabs' currently active tab
+  // route - and therefore MainTabs itself - is the focused screen in the
+  // parent stack; when a screen is pushed on top, this goes false and we
+  // simply render nothing.
+  const isFocused = useIsFocused();
+  if (!isFocused) {
+    return null;
+  }
+
   return (
     <View pointerEvents="box-none" style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 14) }]}>
       <View style={[styles.tabBar, SHADOW.level3]}>
         <BlurView blurType="light" blurAmount={GLASS.blurAmount.strong} reducedTransparencyFallbackColor="rgba(255,255,255,0.92)" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, styles.tabBarTint]} />
         {state.routes.map((route: any, index: number) => {
-          const isFocused = state.index === index;
+          const isRouteFocused = state.index === index;
           const renderIcon = ICONS[route.name];
 
           const onPress = () => {
@@ -103,7 +120,7 @@ function TabBar({ state, navigation }: any) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !event.defaultPrevented) {
+            if (!isRouteFocused && !event.defaultPrevented) {
               navigation.navigate(route.name);
             }
           };
@@ -112,20 +129,14 @@ function TabBar({ state, navigation }: any) {
             <TouchableOpacity
               key={route.key}
               accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityState={isRouteFocused ? { selected: true } : {}}
               onPress={onPress}
               style={styles.tabItem}
               activeOpacity={0.7}
             >
-              {isFocused && (
-                <LinearGradient
-                  colors={[BRAND.emeraldLight, BRAND.emerald]}
-                  style={[styles.activePill, { backgroundColor: BRAND.emerald }]}
-                  pointerEvents="none"
-                />
-              )}
+              {isRouteFocused && <View style={styles.activePill} pointerEvents="none" />}
               <View style={styles.iconWrap}>
-                {renderIcon && renderIcon(isFocused ? '#FFFFFF' : SUBTLE)}
+                {renderIcon && renderIcon(isRouteFocused ? ACTIVE_FG : SUBTLE)}
               </View>
             </TouchableOpacity>
           );
@@ -222,6 +233,7 @@ const styles = StyleSheet.create({
   },
   activePill: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: ACTIVE_PILL,
     borderRadius: 999,
     margin: 2,
     zIndex: 0,

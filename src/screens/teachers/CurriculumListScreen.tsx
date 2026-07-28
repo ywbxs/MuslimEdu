@@ -168,6 +168,12 @@ const CurriculumListScreen = () => {
 
         <View style={styles.cardFooter}>
           <TouchableOpacity
+            style={styles.actionButtonGhost}
+            onPress={() => navigation.navigate('CurriculumVersions', { curriculumId: item.id, curriculumName: item.name })}
+          >
+            <Text style={styles.actionButtonGhostText}>Versions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleCurriculumPress(item.id)}
           >
@@ -474,6 +480,19 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     actionButtonText: {
       color: theme.onAccent,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    actionButtonGhost: {
+      borderWidth: 1,
+      borderColor: theme.borderStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+      marginLeft: 8,
+    },
+    actionButtonGhostText: {
+      color: theme.textSecondary,
       fontSize: 12,
       fontWeight: '600',
     },

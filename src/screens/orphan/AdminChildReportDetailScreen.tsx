@@ -19,15 +19,18 @@ import {
   deleteChildReport,
 } from '../../services/adminOrphanReportService';
 import { Skeleton } from '../../components/Skeleton';
+import RatingGauge from '../../components/RatingGauge';
+import PhotoLightbox from '../../components/PhotoLightbox';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW } from '../../theme/spatial';
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#EAF7EF';
-const INK = '#1C1C1E';
-const SUBTLE = '#8E8E93';
+const GOLD = '#B8912F';
+const INK = '#14171A';
+const SUBTLE = '#7A8078';
 const DANGER = '#E0637A';
-const TRACK_BG = '#F4F5F7';
+const CANVAS = '#F3F5F2';
 
 function RatingSelector({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number) => void }) {
   return (
@@ -64,6 +67,13 @@ export default function AdminChildReportDetailScreen() {
   const [academicRating, setAcademicRating] = useState<number | null>(null);
   const [wellbeingRating, setWellbeingRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Full-screen photo viewer state - which report's photos are open, and
+  // at which index, so PhotoLightbox can be a single shared instance for
+  // the whole screen instead of one per report card.
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -123,6 +133,12 @@ export default function AdminChildReportDetailScreen() {
         },
       },
     ]);
+  };
+
+  const openLightbox = (photos: string[], index: number) => {
+    setLightboxPhotos(photos);
+    setLightboxIndex(index);
+    setLightboxVisible(true);
   };
 
   return (
@@ -207,30 +223,52 @@ export default function AdminChildReportDetailScreen() {
                     <Text style={styles.deleteText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
-                {report.note ? <Text style={styles.reportNote}>{report.note}</Text> : null}
-                <View style={styles.reportRatingsRow}>
-                  <Text style={styles.reportRating}>Academic: {report.academic_rating ?? '—'}</Text>
-                  <Text style={styles.reportRating}>Wellbeing: {report.wellbeing_rating ?? '—'}</Text>
+
+                <View style={styles.gaugeRow}>
+                  <RatingGauge label="Academic" value={report.academic_rating} color={EMERALD} />
+                  <RatingGauge label="Wellbeing" value={report.wellbeing_rating} color={GOLD} />
                 </View>
+
+                {report.note ? (
+                  <View style={styles.noteBlock}>
+                    <Text style={styles.reportNote}>{report.note}</Text>
+                  </View>
+                ) : null}
+
                 <Text style={styles.reportSubmittedBy}>Submitted by {report.submitted_by ?? 'unknown'}</Text>
+
                 {report.photos.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-                    {report.photos.map((url) => (
-                      <Image key={url} source={{ uri: url }} style={styles.photoThumb} />
+                  <View style={styles.photoGrid}>
+                    {report.photos.map((url, index) => (
+                      <TouchableOpacity
+                        key={url}
+                        style={styles.photoTile}
+                        activeOpacity={0.85}
+                        onPress={() => openLightbox(report.photos, index)}
+                      >
+                        <Image source={{ uri: url }} style={styles.photoTileImage} />
+                      </TouchableOpacity>
                     ))}
-                  </ScrollView>
+                  </View>
                 )}
               </View>
             ))
           )}
         </ScrollView>
       )}
+
+      <PhotoLightbox
+        visible={lightboxVisible}
+        photos={lightboxPhotos}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxVisible(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: TRACK_BG },
+  flex: { flex: 1, backgroundColor: CANVAS },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,11 +301,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-  ...SHADOW.level1,
+    ...SHADOW.level1,
   },
   formTitle: { fontSize: 17, fontWeight: '700', color: INK, marginBottom: 14 },
   noteInput: {
-    backgroundColor: TRACK_BG,
+    backgroundColor: CANVAS,
     borderRadius: 14,
     padding: 14,
     fontSize: 15,
@@ -278,16 +316,10 @@ const styles = StyleSheet.create({
   },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8 },
   ratingRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  ratingPill: { width: 44, height: 44, borderRadius: 22, backgroundColor: TRACK_BG, alignItems: 'center', justifyContent: 'center' },
+  ratingPill: { width: 44, height: 44, borderRadius: 22, backgroundColor: CANVAS, alignItems: 'center', justifyContent: 'center' },
   ratingPillSelected: { backgroundColor: EMERALD },
   ratingPillText: { fontSize: 15, fontWeight: '600', color: INK },
   ratingPillTextSelected: { color: '#FFFFFF' },
-  photoThumb: { width: 64, height: 64, borderRadius: 12, marginRight: 10, backgroundColor: TRACK_BG },
-  photoAddTile: {
-    width: 64, height: 64, borderRadius: 12, backgroundColor: TRACK_BG,
-    borderWidth: 1.5, borderColor: '#D9DCE1', borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
-  },
   formButtonRow: { flexDirection: 'row', marginTop: 4 },
   cancelButton: { flex: 1, paddingVertical: 14, alignItems: 'center', marginRight: 10 },
   cancelButtonText: { color: SUBTLE, fontWeight: '600' },
@@ -296,13 +328,39 @@ const styles = StyleSheet.create({
 
   sectionLabel: { fontSize: 13, fontWeight: '600', color: SUBTLE, textTransform: 'uppercase', marginBottom: 10 },
   emptyText: { color: SUBTLE, fontSize: 14 },
-  reportCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, ...SHADOW.level1,
+  reportCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    ...SHADOW.level1,
   },
-  reportCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  reportMonth: { fontWeight: '700', color: INK },
+  reportCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  reportMonth: { fontWeight: '800', color: INK, fontSize: 15 },
   deleteText: { color: DANGER, fontSize: 13, fontWeight: '600' },
-  reportNote: { color: INK, fontSize: 14, marginBottom: 8 },
-  reportRatingsRow: { flexDirection: 'row', marginBottom: 6 },
-  reportRating: { fontSize: 12, color: SUBTLE, marginRight: 16 },
-  reportSubmittedBy: { fontSize: 11, color: SUBTLE, fontStyle: 'italic' },
+
+  gaugeRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+
+  noteBlock: {
+    backgroundColor: CANVAS,
+    borderLeftWidth: 3,
+    borderLeftColor: GOLD,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    marginBottom: 10,
+  },
+  reportNote: { color: '#3A3F3C', fontSize: 13.5, lineHeight: 19 },
+  reportSubmittedBy: { fontSize: 11, color: SUBTLE, fontStyle: 'italic', marginBottom: 12 },
+
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoTile: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: CANVAS,
+  },
+  photoTileImage: { width: '100%', height: '100%' },
 });
