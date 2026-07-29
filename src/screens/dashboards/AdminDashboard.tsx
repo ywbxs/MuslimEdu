@@ -507,6 +507,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <GearIcon color={c} />,
     },
     {
+      key: 'examinations',
+      title: 'Examinations',
+      desc: 'Schedule exams and manage grades',
+      variant: 'soft',
+      route: 'Examinations',
+      icon: (c) => <CatalogIcon color={c} />,
+    },
+    {
       key: 'integrationSettings',
       title: 'Integrations',
       desc: 'Finance, library and third-party connections',
