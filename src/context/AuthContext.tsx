@@ -14,6 +14,7 @@ import {
   getStoredToken,
   clearToken,
   AuthApiError,
+  TwoFactorRequiredError,
 } from '../services/authService';
 
 interface AuthContextValue {
@@ -22,9 +23,14 @@ interface AuthContextValue {
   isLoading: boolean; // true while checking for a saved token on launch
   isSubmitting: boolean; // true while a login request is in flight
   error: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  // True once the server has said "this account needs a 2FA code" for the
+  // email/password just submitted - the login screen shows a code-entry
+  // step while this is true, then calls login() again with the code.
+  requiresTwoFactor: boolean;
+  login: (email: string, password: string, twoFactorCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
+  resetTwoFactorPrompt: () => void;
   // Patches fields onto the current user in-place (e.g. school_code right
   // after SchoolCodeSetupScreen saves it) - avoids forcing a re-login just
   // to pick up a value the app already knows.
@@ -39,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
   // On app launch: check keychain for a saved token, and validate it via /me
   useEffect(() => {
@@ -61,11 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, twoFactorCode?: string) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await loginRequest(email, password);
+      const result = await loginRequest(email, password, twoFactorCode);
+      setRequiresTwoFactor(false);
       try {
         await saveToken(result.token);
       } catch (storageErr) {
@@ -82,6 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(result.user);
       return true;
     } catch (err) {
+      if (err instanceof TwoFactorRequiredError) {
+        setRequiresTwoFactor(true);
+        return false;
+      }
       // Show the server's message for known API errors, and the actual
       // error text for everything else - no more silent "Something went wrong".
       let message: string;
@@ -98,6 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsSubmitting(false);
     }
   }, []);
+
+  const resetTwoFactorPrompt = useCallback(() => setRequiresTwoFactor(false), []);
 
   const logout = useCallback(async () => {
     if (token) {
@@ -122,9 +136,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isSubmitting,
         error,
+        requiresTwoFactor,
         login,
         logout,
         clearError,
+        resetTwoFactorPrompt,
         updateUser,
       }}
     >

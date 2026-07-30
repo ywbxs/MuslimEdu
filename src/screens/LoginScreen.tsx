@@ -266,7 +266,7 @@ function GetStartedSheet({
 
 /* ========================= STEP DOTS ========================= */
 
-function StepDots({ step }: { step: 1 | 2 }) {
+function StepDots({ step }: { step: 1 | 2 | 3 }) {
   return (
     <View style={dots.row}>
       <View style={[dots.dot, step === 1 && dots.active]} />
@@ -321,17 +321,28 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const navigation = useNavigation();
-  const { login, isSubmitting, error, clearError } = useAuth();
+  const { login, isSubmitting, error, clearError, requiresTwoFactor, resetTwoFactorPrompt } = useAuth();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  // The server told us this account needs a code - move to step 3 once,
+  // without fighting the user if they navigate back and the flag is still
+  // true from a moment ago.
+  useEffect(() => {
+    if (requiresTwoFactor && step !== 3) {
+      direction.current = 1;
+      setStep(3);
+    }
+  }, [requiresTwoFactor]);
 
   const passwordRef = useRef<TextInput>(null);
 
@@ -369,10 +380,16 @@ export default function LoginScreen() {
   }, [step]);
 
   const canSubmit = email.trim().length > 0 && password.length > 0 && !isSubmitting;
+  const canSubmitTwoFactor = twoFactorCode.trim().length > 0 && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     await login(email.trim(), password);
+  };
+
+  const handleSubmitTwoFactor = async () => {
+    if (!canSubmitTwoFactor) return;
+    await login(email.trim(), password, twoFactorCode.trim());
   };
 
   const goToStep2 = () => {
@@ -392,6 +409,14 @@ export default function LoginScreen() {
     setStep(1);
   };
 
+  const goBackFromTwoFactor = () => {
+    direction.current = -1;
+    setTwoFactorCode('');
+    resetTwoFactorPrompt();
+    if (error) clearError();
+    setStep(2);
+  };
+
   const heroSideSize = Math.min(Math.max(width * 0.32, 105), 165);
 
   return (
@@ -409,10 +434,10 @@ export default function LoginScreen() {
             </View>
           ) : (
             <View style={styles.topbar}>
-              <TouchableOpacity style={styles.backBtn} onPress={goToStep1} hitSlop={12}>
+              <TouchableOpacity style={styles.backBtn} onPress={step === 3 ? goBackFromTwoFactor : goToStep1} hitSlop={12}>
                 <ChevronLeftIcon />
               </TouchableOpacity>
-              <Text style={styles.topbarTitle}>Sign in</Text>
+              <Text style={styles.topbarTitle}>{step === 3 ? 'Verify it\'s you' : 'Sign in'}</Text>
             </View>
           )}
 
@@ -427,7 +452,7 @@ export default function LoginScreen() {
             }}
           >
             <View style={styles.stepPill}>
-              <Text style={styles.stepPillText}>STEP {step} OF 2</Text>
+              <Text style={styles.stepPillText}>{step === 3 ? 'TWO-FACTOR' : `STEP ${step} OF 2`}</Text>
             </View>
 
             {step === 1 ? (
@@ -451,7 +476,7 @@ export default function LoginScreen() {
                   />
                 </View>
               </View>
-            ) : (
+            ) : step === 2 ? (
               <View style={styles.hero}>
                 <Text style={styles.title}>
                   Welcome{'\n'}
@@ -463,6 +488,14 @@ export default function LoginScreen() {
                     {email.trim()}
                   </Text>
                 </View>
+              </View>
+            ) : (
+              <View style={styles.hero}>
+                <Text style={styles.title}>
+                  One more{'\n'}
+                  <Text style={styles.titleGreen}>step.</Text>
+                </Text>
+                <Text style={styles.subtitle}>Enter the code from your authenticator app.</Text>
               </View>
             )}
 
@@ -494,7 +527,7 @@ export default function LoginScreen() {
 
                   <GradientButton label="Continue" onPress={goToStep2} style={styles.actionSpacing} />
                 </>
-              ) : (
+              ) : step === 2 ? (
                 <>
                   <Text style={styles.fieldLabel}>PASSWORD</Text>
                   <View style={styles.inputRow}>
@@ -548,9 +581,45 @@ export default function LoginScreen() {
                     style={styles.actionSpacing}
                   />
                 </>
+              ) : (
+                <>
+                  <Text style={styles.fieldLabel}>AUTHENTICATION CODE</Text>
+                  <View style={styles.inputRow}>
+                    <LockIcon />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="6-digit code or recovery code"
+                      placeholderTextColor={PLACEHOLDER}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      value={twoFactorCode}
+                      onChangeText={(text) => {
+                        setTwoFactorCode(text);
+                        if (error) clearError();
+                      }}
+                      onSubmitEditing={handleSubmitTwoFactor}
+                      returnKeyType="go"
+                      autoFocus
+                    />
+                  </View>
+                  <Text style={styles.helperText}>
+                    Open your authenticator app for the current code, or use one of your saved recovery codes if you've
+                    lost access to it.
+                  </Text>
+
+                  {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                  <GradientButton
+                    label="Verify"
+                    onPress={handleSubmitTwoFactor}
+                    disabled={!canSubmitTwoFactor}
+                    loading={isSubmitting}
+                    style={styles.actionSpacing}
+                  />
+                </>
               )}
 
-              <StepDots step={step} />
+              {step !== 3 && <StepDots step={step} />}
 
               <TouchableOpacity style={styles.getStartedRow} activeOpacity={0.7} onPress={() => setSheetOpen(true)}>
                 <Text style={styles.getStartedMuted}>New here? </Text>

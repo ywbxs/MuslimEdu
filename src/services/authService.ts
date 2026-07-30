@@ -64,6 +64,15 @@ export class AuthApiError extends Error {
   }
 }
 
+/** Thrown by loginRequest when the account has 2FA enabled and no/invalid
+ * code was supplied yet - distinct from AuthApiError so the login screen
+ * can show a code-entry step instead of a plain error. */
+export class TwoFactorRequiredError extends Error {
+  constructor() {
+    super('Two-factor authentication code required.');
+  }
+}
+
 // Ensures user.photo is a loadable absolute URL rather than a relative path
 // (a relative path renders as nothing in <Image>, i.e. the avatar "doesn't sync").
 function normalizeUser(user: AuthUser): AuthUser {
@@ -77,6 +86,7 @@ function normalizeUser(user: AuthUser): AuthUser {
 export async function loginRequest(
   email: string,
   password: string,
+  twoFactorCode?: string,
 ): Promise<LoginResponse> {
   let response: Response;
 
@@ -91,6 +101,7 @@ export async function loginRequest(
         email,
         password,
         device_name: 'muslimedu-mobile',
+        ...(twoFactorCode ? { two_factor_code: twoFactorCode } : {}),
       }),
     });
   } catch (networkError) {
@@ -113,6 +124,13 @@ export async function loginRequest(
       `Server returned an unexpected response (status ${response.status}). Please try again or contact support.`,
       response.status,
     );
+  }
+
+  // The account has 2FA enabled and either no code, or the request got
+  // here before a code was ready to send - the server responds 200 (not
+  // an error status) with this flag rather than issuing a token.
+  if (response.ok && data?.requires_two_factor) {
+    throw new TwoFactorRequiredError();
   }
 
   if (!response.ok) {

@@ -568,6 +568,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             badge={0}
             onPress={() => (navigation as any).navigate('Notifications')}
           />
+          <QuickActionCard
+            icon={<IdCardIcon color={EMERALD} size={20} />}
+            title="Security"
+            description="Two-factor authentication and device sessions"
+            onPress={() => (navigation as any).navigate('SecuritySettings')}
+          />
         </View>
 
         {/* This Month Overview - orphan students only (it's report-backed) */}

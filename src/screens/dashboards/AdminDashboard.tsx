@@ -491,6 +491,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'security',
+      title: 'Security',
+      desc: 'Two-factor authentication and device sessions',
+      variant: 'soft',
+      route: 'SecuritySettings',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'orgStructure',
       title: 'Org Structure',
       desc: 'Faculties, colleges, institutes, streams',

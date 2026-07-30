@@ -444,14 +444,14 @@ export default function StudentDashboard() {
             icon={<ProgressBarsIcon color={EMERALD} size={20} />}
             title="My Progress"
             description="Track your learning progress"
-            onPress={() => handlePlaceholderPress('My Progress')}
+            onPress={() => (navigation as any).navigate('MyProgress')}
           />
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title="Notifications"
             description="Stay updated with important alerts"
             badge={0}
-            onPress={() => handlePlaceholderPress('Notifications')}
+            onPress={() => (navigation as any).navigate('Notifications')}
           />
         </View>
 
