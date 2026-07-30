@@ -10,6 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import { fetchTeacherReportStatus, TeacherReportStatus } from '../../services/teacherOrphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
@@ -307,6 +308,7 @@ interface TeacherDashboardProps {
 export default function TeacherDashboard({ footer }: TeacherDashboardProps = {}) {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
+  const { t } = useLocale();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -340,8 +342,14 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
   }, [isOrphan, token]);
 
   const handlePlaceholderPress = useCallback((title: string) => {
-    Alert.alert('Coming soon', `${title} isn't wired up yet - tell me which to build out next.`);
-  }, []);
+    Alert.alert(
+      t('teacher_dashboard.coming_soon_title', 'Coming soon'),
+      t('teacher_dashboard.coming_soon_message', "{title} isn't wired up yet - tell me which to build out next.").replace(
+        '{title}',
+        title,
+      ),
+    );
+  }, [t]);
 
   // --- Overview stats: wired to real submission history (orphan-only). ---
   const history = status?.history ?? [];
@@ -406,7 +414,7 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
         {/* Greeting */}
         <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
           <View>
-            <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
+            <Text style={styles.greetingSmall}>{t('teacher_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
             <Text style={styles.greetingName}>{user?.name}</Text>
           </View>
           <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
@@ -422,13 +430,15 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
                 <PersonIcon color={PALE_GREEN} size={22} />
               </View>
               <View>
-                <Text style={styles.glassTitle}>Profile</Text>
-                <Text style={styles.glassSubtitle}>Your personal information</Text>
+                <Text style={styles.glassTitle}>{t('teacher_dashboard.profile_title', 'Profile')}</Text>
+                <Text style={styles.glassSubtitle}>
+                  {t('teacher_dashboard.profile_subtitle', 'Your personal information')}
+                </Text>
               </View>
             </View>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => handlePlaceholderPress('Editing your profile')}
+              onPress={() => handlePlaceholderPress(t('teacher_dashboard.editing_profile', 'Editing your profile'))}
               hitSlop={8}
             >
               <PencilIcon color={PALE_GREEN} size={16} />
@@ -436,13 +446,17 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           </View>
 
           <View style={styles.glassDivider} />
-          <GlassRow icon={<PersonIcon />} label="Name" value={user?.name} />
+          <GlassRow icon={<PersonIcon />} label={t('teacher_dashboard.name_label', 'Name')} value={user?.name} />
           <View style={styles.glassDivider} />
-          <GlassRow icon={<MailIcon />} label="Email" value={user?.email} />
+          <GlassRow icon={<MailIcon />} label={t('teacher_dashboard.email_label', 'Email')} value={user?.email} />
           {user?.code ? (
             <>
               <View style={styles.glassDivider} />
-              <GlassRow icon={<IdCardIcon />} label="Staff Code" value={user.code} />
+              <GlassRow
+                icon={<IdCardIcon />}
+                label={t('teacher_dashboard.staff_code_label', 'Staff Code')}
+                value={user.code}
+              />
             </>
           ) : null}
         </View>
@@ -473,11 +487,17 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               <DocCheckIcon color="#FFFFFF" size={24} />
             </View>
             <View style={styles.reportTextWrap}>
-              <Text style={styles.reportTitle}>Monthly Report</Text>
+              <Text style={styles.reportTitle}>{t('teacher_dashboard.monthly_report_title', 'Monthly Report')}</Text>
               <Text style={styles.reportSubtitle}>
                 {status?.submitted_this_month
-                  ? 'Submitted for this month - view your history any time'
-                  : 'Submit how your month went, and see your submission history'}
+                  ? t(
+                      'teacher_dashboard.monthly_report_submitted',
+                      'Submitted for this month - view your history any time',
+                    )
+                  : t(
+                      'teacher_dashboard.monthly_report_pending',
+                      'Submit how your month went, and see your submission history',
+                    )}
               </Text>
             </View>
             <View style={styles.reportArrowButton}>
@@ -488,12 +508,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
 
         {/* Quick Actions */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('teacher_dashboard.quick_actions', 'Quick Actions')}</Text>
           <TouchableOpacity
             style={styles.viewAllRow}
-            onPress={() => handlePlaceholderPress('Viewing all quick actions')}
+            onPress={() => handlePlaceholderPress(t('teacher_dashboard.viewing_all_actions', 'Viewing all quick actions'))}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{t('common.view_all', 'View All')}</Text>
             <ChevronRightIcon color={EMERALD} size={15} />
           </TouchableOpacity>
         </View>
@@ -503,94 +523,103 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           {isOrphan ? (
             <QuickActionCard
               icon={<DocumentIcon color={EMERALD} size={20} />}
-              title="My Reports"
-              description="View your report submissions"
+              title={t('teacher_dashboard.my_reports_title', 'My Reports')}
+              description={t('teacher_dashboard.my_reports_desc', 'View your report submissions')}
               onPress={() => (navigation as any).navigate('Reports')}
             />
           ) : null}
           <QuickActionCard
             icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-            title="My Classes"
-            description="View and manage your assigned classes"
+            title={t('teacher_dashboard.my_classes_title', 'My Classes')}
+            description={t('teacher_dashboard.my_classes_desc', 'View and manage your assigned classes')}
             onPress={() => (navigation as any).navigate('TeacherMyClasses')}
           />
           <QuickActionCard
             icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-            title="Take Attendance"
-            description="Mark today's attendance for your classes"
+            title={t('teacher_dashboard.take_attendance_title', 'Take Attendance')}
+            description={t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes")}
             onPress={() => (navigation as any).navigate('TeacherAttendanceClasses')}
           />
           <QuickActionCard
             icon={<GradeIcon color={EMERALD} size={20} />}
-            title="Enter Grades"
-            description="Record marks for your assigned subjects"
+            title={t('teacher_dashboard.enter_grades_title', 'Enter Grades')}
+            description={t('teacher_dashboard.enter_grades_desc', 'Record marks for your assigned subjects')}
             onPress={() => (navigation as any).navigate('TeacherGradebookClasses')}
           />
           <QuickActionCard
             icon={<AnnouncementIcon color={EMERALD} size={20} />}
-            title="Announcements"
-            description="Post updates to your classes"
+            title={t('teacher_dashboard.announcements_title', 'Announcements')}
+            description={t('teacher_dashboard.announcements_desc', 'Post updates to your classes')}
             onPress={() => (navigation as any).navigate('TeacherAnnouncements')}
           />
           <QuickActionCard
             icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-            title="Behavior & Discipline"
-            description="Log and track student behavior incidents"
+            title={t('teacher_dashboard.behavior_title', 'Behavior & Discipline')}
+            description={t('teacher_dashboard.behavior_desc', 'Log and track student behavior incidents')}
             onPress={() => (navigation as any).navigate('BehaviorIncidents')}
           />
           <QuickActionCard
             icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title="Examinations"
-            description="Schedule exams and enter grades"
+            title={t('teacher_dashboard.examinations_title', 'Examinations')}
+            description={t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades')}
             onPress={() => (navigation as any).navigate('Examinations')}
           />
           <QuickActionCard
             icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title="Student Progress"
-            description="Attendance, grades, behavior, memorization in one view"
+            title={t('teacher_dashboard.student_progress_title', 'Student Progress')}
+            description={t(
+              'teacher_dashboard.student_progress_desc',
+              'Attendance, grades, behavior, memorization in one view',
+            )}
             onPress={() => (navigation as any).navigate('StudentProgress')}
           />
           <QuickActionCard
             icon={<LessonPlanIcon color={EMERALD} size={20} />}
-            title="Lesson Plans"
-            description="Draft, submit, and revise your lesson plans"
+            title={t('teacher_dashboard.lesson_plans_title', 'Lesson Plans')}
+            description={t('teacher_dashboard.lesson_plans_desc', 'Draft, submit, and revise your lesson plans')}
             onPress={() => (navigation as any).navigate('TeacherLessonPlans')}
           />
           <QuickActionCard
             icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title="Assessments"
-            description="Create assignments, quizzes, and grade submissions"
+            title={t('teacher_dashboard.assessments_title', 'Assessments')}
+            description={t(
+              'teacher_dashboard.assessments_desc',
+              'Create assignments, quizzes, and grade submissions',
+            )}
             onPress={() => (navigation as any).navigate('TeacherAssessments')}
           />
           <QuickActionCard
             icon={<StarIcon color={EMERALD} size={20} />}
-            title="Assessment Grades"
-            description="Weighted grade breakdown for your sections"
+            title={t('teacher_dashboard.assessment_grades_title', 'Assessment Grades')}
+            description={t('teacher_dashboard.assessment_grades_desc', 'Weighted grade breakdown for your sections')}
             onPress={() => (navigation as any).navigate('TeacherAssessmentGrades')}
           />
           <QuickActionCard
             icon={<DocumentIcon color={EMERALD} size={20} />}
-            title="Materials"
-            description="Share lecture notes, slides, and other resources"
+            title={t('teacher_dashboard.materials_title', 'Materials')}
+            description={t(
+              'teacher_dashboard.materials_desc',
+              'Share lecture notes, slides, and other resources',
+            )}
             onPress={() => (navigation as any).navigate('TeacherMaterials')}
           />
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
-            title="Notifications"
-            description="Stay updated with important alerts"
+            title={t('teacher_dashboard.notifications_title', 'Notifications')}
+            description={t('teacher_dashboard.notifications_desc', 'Stay updated with important alerts')}
             badge={0}
             onPress={() => (navigation as any).navigate('Notifications')}
           />
           <QuickActionCard
             icon={<IdCardIcon color={EMERALD} size={20} />}
-            title="Security"
-            description="Two-factor authentication and device sessions"
+            title={t('teacher_dashboard.security_title', 'Security')}
+            description={t('teacher_dashboard.security_desc', 'Two-factor authentication and device sessions')}
             onPress={() => (navigation as any).navigate('SecuritySettings')}
           />
           <QuickActionCard
             icon={<GearIcon color={EMERALD} size={20} />}
-            title="Settings"
-            description="Language, theme, privacy and password"
+            title={t('teacher_dashboard.settings_title', 'Settings')}
+            description={t('teacher_dashboard.settings_desc', 'Language, theme, privacy and password')}
             onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
@@ -599,10 +628,10 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
         {isOrphan ? (
           <View style={styles.overviewCard}>
             <View style={styles.overviewHeaderRow}>
-              <Text style={styles.overviewTitle}>This Month Overview</Text>
+              <Text style={styles.overviewTitle}>{t('teacher_dashboard.month_overview_title', 'This Month Overview')}</Text>
               <TouchableOpacity
                 style={styles.monthPill}
-                onPress={() => handlePlaceholderPress('Choosing a different month')}
+                onPress={() => handlePlaceholderPress(t('teacher_dashboard.choosing_month', 'Choosing a different month'))}
               >
                 <Text style={styles.monthPillText}>{monthLabel}</Text>
                 <ChevronDownIcon color={SUBTLE} size={14} />
@@ -621,22 +650,36 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               </View>
             ) : (
               <View style={styles.statsRow}>
-                <StatItem icon={<DocumentIcon color={EMERALD} size={20} />} value={reportsSubmitted} label="Reports Submitted" />
+                <StatItem
+                  icon={<DocumentIcon color={EMERALD} size={20} />}
+                  value={reportsSubmitted}
+                  label={t('teacher_dashboard.reports_submitted_label', 'Reports Submitted')}
+                />
                 <StatItem
                   icon={<StarIcon color={EMERALD} size={20} />}
                   value={averageScore}
                   unit={averageScore !== '-' ? '%' : undefined}
-                  label="Average Score"
+                  label={t('teacher_dashboard.average_score_label', 'Average Score')}
                 />
-                <StatItem icon={<CheckCircleIcon color={EMERALD} size={20} />} value="-" label="Activities Completed" />
-                <StatItem icon={<ClockIcon color={EMERALD} size={20} />} value="-" label="Time Spent" />
+                <StatItem
+                  icon={<CheckCircleIcon color={EMERALD} size={20} />}
+                  value="-"
+                  label={t('teacher_dashboard.activities_completed_label', 'Activities Completed')}
+                />
+                <StatItem
+                  icon={<ClockIcon color={EMERALD} size={20} />}
+                  value="-"
+                  label={t('teacher_dashboard.time_spent_label', 'Time Spent')}
+                />
               </View>
             )}
 
             <View style={styles.noteBox}>
               <Text style={styles.noteText}>
-                Reports Submitted and Average Score are wired to your real submission history.
-                Activities Completed and Time Spent will connect once those features are built.
+                {t(
+                  'teacher_dashboard.stats_note',
+                  'Reports Submitted and Average Score are wired to your real submission history. Activities Completed and Time Spent will connect once those features are built.',
+                )}
               </Text>
             </View>
           </View>
