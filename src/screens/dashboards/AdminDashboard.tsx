@@ -491,6 +491,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'security',
+      title: 'Security',
+      desc: 'Two-factor authentication and device sessions',
+      variant: 'soft',
+      route: 'SecuritySettings',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'orgStructure',
       title: 'Org Structure',
       desc: 'Faculties, colleges, institutes, streams',
@@ -577,6 +585,30 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminAttendanceAnalytics',
       icon: (c) => <CalendarIcon color={c} />,
+    },
+    {
+      key: 'studentDocumentRequests',
+      title: 'Document Requests',
+      desc: 'Issue or reject student document requests',
+      variant: 'soft',
+      route: 'AdminStudentDocuments',
+      icon: (c) => <ReportDocIcon color={c} />,
+    },
+    {
+      key: 'studentServiceRequests',
+      title: 'Service Requests',
+      desc: 'Guidance, counselling and other student tickets',
+      variant: 'soft',
+      route: 'AdminStudentServices',
+      icon: (c) => <CatalogIcon color={c} />,
+    },
+    {
+      key: 'accountSettings',
+      title: 'Account Settings',
+      desc: 'Language, theme, privacy and password',
+      variant: 'soft',
+      route: 'AccountSettings',
+      icon: (c) => <GearIcon color={c} />,
     },
   ].filter((item) => !(isOrphanSchool && item.key === 'classes'));
 

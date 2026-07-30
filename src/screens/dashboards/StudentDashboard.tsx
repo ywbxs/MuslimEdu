@@ -161,6 +161,19 @@ function ClockIcon({ color = EMERALD, size = 20 }: { color?: string; size?: numb
     </Svg>
   );
 }
+function GearIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={3} stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 function GlassRow({
   icon,
@@ -444,14 +457,32 @@ export default function StudentDashboard() {
             icon={<ProgressBarsIcon color={EMERALD} size={20} />}
             title="My Progress"
             description="Track your learning progress"
-            onPress={() => handlePlaceholderPress('My Progress')}
+            onPress={() => (navigation as any).navigate('MyProgress')}
           />
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title="Notifications"
             description="Stay updated with important alerts"
             badge={0}
-            onPress={() => handlePlaceholderPress('Notifications')}
+            onPress={() => (navigation as any).navigate('Notifications')}
+          />
+          <QuickActionCard
+            icon={<DocumentIcon color={EMERALD} size={20} />}
+            title="Documents"
+            description="Request report cards, COR and certificates"
+            onPress={() => (navigation as any).navigate('StudentDocuments')}
+          />
+          <QuickActionCard
+            icon={<CheckCircleIcon color={EMERALD} size={20} />}
+            title="Services"
+            description="Guidance, counselling and other requests"
+            onPress={() => (navigation as any).navigate('StudentServices')}
+          />
+          <QuickActionCard
+            icon={<GearIcon color={EMERALD} size={20} />}
+            title="Settings"
+            description="Language, theme, privacy and password"
+            onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
 
@@ -637,13 +668,13 @@ const styles = StyleSheet.create({
   viewAllRow: { flexDirection: 'row', alignItems: 'center' },
   viewAllText: { fontSize: 13, fontWeight: '700', color: EMERALD, marginRight: 2 },
 
-  quickRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
   quickCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 14,
-    marginHorizontal: 4,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 10,
