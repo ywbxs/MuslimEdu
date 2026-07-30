@@ -209,6 +209,19 @@ function ClockIcon({ color = EMERALD, size = 20 }: { color?: string; size?: numb
     </Svg>
   );
 }
+function GearIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={3} stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 function GlassRow({
   icon,
@@ -573,6 +586,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             title="Security"
             description="Two-factor authentication and device sessions"
             onPress={() => (navigation as any).navigate('SecuritySettings')}
+          />
+          <QuickActionCard
+            icon={<GearIcon color={EMERALD} size={20} />}
+            title="Settings"
+            description="Language, theme, privacy and password"
+            onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
 

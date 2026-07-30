@@ -586,6 +586,30 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       route: 'AdminAttendanceAnalytics',
       icon: (c) => <CalendarIcon color={c} />,
     },
+    {
+      key: 'studentDocumentRequests',
+      title: 'Document Requests',
+      desc: 'Issue or reject student document requests',
+      variant: 'soft',
+      route: 'AdminStudentDocuments',
+      icon: (c) => <ReportDocIcon color={c} />,
+    },
+    {
+      key: 'studentServiceRequests',
+      title: 'Service Requests',
+      desc: 'Guidance, counselling and other student tickets',
+      variant: 'soft',
+      route: 'AdminStudentServices',
+      icon: (c) => <CatalogIcon color={c} />,
+    },
+    {
+      key: 'accountSettings',
+      title: 'Account Settings',
+      desc: 'Language, theme, privacy and password',
+      variant: 'soft',
+      route: 'AccountSettings',
+      icon: (c) => <GearIcon color={c} />,
+    },
   ].filter((item) => !(isOrphanSchool && item.key === 'classes'));
 
   // --- Parallax + fade for the background layer only. The ScrollView content

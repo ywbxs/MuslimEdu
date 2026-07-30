@@ -120,6 +120,13 @@ import StudentLifecycleScreen from '../screens/admin/StudentLifecycleScreen';
 import TimetableConflictScreen from '../screens/admin/TimetableConflictScreen';
 import CommunicationScreen from '../screens/common/CommunicationScreen';
 import StudentPortalHomeScreen from '../screens/student/StudentPortalHomeScreen';
+// M5 student portal - documents, services, settings (routed this phase;
+// backend already existed, see StudentPortalController).
+import StudentDocumentsScreen from '../screens/student/StudentDocumentsScreen';
+import StudentServicesScreen from '../screens/student/StudentServicesScreen';
+import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
+import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
+import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -566,6 +573,11 @@ export default function RootNavigator() {
       <Stack.Screen name="TimetableConflicts" component={TimetableConflictScreen} />
       <Stack.Screen name="Notifications" component={CommunicationScreen} />
       <Stack.Screen name="StudentPortalHome" component={StudentPortalHomeScreen} />
+      <Stack.Screen name="StudentDocuments" component={StudentDocumentsScreen} />
+      <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
+      <Stack.Screen name="AdminStudentDocuments" component={StudentDocumentRequestsScreen} />
+      <Stack.Screen name="AdminStudentServices" component={StudentServiceRequestsScreen} />
+      <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>
