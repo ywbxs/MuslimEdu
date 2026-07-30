@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   StudentDocument,
@@ -38,16 +39,17 @@ function statusColor(status: StudentDocument['status']) {
   return WARN;
 }
 
-function statusLabel(status: StudentDocument['status']) {
-  if (status === 'issued') return 'Issued';
-  if (status === 'rejected') return 'Rejected';
-  return 'Requested';
+function statusLabel(status: StudentDocument['status'], t: (key: string, fallback?: string) => string) {
+  if (status === 'issued') return t('student_documents.status_issued', 'Issued');
+  if (status === 'rejected') return t('student_documents.status_rejected', 'Rejected');
+  return t('student_documents.status_requested', 'Requested');
 }
 
 export default function StudentDocumentsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,11 +71,11 @@ export default function StudentDocumentsScreen() {
       setDocuments(data.documents);
       setDocumentTypes(data.document_types);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load your documents.');
+      setError(e?.message ?? t('student_documents.load_error', 'Could not load your documents.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -88,7 +90,10 @@ export default function StudentDocumentsScreen() {
 
   const onSubmit = async () => {
     if (!token || !fType) {
-      Alert.alert('Pick a document type', 'Choose which document you need first.');
+      Alert.alert(
+        t('student_documents.pick_type_title', 'Pick a document type'),
+        t('student_documents.pick_type_message', 'Choose which document you need first.'),
+      );
       return;
     }
     const copies = Math.max(1, parseInt(fCopies, 10) || 1);
@@ -98,36 +103,49 @@ export default function StudentDocumentsScreen() {
       setDocuments((prev) => [result.document, ...prev]);
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not submit request', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('student_documents.submit_error_title', 'Could not submit request'),
+        e?.message ?? t('student_documents.try_again', 'Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const confirmCancel = (doc: StudentDocument) => {
-    Alert.alert('Cancel this request?', `Your request for "${doc.label}" will be withdrawn.`, [
-      { text: 'Keep it', style: 'cancel' },
-      {
-        text: 'Cancel request',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await cancelStudentDocument(token, doc.id);
-            setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-          } catch (e: any) {
-            Alert.alert('Could not cancel', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('student_documents.cancel_confirm_title', 'Cancel this request?'),
+      t('student_documents.cancel_confirm_message', 'Your request for "{label}" will be withdrawn.').replace(
+        '{label}',
+        doc.label,
+      ),
+      [
+        { text: t('student_documents.keep_it', 'Keep it'), style: 'cancel' },
+        {
+          text: t('student_documents.cancel_request', 'Cancel request'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await cancelStudentDocument(token, doc.id);
+              setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+            } catch (e: any) {
+              Alert.alert(
+                t('student_documents.cancel_error_title', 'Could not cancel'),
+                e?.message ?? t('student_documents.try_again', 'Please try again.'),
+              );
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading your documents…</Text>
+        <Text style={styles.centerText}>{t('student_documents.loading', 'Loading your documents…')}</Text>
       </View>
     );
   }
@@ -135,10 +153,10 @@ export default function StudentDocumentsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -151,15 +169,19 @@ export default function StudentDocumentsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>My Documents</Text>
-          <Text style={styles.headerSub}>Request report cards, transcripts, COR and certificates</Text>
+          <Text style={styles.headerTitle}>{t('student_documents.header_title', 'My Documents')}</Text>
+          <Text style={styles.headerSub}>
+            {t('student_documents.header_subtitle', 'Request report cards, transcripts, COR and certificates')}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {documents.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>You haven't requested any documents yet.</Text>
+            <Text style={styles.emptyText}>
+              {t('student_documents.empty', "You haven't requested any documents yet.")}
+            </Text>
           </View>
         ) : (
           documents.map((doc) => (
@@ -168,22 +190,29 @@ export default function StudentDocumentsScreen() {
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>{doc.label}</Text>
                   <Text style={styles.rowSub}>
-                    {doc.reference_no} · {doc.copies} {doc.copies === 1 ? 'copy' : 'copies'}
+                    {doc.reference_no} · {doc.copies}{' '}
+                    {doc.copies === 1
+                      ? t('student_documents.copy', 'copy')
+                      : t('student_documents.copies', 'copies')}
                   </Text>
-                  {doc.purpose ? <Text style={styles.rowSub}>Purpose: {doc.purpose}</Text> : null}
+                  {doc.purpose ? (
+                    <Text style={styles.rowSub}>{t('student_documents.purpose_label', 'Purpose')}: {doc.purpose}</Text>
+                  ) : null}
                   {doc.status === 'rejected' && doc.rejected_reason ? (
-                    <Text style={[styles.rowSub, { color: DANGER }]}>Reason: {doc.rejected_reason}</Text>
+                    <Text style={[styles.rowSub, { color: DANGER }]}>
+                      {t('student_documents.reason_label', 'Reason')}: {doc.rejected_reason}
+                    </Text>
                   ) : null}
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: `${statusColor(doc.status)}1A` }]}>
                   <Text style={[styles.statusPillText, { color: statusColor(doc.status) }]}>
-                    {statusLabel(doc.status)}
+                    {statusLabel(doc.status, t)}
                   </Text>
                 </View>
               </View>
               {doc.status === 'requested' ? (
                 <TouchableOpacity style={styles.dangerLinkBtn} onPress={() => confirmCancel(doc)}>
-                  <Text style={styles.dangerLinkText}>Cancel request</Text>
+                  <Text style={styles.dangerLinkText}>{t('student_documents.cancel_request', 'Cancel request')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -193,38 +222,38 @@ export default function StudentDocumentsScreen() {
 
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={openForm}>
-          <Text style={styles.addBtnText}>+ Request Document</Text>
+          <Text style={styles.addBtnText}>+ {t('student_documents.request_document', 'Request Document')}</Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Request a Document</Text>
+            <Text style={styles.modalTitle}>{t('student_documents.modal_title', 'Request a Document')}</Text>
 
-            <Text style={styles.label}>Document type</Text>
+            <Text style={styles.label}>{t('student_documents.document_type_label', 'Document type')}</Text>
             <View style={styles.chipRow}>
-              {documentTypes.map((t) => (
+              {documentTypes.map((docType) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.chip, fType === t && styles.chipActive]}
-                  onPress={() => setFType(t)}
+                  key={docType}
+                  style={[styles.chip, fType === docType && styles.chipActive]}
+                  onPress={() => setFType(docType)}
                 >
-                  <Text style={[styles.chipText, fType === t && styles.chipTextActive]}>{t}</Text>
+                  <Text style={[styles.chipText, fType === docType && styles.chipTextActive]}>{docType}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>Purpose (optional)</Text>
+            <Text style={styles.label}>{t('student_documents.purpose_optional_label', 'Purpose (optional)')}</Text>
             <TextInput
               style={styles.input}
               value={fPurpose}
               onChangeText={setFPurpose}
-              placeholder="e.g. scholarship application"
+              placeholder={t('student_documents.purpose_placeholder', 'e.g. scholarship application')}
               placeholderTextColor={SUBTLE}
             />
 
-            <Text style={styles.label}>Copies</Text>
+            <Text style={styles.label}>{t('student_documents.copies_label', 'Copies')}</Text>
             <TextInput
               style={styles.input}
               value={fCopies}
@@ -236,10 +265,14 @@ export default function StudentDocumentsScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={submitting}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSubmit} disabled={submitting}>
-                {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Submit</Text>}
+                {submitting ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSaveText}>{t('common.submit', 'Submit')}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

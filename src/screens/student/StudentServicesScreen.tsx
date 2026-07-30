@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   ServiceCatalogEntry,
@@ -43,15 +44,16 @@ function statusColor(status: ServiceRequest['status']) {
   return WARN;
 }
 
-function statusLabel(status: ServiceRequest['status']) {
-  if (status === 'in_progress') return 'In progress';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+function statusLabel(status: ServiceRequest['status'], t: (key: string, fallback?: string) => string) {
+  if (status === 'in_progress') return t('student_services.status_in_progress', 'In progress');
+  return t(`student_services.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 }
 
 export default function StudentServicesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +75,11 @@ export default function StudentServicesScreen() {
       setServices(data.services);
       setRequests(data.requests);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load services.');
+      setError(e?.message ?? t('student_services.load_error', 'Could not load services.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -94,15 +96,24 @@ export default function StudentServicesScreen() {
 
   const onSubmit = async () => {
     if (!token || !fKey) {
-      Alert.alert('Pick a service', 'Choose which service you need first.');
+      Alert.alert(
+        t('student_services.pick_service_title', 'Pick a service'),
+        t('student_services.pick_service_message', 'Choose which service you need first.'),
+      );
       return;
     }
     if (!fSubject.trim()) {
-      Alert.alert('Subject required', 'Give this request a short subject.');
+      Alert.alert(
+        t('student_services.subject_required_title', 'Subject required'),
+        t('student_services.subject_required_message', 'Give this request a short subject.'),
+      );
       return;
     }
     if (selectedEntry?.needs_details && !fDetails.trim()) {
-      Alert.alert('More detail needed', 'This service needs a bit more detail before it can be submitted.');
+      Alert.alert(
+        t('student_services.more_detail_title', 'More detail needed'),
+        t('student_services.more_detail_message', 'This service needs a bit more detail before it can be submitted.'),
+      );
       return;
     }
     setSubmitting(true);
@@ -111,36 +122,46 @@ export default function StudentServicesScreen() {
       setRequests((prev) => [result.request, ...prev]);
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not submit request', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('student_services.submit_error_title', 'Could not submit request'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const confirmCancel = (req: ServiceRequest) => {
-    Alert.alert('Cancel this request?', `"${req.subject}" will be withdrawn.`, [
-      { text: 'Keep it', style: 'cancel' },
-      {
-        text: 'Cancel request',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await cancelServiceRequest(token, req.id);
-            setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'cancelled' } : r)));
-          } catch (e: any) {
-            Alert.alert('Could not cancel', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('student_services.cancel_confirm_title', 'Cancel this request?'),
+      t('student_services.cancel_confirm_message', '"{subject}" will be withdrawn.').replace('{subject}', req.subject),
+      [
+        { text: t('student_services.keep_it', 'Keep it'), style: 'cancel' },
+        {
+          text: t('student_services.cancel_request', 'Cancel request'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await cancelServiceRequest(token, req.id);
+              setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'cancelled' } : r)));
+            } catch (e: any) {
+              Alert.alert(
+                t('student_services.cancel_error_title', 'Could not cancel'),
+                e?.message ?? t('common.try_again', 'Please try again.'),
+              );
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading services…</Text>
+        <Text style={styles.centerText}>{t('student_services.loading', 'Loading services…')}</Text>
       </View>
     );
   }
@@ -148,10 +169,10 @@ export default function StudentServicesScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -164,29 +185,36 @@ export default function StudentServicesScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Services</Text>
-          <Text style={styles.headerSub}>Guidance, counselling and other school services</Text>
+          <Text style={styles.headerTitle}>{t('student_services.header_title', 'Services')}</Text>
+          <Text style={styles.headerSub}>
+            {t('student_services.header_subtitle', 'Guidance, counselling and other school services')}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Available services</Text>
+        <Text style={styles.sectionTitle}>{t('student_services.available_services', 'Available services')}</Text>
         {services.map((s) => (
           <TouchableOpacity key={s.key} style={styles.card} onPress={() => openForm(s.key)}>
             <View style={styles.rowBetween}>
               <View style={styles.flexCol}>
                 <Text style={styles.rowTitle}>{s.label}</Text>
-                <Text style={styles.rowSub}>Typical response: {s.sla_days} {s.sla_days === 1 ? 'day' : 'days'}</Text>
+                <Text style={styles.rowSub}>
+                  {t('student_services.typical_response', 'Typical response')}: {s.sla_days}{' '}
+                  {s.sla_days === 1 ? t('student_services.day', 'day') : t('student_services.days', 'days')}
+                </Text>
               </View>
-              <Text style={styles.requestLink}>Request</Text>
+              <Text style={styles.requestLink}>{t('student_services.request', 'Request')}</Text>
             </View>
           </TouchableOpacity>
         ))}
 
-        <Text style={styles.sectionTitle}>My requests</Text>
+        <Text style={styles.sectionTitle}>{t('student_services.my_requests', 'My requests')}</Text>
         {requests.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>You haven't submitted any service requests yet.</Text>
+            <Text style={styles.emptyText}>
+              {t('student_services.empty', "You haven't submitted any service requests yet.")}
+            </Text>
           </View>
         ) : (
           requests.map((req) => (
@@ -199,18 +227,20 @@ export default function StudentServicesScreen() {
                   </Text>
                   {req.details ? <Text style={styles.rowSub}>{req.details}</Text> : null}
                   {req.status === 'resolved' && req.resolution_note ? (
-                    <Text style={[styles.rowSub, { color: EMERALD }]}>Response: {req.resolution_note}</Text>
+                    <Text style={[styles.rowSub, { color: EMERALD }]}>
+                      {t('student_services.response_label', 'Response')}: {req.resolution_note}
+                    </Text>
                   ) : null}
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: `${statusColor(req.status)}1A` }]}>
                   <Text style={[styles.statusPillText, { color: statusColor(req.status) }]}>
-                    {statusLabel(req.status)}
+                    {statusLabel(req.status, t)}
                   </Text>
                 </View>
               </View>
               {req.status === 'open' ? (
                 <TouchableOpacity style={styles.dangerLinkBtn} onPress={() => confirmCancel(req)}>
-                  <Text style={styles.dangerLinkText}>Cancel request</Text>
+                  <Text style={styles.dangerLinkText}>{t('student_services.cancel_request', 'Cancel request')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -220,16 +250,16 @@ export default function StudentServicesScreen() {
 
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={() => openForm()}>
-          <Text style={styles.addBtnText}>+ New Request</Text>
+          <Text style={styles.addBtnText}>+ {t('student_services.new_request', 'New Request')}</Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New Service Request</Text>
+            <Text style={styles.modalTitle}>{t('student_services.modal_title', 'New Service Request')}</Text>
 
-            <Text style={styles.label}>Service</Text>
+            <Text style={styles.label}>{t('student_services.service_label', 'Service')}</Text>
             <View style={styles.chipRow}>
               {services.map((s) => (
                 <TouchableOpacity
@@ -242,33 +272,38 @@ export default function StudentServicesScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Subject</Text>
+            <Text style={styles.label}>{t('student_services.subject_label', 'Subject')}</Text>
             <TextInput
               style={styles.input}
               value={fSubject}
               onChangeText={setFSubject}
-              placeholder="Short summary"
+              placeholder={t('student_services.subject_placeholder', 'Short summary')}
               placeholderTextColor={SUBTLE}
             />
 
             <Text style={styles.label}>
-              Details{selectedEntry?.needs_details ? '' : ' (optional)'}
+              {t('student_services.details_label', 'Details')}
+              {selectedEntry?.needs_details ? '' : ` ${t('student_services.optional_suffix', '(optional)')}`}
             </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={fDetails}
               onChangeText={setFDetails}
-              placeholder="Anything that would help"
+              placeholder={t('student_services.details_placeholder', 'Anything that would help')}
               placeholderTextColor={SUBTLE}
               multiline
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={submitting}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSubmit} disabled={submitting}>
-                {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Submit</Text>}
+                {submitting ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSaveText}>{t('common.submit', 'Submit')}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
