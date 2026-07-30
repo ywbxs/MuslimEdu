@@ -515,6 +515,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
+      key: 'studentProgress',
+      title: 'Student Progress',
+      desc: 'Attendance, grades, behavior, memorization',
+      variant: 'soft',
+      route: 'StudentProgress',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'integrationSettings',
       title: 'Integrations',
       desc: 'Finance, library and third-party connections',

@@ -532,6 +532,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             onPress={() => (navigation as any).navigate('Examinations')}
           />
           <QuickActionCard
+            icon={<AssessmentIcon color={EMERALD} size={20} />}
+            title="Student Progress"
+            description="Attendance, grades, behavior, memorization in one view"
+            onPress={() => (navigation as any).navigate('StudentProgress')}
+          />
+          <QuickActionCard
             icon={<LessonPlanIcon color={EMERALD} size={20} />}
             title="Lesson Plans"
             description="Draft, submit, and revise your lesson plans"
