@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   AdminServiceRequest,
@@ -42,15 +43,16 @@ function statusColor(status: AdminServiceRequest['status']) {
   return WARN;
 }
 
-function statusLabel(status: AdminServiceRequest['status']) {
-  if (status === 'in_progress') return 'In progress';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+function statusLabel(status: AdminServiceRequest['status'], t: (key: string, fallback?: string) => string) {
+  if (status === 'in_progress') return t('admin_service_requests.status_in_progress', 'In progress');
+  return t(`admin_service_requests.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 }
 
 export default function StudentServiceRequestsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +73,11 @@ export default function StudentServiceRequestsScreen() {
       const data = await fetchAdminServiceRequests(token);
       setRequests(data);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load service requests.');
+      setError(e?.message ?? t('admin_service_requests.load_error', 'Could not load service requests.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -93,7 +95,10 @@ export default function StudentServiceRequestsScreen() {
       await updateAdminServiceRequest(token, req.id, 'in_progress');
       setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'in_progress' } : r)));
     } catch (e: any) {
-      Alert.alert('Could not update', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('admin_service_requests.update_error_title', 'Could not update'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setBusyId(null);
     }
@@ -117,7 +122,10 @@ export default function StudentServiceRequestsScreen() {
       );
       setResolveVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not resolve', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('admin_service_requests.resolve_error_title', 'Could not resolve'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setResolving(false);
     }
@@ -127,7 +135,7 @@ export default function StudentServiceRequestsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading service requests…</Text>
+        <Text style={styles.centerText}>{t('admin_service_requests.loading', 'Loading service requests…')}</Text>
       </View>
     );
   }
@@ -135,10 +143,10 @@ export default function StudentServiceRequestsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -151,8 +159,10 @@ export default function StudentServiceRequestsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Service Requests</Text>
-          <Text style={styles.headerSub}>Guidance, counselling and other student service tickets</Text>
+          <Text style={styles.headerTitle}>{t('admin_service_requests.header_title', 'Service Requests')}</Text>
+          <Text style={styles.headerSub}>
+            {t('admin_service_requests.header_subtitle', 'Guidance, counselling and other student service tickets')}
+          </Text>
         </View>
       </View>
 
@@ -164,7 +174,7 @@ export default function StudentServiceRequestsScreen() {
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-              {f === 'all' ? 'All' : statusLabel(f as AdminServiceRequest['status'])}
+              {f === 'all' ? t('common.filter_all', 'All') : statusLabel(f as AdminServiceRequest['status'], t)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -173,7 +183,7 @@ export default function StudentServiceRequestsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {visible.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No requests in this view.</Text>
+            <Text style={styles.emptyText}>{t('admin_service_requests.empty', 'No requests in this view.')}</Text>
           </View>
         ) : (
           visible.map((req) => (
@@ -182,7 +192,7 @@ export default function StudentServiceRequestsScreen() {
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>{req.subject}</Text>
                   <Text style={styles.rowSub}>
-                    {req.student?.name ?? 'Unknown student'}
+                    {req.student?.name ?? t('admin_service_requests.unknown_student', 'Unknown student')}
                     {req.student?.code ? ` · ${req.student.code}` : ''}
                   </Text>
                   <Text style={styles.rowSub}>
@@ -190,12 +200,14 @@ export default function StudentServiceRequestsScreen() {
                   </Text>
                   {req.details ? <Text style={styles.rowSub}>{req.details}</Text> : null}
                   {req.status === 'resolved' && req.resolution_note ? (
-                    <Text style={[styles.rowSub, { color: EMERALD }]}>Response: {req.resolution_note}</Text>
+                    <Text style={[styles.rowSub, { color: EMERALD }]}>
+                      {t('admin_service_requests.response_label', 'Response')}: {req.resolution_note}
+                    </Text>
                   ) : null}
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: `${statusColor(req.status)}1A` }]}>
                   <Text style={[styles.statusPillText, { color: statusColor(req.status) }]}>
-                    {statusLabel(req.status)}
+                    {statusLabel(req.status, t)}
                   </Text>
                 </View>
               </View>
@@ -203,11 +215,15 @@ export default function StudentServiceRequestsScreen() {
                 <View style={styles.actionsRow}>
                   {req.status === 'open' ? (
                     <TouchableOpacity onPress={() => onStart(req)} disabled={busyId === req.id}>
-                      <Text style={styles.actionLink}>{busyId === req.id ? 'Working…' : 'Start working'}</Text>
+                      <Text style={styles.actionLink}>
+                        {busyId === req.id
+                          ? t('admin_service_requests.working', 'Working…')
+                          : t('admin_service_requests.start_working', 'Start working')}
+                      </Text>
                     </TouchableOpacity>
                   ) : null}
                   <TouchableOpacity onPress={() => openResolve(req)} disabled={busyId === req.id}>
-                    <Text style={styles.actionLink}>Resolve</Text>
+                    <Text style={styles.actionLink}>{t('admin_service_requests.resolve', 'Resolve')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -219,22 +235,28 @@ export default function StudentServiceRequestsScreen() {
       <Modal visible={resolveVisible} animationType="slide" transparent onRequestClose={() => setResolveVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Resolve Request</Text>
-            <Text style={styles.label}>Response note (optional)</Text>
+            <Text style={styles.modalTitle}>{t('admin_service_requests.modal_title', 'Resolve Request')}</Text>
+            <Text style={styles.label}>
+              {t('admin_service_requests.response_note_label', 'Response note (optional)')}
+            </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={resolveNote}
               onChangeText={setResolveNote}
-              placeholder="What was done or decided"
+              placeholder={t('admin_service_requests.response_note_placeholder', 'What was done or decided')}
               placeholderTextColor={SUBTLE}
               multiline
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setResolveVisible(false)} disabled={resolving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onResolve} disabled={resolving}>
-                {resolving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Resolve</Text>}
+                {resolving ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSaveText}>{t('admin_service_requests.resolve', 'Resolve')}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

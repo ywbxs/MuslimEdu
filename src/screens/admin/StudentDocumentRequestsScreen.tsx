@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   AdminDocumentRequest,
@@ -45,6 +46,7 @@ export default function StudentDocumentRequestsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,11 +67,11 @@ export default function StudentDocumentRequestsScreen() {
       const data = await fetchAdminDocumentRequests(token);
       setRequests(data);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load document requests.');
+      setError(e?.message ?? t('admin_document_requests.load_error', 'Could not load document requests.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -81,24 +83,33 @@ export default function StudentDocumentRequestsScreen() {
   );
 
   const confirmIssue = (req: AdminDocumentRequest) => {
-    Alert.alert('Issue this document?', `Mark "${req.label}" as issued for ${req.student?.name ?? 'this student'}.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Issue',
-        onPress: async () => {
-          if (!token) return;
-          setBusyId(req.id);
-          try {
-            await issueAdminDocument(token, req.id);
-            setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'issued' } : r)));
-          } catch (e: any) {
-            Alert.alert('Could not issue', e?.message ?? 'Please try again.');
-          } finally {
-            setBusyId(null);
-          }
+    Alert.alert(
+      t('admin_document_requests.issue_confirm_title', 'Issue this document?'),
+      t('admin_document_requests.issue_confirm_message', 'Mark "{label}" as issued for {student}.')
+        .replace('{label}', req.label)
+        .replace('{student}', req.student?.name ?? t('admin_document_requests.unknown_student', 'this student')),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('admin_document_requests.issue', 'Issue'),
+          onPress: async () => {
+            if (!token) return;
+            setBusyId(req.id);
+            try {
+              await issueAdminDocument(token, req.id);
+              setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'issued' } : r)));
+            } catch (e: any) {
+              Alert.alert(
+                t('admin_document_requests.issue_error_title', 'Could not issue'),
+                e?.message ?? t('common.try_again', 'Please try again.'),
+              );
+            } finally {
+              setBusyId(null);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const openReject = (req: AdminDocumentRequest) => {
@@ -109,7 +120,10 @@ export default function StudentDocumentRequestsScreen() {
 
   const onReject = async () => {
     if (!token || !rejectTarget || !rejectReason.trim()) {
-      Alert.alert('Reason required', 'Tell the student why this request is being rejected.');
+      Alert.alert(
+        t('admin_document_requests.reason_required_title', 'Reason required'),
+        t('admin_document_requests.reason_required_message', 'Tell the student why this request is being rejected.'),
+      );
       return;
     }
     setRejecting(true);
@@ -122,7 +136,10 @@ export default function StudentDocumentRequestsScreen() {
       );
       setRejectVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not reject', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('admin_document_requests.reject_error_title', 'Could not reject'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setRejecting(false);
     }
@@ -132,7 +149,9 @@ export default function StudentDocumentRequestsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading document requests…</Text>
+        <Text style={styles.centerText}>
+          {t('admin_document_requests.loading', 'Loading document requests…')}
+        </Text>
       </View>
     );
   }
@@ -140,10 +159,10 @@ export default function StudentDocumentRequestsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -156,8 +175,10 @@ export default function StudentDocumentRequestsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Document Requests</Text>
-          <Text style={styles.headerSub}>Issue or reject student document requests</Text>
+          <Text style={styles.headerTitle}>{t('admin_document_requests.header_title', 'Document Requests')}</Text>
+          <Text style={styles.headerSub}>
+            {t('admin_document_requests.header_subtitle', 'Issue or reject student document requests')}
+          </Text>
         </View>
       </View>
 
@@ -169,7 +190,9 @@ export default function StudentDocumentRequestsScreen() {
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'all'
+                ? t('common.filter_all', 'All')
+                : t(`admin_document_requests.filter_${f}`, f.charAt(0).toUpperCase() + f.slice(1))}
             </Text>
           </TouchableOpacity>
         ))}
@@ -178,7 +201,7 @@ export default function StudentDocumentRequestsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {visible.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No requests in this view.</Text>
+            <Text style={styles.emptyText}>{t('admin_document_requests.empty', 'No requests in this view.')}</Text>
           </View>
         ) : (
           visible.map((req) => (
@@ -187,30 +210,45 @@ export default function StudentDocumentRequestsScreen() {
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>{req.label}</Text>
                   <Text style={styles.rowSub}>
-                    {req.student?.name ?? 'Unknown student'}
+                    {req.student?.name ?? t('admin_document_requests.unknown_student', 'Unknown student')}
                     {req.student?.code ? ` · ${req.student.code}` : ''}
                   </Text>
                   <Text style={styles.rowSub}>
-                    {req.reference_no} · {req.copies} {req.copies === 1 ? 'copy' : 'copies'}
+                    {req.reference_no} · {req.copies}{' '}
+                    {req.copies === 1
+                      ? t('admin_document_requests.copy', 'copy')
+                      : t('admin_document_requests.copies', 'copies')}
                   </Text>
-                  {req.purpose ? <Text style={styles.rowSub}>Purpose: {req.purpose}</Text> : null}
+                  {req.purpose ? (
+                    <Text style={styles.rowSub}>
+                      {t('admin_document_requests.purpose_label', 'Purpose')}: {req.purpose}
+                    </Text>
+                  ) : null}
                   {req.status === 'rejected' && req.rejected_reason ? (
-                    <Text style={[styles.rowSub, { color: DANGER }]}>Reason: {req.rejected_reason}</Text>
+                    <Text style={[styles.rowSub, { color: DANGER }]}>
+                      {t('admin_document_requests.reason_label', 'Reason')}: {req.rejected_reason}
+                    </Text>
                   ) : null}
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: `${statusColor(req.status)}1A` }]}>
                   <Text style={[styles.statusPillText, { color: statusColor(req.status) }]}>
-                    {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                    {t(`admin_document_requests.status_${req.status}`, req.status.charAt(0).toUpperCase() + req.status.slice(1))}
                   </Text>
                 </View>
               </View>
               {req.status === 'requested' ? (
                 <View style={styles.actionsRow}>
                   <TouchableOpacity onPress={() => confirmIssue(req)} disabled={busyId === req.id}>
-                    <Text style={styles.actionLink}>{busyId === req.id ? 'Working…' : 'Issue'}</Text>
+                    <Text style={styles.actionLink}>
+                      {busyId === req.id
+                        ? t('admin_document_requests.working', 'Working…')
+                        : t('admin_document_requests.issue', 'Issue')}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => openReject(req)} disabled={busyId === req.id}>
-                    <Text style={[styles.actionLink, styles.deleteLink]}>Reject</Text>
+                    <Text style={[styles.actionLink, styles.deleteLink]}>
+                      {t('admin_document_requests.reject', 'Reject')}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -222,22 +260,33 @@ export default function StudentDocumentRequestsScreen() {
       <Modal visible={rejectVisible} animationType="slide" transparent onRequestClose={() => setRejectVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Reject Document Request</Text>
-            <Text style={styles.label}>Reason (shown to the student)</Text>
+            <Text style={styles.modalTitle}>
+              {t('admin_document_requests.reject_modal_title', 'Reject Document Request')}
+            </Text>
+            <Text style={styles.label}>
+              {t('admin_document_requests.reject_reason_label', 'Reason (shown to the student)')}
+            </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={rejectReason}
               onChangeText={setRejectReason}
-              placeholder="e.g. outstanding balance, missing clearance"
+              placeholder={t(
+                'admin_document_requests.reject_reason_placeholder',
+                'e.g. outstanding balance, missing clearance',
+              )}
               placeholderTextColor={SUBTLE}
               multiline
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setRejectVisible(false)} disabled={rejecting}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalDanger} onPress={onReject} disabled={rejecting}>
-                {rejecting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalDangerText}>Reject</Text>}
+                {rejecting ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalDangerText}>{t('admin_document_requests.reject', 'Reject')}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

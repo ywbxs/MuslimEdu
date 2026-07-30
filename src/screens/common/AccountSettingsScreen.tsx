@@ -45,7 +45,7 @@ export default function AccountSettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { refresh: refreshLocale } = useLocale();
+  const { t, refresh: refreshLocale } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,11 +67,11 @@ export default function AccountSettingsScreen() {
       setSettings(data.settings);
       setOptions(data.options);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load your settings.');
+      setError(e?.message ?? t('account_settings.load_error', 'Could not load your settings.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -87,9 +87,12 @@ export default function AccountSettingsScreen() {
     try {
       await saveUserSettings(token, settings);
       await refreshLocale(settings.language);
-      Alert.alert('Saved', 'Your settings have been updated.');
+      Alert.alert(t('account_settings.saved_title', 'Saved'), t('account_settings.saved_message', 'Your settings have been updated.'));
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('account_settings.save_error_title', 'Could not save'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setSaving(false);
     }
@@ -98,11 +101,17 @@ export default function AccountSettingsScreen() {
   const onChangePassword = async () => {
     if (!token) return;
     if (!currentPassword || !newPassword) {
-      Alert.alert('Missing fields', 'Enter your current password and a new password.');
+      Alert.alert(
+        t('account_settings.missing_fields_title', 'Missing fields'),
+        t('account_settings.missing_fields_message', 'Enter your current password and a new password.'),
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Passwords don't match", 'Re-type the new password so both fields match.');
+      Alert.alert(
+        t('account_settings.password_mismatch_title', "Passwords don't match"),
+        t('account_settings.password_mismatch_message', 'Re-type the new password so both fields match.'),
+      );
       return;
     }
     setChangingPassword(true);
@@ -111,9 +120,15 @@ export default function AccountSettingsScreen() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert('Password updated', 'Your password has been changed.');
+      Alert.alert(
+        t('account_settings.password_updated_title', 'Password updated'),
+        t('account_settings.password_updated_message', 'Your password has been changed.'),
+      );
     } catch (e: any) {
-      Alert.alert('Could not change password', e?.message ?? 'Please try again.');
+      Alert.alert(
+        t('account_settings.password_error_title', 'Could not change password'),
+        e?.message ?? t('common.try_again', 'Please try again.'),
+      );
     } finally {
       setChangingPassword(false);
     }
@@ -123,7 +138,7 @@ export default function AccountSettingsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading your settings…</Text>
+        <Text style={styles.centerText}>{t('account_settings.loading', 'Loading your settings…')}</Text>
       </View>
     );
   }
@@ -131,10 +146,10 @@ export default function AccountSettingsScreen() {
   if (error || !settings || !options) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
-        <Text style={styles.centerText}>{error ?? 'Something went wrong.'}</Text>
+        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
+        <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -169,28 +184,30 @@ export default function AccountSettingsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Account Settings</Text>
-          <Text style={styles.headerSub}>Language, appearance, privacy and password</Text>
+          <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
+          <Text style={styles.headerSub}>
+            {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Language & appearance</Text>
+        <Text style={styles.sectionTitle}>{t('account_settings.language_appearance_section', 'Language & appearance')}</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Language</Text>
+          <Text style={styles.label}>{t('account_settings.language_label', 'Language')}</Text>
           <ChipGroup optionsList={options.languages} value={settings.language} onSelect={(v) => patch({ language: v })} />
 
-          <Text style={styles.label}>Theme</Text>
+          <Text style={styles.label}>{t('account_settings.theme_label', 'Theme')}</Text>
           <ChipGroup optionsList={options.themes} value={settings.theme} onSelect={(v) => patch({ theme: v })} />
 
-          <Text style={styles.label}>Calendar</Text>
+          <Text style={styles.label}>{t('account_settings.calendar_label', 'Calendar')}</Text>
           <ChipGroup
             optionsList={options.calendar_types}
             value={settings.calendar_type}
             onSelect={(v) => patch({ calendar_type: v })}
           />
 
-          <Text style={styles.label}>Date format</Text>
+          <Text style={styles.label}>{t('account_settings.date_format_label', 'Date format')}</Text>
           <ChipGroup
             optionsList={options.date_formats}
             value={settings.date_format}
@@ -198,9 +215,9 @@ export default function AccountSettingsScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Privacy</Text>
+        <Text style={styles.sectionTitle}>{t('account_settings.privacy_section', 'Privacy')}</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Profile visibility</Text>
+          <Text style={styles.label}>{t('account_settings.profile_visibility_label', 'Profile visibility')}</Text>
           <ChipGroup
             optionsList={options.profile_visibility}
             value={settings.profile_visibility}
@@ -208,7 +225,7 @@ export default function AccountSettingsScreen() {
           />
 
           <View style={styles.switchRow}>
-            <Text style={styles.rowTitle}>Show email on my profile</Text>
+            <Text style={styles.rowTitle}>{t('account_settings.show_email_label', 'Show email on my profile')}</Text>
             <Switch
               value={settings.show_email}
               onValueChange={(v) => patch({ show_email: v })}
@@ -216,7 +233,7 @@ export default function AccountSettingsScreen() {
             />
           </View>
           <View style={styles.switchRow}>
-            <Text style={styles.rowTitle}>Show phone on my profile</Text>
+            <Text style={styles.rowTitle}>{t('account_settings.show_phone_label', 'Show phone on my profile')}</Text>
             <Switch
               value={settings.show_phone}
               onValueChange={(v) => patch({ show_phone: v })}
@@ -224,7 +241,7 @@ export default function AccountSettingsScreen() {
             />
           </View>
 
-          <Text style={styles.label}>Digest emails</Text>
+          <Text style={styles.label}>{t('account_settings.digest_emails_label', 'Digest emails')}</Text>
           <ChipGroup
             optionsList={options.digest_frequency}
             value={settings.digest_frequency}
@@ -233,43 +250,47 @@ export default function AccountSettingsScreen() {
         </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={onSave} disabled={saving}>
-          {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Save settings</Text>}
+          {saving ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.saveBtnText}>{t('account_settings.save_settings', 'Save settings')}</Text>
+          )}
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Password</Text>
+        <Text style={styles.sectionTitle}>{t('account_settings.password_section', 'Password')}</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Current password</Text>
+          <Text style={styles.label}>{t('account_settings.current_password_label', 'Current password')}</Text>
           <TextInput
             style={styles.input}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             secureTextEntry
-            placeholder="Current password"
+            placeholder={t('account_settings.current_password_label', 'Current password')}
             placeholderTextColor={SUBTLE}
           />
-          <Text style={styles.label}>New password</Text>
+          <Text style={styles.label}>{t('account_settings.new_password_label', 'New password')}</Text>
           <TextInput
             style={styles.input}
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
-            placeholder="New password"
+            placeholder={t('account_settings.new_password_label', 'New password')}
             placeholderTextColor={SUBTLE}
           />
-          <Text style={styles.label}>Confirm new password</Text>
+          <Text style={styles.label}>{t('account_settings.confirm_password_label', 'Confirm new password')}</Text>
           <TextInput
             style={styles.input}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            placeholder="Re-type new password"
+            placeholder={t('account_settings.confirm_password_placeholder', 'Re-type new password')}
             placeholderTextColor={SUBTLE}
           />
           <TouchableOpacity style={styles.saveBtnInline} onPress={onChangePassword} disabled={changingPassword}>
             {changingPassword ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.saveBtnText}>Change password</Text>
+              <Text style={styles.saveBtnText}>{t('account_settings.change_password', 'Change password')}</Text>
             )}
           </TouchableOpacity>
         </View>
