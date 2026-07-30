@@ -10,14 +10,10 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
+import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
 import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
-import { fetchStudentAcademicStatus, StudentAcademicStatus } from '../../services/subscriptionService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
-import UserAvatar from '../../components/UserAvatar';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SHADOW } from '../../theme/spatial';
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
 // Animated layer sitting behind the ScrollView content, so it can move
@@ -25,12 +21,9 @@ import { COLORS, SHADOW } from '../../theme/spatial';
 const HERO_HEIGHT = 430;
 const PARALLAX_FACTOR = 0.5; // background travels at half the content's scroll speed
 
-const DARK_TOP = '#1C1C1E';
-const DARK_BOTTOM = '#000000';
+const DARK_TOP = '#123F2E';
+const DARK_BOTTOM = '#04140D';
 const PALE_GREEN = '#8FD9AE';
-const GLASS_BG = 'rgba(255,255,255,0.07)';
-const GLASS_BORDER = 'rgba(255,255,255,0.14)';
-const GLASS_DIVIDER = 'rgba(255,255,255,0.12)';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -130,13 +123,6 @@ function BellIcon({ color = EMERALD, size = 22 }: { color?: string; size?: numbe
     </Svg>
   );
 }
-function AnnouncementIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 11v2a2 2 0 0 0 2 2h1l2 4h2l-1-4h6l5 3V6l-5 3H8L6 5H4a2 2 0 0 0-2 2v2" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
-}
 function DocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -144,14 +130,6 @@ function DocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: n
       <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
       <Line x1={9} y1={13} x2={15} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
       <Line x1={9} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function AssessmentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 11l3 3L22 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -184,15 +162,6 @@ function ClockIcon({ color = EMERALD, size = 20 }: { color?: string; size?: numb
   );
 }
 
-function LockIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="5" y="11" width="14" height="9" rx="2" stroke={color} strokeWidth={2} />
-      <Path d="M8 11V7a4 4 0 0 1 8 0v4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 function GlassRow({
   icon,
   label,
@@ -219,29 +188,19 @@ function QuickActionCard({
   title,
   description,
   badge,
-  locked,
   onPress,
 }: {
   icon: React.ReactElement;
   title: string;
   description: string;
   badge?: number;
-  locked?: boolean;
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.quickCard, locked && styles.quickCardLocked]}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
+    <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={onPress}>
       <View style={styles.quickIconWrap}>
         {icon}
-        {locked ? (
-          <View style={styles.quickLockBadge}>
-            <LockIcon color="#FFFFFF" size={10} />
-          </View>
-        ) : !!badge && badge > 0 ? (
+        {!!badge && badge > 0 ? (
           <View style={styles.quickBadge}>
             <Text style={styles.quickBadgeText}>{badge}</Text>
           </View>
@@ -280,41 +239,16 @@ function StatItem({
   );
 }
 
-interface StudentDashboardProps {
-  footer?: React.ReactNode;
-}
-
-export default function StudentDashboard({ footer }: StudentDashboardProps = {}) {
-  const insets = useSafeAreaInsets();
+export default function StudentDashboard() {
   const { user, token } = useAuth();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const isOrphan = !!user?.is_orphan && user?.institution_type === 'orphanage';
+  const isOrphan = !!user?.is_orphan;
+  const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
 
   const [status, setStatus] = useState<ReportStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(isOrphan);
-
-  // Gates the "Academic" quick action - applies to every student, not just
-  // orphan-school ones. Fail-open by design: a null status (still loading,
-  // or the check failed) never locks the card - real authorization still
-  // lives server-side in student_enrollment_workflow_status itself.
-  const [academicStatus, setAcademicStatus] = useState<StudentAcademicStatus | null>(null);
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    fetchStudentAcademicStatus(token)
-      .then((data) => {
-        if (!cancelled) setAcademicStatus(data);
-      })
-      .catch(() => {
-        // Silent - fail-open, card stays unlocked-looking until we know otherwise.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-  const isAcademicLocked = academicStatus?.unlocked === false;
 
   useEffect(() => {
     // Regular (non-orphan) students have no monthly report feature, so we
@@ -403,13 +337,18 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
         showsVerticalScrollIndicator={false}
       >
         {/* Greeting */}
-        <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.headerRow}>
           <View>
             <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
             <Text style={styles.greetingName}>{user?.name}</Text>
           </View>
           <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
+            <View style={styles.avatarRing}>
+              <View style={styles.avatarInner}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+              <View style={styles.avatarDot} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -492,61 +431,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
         </View>
 
         <View style={styles.quickRow}>
-          {/* Academic Hub (enrollment tracker, schedule/subjects/attendance/grades,
-              progress) only applies to regular schools. Orphan schools have no
-              academic-hub concept - their students only get "My Reports" below. */}
-          {!isOrphan ? (
-            <>
-              <QuickActionCard
-                icon={<DocumentIcon color={EMERALD} size={20} />}
-                title="Academic"
-                description={
-                  isAcademicLocked
-                    ? academicStatus?.enrolled === false
-                      ? 'Not enrolled yet'
-                      : 'Unpaid fees'
-                    : 'Track your enrollment progress'
-                }
-                locked={isAcademicLocked}
-                onPress={() => {
-                  if (isAcademicLocked) {
-                    Alert.alert(
-                      'Academic is locked',
-                      academicStatus?.enrolled === false
-                        ? "You're not enrolled for the current session yet. Contact your school to get started."
-                        : 'There are unpaid fees on your account. Contact your school to clear them before Academic unlocks.',
-                    );
-                    return;
-                  }
-                  (navigation as any).navigate('EnrollmentStatus');
-                }}
-              />
-              <QuickActionCard
-                icon={<DocumentIcon color={EMERALD} size={20} />}
-                title="Classes & Grades"
-                description={
-                  isAcademicLocked
-                    ? academicStatus?.enrolled === false
-                      ? 'Not enrolled yet'
-                      : 'Unpaid fees'
-                    : 'Schedule, subjects, attendance & grades'
-                }
-                locked={isAcademicLocked}
-                onPress={() => {
-                  if (isAcademicLocked) {
-                    Alert.alert(
-                      'Classes & Grades is locked',
-                      academicStatus?.enrolled === false
-                        ? "You're not enrolled for the current session yet. Contact your school to get started."
-                        : 'There are unpaid fees on your account. Contact your school to clear them before this unlocks.',
-                    );
-                    return;
-                  }
-                  (navigation as any).navigate('AcademicHub');
-                }}
-              />
-            </>
-          ) : null}
           {/* My Reports - orphan students only */}
           {isOrphan ? (
             <QuickActionCard
@@ -556,74 +440,18 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               onPress={() => (navigation as any).navigate('OrphanReport')}
             />
           ) : null}
-          {!isOrphan ? (
-            <QuickActionCard
-              icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-              title="My Progress"
-              description={
-                isAcademicLocked
-                  ? academicStatus?.enrolled === false
-                    ? 'Not enrolled yet'
-                    : 'Unpaid fees'
-                  : 'Attendance rate & subject averages'
-              }
-              locked={isAcademicLocked}
-              onPress={() => {
-                if (isAcademicLocked) {
-                  Alert.alert(
-                    'My Progress is locked',
-                    academicStatus?.enrolled === false
-                      ? "You're not enrolled for the current session yet. Contact your school to get started."
-                      : 'There are unpaid fees on your account. Contact your school to clear them before this unlocks.',
-                  );
-                  return;
-                }
-                (navigation as any).navigate('AcademicHub', { initialTab: 'progress' });
-              }}
-            />
-          ) : null}
           <QuickActionCard
-            icon={<IdCardIcon color={EMERALD} size={20} />}
-            title="Student ID"
-            description="Official student number and school identity"
-            onPress={() => (navigation as any).navigate('StudentIdentity')}
-          />
-          <QuickActionCard
-            icon={<DocumentIcon color={EMERALD} size={20} />}
-            title="My Portal"
-            description="Approved subject load, released grades, and documents"
-            onPress={() => (navigation as any).navigate('StudentPortalHome')}
-          />
-          <QuickActionCard
-            icon={<AnnouncementIcon color={EMERALD} size={20} />}
-            title="Announcements"
-            description="Updates from your teachers"
-            onPress={() => (navigation as any).navigate('StudentAnnouncements')}
-          />
-          <QuickActionCard
-            icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title="Assignments"
-            description="View and submit your assigned work"
-            onPress={() => (navigation as any).navigate('StudentAssessments')}
-          />
-          <QuickActionCard
-            icon={<StarIcon color={EMERALD} size={20} />}
-            title="My Grades"
-            description="Weighted grade breakdown by subject"
-            onPress={() => (navigation as any).navigate('StudentAssessmentGrades')}
-          />
-          <QuickActionCard
-            icon={<DocumentIcon color={EMERALD} size={20} />}
-            title="Materials"
-            description="Lecture notes, slides, and other resources"
-            onPress={() => (navigation as any).navigate('StudentMaterials')}
+            icon={<ProgressBarsIcon color={EMERALD} size={20} />}
+            title="My Progress"
+            description="Track your learning progress"
+            onPress={() => handlePlaceholderPress('My Progress')}
           />
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title="Notifications"
             description="Stay updated with important alerts"
             badge={0}
-            onPress={() => (navigation as any).navigate('Notifications')}
+            onPress={() => handlePlaceholderPress('Notifications')}
           />
         </View>
 
@@ -673,14 +501,13 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             </View>
           </View>
         ) : null}
-        {footer}
       </Animated.ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas, overflow: 'hidden' },
+  flex: { flex: 1, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   bgLayer: {
     position: 'absolute',
     top: 0,
@@ -699,10 +526,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    paddingTop: 60,
     paddingBottom: 24,
   },
   greetingSmall: { fontSize: 14, color: PALE_GREEN },
   greetingName: { fontSize: 26, fontWeight: '800', color: '#FFFFFF', marginTop: 4 },
+  avatarRing: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: EMERALD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
+  avatarDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#5FE38A',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+
   glassCard: {
     backgroundColor: GLASS_BG,
     borderWidth: 1,
@@ -717,7 +575,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: GLASS_ICON_BG,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -728,7 +586,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: GLASS_ICON_BG,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -767,7 +625,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
-  ...SHADOW.level1,
   },
 
   sectionHeaderRow: {
@@ -780,13 +637,13 @@ const styles = StyleSheet.create({
   viewAllRow: { flexDirection: 'row', alignItems: 'center' },
   viewAllText: { fontSize: 13, fontWeight: '700', color: EMERALD, marginRight: 2 },
 
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
+  quickRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   quickCard: {
-    width: '48%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 14,
-    marginBottom: 10,
+    marginHorizontal: 4,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -816,18 +673,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   quickBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-  quickCardLocked: { opacity: 0.55 },
-  quickLockBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   quickTitle: { fontSize: 14, fontWeight: '700', color: INK, marginBottom: 4 },
   quickDescription: { fontSize: 11, color: SUBTLE, lineHeight: 15, marginBottom: 10 },
   quickArrowButton: {

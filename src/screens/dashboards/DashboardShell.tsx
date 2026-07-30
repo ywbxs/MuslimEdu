@@ -1,24 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import GlassBackground from '../../components/glass/GlassBackground';
-import GlassCard from '../../components/glass/GlassCard';
-import { GlassAvatar } from '../../components/glass/GlassKit';
-import { COLORS, RADIUS, BRAND } from '../../theme/glass';
 
-const EMERALD = BRAND.emerald;
-const EMERALD_SOFT = COLORS.emeraldSoft;
-const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
+const EMERALD = '#0F9D58';
+const EMERALD_SOFT = '#EAF7EF';
+const INK = '#1C1C1E';
+const SUBTLE = '#8E8E93';
+
+// --- Glass theme switch --------------------------------------------------
+// Frosted/translucent "glass" panels (semi-transparent white over a dark
+// hero) used to be the look for cards like the Profile panel on the Student
+// dashboard. Flip GLASS_ENABLED back to true to restore that look; every
+// screen that imports these from here (instead of hardcoding its own rgba
+// values) follows this one switch. When off, panels fall back to a solid
+// opaque dark-green card instead of the frosted effect.
+export const GLASS_ENABLED = false;
+export const GLASS_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.07)' : '#0E2A1E';
+export const GLASS_BORDER = GLASS_ENABLED ? 'rgba(255,255,255,0.14)' : '#1B3B2C';
+export const GLASS_DIVIDER = GLASS_ENABLED ? 'rgba(255,255,255,0.12)' : '#1B3B2C';
+export const GLASS_ICON_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.08)' : '#173225';
 
 interface DashboardShellProps {
   title: string;
   children?: React.ReactNode;
-  /** Optional extra content rendered at the very bottom of the scroll area
-   * (below `children`) - used to append the profile card + logout button
-   * when this dashboard is being shown inline on the Menu tab. */
-  footer?: React.ReactNode;
 }
 
 /**
@@ -27,16 +32,12 @@ interface DashboardShellProps {
  * missing OR if the image URL fails to actually load), a role badge, and
  * whatever content that role's screen provides below it.
  *
- * Redesigned as a full-bleed spatial-glass screen: an animated gradient mesh
- * fills the whole screen edge-to-edge (behind the status bar too), with a
- * frosted glass header "floating" near the top instead of a flat white bar.
- *
- * This IS the Menu tab's content now (see MenuScreen.tsx) - there's no
- * separate "My Dashboard" page anymore, so the avatar here is just visual.
+ * Logout now lives in the Menu tab, not here - tapping the avatar jumps
+ * there instead.
  */
-export default function DashboardShell({ title, children, footer }: DashboardShellProps) {
-  const insets = useSafeAreaInsets();
+export default function DashboardShell({ title, children }: DashboardShellProps) {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [photoFailed, setPhotoFailed] = useState(false);
 
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
@@ -44,53 +45,47 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
 
   return (
     <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
-
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <GlassCard surface="light" radius={RADIUS.xl} style={styles.header} intensity={35}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
-              <Text style={styles.greetingName}>{user?.name}</Text>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>{title}</Text>
-              </View>
-            </View>
-
-            <GlassAvatar
-              size={56}
-              initial={initial}
-              uri={showPhoto ? user!.photo : undefined}
-            />
-            {showPhoto && (
-              // Hidden probe image so we can detect load failures and fall
-              // back to initials, without giving GlassAvatar network logic.
-              <Image
-                source={{ uri: user!.photo! }}
-                style={styles.probe}
-                onError={() => setPhotoFailed(true)}
-              />
-            )}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
+          <Text style={styles.greetingName}>{user?.name}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{title}</Text>
           </View>
-        </GlassCard>
-
-        <View style={styles.body}>
-          {children}
-          {footer}
         </View>
+
+        <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+          {showPhoto ? (
+            <Image
+              source={{ uri: user!.photo! }}
+              style={styles.avatar}
+              onError={() => setPhotoFailed(true)}
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>{initial}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {children}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas },
-  content: { paddingHorizontal: 20, paddingBottom: 130, flexGrow: 1 },
-  header: { marginBottom: 20 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  flex: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
   greetingSmall: { fontSize: 14, color: SUBTLE },
   greetingName: { fontSize: 22, fontWeight: '700', color: INK, marginTop: 2 },
   roleBadge: {
@@ -98,12 +93,21 @@ const styles = StyleSheet.create({
     backgroundColor: EMERALD_SOFT,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: RADIUS.sm,
+    borderRadius: 8,
     marginTop: 8,
   },
   roleBadgeText: { fontSize: 11, fontWeight: '700', color: EMERALD, textTransform: 'uppercase', letterSpacing: 0.5 },
-  probe: { position: 'absolute', width: 1, height: 1, opacity: 0 },
-  body: { flexGrow: 1 },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#F2F2F7' },
+  avatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: EMERALD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
+  content: { paddingHorizontal: 20, paddingBottom: 110, flexGrow: 1 },
 });
 
 export { EMERALD, EMERALD_SOFT, INK, SUBTLE };
