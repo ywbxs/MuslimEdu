@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   MemorizationDraft,
@@ -52,14 +53,14 @@ const CANVAS = '#F5F7F6';
 const DANGER = '#BA1A1A';
 const ADMIN_ROLES = [1, 2];
 
-const STATUS_LABELS: Record<MemorizationStatus, string> = {
+const STATUS_FALLBACKS: Record<MemorizationStatus, string> = {
   assigned: 'Assigned',
   in_progress: 'In Progress',
   memorized: 'Memorized',
   needs_revision: 'Needs Revision',
 };
 
-const QUALITY_LABELS: Record<QualityRating, string> = {
+const QUALITY_FALLBACKS: Record<QualityRating, string> = {
   needs_improvement: 'Needs Improvement',
   fair: 'Fair',
   good: 'Good',
@@ -72,11 +73,24 @@ const RISK_COLORS: Record<RiskLevel, { color: string; bg: string }> = {
   high: { color: DANGER, bg: '#FEE2E2' },
 };
 
+const RISK_LEVEL_FALLBACKS: Record<RiskLevel, string> = {
+  low: 'Low',
+  moderate: 'Moderate',
+  high: 'High',
+};
+
 export default function StudentProgressScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdmin = !!user && ADMIN_ROLES.includes(user.role_id);
+  const statusLabel = (status: MemorizationStatus) =>
+    t(`student_progress.status_${status}`, STATUS_FALLBACKS[status]);
+  const qualityLabel = (quality: QualityRating) =>
+    t(`student_progress.quality_${quality}`, QUALITY_FALLBACKS[quality]);
+  const riskLevelLabel = (level: RiskLevel) =>
+    t(`student_progress.risk_${level}`, RISK_LEVEL_FALLBACKS[level]).toUpperCase();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +129,7 @@ export default function StudentProgressScreen() {
         : (await fetchMyClasses(token)).map((r: ClassSection) => ({ id: r.section_id, name: r.section_name }));
       setSections(secs);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load sections.');
+      setError(e?.message ?? t('student_progress.load_sections_error', 'Could not load sections.'));
     } finally {
       setLoading(false);
     }
@@ -136,7 +150,7 @@ export default function StudentProgressScreen() {
       const r = await fetchClassStudents(token, id);
       setRoster(r.students);
     } catch (e: any) {
-      Alert.alert("Couldn't load students", e?.message ?? 'Please try again.');
+      Alert.alert(t('student_progress.load_students_error', "Couldn't load students"), e?.message ?? t('common.try_again_full', 'Please try again.'));
       setRoster([]);
     } finally {
       setRosterLoading(false);
@@ -157,7 +171,7 @@ export default function StudentProgressScreen() {
       setSummary(s);
       setMemRecords(records);
     } catch (e: any) {
-      setSummaryError(e?.message ?? 'Could not load this student.');
+      setSummaryError(e?.message ?? t('student_progress.load_student_error', 'Could not load this student.'));
     } finally {
       setSummaryLoading(false);
       setMemLoading(false);
@@ -191,7 +205,10 @@ export default function StudentProgressScreen() {
   const onSaveRecord = async () => {
     if (!token || !studentId) return;
     if (!fSurahNumber.trim() || !fSurahName.trim()) {
-      Alert.alert('Missing info', 'Surah number and name are required.');
+      Alert.alert(
+        t('student_progress.missing_info_title', 'Missing info'),
+        t('student_progress.missing_info_message', 'Surah number and name are required.'),
+      );
       return;
     }
     setSaving(true);
@@ -215,29 +232,33 @@ export default function StudentProgressScreen() {
       });
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('student_progress.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeleteRecord = (r: MemorizationRecord) => {
-    Alert.alert('Delete this record?', `"${r.surah_name}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteMemorizationRecord(token, r.id);
-            setMemRecords((prev) => prev.filter((x) => x.id !== r.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('student_progress.delete_confirm_title', 'Delete this record?'),
+      t('student_progress.delete_confirm_message', '"{surah}" will be removed.').replace('{surah}', r.surah_name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteMemorizationRecord(token, r.id);
+              setMemRecords((prev) => prev.filter((x) => x.id !== r.id));
+            } catch (e: any) {
+              Alert.alert(t('student_progress.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const onExportStudentReport = async () => {
@@ -247,7 +268,7 @@ export default function StudentProgressScreen() {
       const report = await fetchStudentProgressCsv(token, studentId);
       await Share.share({ title: report.filename, message: report.csv });
     } catch (e: any) {
-      Alert.alert('Could not export report', e?.message ?? 'Please try again.');
+      Alert.alert(t('student_progress.export_error', 'Could not export report'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setExporting(false);
     }
@@ -260,7 +281,7 @@ export default function StudentProgressScreen() {
       const report = await fetchClassProgressCsv(token, sectionId);
       await Share.share({ title: report.filename, message: report.csv });
     } catch (e: any) {
-      Alert.alert('Could not export report', e?.message ?? 'Please try again.');
+      Alert.alert(t('student_progress.export_error', 'Could not export report'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setExporting(false);
     }
@@ -270,7 +291,7 @@ export default function StudentProgressScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading…</Text>
+        <Text style={styles.centerText}>{t('common.loading', 'Loading…')}</Text>
       </View>
     );
   }
@@ -278,10 +299,10 @@ export default function StudentProgressScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('student_progress.error_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -294,8 +315,8 @@ export default function StudentProgressScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Student Progress</Text>
-          <Text style={styles.headerSub}>Attendance, grades, behavior, and memorization in one view</Text>
+          <Text style={styles.headerTitle}>{t('student_progress.header_title', 'Student Progress')}</Text>
+          <Text style={styles.headerSub}>{t('student_progress.header_sub', 'Attendance, grades, behavior, and memorization in one view')}</Text>
         </View>
       </View>
 
@@ -330,14 +351,14 @@ export default function StudentProgressScreen() {
       )}
       {sectionId && (
         <TouchableOpacity onPress={onExportClassReport} disabled={exporting} style={styles.exportClassRow}>
-          <Text style={styles.actionLink}>{exporting ? 'Preparing…' : '⬇ Export class report (CSV)'}</Text>
+          <Text style={styles.actionLink}>{exporting ? t('student_progress.preparing', 'Preparing…') : t('student_progress.export_class_report', '⬇ Export class report (CSV)')}</Text>
         </TouchableOpacity>
       )}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {!studentId ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Pick a section, then a student, to see their progress.</Text>
+            <Text style={styles.emptyText}>{t('student_progress.empty_pick', 'Pick a section, then a student, to see their progress.')}</Text>
           </View>
         ) : summaryLoading ? (
           <ActivityIndicator color={EMERALD} style={{ marginTop: 20 }} />
@@ -351,37 +372,37 @@ export default function StudentProgressScreen() {
               <View style={styles.rowBetween}>
                 <Text style={styles.rowTitle}>{summary.student.name}</Text>
                 <Text style={[styles.riskBadge, { color: RISK_COLORS[summary.risk.level].color, backgroundColor: RISK_COLORS[summary.risk.level].bg }]}>
-                  {summary.risk.level.toUpperCase()} RISK
+                  {riskLevelLabel(summary.risk.level)} {t('student_progress.risk_suffix', 'RISK')}
                 </Text>
               </View>
               <Text style={styles.metricRow}>
-                Attendance: {summary.attendance.rate_percent != null ? `${summary.attendance.rate_percent}%` : 'No data'}
-                {' '}({summary.attendance.days_recorded} days, last {summary.lookback_days})
+                {t('student_progress.metric_attendance', 'Attendance')}: {summary.attendance.rate_percent != null ? `${summary.attendance.rate_percent}%` : t('student_progress.no_data', 'No data')}
+                {' '}({summary.attendance.days_recorded} {t('student_progress.days', 'days')}, {t('student_progress.last_n_days', 'last {n}').replace('{n}', String(summary.lookback_days))})
               </Text>
               <Text style={styles.metricRow}>
-                Assessment average: {summary.grades.assessment_average_percent != null ? `${summary.grades.assessment_average_percent}%` : 'No data'}
-                {' '}({summary.grades.graded_assessment_count} graded)
+                {t('student_progress.metric_assessment_average', 'Assessment average')}: {summary.grades.assessment_average_percent != null ? `${summary.grades.assessment_average_percent}%` : t('student_progress.no_data', 'No data')}
+                {' '}({summary.grades.graded_assessment_count} {t('student_progress.graded', 'graded')})
               </Text>
               <Text style={styles.metricRow}>
-                Exam average: {summary.grades.exam_average_percent != null ? `${summary.grades.exam_average_percent}%` : 'No data'}
-                {' '}({summary.grades.graded_exam_count} graded)
+                {t('student_progress.metric_exam_average', 'Exam average')}: {summary.grades.exam_average_percent != null ? `${summary.grades.exam_average_percent}%` : t('student_progress.no_data', 'No data')}
+                {' '}({summary.grades.graded_exam_count} {t('student_progress.graded', 'graded')})
               </Text>
               <Text style={styles.metricRow}>
-                Behavior incidents (last {summary.lookback_days} days): {summary.behavior.incidents_last_90_days}
-                {summary.behavior.major_incidents_last_90_days > 0 ? ` (${summary.behavior.major_incidents_last_90_days} major)` : ''}
+                {t('student_progress.metric_behavior_incidents', 'Behavior incidents (last {n} days)').replace('{n}', String(summary.lookback_days))}: {summary.behavior.incidents_last_90_days}
+                {summary.behavior.major_incidents_last_90_days > 0 ? ` (${summary.behavior.major_incidents_last_90_days} ${t('student_progress.major', 'major')})` : ''}
               </Text>
               <Text style={styles.metricRow}>
-                Memorization: {summary.memorization.memorized_count} memorized, {summary.memorization.in_progress_count} in progress
+                {t('student_progress.metric_memorization', 'Memorization')}: {summary.memorization.memorized_count} {t('student_progress.memorized', 'memorized')}, {summary.memorization.in_progress_count} {t('student_progress.in_progress', 'in progress')}
               </Text>
               <TouchableOpacity onPress={onExportStudentReport} disabled={exporting} style={styles.exportStudentRow}>
-                <Text style={styles.actionLink}>{exporting ? 'Preparing…' : '⬇ Export this report (CSV)'}</Text>
+                <Text style={styles.actionLink}>{exporting ? t('student_progress.preparing', 'Preparing…') : t('student_progress.export_student_report', '⬇ Export this report (CSV)')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeader}>Memorization Records</Text>
+              <Text style={styles.sectionHeader}>{t('student_progress.memorization_records', 'Memorization Records')}</Text>
               <TouchableOpacity onPress={openNewRecord}>
-                <Text style={styles.actionLink}>+ Add</Text>
+                <Text style={styles.actionLink}>{t('student_progress.add', '+ Add')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -389,28 +410,28 @@ export default function StudentProgressScreen() {
               <ActivityIndicator color={EMERALD} />
             ) : memRecords.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No memorization records yet for this student.</Text>
+                <Text style={styles.emptyText}>{t('student_progress.empty_memorization', 'No memorization records yet for this student.')}</Text>
               </View>
             ) : (
               memRecords.map((r) => (
                 <View key={r.id} style={styles.card}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.rowTitle}>
-                      {r.surah_name} {r.juz_number ? `(Juz ${r.juz_number})` : ''}
+                      {r.surah_name} {r.juz_number ? `(${t('student_progress.juz', 'Juz')} ${r.juz_number})` : ''}
                     </Text>
-                    <Text style={styles.statusBadge}>{STATUS_LABELS[r.status]}</Text>
+                    <Text style={styles.statusBadge}>{statusLabel(r.status)}</Text>
                   </View>
                   <Text style={styles.rowSub}>
                     {r.recorded_date.slice(0, 10)}
-                    {r.quality_rating ? ` · ${QUALITY_LABELS[r.quality_rating]}` : ''}
+                    {r.quality_rating ? ` · ${qualityLabel(r.quality_rating)}` : ''}
                   </Text>
                   {!!r.notes && <Text style={styles.metricRow}>{r.notes}</Text>}
                   <View style={styles.actionsRow}>
                     <TouchableOpacity onPress={() => openEditRecord(r)}>
-                      <Text style={styles.actionLink}>Edit</Text>
+                      <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => confirmDeleteRecord(r)}>
-                      <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                      <Text style={[styles.actionLink, styles.deleteLink]}>{t('common.delete', 'Delete')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -424,51 +445,51 @@ export default function StudentProgressScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{editing ? 'Edit Record' : 'New Memorization Record'}</Text>
+              <Text style={styles.modalTitle}>{editing ? t('student_progress.edit_record', 'Edit Record') : t('student_progress.new_record', 'New Memorization Record')}</Text>
 
-              <Text style={styles.label}>Surah number (1-114)</Text>
+              <Text style={styles.label}>{t('student_progress.surah_number_label', 'Surah number (1-114)')}</Text>
               <TextInput style={styles.input} value={fSurahNumber} onChangeText={setFSurahNumber} keyboardType="numeric" />
 
-              <Text style={styles.label}>Surah name</Text>
-              <TextInput style={styles.input} value={fSurahName} onChangeText={setFSurahName} placeholder="e.g. Al-Fatiha" />
+              <Text style={styles.label}>{t('student_progress.surah_name_label', 'Surah name')}</Text>
+              <TextInput style={styles.input} value={fSurahName} onChangeText={setFSurahName} placeholder={t('student_progress.surah_name_placeholder', 'e.g. Al-Fatiha')} />
 
-              <Text style={styles.label}>Juz (optional, 1-30)</Text>
+              <Text style={styles.label}>{t('student_progress.juz_label', 'Juz (optional, 1-30)')}</Text>
               <TextInput style={styles.input} value={fJuz} onChangeText={setFJuz} keyboardType="numeric" />
 
-              <Text style={styles.label}>Status</Text>
+              <Text style={styles.label}>{t('student_progress.status_label', 'Status')}</Text>
               <View style={styles.chipRow}>
-                {(Object.keys(STATUS_LABELS) as MemorizationStatus[]).map((s) => (
+                {(Object.keys(STATUS_FALLBACKS) as MemorizationStatus[]).map((s) => (
                   <TouchableOpacity key={s} style={[styles.chip, fStatus === s && styles.chipActive]} onPress={() => setFStatus(s)}>
-                    <Text style={[styles.chipText, fStatus === s && styles.chipTextActive]}>{STATUS_LABELS[s]}</Text>
+                    <Text style={[styles.chipText, fStatus === s && styles.chipTextActive]}>{statusLabel(s)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>Quality (optional)</Text>
+              <Text style={styles.label}>{t('student_progress.quality_label', 'Quality (optional)')}</Text>
               <View style={styles.chipRow}>
-                {(Object.keys(QUALITY_LABELS) as QualityRating[]).map((q) => (
+                {(Object.keys(QUALITY_FALLBACKS) as QualityRating[]).map((q) => (
                   <TouchableOpacity
                     key={q}
                     style={[styles.chip, fQuality === q && styles.chipActive]}
                     onPress={() => setFQuality(fQuality === q ? null : q)}
                   >
-                    <Text style={[styles.chipText, fQuality === q && styles.chipTextActive]}>{QUALITY_LABELS[q]}</Text>
+                    <Text style={[styles.chipText, fQuality === q && styles.chipTextActive]}>{qualityLabel(q)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+              <Text style={styles.label}>{t('student_progress.date_label', 'Date (YYYY-MM-DD)')}</Text>
               <TextInput style={styles.input} value={fDate} onChangeText={setFDate} />
 
-              <Text style={styles.label}>Notes (optional)</Text>
+              <Text style={styles.label}>{t('student_progress.notes_label', 'Notes (optional)')}</Text>
               <TextInput style={[styles.input, styles.inputMultiline]} value={fNotes} onChangeText={setFNotes} multiline />
 
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSave} onPress={onSaveRecord} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
