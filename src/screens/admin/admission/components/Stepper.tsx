@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { md3 } from '../theme';
+import { useLocale } from '../../../../context/LocaleContext';
 
 export interface StepDef {
   key: string;
@@ -53,6 +54,7 @@ function StepDot({ index, active, done }: { index: number; active: boolean; done
 }
 
 export default function Stepper({ steps, activeIndex }: { steps: StepDef[]; activeIndex: number }) {
+  const { t } = useLocale();
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export default function Stepper({ steps, activeIndex }: { steps: StepDef[]; acti
         ))}
       </View>
       <Text style={styles.caption}>
-        Step {activeIndex + 1} of {steps.length} · {steps[activeIndex]?.title}
+        {t('stepper.step', 'Step')} {activeIndex + 1} {t('stepper.of', 'of')} {steps.length} · {steps[activeIndex]?.title}
       </Text>
     </View>
   );

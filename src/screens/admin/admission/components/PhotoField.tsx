@@ -4,6 +4,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { md3 } from '../theme';
 import { prepareProfilePhoto, InvalidPhotoTypeError, formatBytes, MAX_PHOTO_BYTES } from '../../../../utils/imagePrep';
 import { PickedPhoto } from '../../../../services/orphanService';
+import { useLocale } from '../../../../context/LocaleContext';
 
 export interface PreparedPhotoState extends PickedPhoto {
   size?: number;
@@ -23,6 +24,7 @@ export default function PhotoField({
   error?: string | null;
   onErrorChange: (message: string | null) => void;
 }) {
+  const { t } = useLocale();
   const [busy, setBusy] = useState(false);
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -63,7 +65,7 @@ export default function PhotoField({
       if (err instanceof InvalidPhotoTypeError) {
         onErrorChange(err.message);
       } else {
-        onErrorChange('Could not process that image. Please try a different photo.');
+        onErrorChange(t('photo_field.process_error', 'Could not process that image. Please try a different photo.'));
       }
     } finally {
       setBusy(false);
@@ -88,32 +90,32 @@ export default function PhotoField({
           ) : null}
         </Animated.View>
         <View style={styles.editBadge}>
-          <Text style={styles.editBadgeText}>{photo ? 'Change' : 'Add photo'}</Text>
+          <Text style={styles.editBadgeText}>{photo ? t('photo_field.change', 'Change') : t('photo_field.add_photo', 'Add photo')}</Text>
         </View>
       </TouchableOpacity>
 
       <Text style={styles.hint}>
         {busy
-          ? 'Optimizing image...'
+          ? t('photo_field.optimizing', 'Optimizing image...')
           : photo
-          ? 'Tap the photo to choose a different one.'
-          : 'Required. JPG, JPEG, or PNG.'}
+          ? t('photo_field.tap_to_change', 'Tap the photo to choose a different one.')
+          : t('photo_field.required_types', 'Required. JPG, JPEG, or PNG.')}
       </Text>
 
       {photo?.size ? (
         <Text style={styles.meta}>
           {formatBytes(photo.size)}
-          {photo.wasCompressed ? ` · compressed to fit ${formatBytes(MAX_PHOTO_BYTES)} limit` : ''}
+          {photo.wasCompressed ? ` · ${t('photo_field.compressed_to_fit', 'compressed to fit')} ${formatBytes(MAX_PHOTO_BYTES)} ${t('photo_field.limit', 'limit')}` : ''}
         </Text>
       ) : (
-        <Text style={styles.meta}>Max {formatBytes(MAX_PHOTO_BYTES)} - larger photos are compressed automatically.</Text>
+        <Text style={styles.meta}>{t('photo_field.max_size', 'Max')} {formatBytes(MAX_PHOTO_BYTES)} - {t('photo_field.compressed_note', 'larger photos are compressed automatically.')}</Text>
       )}
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {photo ? (
         <TouchableOpacity onPress={() => onChange(null)} hitSlop={8}>
-          <Text style={styles.remove}>Remove photo</Text>
+          <Text style={styles.remove}>{t('photo_field.remove_photo', 'Remove photo')}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
