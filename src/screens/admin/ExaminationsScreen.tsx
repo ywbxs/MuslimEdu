@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   Examination,
@@ -49,7 +50,7 @@ const CANVAS = '#F5F7F6';
 const DANGER = '#BA1A1A';
 const ADMIN_ROLES = [1, 2];
 
-const STATUS_LABELS: Record<ExaminationStatus, string> = {
+const STATUS_FALLBACKS: Record<ExaminationStatus, string> = {
   draft: 'Draft',
   published: 'Published',
   archived: 'Archived',
@@ -61,7 +62,9 @@ export default function ExaminationsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdmin = !!user && ADMIN_ROLES.includes(user.role_id);
+  const statusLabel = (s: ExaminationStatus) => t(`examinations.status_${s}`, STATUS_FALLBACKS[s]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,11 +105,11 @@ export default function ExaminationsScreen() {
       setExams(ex);
       setAssignments(asn);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load examinations.');
+      setError(e?.message ?? t('examinations.load_error', 'Could not load examinations.'));
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter]);
+  }, [token, statusFilter, t]);
 
   useEffect(() => {
     load();
@@ -137,7 +140,10 @@ export default function ExaminationsScreen() {
 
   const openEdit = (exam: Examination) => {
     if (exam.status === 'published' && !isAdmin) {
-      Alert.alert('Published exam', 'Only an administrator can change a published exam. You can still grade and release results.');
+      Alert.alert(
+        t('examinations.published_exam_title', 'Published exam'),
+        t('examinations.published_exam_message', 'Only an administrator can change a published exam. You can still grade and release results.'),
+      );
       return;
     }
     setEditing(exam);
@@ -155,11 +161,11 @@ export default function ExaminationsScreen() {
   const onSave = async () => {
     if (!token) return;
     if (!editing && !fAssignmentKey) {
-      Alert.alert('Missing info', 'Pick a section and subject first.');
+      Alert.alert(t('examinations.missing_info', 'Missing info'), t('examinations.missing_section_subject', 'Pick a section and subject first.'));
       return;
     }
     if (!fTitle.trim()) {
-      Alert.alert('Title required', 'Give this exam a title first.');
+      Alert.alert(t('examinations.title_required', 'Title required'), t('examinations.title_required_message', 'Give this exam a title first.'));
       return;
     }
     setSaving(true);
@@ -187,35 +193,42 @@ export default function ExaminationsScreen() {
       });
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('examinations.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const onPublish = (exam: Examination) => {
-    Alert.alert('Publish this exam?', 'Students in this section will be able to see it. You can no longer edit its schedule or marks without an administrator.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Publish',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            const saved = await publishExamination(token, exam.id);
-            setExams((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
-          } catch (e: any) {
-            Alert.alert('Could not publish', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('examinations.publish_title', 'Publish this exam?'),
+      t(
+        'examinations.publish_message',
+        'Students in this section will be able to see it. You can no longer edit its schedule or marks without an administrator.',
+      ),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('examinations.publish', 'Publish'),
+          onPress: async () => {
+            if (!token) return;
+            try {
+              const saved = await publishExamination(token, exam.id);
+              setExams((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
+            } catch (e: any) {
+              Alert.alert(t('examinations.publish_error', 'Could not publish'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const confirmDelete = (exam: Examination) => {
-    Alert.alert('Delete this exam?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('examinations.delete_title', 'Delete this exam?'), t('examinations.delete_message', 'This cannot be undone.'), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('examinations.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -223,7 +236,7 @@ export default function ExaminationsScreen() {
             await deleteExamination(token, exam.id);
             setExams((prev) => prev.filter((x) => x.id !== exam.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('examinations.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -256,7 +269,7 @@ export default function ExaminationsScreen() {
       });
       setMarksDraft(draft);
     } catch (e: any) {
-      Alert.alert("Couldn't load roster", e?.message ?? 'Please try again.');
+      Alert.alert(t('examinations.load_roster_error', "Couldn't load roster"), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setGradingLoading(false);
     }
@@ -272,9 +285,9 @@ export default function ExaminationsScreen() {
         is_absent: marksDraft[s.id]?.absent ?? false,
       }));
       await saveExaminationResults(token, gradingExam.id, results);
-      Alert.alert('Saved', 'Grades saved. Remember to release them so students can see their marks.');
+      Alert.alert(t('examinations.saved', 'Saved'), t('examinations.saved_message', 'Grades saved. Remember to release them so students can see their marks.'));
     } catch (e: any) {
-      Alert.alert('Could not save grades', e?.message ?? 'Please try again.');
+      Alert.alert(t('examinations.save_grades_error', 'Could not save grades'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setGradingSaving(false);
     }
@@ -282,16 +295,16 @@ export default function ExaminationsScreen() {
 
   const onRelease = () => {
     if (!token || !gradingExam) return;
-    Alert.alert('Release results?', 'Students will be able to see their marks for this exam.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('examinations.release_title', 'Release results?'), t('examinations.release_message', 'Students will be able to see their marks for this exam.'), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Release',
+        text: t('examinations.release', 'Release'),
         onPress: async () => {
           try {
             await releaseExaminationResults(token, gradingExam.id);
-            Alert.alert('Released', 'Results are now visible to students.');
+            Alert.alert(t('examinations.released', 'Released'), t('examinations.released_message', 'Results are now visible to students.'));
           } catch (e: any) {
-            Alert.alert('Could not release', e?.message ?? 'Please try again.');
+            Alert.alert(t('examinations.release_error', 'Could not release'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -302,7 +315,7 @@ export default function ExaminationsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading examinations…</Text>
+        <Text style={styles.centerText}>{t('examinations.loading', 'Loading examinations…')}</Text>
       </View>
     );
   }
@@ -310,10 +323,10 @@ export default function ExaminationsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('examinations.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -328,8 +341,10 @@ export default function ExaminationsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Examinations</Text>
-          <Text style={styles.headerSub}>{isAdmin ? 'All exams in your school' : 'Exams you own'}</Text>
+          <Text style={styles.headerTitle}>{t('examinations.title', 'Examinations')}</Text>
+          <Text style={styles.headerSub}>
+            {isAdmin ? t('examinations.subtitle_admin', 'All exams in your school') : t('examinations.subtitle_teacher', 'Exams you own')}
+          </Text>
         </View>
       </View>
 
@@ -341,7 +356,7 @@ export default function ExaminationsScreen() {
             onPress={() => setStatusFilter(s)}
           >
             <Text style={[styles.filterChipText, statusFilter === s && styles.filterChipTextActive]}>
-              {s ? STATUS_LABELS[s] : 'All'}
+              {s ? statusLabel(s) : t('common.all', 'All')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -350,7 +365,7 @@ export default function ExaminationsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {exams.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No examinations yet.</Text>
+            <Text style={styles.emptyText}>{t('examinations.empty', 'No examinations yet.')}</Text>
           </View>
         ) : (
           exams.map((exam) => {
@@ -361,10 +376,10 @@ export default function ExaminationsScreen() {
                   <View style={styles.flexCol}>
                     <Text style={styles.rowTitle}>{exam.title}</Text>
                     <Text style={styles.rowSub}>
-                      {exam.exam_type} · {exam.total_marks} marks
+                      {exam.exam_type} · {exam.total_marks} {t('examinations.marks', 'marks')}
                       {exam.scheduled_date ? ` · ${exam.scheduled_date.slice(0, 10)}` : ''}
                       {' · '}
-                      {gradedCount}/{(exam.results ?? []).length || '?'} graded
+                      {gradedCount}/{(exam.results ?? []).length || '?'} {t('examinations.graded', 'graded')}
                     </Text>
                   </View>
                   <Text
@@ -373,24 +388,24 @@ export default function ExaminationsScreen() {
                       exam.status === 'published' ? styles.statusPublished : styles.statusDraft,
                     ]}
                   >
-                    {STATUS_LABELS[exam.status]}
+                    {statusLabel(exam.status)}
                   </Text>
                 </View>
 
                 <View style={styles.actionsRow}>
                   <TouchableOpacity onPress={() => openGrading(exam)}>
-                    <Text style={styles.actionLink}>Grade</Text>
+                    <Text style={styles.actionLink}>{t('examinations.grade', 'Grade')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => openEdit(exam)}>
-                    <Text style={styles.actionLink}>Edit</Text>
+                    <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   {exam.status === 'draft' && (
                     <TouchableOpacity onPress={() => onPublish(exam)}>
-                      <Text style={styles.actionLink}>Publish</Text>
+                      <Text style={styles.actionLink}>{t('examinations.publish', 'Publish')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={() => confirmDelete(exam)}>
-                    <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                    <Text style={[styles.actionLink, styles.deleteLink]}>{t('examinations.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -401,7 +416,7 @@ export default function ExaminationsScreen() {
 
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={openNew}>
-          <Text style={styles.addBtnText}>+ New Examination</Text>
+          <Text style={styles.addBtnText}>{t('examinations.new_examination', '+ New Examination')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -410,11 +425,13 @@ export default function ExaminationsScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{editing ? 'Edit Examination' : 'New Examination'}</Text>
+              <Text style={styles.modalTitle}>
+                {editing ? t('examinations.edit_examination', 'Edit Examination') : t('examinations.new_examination_title', 'New Examination')}
+              </Text>
 
               {!editing && (
                 <>
-                  <Text style={styles.label}>Section / Subject</Text>
+                  <Text style={styles.label}>{t('examinations.section_subject_label', 'Section / Subject')}</Text>
                   <ScrollView style={styles.assignmentList} nestedScrollEnabled>
                     {uniqueAssignments.map((a) => {
                       const key = `${a.section_id}:${a.subject_id}`;
@@ -425,47 +442,51 @@ export default function ExaminationsScreen() {
                           onPress={() => setFAssignmentKey(key)}
                         >
                           <Text style={[styles.assignmentRowText, fAssignmentKey === key && styles.assignmentRowTextActive]}>
-                            {a.subject_name ?? `Subject ${a.subject_id}`} — Section {a.section_id}
+                            {a.subject_name ?? t('examinations.subject_fallback', 'Subject {id}').replace('{id}', String(a.subject_id))}
+                            {' — '}
+                            {t('examinations.section_prefix', 'Section')} {a.section_id}
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                     {uniqueAssignments.length === 0 && (
-                      <Text style={styles.emptyText}>You're not assigned to teach any subject yet.</Text>
+                      <Text style={styles.emptyText}>{t('examinations.no_assignments', "You're not assigned to teach any subject yet.")}</Text>
                     )}
                   </ScrollView>
                 </>
               )}
 
-              <Text style={styles.label}>Title</Text>
-              <TextInput style={styles.input} value={fTitle} onChangeText={setFTitle} placeholder="e.g. Midterm Exam" />
+              <Text style={styles.label}>{t('examinations.title_label', 'Title')}</Text>
+              <TextInput style={styles.input} value={fTitle} onChangeText={setFTitle} placeholder={t('examinations.title_placeholder', 'e.g. Midterm Exam')} />
 
-              <Text style={styles.label}>Type</Text>
+              <Text style={styles.label}>{t('examinations.type_label', 'Type')}</Text>
               <View style={styles.chipRow}>
-                {EXAM_TYPES.map((t) => (
+                {EXAM_TYPES.map((examType) => (
                   <TouchableOpacity
-                    key={t}
-                    style={[styles.chip, fExamType === t && styles.chipActive]}
-                    onPress={() => setFExamType(t)}
+                    key={examType}
+                    style={[styles.chip, fExamType === examType && styles.chipActive]}
+                    onPress={() => setFExamType(examType)}
                   >
-                    <Text style={[styles.chipText, fExamType === t && styles.chipTextActive]}>{t}</Text>
+                    <Text style={[styles.chipText, fExamType === examType && styles.chipTextActive]}>
+                      {t(`examinations.type_${examType}`, examType)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>Scheduled date (YYYY-MM-DD, optional)</Text>
+              <Text style={styles.label}>{t('examinations.scheduled_date_label', 'Scheduled date (YYYY-MM-DD, optional)')}</Text>
               <TextInput style={styles.input} value={fScheduledDate} onChangeText={setFScheduledDate} placeholder="2026-08-15" />
 
-              <Text style={styles.label}>Total marks</Text>
+              <Text style={styles.label}>{t('examinations.total_marks_label', 'Total marks')}</Text>
               <TextInput style={styles.input} value={fTotalMarks} onChangeText={setFTotalMarks} keyboardType="numeric" />
 
-              <Text style={styles.label}>Passing marks (optional)</Text>
+              <Text style={styles.label}>{t('examinations.passing_marks_label', 'Passing marks (optional)')}</Text>
               <TextInput style={styles.input} value={fPassingMarks} onChangeText={setFPassingMarks} keyboardType="numeric" />
 
-              <Text style={styles.label}>Weight % (optional)</Text>
+              <Text style={styles.label}>{t('examinations.weight_label', 'Weight % (optional)')}</Text>
               <TextInput style={styles.input} value={fWeight} onChangeText={setFWeight} keyboardType="numeric" />
 
-              <Text style={styles.label}>Instructions (optional)</Text>
+              <Text style={styles.label}>{t('examinations.instructions_label', 'Instructions (optional)')}</Text>
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={fInstructions}
@@ -475,10 +496,10 @@ export default function ExaminationsScreen() {
 
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSave} onPress={onSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -490,7 +511,7 @@ export default function ExaminationsScreen() {
       <Modal visible={gradingVisible} animationType="slide" transparent onRequestClose={() => setGradingVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{gradingExam?.title ?? 'Grade Exam'}</Text>
+            <Text style={styles.modalTitle}>{gradingExam?.title ?? t('examinations.grade_exam', 'Grade Exam')}</Text>
             {gradingLoading ? (
               <ActivityIndicator color={EMERALD} style={{ marginVertical: 20 }} />
             ) : (
@@ -525,24 +546,26 @@ export default function ExaminationsScreen() {
                           marksDraft[s.id]?.absent && styles.absentToggleTextActive,
                         ]}
                       >
-                        Absent
+                        {t('examinations.absent', 'Absent')}
                       </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
-                {roster.length === 0 && <Text style={styles.emptyText}>No students enrolled in this section.</Text>}
+                {roster.length === 0 && (
+                  <Text style={styles.emptyText}>{t('examinations.no_students', 'No students enrolled in this section.')}</Text>
+                )}
               </ScrollView>
             )}
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setGradingVisible(false)}>
-                <Text style={styles.modalCancelText}>Close</Text>
+                <Text style={styles.modalCancelText}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancel} onPress={onRelease}>
-                <Text style={styles.modalCancelText}>Release</Text>
+                <Text style={styles.modalCancelText}>{t('examinations.release', 'Release')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveGrades} disabled={gradingSaving}>
-                {gradingSaving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save Grades</Text>}
+                {gradingSaving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('examinations.save_grades', 'Save Grades')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
