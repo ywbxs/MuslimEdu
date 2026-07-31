@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
 import { GLASS, RADIUS } from '../../theme/glass';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import {
   admitStudent,
   fetchClasses,
@@ -163,7 +164,7 @@ export default function AdmissionScreen() {
     }).start();
   }, [stepIndex, stepAnim]);
 
-  const isOrphanSchool = !!user?.is_orphan;
+  const isOrphanSchool = isOrphanSchoolUser(user);
   const schoolCode = user?.school_code ?? null; // e.g. "MLP2648", locked
 
   // Whenever the admin edits the suffix, recompute the full code the

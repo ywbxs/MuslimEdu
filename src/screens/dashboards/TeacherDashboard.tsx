@@ -15,6 +15,7 @@ import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import { fetchTeacherReportStatus, TeacherReportStatus } from '../../services/teacherOrphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOW } from '../../theme/spatial';
@@ -312,7 +313,9 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const isOrphan = !!user?.is_orphan && user?.institution_type === 'orphanage';
+  // Either orphan-school signal is enough - requiring both meant a teacher
+  // whose token carried only one of them got the full academic card set.
+  const isOrphan = isOrphanSchoolUser(user);
 
   const [status, setStatus] = useState<TeacherReportStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(isOrphan);
