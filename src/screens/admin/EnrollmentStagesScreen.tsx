@@ -11,6 +11,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -77,6 +78,7 @@ export default function EnrollmentStagesScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,11 +92,11 @@ export default function EnrollmentStagesScreen() {
       const data = await fetchEnrollmentStages(token);
       setStages(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load stages.');
+      setError(err instanceof Error ? err.message : t('enrollment_stages.load_error', 'Failed to load stages.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,7 +120,7 @@ export default function EnrollmentStagesScreen() {
       setStages(saved);
     } catch (err) {
       setStages(stages); // revert on failure
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not reorder stages.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_stages.reorder_error', 'Could not reorder stages.'));
     } finally {
       setReorderingId(null);
     }
@@ -126,12 +128,12 @@ export default function EnrollmentStagesScreen() {
 
   const handleDelete = (stage: WorkflowStage) => {
     Alert.alert(
-      'Delete Stage',
-      `Delete "${stage.name}"? This can't be undone.`,
+      t('enrollment_stages.delete_title', 'Delete Stage'),
+      t('enrollment_stages.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', stage.name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('enrollment_stages.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
@@ -142,7 +144,7 @@ export default function EnrollmentStagesScreen() {
               // The backend deliberately blocks deletion when the stage is
               // in use (students currently on it, or in history) and asks
               // for deactivation instead - surface that message as-is.
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete stage.');
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_stages.delete_error', 'Failed to delete stage.'));
             }
           },
         },
@@ -204,7 +206,7 @@ export default function EnrollmentStagesScreen() {
           {item.is_terminal ? (
             <View style={styles.terminalRow}>
               <IconFlag color={theme.accent} />
-              <Text style={styles.terminalText}>Final stage - completes the workflow</Text>
+              <Text style={styles.terminalText}>{t('enrollment_stages.final_stage', 'Final stage - completes the workflow')}</Text>
             </View>
           ) : null}
 
@@ -213,7 +215,7 @@ export default function EnrollmentStagesScreen() {
               style={styles.deleteButton}
               onPress={() => handleDelete(item)}
             >
-              <Text style={styles.deleteButtonText}>Delete</Text>
+              <Text style={styles.deleteButtonText}>{t('enrollment_stages.delete', 'Delete')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -242,7 +244,7 @@ export default function EnrollmentStagesScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Stages</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_stages.title', 'Enrollment Stages')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>{[0, 1, 2, 3].map(renderSkeletonCard)}</View>
@@ -263,13 +265,13 @@ export default function EnrollmentStagesScreen() {
           style={styles.studentsButton}
           onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}
         >
-          <Text style={styles.studentsButtonText}>Students</Text>
+          <Text style={styles.studentsButtonText}>{t('enrollment_stages.students', 'Students')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => (navigation as any).navigate('EnrollmentStageForm')}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.addButtonText}>{t('enrollment_stages.add', '+ Add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -277,13 +279,13 @@ export default function EnrollmentStagesScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
       <Text style={styles.helperText}>
-        Students move through these stages in order, top to bottom. Use the arrows to reorder.
+        {t('enrollment_stages.helper', 'Students move through these stages in order, top to bottom. Use the arrows to reorder.')}
       </Text>
 
       <FlatList
@@ -295,9 +297,9 @@ export default function EnrollmentStagesScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="🧭"
-            title="No enrollment stages yet"
-            subtitle="Add your first stage (e.g. Admission) to start building the workflow."
-            actionLabel="Add Stage"
+            title={t('enrollment_stages.empty_title', 'No enrollment stages yet')}
+            subtitle={t('enrollment_stages.empty_subtitle', 'Add your first stage (e.g. Admission) to start building the workflow.')}
+            actionLabel={t('enrollment_stages.empty_action', 'Add Stage')}
             onAction={() => (navigation as any).navigate('EnrollmentStageForm')}
             colors={theme}
           />
