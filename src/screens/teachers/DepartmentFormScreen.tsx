@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -30,6 +31,9 @@ const DepartmentFormScreen = () => {
   const route = useRoute();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const schoolLevelLabel = (level: string) => t(`department_form.school_level_${level}`, labelize(level));
+  const statusLabel = (status: string) => t(`department_form.status_${status}`, labelize(status));
   const departmentId = route.params?.departmentId;
   const isEditing = !!departmentId;
 
@@ -146,12 +150,12 @@ const DepartmentFormScreen = () => {
           status: dept.status || 'active',
         });
       } else {
-        Alert.alert('Error', 'Department not found');
+        Alert.alert(t('common.error', 'Error'), t('department_form.not_found', 'Department not found'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching department:', error);
-      Alert.alert('Error', 'Failed to load department');
+      Alert.alert(t('common.error', 'Error'), t('department_form.load_error', 'Failed to load department'));
     } finally {
       setLoading(false);
     }
@@ -168,7 +172,7 @@ const DepartmentFormScreen = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Department name is required');
+      Alert.alert(t('common.error', 'Error'), t('department_form.name_required', 'Department name is required'));
       return false;
     }
     return true;
@@ -205,8 +209,8 @@ const DepartmentFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Department updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('department_form.success', 'Success'), t('department_form.updated_message', 'Department updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await axios.post(`${API_BASE_URL}/admin_departments_create`, payload, {
@@ -215,16 +219,16 @@ const DepartmentFormScreen = () => {
             'Content-Type': 'application/json',
           },
         });
-        Alert.alert('Success', 'Department created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('department_form.success', 'Success'), t('department_form.created_message', 'Department created successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
       console.error('Error saving department:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || 'Failed to save department';
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || t('department_form.save_error', 'Failed to save department');
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -233,20 +237,20 @@ const DepartmentFormScreen = () => {
   const getDisplayValue = (field) => {
     switch (field) {
       case 'school_level':
-        return formData.school_level ? labelize(formData.school_level) : 'Select...';
+        return formData.school_level ? schoolLevelLabel(formData.school_level) : t('department_form.select_placeholder', 'Select...');
       case 'campus_id':
-        return campuses.find((c) => c.id === parseInt(formData.campus_id))?.name || 'Select...';
+        return campuses.find((c) => c.id === parseInt(formData.campus_id))?.name || t('department_form.select_placeholder', 'Select...');
       case 'faculty_id':
-        return faculties.find((f) => f.id === parseInt(formData.faculty_id))?.name || 'None';
+        return faculties.find((f) => f.id === parseInt(formData.faculty_id))?.name || t('common.none', 'None');
       case 'head_of_department_id':
         return (
-          teachers.find((t) => t.id === parseInt(formData.head_of_department_id))?.name ||
-          'Not assigned'
+          teachers.find((teacher) => teacher.id === parseInt(formData.head_of_department_id))?.name ||
+          t('department_form.not_assigned', 'Not assigned')
         );
       case 'status':
-        return labelize(formData.status);
+        return statusLabel(formData.status);
       default:
-        return formData[field] || 'Select...';
+        return formData[field] || t('department_form.select_placeholder', 'Select...');
     }
   };
 
@@ -264,16 +268,16 @@ const DepartmentFormScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Department' : 'Create Department'}
+          {isEditing ? t('department_form.edit_title', 'Edit Department') : t('department_form.create_title', 'Create Department')}
         </Text>
       </View>
 
       <View style={styles.formContainer}>
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Department Name *</Text>
+          <Text style={styles.label}>{t('department_form.name_label', 'Department Name *')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Mathematics"
+            placeholder={t('department_form.name_placeholder', 'e.g., Mathematics')}
             value={formData.name}
             onChangeText={(text) => updateField('name', text)}
             placeholderTextColor={theme.textMuted}
@@ -281,7 +285,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Code</Text>
+          <Text style={styles.label}>{t('department_form.code_label', 'Code')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., MATH"
@@ -292,7 +296,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>School Level</Text>
+          <Text style={styles.label}>{t('department_form.school_level_label', 'School Level')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('school_level')}
@@ -302,7 +306,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Campus</Text>
+          <Text style={styles.label}>{t('department_form.campus_label', 'Campus')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('campus_id')}
@@ -312,7 +316,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Faculty / College / Institute</Text>
+          <Text style={styles.label}>{t('department_form.faculty_label', 'Faculty / College / Institute')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('faculty_id')}
@@ -322,7 +326,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Head of Department</Text>
+          <Text style={styles.label}>{t('department_form.head_label', 'Head of Department')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('head_of_department_id')}
@@ -334,10 +338,10 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('department_form.description_label', 'Description')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Optional description"
+            placeholder={t('department_form.description_placeholder', 'Optional description')}
             value={formData.description}
             onChangeText={(text) => updateField('description', text)}
             multiline
@@ -346,7 +350,7 @@ const DepartmentFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Status</Text>
+          <Text style={styles.label}>{t('department_form.status_label', 'Status')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('status')}
@@ -364,7 +368,7 @@ const DepartmentFormScreen = () => {
             <ActivityIndicator size="small" color={theme.onAccent} />
           ) : (
             <Text style={styles.submitButtonText}>
-              {isEditing ? 'Save Changes' : 'Create Department'}
+              {isEditing ? t('department_form.save_changes', 'Save Changes') : t('department_form.create_title', 'Create Department')}
             </Text>
           )}
         </TouchableOpacity>
@@ -373,7 +377,7 @@ const DepartmentFormScreen = () => {
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -386,7 +390,7 @@ const DepartmentFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Campus</Text>
+            <Text style={styles.modalTitle}>{t('department_form.select_campus', 'Select Campus')}</Text>
             <FlatList
               data={campuses}
               renderItem={({ item }) => (
@@ -403,7 +407,7 @@ const DepartmentFormScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -418,9 +422,9 @@ const DepartmentFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Faculty / College / Institute</Text>
+            <Text style={styles.modalTitle}>{t('department_form.select_faculty', 'Select Faculty / College / Institute')}</Text>
             <FlatList
-              data={[{ id: null, name: 'None' }, ...faculties]}
+              data={[{ id: null, name: t('common.none', 'None') }, ...faculties]}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
@@ -435,7 +439,7 @@ const DepartmentFormScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -450,21 +454,21 @@ const DepartmentFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select School Level</Text>
+            <Text style={styles.modalTitle}>{t('department_form.select_school_level', 'Select School Level')}</Text>
             {SCHOOL_LEVELS.map((level) => (
               <TouchableOpacity
                 key={level}
                 style={styles.modalItem}
                 onPress={() => handleSelectOption('school_level', level)}
               >
-                <Text style={styles.modalItemText}>{labelize(level)}</Text>
+                <Text style={styles.modalItemText}>{schoolLevelLabel(level)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -479,7 +483,7 @@ const DepartmentFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Head of Department</Text>
+            <Text style={styles.modalTitle}>{t('department_form.select_head', 'Select Head of Department')}</Text>
             <FlatList
               data={teachers}
               renderItem={({ item }) => (
@@ -492,20 +496,20 @@ const DepartmentFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No teachers found</Text>
+                <Text style={styles.modalEmptyText}>{t('department_form.no_teachers_found', 'No teachers found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('head_of_department_id', '')}
             >
-              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>{t('department_form.clear_selection', 'Clear selection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -520,21 +524,21 @@ const DepartmentFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Status</Text>
+            <Text style={styles.modalTitle}>{t('department_form.select_status', 'Select Status')}</Text>
             {STATUSES.map((status) => (
               <TouchableOpacity
                 key={status}
                 style={styles.modalItem}
                 onPress={() => handleSelectOption('status', status)}
               >
-                <Text style={styles.modalItemText}>{labelize(status)}</Text>
+                <Text style={styles.modalItemText}>{statusLabel(status)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

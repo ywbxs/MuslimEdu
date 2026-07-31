@@ -16,6 +16,7 @@ import axios from 'axios';
 import Svg, { Polyline } from 'react-native-svg';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -39,7 +40,9 @@ const DepartmentListScreen = () => {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
+  const statusLabel = (status: string) => t(`department_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
   const [departments, setDepartments] = useState([]);
   const [campuses, setCampuses] = useState([]);
@@ -103,7 +106,7 @@ const DepartmentListScreen = () => {
       setDepartments(response.data.departments || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
-      Alert.alert('Error', 'Failed to load departments');
+      Alert.alert(t('common.error', 'Error'), t('department_list.load_error', 'Failed to load departments'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -136,12 +139,12 @@ const DepartmentListScreen = () => {
 
   const handleDelete = (department) => {
     Alert.alert(
-      'Delete Department',
-      `Delete "${department.name}"? This can't be undone.`,
+      t('department_list.delete_title', 'Delete Department'),
+      t('department_list.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', department.name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('department_list.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -157,8 +160,8 @@ const DepartmentListScreen = () => {
               );
               fetchDepartments();
             } catch (error) {
-              const msg = error.response?.data?.message || 'Failed to delete department';
-              Alert.alert('Error', msg);
+              const msg = error.response?.data?.message || t('department_list.delete_error', 'Failed to delete department');
+              Alert.alert(t('common.error', 'Error'), msg);
             }
           },
         },
@@ -196,22 +199,22 @@ const DepartmentListScreen = () => {
 
         {item.campus_name ? (
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Campus:</Text>
+            <Text style={styles.label}>{t('department_list.campus_label', 'Campus:')}</Text>
             <Text style={styles.value}>{item.campus_name}</Text>
           </View>
         ) : null}
 
         <View style={styles.infoRow}>
-          <Text style={styles.label}>Head:</Text>
-          <Text style={styles.value}>{item.head_of_department_name || 'Not assigned'}</Text>
+          <Text style={styles.label}>{t('department_list.head_label', 'Head:')}</Text>
+          <Text style={styles.value}>{item.head_of_department_name || t('department_list.not_assigned', 'Not assigned')}</Text>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statChip}>
-            <Text style={styles.statChipText}>{item.curricula_count} curricula</Text>
+            <Text style={styles.statChipText}>{t('department_list.n_curricula', '{n} curricula').replace('{n}', String(item.curricula_count))}</Text>
           </View>
           <View style={styles.statChip}>
-            <Text style={styles.statChipText}>{item.classes_count} classes</Text>
+            <Text style={styles.statChipText}>{t('department_list.n_classes', '{n} classes').replace('{n}', String(item.classes_count))}</Text>
           </View>
         </View>
 
@@ -220,13 +223,13 @@ const DepartmentListScreen = () => {
             style={styles.actionButton}
             onPress={() => handleDepartmentPress(item.id)}
           >
-            <Text style={styles.actionButtonText}>Edit</Text>
+            <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('department_list.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -256,7 +259,7 @@ const DepartmentListScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Departments</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('department_list.title', 'Departments')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>
@@ -280,7 +283,7 @@ const DepartmentListScreen = () => {
             style={styles.addButton}
             onPress={() => navigation.navigate('DepartmentForm')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('department_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -290,7 +293,7 @@ const DepartmentListScreen = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search department name or code..."
+          placeholder={t('department_list.search_placeholder', 'Search department name or code...')}
           value={searchTerm}
           onChangeText={handleSearch}
           placeholderTextColor={theme.textMuted}
@@ -313,7 +316,7 @@ const DepartmentListScreen = () => {
                 statusFilter === status && styles.filterButtonTextActive,
               ]}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -326,7 +329,7 @@ const DepartmentListScreen = () => {
             onPress={() => handleCampusFilter('all')}
           >
             <Text style={[styles.filterButtonText, campusFilter === 'all' && styles.filterButtonTextActive]}>
-              All Campuses
+              {t('department_list.all_campuses', 'All Campuses')}
             </Text>
           </TouchableOpacity>
           {campuses.map((campus) => (
@@ -360,11 +363,13 @@ const DepartmentListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon="🏛️"
-            title="No departments found"
+            title={t('department_list.empty_title', 'No departments found')}
             subtitle={
               searchTerm
-                ? `Nothing matches "${searchTerm}".`
-                : `No ${statusFilter === 'all' ? '' : statusFilter + ' '}departments yet.`
+                ? t('department_list.no_match', 'Nothing matches "{query}".').replace('{query}', searchTerm)
+                : statusFilter === 'all'
+                ? t('department_list.empty_all', 'No departments yet.')
+                : t('department_list.empty_status', 'No {status} departments yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
             colors={theme}
           />
