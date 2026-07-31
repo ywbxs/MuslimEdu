@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 import {
   fetchAdminLessonPlanReview,
@@ -23,11 +24,11 @@ const RED = '#B3261E';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const STATUS_FILTERS: { key: 'all' | LessonPlanStatus; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'submitted', label: 'Submitted' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+const STATUS_FILTERS: { key: 'all' | LessonPlanStatus; labelKey: string; label: string }[] = [
+  { key: 'all', labelKey: 'all', label: 'All' },
+  { key: 'submitted', labelKey: 'submitted', label: 'Submitted' },
+  { key: 'approved', labelKey: 'approved', label: 'Approved' },
+  { key: 'rejected', labelKey: 'rejected', label: 'Rejected' },
 ];
 
 function statusColor(status: LessonPlanStatus) {
@@ -64,6 +65,7 @@ function Picker<T extends { id: number; name: string }>({
   onSelect: (id: number) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.pickerBlock}>
       <Text style={styles.pickerLabel}>{label}</Text>
@@ -78,7 +80,7 @@ function Picker<T extends { id: number; name: string }>({
             <Text style={[styles.chipText, selectedId === opt.id ? styles.chipTextActive : null]}>{opt.name}</Text>
           </TouchableOpacity>
         ))}
-        {options.length === 0 ? <Text style={styles.emptyPickerText}>Nothing available yet.</Text> : null}
+        {options.length === 0 ? <Text style={styles.emptyPickerText}>{t('admin_lesson_plan_review.nothing_available', 'Nothing available yet.')}</Text> : null}
       </View>
     </View>
   );
@@ -91,6 +93,7 @@ export default function AdminLessonPlanReviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -114,9 +117,9 @@ export default function AdminLessonPlanReviewScreen() {
     setIsLoadingFilters(true);
     fetchClasses(token)
       .then(setClasses)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load classes.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_lesson_plan_review.classes_error', 'Could not load classes.')))
       .finally(() => setIsLoadingFilters(false));
-  }, [token]);
+  }, [token, t]);
 
   const onSelectClass = useCallback(
     (id: number) => {
@@ -127,10 +130,10 @@ export default function AdminLessonPlanReviewScreen() {
       setIsLoadingSections(true);
       fetchSections(token, String(id))
         .then(setSections)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_lesson_plan_review.sections_error', 'Could not load sections.')))
         .finally(() => setIsLoadingSections(false));
     },
-    [token]
+    [token, t]
   );
 
   const loadReview = useCallback(() => {
@@ -142,9 +145,9 @@ export default function AdminLessonPlanReviewScreen() {
       status: statusFilter === 'all' ? undefined : statusFilter,
     })
       .then(setPlans)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load lesson plans.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_lesson_plan_review.plans_error', 'Could not load lesson plans.')))
       .finally(() => setIsLoadingReview(false));
-  }, [token, sectionId, statusFilter]);
+  }, [token, sectionId, statusFilter, t]);
 
   useEffect(() => {
     loadReview();
@@ -178,7 +181,7 @@ export default function AdminLessonPlanReviewScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lesson Plans Review</Text>
+        <Text style={styles.headerTitle}>{t('admin_lesson_plan_review.title', 'Lesson Plans Review')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -197,16 +200,16 @@ export default function AdminLessonPlanReviewScreen() {
               <Skeleton width="100%" height={80} borderRadius={12} />
             ) : (
               <>
-                <Picker label="Class" options={classes} selectedId={classId} onSelect={onSelectClass} />
+                <Picker label={t('admin_lesson_plan_review.class', 'Class')} options={classes} selectedId={classId} onSelect={onSelectClass} />
                 {classId ? (
                   isLoadingSections ? (
                     <Skeleton width="100%" height={40} borderRadius={12} style={{ marginTop: 8 }} />
                   ) : (
-                    <Picker label="Section" options={sections} selectedId={sectionId} onSelect={setSectionId} />
+                    <Picker label={t('admin_lesson_plan_review.section', 'Section')} options={sections} selectedId={sectionId} onSelect={setSectionId} />
                   )
                 ) : null}
                 <View style={styles.pickerBlock}>
-                  <Text style={styles.pickerLabel}>Status</Text>
+                  <Text style={styles.pickerLabel}>{t('admin_lesson_plan_review.status', 'Status')}</Text>
                   <View style={styles.chipWrap}>
                     {STATUS_FILTERS.map((f) => (
                       <TouchableOpacity
@@ -214,7 +217,7 @@ export default function AdminLessonPlanReviewScreen() {
                         style={[styles.chip, statusFilter === f.key && styles.chipActive]}
                         onPress={() => setStatusFilter(f.key)}
                       >
-                        <Text style={[styles.chipText, statusFilter === f.key && styles.chipTextActive]}>{f.label}</Text>
+                        <Text style={[styles.chipText, statusFilter === f.key && styles.chipTextActive]}>{t(`admin_lesson_plan_review.filter_${f.labelKey}`, f.label)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -228,8 +231,8 @@ export default function AdminLessonPlanReviewScreen() {
             ) : null}
             {!isLoadingReview && sectionId && plans.length === 0 && !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>Nothing here yet</Text>
-                <Text style={styles.emptyDesc}>No lesson plans match this section/status.</Text>
+                <Text style={styles.emptyTitle}>{t('admin_lesson_plan_review.empty_title', 'Nothing here yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('admin_lesson_plan_review.empty_desc', 'No lesson plans match this section/status.')}</Text>
               </View>
             ) : null}
           </>
@@ -252,16 +255,16 @@ export default function AdminLessonPlanReviewScreen() {
             {item.objectives ? <Text style={styles.cardBody} numberOfLines={3}>{item.objectives}</Text> : null}
             {item.admin_comment ? (
               <Text style={styles.decisionNote}>
-                {item.decided_by_name ?? 'Admin'}: {item.admin_comment}
+                {item.decided_by_name ?? t('admin_lesson_plan_review.admin', 'Admin')}: {item.admin_comment}
               </Text>
             ) : null}
             {item.status === 'submitted' ? (
               <View style={styles.decideRow}>
                 <TouchableOpacity style={[styles.decideBtn, styles.rejectBtn]} onPress={() => openDecide(item, 'rejected')}>
-                  <Text style={styles.rejectBtnText}>Reject</Text>
+                  <Text style={styles.rejectBtnText}>{t('admin_lesson_plan_review.reject', 'Reject')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.decideBtn, styles.approveBtn]} onPress={() => openDecide(item, 'approved')}>
-                  <Text style={styles.approveBtnText}>Approve</Text>
+                  <Text style={styles.approveBtnText}>{t('admin_lesson_plan_review.approve', 'Approve')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -273,11 +276,11 @@ export default function AdminLessonPlanReviewScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {decision === 'approved' ? 'Approve this plan?' : 'Reject this plan?'}
+              {decision === 'approved' ? t('admin_lesson_plan_review.approve_confirm', 'Approve this plan?') : t('admin_lesson_plan_review.reject_confirm', 'Reject this plan?')}
             </Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Optional comment for the teacher"
+              placeholder={t('admin_lesson_plan_review.comment_placeholder', 'Optional comment for the teacher')}
               placeholderTextColor={SUBTLE}
               value={comment}
               onChangeText={setComment}
@@ -289,7 +292,7 @@ export default function AdminLessonPlanReviewScreen() {
                 onPress={() => setDecidingPlan(null)}
                 disabled={isDeciding}
               >
-                <Text style={styles.modalBtnGhostText}>Cancel</Text>
+                <Text style={styles.modalBtnGhostText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, decision === 'approved' ? styles.modalBtnApprove : styles.modalBtnReject]}
@@ -299,7 +302,7 @@ export default function AdminLessonPlanReviewScreen() {
                 {isDeciding ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.modalBtnPrimaryText}>{decision === 'approved' ? 'Approve' : 'Reject'}</Text>
+                  <Text style={styles.modalBtnPrimaryText}>{decision === 'approved' ? t('admin_lesson_plan_review.approve', 'Approve') : t('admin_lesson_plan_review.reject', 'Reject')}</Text>
                 )}
               </TouchableOpacity>
             </View>
