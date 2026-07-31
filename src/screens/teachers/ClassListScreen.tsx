@@ -16,6 +16,7 @@ import axios from 'axios';
 import Svg, { Polyline } from 'react-native-svg';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -37,7 +38,9 @@ const ClassListScreen = () => {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
+  const statusLabel = (status: string) => t(`class_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
@@ -113,7 +116,7 @@ const ClassListScreen = () => {
       setTotalPages(response.data.pagination.last_page);
     } catch (error) {
       console.error('Error fetching classes:', error);
-      Alert.alert('Error', 'Failed to load classes');
+      Alert.alert(t('common.error', 'Error'), t('class_list.load_error', 'Failed to load classes'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,20 +173,20 @@ const ClassListScreen = () => {
 
         <View style={styles.classInfo}>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Grade:</Text>
+            <Text style={styles.label}>{t('class_list.grade_label', 'Grade:')}</Text>
             <Text style={styles.value}>{item.grade_level}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Type:</Text>
+            <Text style={styles.label}>{t('class_list.type_label', 'Type:')}</Text>
             <Text style={styles.value}>{item.class_type}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Shift:</Text>
+            <Text style={styles.label}>{t('class_list.shift_label', 'Shift:')}</Text>
             <Text style={styles.value}>{item.shift}</Text>
           </View>
           {item.campus ? (
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Campus:</Text>
+              <Text style={styles.label}>{t('class_list.campus_label', 'Campus:')}</Text>
               <Text style={styles.value}>{item.campus}</Text>
             </View>
           ) : null}
@@ -206,18 +209,21 @@ const ClassListScreen = () => {
           />
         </View>
         <Text style={styles.enrollmentText}>
-          {item.current_enrollment}/{item.max_capacity} students ({item.enrollment_percentage || 0}%)
+          {t('class_list.enrollment', '{current}/{capacity} students ({pct}%)')
+            .replace('{current}', String(item.current_enrollment))
+            .replace('{capacity}', String(item.max_capacity))
+            .replace('{pct}', String(item.enrollment_percentage || 0))}
         </Text>
 
         <View style={styles.cardFooter}>
           <Text style={styles.dateText}>
-            {item.start_date} to {item.end_date}
+            {t('class_list.date_range', '{start} to {end}').replace('{start}', item.start_date).replace('{end}', item.end_date)}
           </Text>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleClassPress(item.id)}
           >
-            <Text style={styles.actionButtonText}>View</Text>
+            <Text style={styles.actionButtonText}>{t('class_list.view', 'View')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -246,7 +252,7 @@ const ClassListScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Classes</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('class_list.title', 'Classes')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>
@@ -265,13 +271,13 @@ const ClassListScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Classes</Text>
+        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('class_list.title', 'Classes')}</Text>
         {isAdminRole ? (
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CreateClass')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('class_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -282,7 +288,7 @@ const ClassListScreen = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search class code or name..."
+          placeholder={t('class_list.search_placeholder', 'Search class code or name...')}
           value={searchTerm}
           onChangeText={handleSearch}
           placeholderTextColor={theme.textMuted}
@@ -306,7 +312,7 @@ const ClassListScreen = () => {
                 statusFilter === status && styles.filterButtonTextActive,
               ]}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -330,11 +336,11 @@ const ClassListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon="🏫"
-            title="No classes found"
+            title={t('class_list.empty_title', 'No classes found')}
             subtitle={
               searchTerm
-                ? `Nothing matches "${searchTerm}" in ${statusFilter}.`
-                : `No ${statusFilter} classes yet.`
+                ? t('class_list.no_match', 'Nothing matches "{query}" in {status}.').replace('{query}', searchTerm).replace('{status}', statusLabel(statusFilter).toLowerCase())
+                : t('class_list.empty_status', 'No {status} classes yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
             colors={theme}
           />
@@ -349,11 +355,11 @@ const ClassListScreen = () => {
             onPress={() => page > 1 && fetchClasses(page - 1)}
             disabled={page === 1}
           >
-            <Text style={styles.paginationText}>Previous</Text>
+            <Text style={styles.paginationText}>{t('class_list.previous', 'Previous')}</Text>
           </TouchableOpacity>
 
           <Text style={styles.paginationInfo}>
-            Page {page} of {totalPages}
+            {t('class_list.page_of', 'Page {page} of {total}').replace('{page}', String(page)).replace('{total}', String(totalPages))}
           </Text>
 
           <TouchableOpacity
@@ -361,7 +367,7 @@ const ClassListScreen = () => {
             onPress={() => page < totalPages && fetchClasses(page + 1)}
             disabled={page === totalPages}
           >
-            <Text style={styles.paginationText}>Next</Text>
+            <Text style={styles.paginationText}>{t('class_list.next', 'Next')}</Text>
           </TouchableOpacity>
         </View>
       )}
