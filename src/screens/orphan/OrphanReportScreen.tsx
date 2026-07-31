@@ -16,6 +16,8 @@ import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
+import { enqueueOrphanReportSubmit } from '../../services/offlineQueue';
 import {
   fetchReportStatus,
   submitReport,
@@ -296,6 +298,8 @@ export default function OrphanReportScreen() {
   const navigation = useNavigation();
   const { token } = useAuth();
   const { t } = useLocale();
+  const { isOnline, actions: queuedActions } = useOfflineQueue();
+  const pendingReportCount = queuedActions.filter((a) => a.kind === 'orphan_report_submit').length;
 
   const [status, setStatus] = useState<ReportStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -325,6 +329,17 @@ export default function OrphanReportScreen() {
     setIsLoading(true);
     load().finally(() => setIsLoading(false));
   }, [load]);
+
+  // A queued report that finishes sending in the background (app stays
+  // open while connectivity returns) won't show up until the status is
+  // refetched - do that the moment the queue for this screen drains.
+  const prevPendingReportCount = React.useRef(pendingReportCount);
+  useEffect(() => {
+    if (prevPendingReportCount.current > 0 && pendingReportCount === 0) {
+      load();
+    }
+    prevPendingReportCount.current = pendingReportCount;
+  }, [pendingReportCount, load]);
 
   const now = new Date();
   const monthName = (idx: number) => t(`common.month_${MONTH_KEYS[idx]}`, MONTH_FALLBACKS[idx]);
@@ -357,13 +372,26 @@ export default function OrphanReportScreen() {
       Alert.alert(t('orphan_report.almost_done', 'Almost done'), t('orphan_report.select_ratings', 'Please select both an academic and wellbeing rating.'));
       return;
     }
+    const fields = { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating };
+
+    // Already known offline - don't bother attempting the request, queue it
+    // straight away so it sends automatically once connectivity returns.
+    if (!isOnline) {
+      enqueueOrphanReportSubmit(token, fields, photos);
+      Alert.alert(
+        t('orphan_report.queued_title', "You're offline"),
+        t('orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
+      );
+      setNote('');
+      setAcademicRating(null);
+      setWellbeingRating(null);
+      setPhotos([]);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await submitReport(
-        token,
-        { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
-        photos,
-      );
+      await submitReport(token, fields, photos);
       Alert.alert(t('orphan_report.submitted_title', 'Report submitted'), t('orphan_report.submitted_message', 'Your monthly report has been sent to your school admin.'));
       await load();
       setNote('');
@@ -371,7 +399,22 @@ export default function OrphanReportScreen() {
       setWellbeingRating(null);
       setPhotos([]);
     } catch (err) {
-      Alert.alert(t('orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+      // A dropped connection mid-submit looks like a plain TypeError from
+      // fetch (RN: "Network request failed") - queue it instead of losing
+      // the note/ratings/photos the user just filled in.
+      if (err instanceof TypeError) {
+        enqueueOrphanReportSubmit(token, fields, photos);
+        Alert.alert(
+          t('orphan_report.queued_title', "You're offline"),
+          t('orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
+        );
+        setNote('');
+        setAcademicRating(null);
+        setWellbeingRating(null);
+        setPhotos([]);
+      } else {
+        Alert.alert(t('orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -458,6 +501,16 @@ export default function OrphanReportScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {pendingReportCount > 0 ? (
+            <View style={styles.pendingSyncBanner}>
+              <IconClock color={EMERALD} />
+              <Text style={styles.pendingSyncText}>
+                {isOnline
+                  ? t('orphan_report.pending_sync_online', 'Sending your queued report…')
+                  : t('orphan_report.pending_sync_offline', "A report is waiting to send once you're back online.")}
+              </Text>
+            </View>
+          ) : null}
           {/* Submission form card */}
           <View style={styles.card}>
             <View style={styles.cardHead}>
@@ -702,6 +755,17 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: '#EEF0F2', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   retryText: { color: INK, fontWeight: '600' },
   scroll: { padding: 16, paddingBottom: 40 },
+  pendingSyncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: EMERALD_SOFT,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  pendingSyncText: { flex: 1, fontSize: 13, color: EMERALD, fontWeight: '600' },
 
   card: {
     backgroundColor: '#FFFFFF',
