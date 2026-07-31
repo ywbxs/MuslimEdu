@@ -14,6 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Line, Circle, Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
+import { enqueueTeacherOrphanReportSubmit } from '../../services/offlineQueue';
 import {
   fetchTeacherReportStatus,
   submitTeacherReport,
@@ -249,6 +251,8 @@ export default function TeacherOrphanReportScreen() {
   const navigation = useNavigation();
   const { token } = useAuth();
   const { t } = useLocale();
+  const { isOnline, actions: queuedActions } = useOfflineQueue();
+  const pendingReportCount = queuedActions.filter((a) => a.kind === 'teacher_orphan_report_submit').length;
 
   const [mode, setMode] = useState<'overview' | 'wizard'>('overview');
   const [status, setStatus] = useState<TeacherReportStatus | null>(null);
@@ -278,6 +282,17 @@ export default function TeacherOrphanReportScreen() {
     setIsLoading(true);
     load().finally(() => setIsLoading(false));
   }, [load]);
+
+  // A queued report that finishes sending in the background (app stays
+  // open while connectivity returns) won't show up until the status is
+  // refetched - do that the moment the queue for this screen drains.
+  const prevPendingReportCount = React.useRef(pendingReportCount);
+  useEffect(() => {
+    if (prevPendingReportCount.current > 0 && pendingReportCount === 0) {
+      load();
+    }
+    prevPendingReportCount.current = pendingReportCount;
+  }, [pendingReportCount, load]);
 
   const now = new Date();
   const monthName = (idx: number) => t(`common.month_${MONTH_KEYS[idx]}`, MONTH_FALLBACKS[idx]);
@@ -333,21 +348,33 @@ export default function TeacherOrphanReportScreen() {
 
   const handleSubmit = async () => {
     if (!token || !teachingEffectiveness || !classroomEngagement || !professionalGrowth) return;
+    const [y, m] = (wizardMonth?.key ?? '').split('-').map(Number);
+    const reportMonthParam = y && m ? `${y}-${String(m).padStart(2, '0')}-01` : undefined;
+    const fields = {
+      note,
+      teaching_effectiveness_rating: teachingEffectiveness,
+      classroom_engagement_rating: classroomEngagement,
+      professional_growth_rating: professionalGrowth,
+      report_month: reportMonthParam,
+    };
+
+    // Already known offline - don't bother attempting the request, queue it
+    // straight away so it sends automatically once connectivity returns.
+    if (!isOnline) {
+      enqueueTeacherOrphanReportSubmit(token, fields, photos);
+      Alert.alert(
+        t('teacher_orphan_report.queued_title', "You're offline"),
+        t('teacher_orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
+      );
+      resetForm();
+      setWizardMonth(null);
+      setMode('overview');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const [y, m] = (wizardMonth?.key ?? '').split('-').map(Number);
-      const reportMonthParam = y && m ? `${y}-${String(m).padStart(2, '0')}-01` : undefined;
-      await submitTeacherReport(
-        token,
-        {
-          note,
-          teaching_effectiveness_rating: teachingEffectiveness,
-          classroom_engagement_rating: classroomEngagement,
-          professional_growth_rating: professionalGrowth,
-          report_month: reportMonthParam,
-        },
-        photos,
-      );
+      await submitTeacherReport(token, fields, photos);
       Alert.alert(
         t('teacher_orphan_report.submitted_title', 'Report submitted'),
         t('teacher_orphan_report.submitted_message', 'Your {month} report has been sent to your school admin.').replace('{month}', wizardMonth?.name ?? t('teacher_orphan_report.monthly_fallback', 'monthly')),
@@ -357,7 +384,21 @@ export default function TeacherOrphanReportScreen() {
       await load();
       setMode('overview');
     } catch (err) {
-      Alert.alert(t('teacher_orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+      // A dropped connection mid-submit looks like a plain TypeError from
+      // fetch (RN: "Network request failed") - queue it instead of losing
+      // the note/ratings/photos the user just filled in.
+      if (err instanceof TypeError) {
+        enqueueTeacherOrphanReportSubmit(token, fields, photos);
+        Alert.alert(
+          t('teacher_orphan_report.queued_title', "You're offline"),
+          t('teacher_orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
+        );
+        resetForm();
+        setWizardMonth(null);
+        setMode('overview');
+      } else {
+        Alert.alert(t('teacher_orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -484,6 +525,16 @@ export default function TeacherOrphanReportScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {pendingReportCount > 0 ? (
+          <View style={styles.pendingSyncBanner}>
+            <IconClock color={EMERALD} />
+            <Text style={styles.pendingSyncText}>
+              {isOnline
+                ? t('teacher_orphan_report.pending_sync_online', 'Sending your queued report…')
+                : t('teacher_orphan_report.pending_sync_offline', "A report is waiting to send once you're back online.")}
+            </Text>
+          </View>
+        ) : null}
         {/* Current-month status card */}
         <View style={styles.card}>
           <View style={styles.cardHead}>
@@ -607,6 +658,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: INK },
 
   scroll: { padding: 16, paddingBottom: 40 },
+  pendingSyncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: EMERALD_SOFT,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  pendingSyncText: { flex: 1, fontSize: 13, color: EMERALD, fontWeight: '600' },
 
   card: {
     backgroundColor: GLASS_SURFACE,
