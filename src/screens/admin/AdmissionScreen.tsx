@@ -15,6 +15,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import { BlurView } from '@react-native-community/blur';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { md3 } from './admission/theme';
 import Stepper, { StepDef } from './admission/components/Stepper';
 import FormField from './admission/components/FormField';
@@ -98,6 +99,10 @@ export default function AdmissionScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token, user } = useAuth();
+  const { t } = useLocale();
+  const fieldLabel = (f: { key: string; label: string }) => t(`admission.field_${f.key}`, f.label);
+  const fieldPlaceholder = (f: { key: string; placeholder?: string }) =>
+    f.placeholder ? t(`admission.field_${f.key}_placeholder`, f.placeholder) : undefined;
 
   const [form, setForm] = useState<AdmissionInput>(emptyForm);
   // Only the suffix an orphan-school admin types (e.g. "0001") - the locked
@@ -171,8 +176,8 @@ export default function AdmissionScreen() {
   }, [isOrphanSchool, schoolCode, codeSuffix]);
 
   const steps: { key: StepKey; title: string; subtitle: string }[] = [
-    { key: 'basic', title: 'Basic Info', subtitle: "The student's name, login, and contact details." },
-    { key: 'photo', title: 'Profile Picture', subtitle: 'A clear photo helps staff recognize this student.' },
+    { key: 'basic', title: t('admission.step_basic_title', 'Basic Info'), subtitle: t('admission.step_basic_subtitle', "The student's name, login, and contact details.") },
+    { key: 'photo', title: t('admission.step_photo_title', 'Profile Picture'), subtitle: t('admission.step_photo_subtitle', 'A clear photo helps staff recognize this student.') },
     // Orphan schools don't organize children by class/section - they're
     // identified by the unified student code (auto-generated on the backend,
     // or set manually via the "Student code" field in Basic Info) instead.
@@ -180,9 +185,9 @@ export default function AdmissionScreen() {
     // classes/sections created yet - being unable to admit any student at all.
     ...(isOrphanSchool
       ? []
-      : ([{ key: 'class', title: 'Class & Section', subtitle: 'Where this student will be enrolled.' }] as const)),
+      : ([{ key: 'class', title: t('admission.step_class_title', 'Class & Section'), subtitle: t('admission.step_class_subtitle', 'Where this student will be enrolled.') }] as const)),
     ...(isOrphanSchool
-      ? ([{ key: 'orphan', title: 'Orphan Information', subtitle: 'Guardian and care details for this child.' }] as const)
+      ? ([{ key: 'orphan', title: t('admission.step_orphan_title', 'Orphan Information'), subtitle: t('admission.step_orphan_subtitle', 'Guardian and care details for this child.') }] as const)
       : []),
   ];
   const step = steps[stepIndex];
@@ -190,10 +195,10 @@ export default function AdmissionScreen() {
 
   const validateBasic = (): FieldErrors => {
     const errs: FieldErrors = {};
-    if (!form.name?.trim()) errs.name = 'A student needs at least a full name.';
-    if (!form.password || form.password.length < 6) errs.password = 'Use at least 6 characters.';
-    if (isOrphanSchool && !form.email?.trim()) errs.email = 'Email is required for orphan admission.';
-    if (isOrphanSchool && !form.phone?.trim()) errs.phone = 'Phone is required for orphan admission.';
+    if (!form.name?.trim()) errs.name = t('admission.error_name_required', 'A student needs at least a full name.');
+    if (!form.password || form.password.length < 6) errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
+    if (isOrphanSchool && !form.email?.trim()) errs.email = t('admission.error_email_required', 'Email is required for orphan admission.');
+    if (isOrphanSchool && !form.phone?.trim()) errs.phone = t('admission.error_phone_required', 'Phone is required for orphan admission.');
     return errs;
   };
 
@@ -207,7 +212,7 @@ export default function AdmissionScreen() {
     const errs: FieldErrors = {};
     ORPHAN_FIELDS.forEach((f) => {
       if (f.required && !(form[f.key] as string)?.trim()) {
-        errs[f.key as string] = `${f.label} is required for orphan admission.`;
+        errs[f.key as string] = t('admission.error_field_required', '{field} is required for orphan admission.').replace('{field}', fieldLabel(f));
       }
     });
     return errs;
@@ -217,7 +222,7 @@ export default function AdmissionScreen() {
     let errs: FieldErrors = {};
     if (step.key === 'basic') errs = validateBasic();
     if (step.key === 'photo' && !photo) {
-      setPhotoError('A profile picture is required.');
+      setPhotoError(t('admission.error_photo_required', 'A profile picture is required.'));
       return;
     }
     if (step.key === 'class') errs = validateClass();
@@ -247,11 +252,11 @@ export default function AdmissionScreen() {
 
   const onSubmit = async () => {
     if (!token) {
-      setSubmitError('Your session expired. Please log in again.');
+      setSubmitError(t('admission.error_session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!photo) {
-      setPhotoError('A profile picture is required.');
+      setPhotoError(t('admission.error_photo_required', 'A profile picture is required.'));
       setStepIndex(steps.findIndex((s) => s.key === 'photo'));
       return;
     }
@@ -263,7 +268,7 @@ export default function AdmissionScreen() {
       resetForm();
       setAdmittedName(name);
     } catch (err: any) {
-      setSubmitError(err?.message ?? 'Something went wrong. Please try again.');
+      setSubmitError(err?.message ?? t('admission.error_generic', 'Something went wrong. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -290,9 +295,9 @@ export default function AdmissionScreen() {
               return (
                 <FormField
                   key={f.key}
-                  label={f.label}
+                  label={fieldLabel(f)}
                   value={(form[f.key] as string) ?? ''}
-                  onChangeText={(t) => set(f.key, t)}
+                  onChangeText={(value) => set(f.key, value)}
                   required={required}
                   error={fieldErrors[f.key]}
                   keyboardType={f.keyboard ?? 'default'}
@@ -305,7 +310,7 @@ export default function AdmissionScreen() {
             {isOrphanSchool ? (
               schoolCode ? (
                 <View style={styles.wrap}>
-                  <Text style={styles.label}>Student code</Text>
+                  <Text style={styles.label}>{t('admission.student_code_label', 'Student code')}</Text>
                   <View style={styles.codeRow}>
                     <View style={styles.codePrefix}>
                       <Text style={styles.codePrefixText}>{schoolCode}</Text>
@@ -313,28 +318,27 @@ export default function AdmissionScreen() {
                     <TextInput
                       style={styles.codeSuffixInput}
                       value={codeSuffix}
-                      onChangeText={(t) => setCodeSuffix(t.replace(/[^0-9A-Za-z]/g, ''))}
-                      placeholder="0001"
+                      onChangeText={(value) => setCodeSuffix(value.replace(/[^0-9A-Za-z]/g, ''))}
+                      placeholder={t('admission.student_code_placeholder', '0001')}
                       placeholderTextColor={md3.color.onSurfaceVariant}
                     />
                   </View>
                   <Text style={styles.helperText}>
-                    The {schoolCode} prefix is locked to your school - just add this student's number.
+                    {t('admission.student_code_helper', "The {code} prefix is locked to your school - just add this student's number.").replace('{code}', schoolCode)}
                   </Text>
                 </View>
               ) : (
                 <View style={styles.submitErrorBox}>
                   <Text style={styles.submitErrorText}>
-                    Your school hasn't set up its student code yet. Go back to the dashboard to finish
-                    that one-time setup before admitting students.
+                    {t('admission.no_school_code', "Your school hasn't set up its student code yet. Go back to the dashboard to finish that one-time setup before admitting students.")}
                   </Text>
                 </View>
               )
             ) : (
               <FormField
-                label={NON_ORPHAN_CODE_FIELD.label}
+                label={t('admission.field_code', NON_ORPHAN_CODE_FIELD.label)}
                 value={(form.code as string) ?? ''}
-                onChangeText={(t) => set('code', t)}
+                onChangeText={(value) => set('code', value)}
                 error={fieldErrors.code}
               />
             )}
@@ -359,7 +363,7 @@ export default function AdmissionScreen() {
         return (
           <>
             <ChipGroup
-              label="Class"
+              label={t('admission.class_label', 'Class')}
               options={classes}
               selectedId={form.class_id}
               onSelect={(id) => {
@@ -367,15 +371,15 @@ export default function AdmissionScreen() {
                 setFieldErrors((prev) => ({ ...prev, class_id: undefined }));
               }}
               error={fieldErrors.class_id}
-              emptyHint="No classes found yet - you can still admit the student and assign a class later."
+              emptyHint={t('admission.class_empty_hint', 'No classes found yet - you can still admit the student and assign a class later.')}
             />
             <ChipGroup
-              label="Section"
+              label={t('admission.section_label', 'Section')}
               options={sections}
               selectedId={form.section_id}
               onSelect={(id) => set('section_id', id)}
               error={fieldErrors.section_id}
-              emptyHint="Pick a class first, or continue without one."
+              emptyHint={t('admission.section_empty_hint', 'Pick a class first, or continue without one.')}
             />
           </>
         );
@@ -384,12 +388,12 @@ export default function AdmissionScreen() {
         return ORPHAN_FIELDS.map((f) => (
           <FormField
             key={f.key}
-            label={f.label}
+            label={fieldLabel(f)}
             value={(form[f.key] as string) ?? ''}
-            onChangeText={(t) => set(f.key, t)}
+            onChangeText={(value) => set(f.key, value)}
             required={f.required}
             error={fieldErrors[f.key as string]}
-            placeholder={f.placeholder}
+            placeholder={fieldPlaceholder(f)}
             multiline={f.multiline}
           />
         ));
@@ -414,9 +418,9 @@ export default function AdmissionScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <ChevronLeft />
-            <Text style={styles.backText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
+            <Text style={styles.backText}>{stepIndex === 0 ? t('common.cancel', 'Cancel') : t('common.back', 'Back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.topTitle}>New Admission</Text>
+          <Text style={styles.topTitle}>{t('admission.header_title', 'New Admission')}</Text>
           <View style={{ width: 64 }} />
         </View>
 
@@ -455,7 +459,7 @@ export default function AdmissionScreen() {
           <BlurView blurType="light" blurAmount={GLASS.blurAmount.strong} reducedTransparencyFallbackColor={GLASS.fillOnLightStrong} style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <TouchableOpacity style={styles.backButton} onPress={goBack} disabled={submitting} activeOpacity={0.85}>
-            <Text style={styles.backButtonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
+            <Text style={styles.backButtonText}>{stepIndex === 0 ? t('common.cancel', 'Cancel') : t('common.back', 'Back')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -467,7 +471,7 @@ export default function AdmissionScreen() {
             {submitting ? (
               <ActivityIndicator color={md3.color.onPrimary} />
             ) : (
-              <Text style={styles.buttonText}>{isLastStep ? 'Admit Student' : 'Next'}</Text>
+              <Text style={styles.buttonText}>{isLastStep ? t('admission.admit_student', 'Admit Student') : t('common.next', 'Next')}</Text>
             )}
           </TouchableOpacity>
         </View>
