@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS } from '../theme/glass';
 
 // ============================================================================
@@ -130,6 +131,7 @@ function GradientButton({
   loading?: boolean;
   style?: any;
 }) {
+  const { t } = useLocale();
   return (
     <TouchableOpacity activeOpacity={0.88} onPress={onPress} disabled={disabled || loading} style={[btn.wrap, style]}>
       <LinearGradient
@@ -138,7 +140,7 @@ function GradientButton({
         end={{ x: 1, y: 1 }}
         style={[btn.gradient, (disabled || loading) && btn.disabled]}
       >
-        <Text style={btn.text}>{loading ? 'Please wait…' : label}</Text>
+        <Text style={btn.text}>{loading ? t('login.please_wait', 'Please wait…') : label}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -174,6 +176,7 @@ function GetStartedSheet({
   onSchool: () => void;
   onAlumni: () => void;
 }) {
+  const { t } = useLocale();
   const { height } = useWindowDimensions();
   const translateY = useRef(new Animated.Value(height)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
@@ -234,16 +237,16 @@ function GetStartedSheet({
             <View style={sheet.handle} />
           </View>
 
-          <Text style={sheet.title}>Get Started</Text>
-          <Text style={sheet.subtitle}>Choose how you'd like to join MuslimEdu.</Text>
+          <Text style={sheet.title}>{t('login.get_started', 'Get Started')}</Text>
+          <Text style={sheet.subtitle}>{t('login.get_started_subtitle', "Choose how you'd like to join MuslimEdu.")}</Text>
 
           <TouchableOpacity style={sheet.option} activeOpacity={0.85} onPress={() => handleSelect(onSchool)}>
             <View style={sheet.optionIcon}>
               <SchoolIcon />
             </View>
             <View style={sheet.optionText}>
-              <Text style={sheet.optionTitle}>Register Your School</Text>
-              <Text style={sheet.optionDesc}>Create and manage your institution with MuslimEdu.</Text>
+              <Text style={sheet.optionTitle}>{t('login.register_school_title', 'Register Your School')}</Text>
+              <Text style={sheet.optionDesc}>{t('login.register_school_desc', 'Create and manage your institution with MuslimEdu.')}</Text>
             </View>
             <ChevronRightIcon />
           </TouchableOpacity>
@@ -253,8 +256,8 @@ function GetStartedSheet({
               <AlumniIcon />
             </View>
             <View style={sheet.optionText}>
-              <Text style={sheet.optionTitle}>Create Alumni Account</Text>
-              <Text style={sheet.optionDesc}>Reconnect with your school and alumni community.</Text>
+              <Text style={sheet.optionTitle}>{t('login.create_alumni_title', 'Create Alumni Account')}</Text>
+              <Text style={sheet.optionDesc}>{t('login.create_alumni_desc', 'Reconnect with your school and alumni community.')}</Text>
             </View>
             <ChevronRightIcon />
           </TouchableOpacity>
@@ -277,24 +280,39 @@ function StepDots({ step }: { step: 1 | 2 | 3 }) {
 
 /* ========================= FOOTER ========================= */
 
-const FOOTER_LINKS = ['Product', 'How It Works', 'Manhaj', 'Resources', 'FAQ', 'Guidelines'];
-const FOOTER_SECONDARY_LINKS = ['Privacy Statement', 'Terms'];
+const FOOTER_LINK_KEYS = ['product', 'how_it_works', 'manhaj', 'resources', 'faq', 'guidelines'] as const;
+const FOOTER_LINK_FALLBACKS: Record<string, string> = {
+  product: 'Product',
+  how_it_works: 'How It Works',
+  manhaj: 'Manhaj',
+  resources: 'Resources',
+  faq: 'FAQ',
+  guidelines: 'Guidelines',
+};
+const FOOTER_SECONDARY_LINK_KEYS = ['privacy_statement', 'terms'] as const;
+const FOOTER_SECONDARY_LINK_FALLBACKS: Record<string, string> = {
+  privacy_statement: 'Privacy Statement',
+  terms: 'Terms',
+};
 
 function FooterLinkRow({
-  items,
+  itemKeys,
+  fallbacks,
   textStyle,
   rowStyle,
 }: {
-  items: string[];
+  itemKeys: readonly string[];
+  fallbacks: Record<string, string>;
   textStyle: any;
   rowStyle?: any;
 }) {
+  const { t } = useLocale();
   return (
     <View style={[footer.linkRow, rowStyle]}>
-      {items.map((label, index) => (
-        <View key={label} style={footer.linkItem}>
-          <Text style={textStyle}>{label}</Text>
-          {index < items.length - 1 && <View style={footer.separator} />}
+      {itemKeys.map((key, index) => (
+        <View key={key} style={footer.linkItem}>
+          <Text style={textStyle}>{t(`login.footer_${key}`, fallbacks[key])}</Text>
+          {index < itemKeys.length - 1 && <View style={footer.separator} />}
         </View>
       ))}
     </View>
@@ -302,15 +320,17 @@ function FooterLinkRow({
 }
 
 function Footer() {
+  const { t } = useLocale();
   return (
     <View style={footer.container}>
-      <FooterLinkRow items={FOOTER_LINKS} textStyle={footer.linkText} />
+      <FooterLinkRow itemKeys={FOOTER_LINK_KEYS} fallbacks={FOOTER_LINK_FALLBACKS} textStyle={footer.linkText} />
       <FooterLinkRow
-        items={FOOTER_SECONDARY_LINKS}
+        itemKeys={FOOTER_SECONDARY_LINK_KEYS}
+        fallbacks={FOOTER_SECONDARY_LINK_FALLBACKS}
         textStyle={footer.linkText}
         rowStyle={footer.secondaryRow}
       />
-      <Text style={footer.copyright}>© 2026 MuslimEdu. All rights reserved.</Text>
+      <Text style={footer.copyright}>{t('login.copyright', '© 2026 MuslimEdu. All rights reserved.')}</Text>
     </View>
   );
 }
@@ -322,6 +342,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { login, isSubmitting, error, clearError, requiresTwoFactor, resetTwoFactorPrompt } = useAuth();
+  const { t } = useLocale();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -395,7 +416,7 @@ export default function LoginScreen() {
   const goToStep2 = () => {
     const trimmed = email.trim();
     if (!EMAIL_RE.test(trimmed)) {
-      setEmailError('Please enter a valid email address.');
+      setEmailError(t('login.invalid_email', 'Please enter a valid email address.'));
       return;
     }
     setEmailError('');
@@ -437,7 +458,9 @@ export default function LoginScreen() {
               <TouchableOpacity style={styles.backBtn} onPress={step === 3 ? goBackFromTwoFactor : goToStep1} hitSlop={12}>
                 <ChevronLeftIcon />
               </TouchableOpacity>
-              <Text style={styles.topbarTitle}>{step === 3 ? 'Verify it\'s you' : 'Sign in'}</Text>
+              <Text style={styles.topbarTitle}>
+                {step === 3 ? t('login.verify_its_you', "Verify it's you") : t('login.sign_in', 'Sign in')}
+              </Text>
             </View>
           )}
 
@@ -452,19 +475,21 @@ export default function LoginScreen() {
             }}
           >
             <View style={styles.stepPill}>
-              <Text style={styles.stepPillText}>{step === 3 ? 'TWO-FACTOR' : `STEP ${step} OF 2`}</Text>
+              <Text style={styles.stepPillText}>
+                {step === 3 ? t('login.step_pill_two_factor', 'TWO-FACTOR') : t('login.step_pill', 'STEP {step} OF 2').replace('{step}', String(step))}
+              </Text>
             </View>
 
             {step === 1 ? (
               <View style={styles.heroRow}>
                 <View style={styles.heroTextCol}>
                   <Text style={styles.titleCompact}>
-                    Peace be{'\n'}
-                    <Text style={styles.titleGreen}>upon you!</Text>
+                    {t('login.greeting_peace_be', 'Peace be')}{'\n'}
+                    <Text style={styles.titleGreen}>{t('login.greeting_upon_you', 'upon you!')}</Text>
                   </Text>
                   <View style={styles.subtitleRow}>
-                    <Text style={styles.subtitle}>Connect through </Text>
-                    <Text style={styles.subtitleGreen}>Education.</Text>
+                    <Text style={styles.subtitle}>{t('login.connect_through', 'Connect through ')}</Text>
+                    <Text style={styles.subtitleGreen}>{t('login.education', 'Education.')}</Text>
                   </View>
                 </View>
 
@@ -479,8 +504,8 @@ export default function LoginScreen() {
             ) : step === 2 ? (
               <View style={styles.hero}>
                 <Text style={styles.title}>
-                  Welcome{'\n'}
-                  <Text style={styles.titleGreen}>back!</Text>
+                  {t('login.welcome', 'Welcome')}{'\n'}
+                  <Text style={styles.titleGreen}>{t('login.back', 'back!')}</Text>
                 </Text>
                 <View style={styles.emailChip}>
                   <MailIcon color={BRAND.emerald} size={14} />
@@ -492,17 +517,17 @@ export default function LoginScreen() {
             ) : (
               <View style={styles.hero}>
                 <Text style={styles.title}>
-                  One more{'\n'}
-                  <Text style={styles.titleGreen}>step.</Text>
+                  {t('login.one_more', 'One more')}{'\n'}
+                  <Text style={styles.titleGreen}>{t('login.step_dot', 'step.')}</Text>
                 </Text>
-                <Text style={styles.subtitle}>Enter the code from your authenticator app.</Text>
+                <Text style={styles.subtitle}>{t('login.enter_authenticator_code', 'Enter the code from your authenticator app.')}</Text>
               </View>
             )}
 
             <View style={styles.card}>
               {step === 1 ? (
                 <>
-                  <Text style={styles.fieldLabel}>E-MAIL</Text>
+                  <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
                   <View style={styles.inputRow}>
                     <MailIcon />
                     <TextInput
@@ -523,13 +548,13 @@ export default function LoginScreen() {
                     />
                   </View>
                   {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-                  <Text style={styles.helperText}>We'll verify your account, then set up your password.</Text>
+                  <Text style={styles.helperText}>{t('login.email_helper', "We'll verify your account, then set up your password.")}</Text>
 
-                  <GradientButton label="Continue" onPress={goToStep2} style={styles.actionSpacing} />
+                  <GradientButton label={t('login.continue', 'Continue')} onPress={goToStep2} style={styles.actionSpacing} />
                 </>
               ) : step === 2 ? (
                 <>
-                  <Text style={styles.fieldLabel}>PASSWORD</Text>
+                  <Text style={styles.fieldLabel}>{t('login.password_label', 'PASSWORD')}</Text>
                   <View style={styles.inputRow}>
                     <LockIcon />
                     <TextInput
@@ -564,17 +589,17 @@ export default function LoginScreen() {
                       <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                         {rememberMe && <CheckIcon />}
                       </View>
-                      <Text style={styles.rememberText}>Remember me</Text>
+                      <Text style={styles.rememberText}>{t('login.remember_me', 'Remember me')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity hitSlop={8}>
-                      <Text style={styles.forgotText}>Forgot password?</Text>
+                      <Text style={styles.forgotText}>{t('login.forgot_password', 'Forgot password?')}</Text>
                     </TouchableOpacity>
                   </View>
 
                   {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                   <GradientButton
-                    label="Log In"
+                    label={t('login.log_in', 'Log In')}
                     onPress={handleSubmit}
                     disabled={!canSubmit}
                     loading={isSubmitting}
@@ -583,7 +608,7 @@ export default function LoginScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.fieldLabel}>AUTHENTICATION CODE</Text>
+                  <Text style={styles.fieldLabel}>{t('login.auth_code_label', 'AUTHENTICATION CODE')}</Text>
                   <View style={styles.inputRow}>
                     <LockIcon />
                     <TextInput
@@ -603,14 +628,16 @@ export default function LoginScreen() {
                     />
                   </View>
                   <Text style={styles.helperText}>
-                    Open your authenticator app for the current code, or use one of your saved recovery codes if you've
-                    lost access to it.
+                    {t(
+                      'login.auth_code_helper',
+                      "Open your authenticator app for the current code, or use one of your saved recovery codes if you've lost access to it.",
+                    )}
                   </Text>
 
                   {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                   <GradientButton
-                    label="Verify"
+                    label={t('login.verify', 'Verify')}
                     onPress={handleSubmitTwoFactor}
                     disabled={!canSubmitTwoFactor}
                     loading={isSubmitting}
@@ -622,8 +649,8 @@ export default function LoginScreen() {
               {step !== 3 && <StepDots step={step} />}
 
               <TouchableOpacity style={styles.getStartedRow} activeOpacity={0.7} onPress={() => setSheetOpen(true)}>
-                <Text style={styles.getStartedMuted}>New here? </Text>
-                <Text style={styles.getStartedLink}>Get Started</Text>
+                <Text style={styles.getStartedMuted}>{t('login.new_here', 'New here? ')}</Text>
+                <Text style={styles.getStartedLink}>{t('login.get_started', 'Get Started')}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

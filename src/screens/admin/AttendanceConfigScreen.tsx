@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   AttendanceMethodConfig,
@@ -47,6 +48,7 @@ export default function AttendanceConfigScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [tab, setTab] = useState<Tab>('statuses');
   const [loading, setLoading] = useState(true);
@@ -74,11 +76,11 @@ export default function AttendanceConfigScreen() {
       setStatuses(s);
       setMethods(m);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load attendance configuration.');
+      setError(e?.message ?? t('attendance_config.load_error', 'Could not load attendance configuration.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -123,7 +125,7 @@ export default function AttendanceConfigScreen() {
   const onSave = async () => {
     if (!token) return;
     if (!fLabel.trim()) {
-      Alert.alert('Label required', 'Give this a display label first.');
+      Alert.alert(t('attendance_config.label_required', 'Label required'), t('attendance_config.label_required_message', 'Give this a display label first.'));
       return;
     }
     setSaving(true);
@@ -153,7 +155,7 @@ export default function AttendanceConfigScreen() {
       }
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('attendance_config.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -161,48 +163,56 @@ export default function AttendanceConfigScreen() {
 
   const confirmDeleteStatus = (s: AttendanceStatusConfig) => {
     if (s.is_system_default) {
-      Alert.alert('System default', 'This status is built-in and can only be deactivated, not deleted.');
+      Alert.alert(t('attendance_config.system_default', 'System default'), t('attendance_config.system_default_message', 'This status is built-in and can only be deactivated, not deleted.'));
       return;
     }
-    Alert.alert('Delete status?', `"${s.label}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteAttendanceStatus(token, s.id);
-            setStatuses((prev) => prev.filter((x) => x.id !== s.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('attendance_config.delete_status_title', 'Delete status?'),
+      t('attendance_config.delete_status_message', '"{label}" will be removed.').replace('{label}', s.label),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('attendance_config.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteAttendanceStatus(token, s.id);
+              setStatuses((prev) => prev.filter((x) => x.id !== s.id));
+            } catch (e: any) {
+              Alert.alert(t('attendance_config.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const confirmDeleteMethod = (m: AttendanceMethodConfig) => {
     if (m.is_system_default) {
-      Alert.alert('Built-in method', 'The manual capture method cannot be deleted.');
+      Alert.alert(t('attendance_config.builtin_method', 'Built-in method'), t('attendance_config.builtin_method_message', 'The manual capture method cannot be deleted.'));
       return;
     }
-    Alert.alert('Delete method?', `"${m.label}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteAttendanceMethod(token, m.id);
-            setMethods((prev) => prev.filter((x) => x.id !== m.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('attendance_config.delete_method_title', 'Delete method?'),
+      t('attendance_config.delete_method_message', '"{label}" will be removed.').replace('{label}', m.label),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('attendance_config.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteAttendanceMethod(token, m.id);
+              setMethods((prev) => prev.filter((x) => x.id !== m.id));
+            } catch (e: any) {
+              Alert.alert(t('attendance_config.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const toggleActive = async (
@@ -227,7 +237,7 @@ export default function AttendanceConfigScreen() {
         setMethods((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
       }
     } catch (e: any) {
-      Alert.alert('Could not update', e?.message ?? 'Please try again.');
+      Alert.alert(t('attendance_config.update_error', 'Could not update'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     }
   };
 
@@ -235,7 +245,7 @@ export default function AttendanceConfigScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading attendance configuration…</Text>
+        <Text style={styles.centerText}>{t('attendance_config.loading', 'Loading attendance configuration…')}</Text>
       </View>
     );
   }
@@ -243,10 +253,10 @@ export default function AttendanceConfigScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('attendance_config.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -262,8 +272,8 @@ export default function AttendanceConfigScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Attendance Configuration</Text>
-          <Text style={styles.headerSub}>Statuses and capture methods for your school</Text>
+          <Text style={styles.headerTitle}>{t('attendance_config.title', 'Attendance Configuration')}</Text>
+          <Text style={styles.headerSub}>{t('attendance_config.subtitle', 'Statuses and capture methods for your school')}</Text>
         </View>
       </View>
 
@@ -272,13 +282,13 @@ export default function AttendanceConfigScreen() {
           style={[styles.tab, tab === 'statuses' && styles.tabActive]}
           onPress={() => setTab('statuses')}
         >
-          <Text style={[styles.tabText, tab === 'statuses' && styles.tabTextActive]}>Statuses</Text>
+          <Text style={[styles.tabText, tab === 'statuses' && styles.tabTextActive]}>{t('attendance_config.tab_statuses', 'Statuses')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, tab === 'methods' && styles.tabActive]}
           onPress={() => setTab('methods')}
         >
-          <Text style={[styles.tabText, tab === 'methods' && styles.tabTextActive]}>Capture Methods</Text>
+          <Text style={[styles.tabText, tab === 'methods' && styles.tabTextActive]}>{t('attendance_config.tab_methods', 'Capture Methods')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -287,8 +297,14 @@ export default function AttendanceConfigScreen() {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
               {tab === 'statuses'
-                ? 'No attendance statuses yet. The 5 defaults will appear the first time this loads for your school.'
-                : 'No capture methods yet. Manual, QR, and Face Recognition defaults will appear the first time this loads for your school.'}
+                ? t(
+                    'attendance_config.empty_statuses',
+                    'No attendance statuses yet. The 5 defaults will appear the first time this loads for your school.',
+                  )
+                : t(
+                    'attendance_config.empty_methods',
+                    'No capture methods yet. Manual, QR, and Face Recognition defaults will appear the first time this loads for your school.',
+                  )}
             </Text>
           </View>
         ) : (
@@ -303,9 +319,13 @@ export default function AttendanceConfigScreen() {
                     <Text style={styles.rowTitle}>{row.label}</Text>
                     <Text style={styles.rowSub}>
                       {row.code}
-                      {row.is_system_default ? ' · built-in' : ''}
-                      {isStatus ? (s.counts_as_present ? ' · counts as present' : ' · counts as absent') : ''}
-                      {isStatus && s.requires_remark ? ' · remark required' : ''}
+                      {row.is_system_default ? ` · ${t('attendance_config.builtin', 'built-in')}` : ''}
+                      {isStatus
+                        ? s.counts_as_present
+                          ? ` · ${t('attendance_config.counts_present', 'counts as present')}`
+                          : ` · ${t('attendance_config.counts_absent', 'counts as absent')}`
+                        : ''}
+                      {isStatus && s.requires_remark ? ` · ${t('attendance_config.remark_required', 'remark required')}` : ''}
                     </Text>
                   </View>
                   <Switch
@@ -316,13 +336,13 @@ export default function AttendanceConfigScreen() {
                 </View>
                 <View style={styles.actionsRow}>
                   <TouchableOpacity onPress={() => (isStatus ? openEditStatus(s) : openEditMethod(m))}>
-                    <Text style={styles.actionLink}>Edit</Text>
+                    <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   {!row.is_system_default && (
                     <TouchableOpacity
                       onPress={() => (isStatus ? confirmDeleteStatus(s) : confirmDeleteMethod(m))}
                     >
-                      <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                      <Text style={[styles.actionLink, styles.deleteLink]}>{t('attendance_config.delete', 'Delete')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -337,7 +357,9 @@ export default function AttendanceConfigScreen() {
           style={styles.addBtn}
           onPress={tab === 'statuses' ? openNewStatus : openNewMethod}
         >
-          <Text style={styles.addBtnText}>{tab === 'statuses' ? '+ Add Status' : '+ Add Method'}</Text>
+          <Text style={styles.addBtnText}>
+            {tab === 'statuses' ? t('attendance_config.add_status', '+ Add Status') : t('attendance_config.add_method', '+ Add Method')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -347,16 +369,16 @@ export default function AttendanceConfigScreen() {
             <Text style={styles.modalTitle}>
               {tab === 'statuses'
                 ? editingStatus
-                  ? 'Edit Status'
-                  : 'New Status'
+                  ? t('attendance_config.edit_status', 'Edit Status')
+                  : t('attendance_config.new_status', 'New Status')
                 : editingMethod
-                ? 'Edit Method'
-                : 'New Method'}
+                ? t('attendance_config.edit_method', 'Edit Method')
+                : t('attendance_config.new_method', 'New Method')}
             </Text>
 
             {!editingStatus && !editingMethod && (
               <>
-                <Text style={styles.label}>Code</Text>
+                <Text style={styles.label}>{t('attendance_config.code_label', 'Code')}</Text>
                 <TextInput
                   style={styles.input}
                   value={fCode}
@@ -364,21 +386,21 @@ export default function AttendanceConfigScreen() {
                   placeholder="e.g. field_trip"
                   autoCapitalize="none"
                 />
-                <Text style={styles.hint}>Lowercase, no spaces — used in records and can't be changed later.</Text>
+                <Text style={styles.hint}>{t('attendance_config.code_hint', "Lowercase, no spaces — used in records and can't be changed later.")}</Text>
               </>
             )}
 
-            <Text style={styles.label}>Label</Text>
-            <TextInput style={styles.input} value={fLabel} onChangeText={setFLabel} placeholder="Display name" />
+            <Text style={styles.label}>{t('attendance_config.label_label', 'Label')}</Text>
+            <TextInput style={styles.input} value={fLabel} onChangeText={setFLabel} placeholder={t('attendance_config.label_placeholder', 'Display name')} />
 
             {tab === 'statuses' && (
               <>
                 <View style={styles.switchRow}>
-                  <Text style={styles.label}>Counts as present</Text>
+                  <Text style={styles.label}>{t('attendance_config.counts_present', 'Counts as present')}</Text>
                   <Switch value={fCountsPresent} onValueChange={setFCountsPresent} trackColor={{ false: '#D8DED9', true: EMERALD }} />
                 </View>
                 <View style={styles.switchRow}>
-                  <Text style={styles.label}>Requires a remark</Text>
+                  <Text style={styles.label}>{t('attendance_config.requires_remark', 'Requires a remark')}</Text>
                   <Switch value={fRequiresRemark} onValueChange={setFRequiresRemark} trackColor={{ false: '#D8DED9', true: EMERALD }} />
                 </View>
               </>
@@ -386,10 +408,10 @@ export default function AttendanceConfigScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSave} disabled={saving}>
-                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
