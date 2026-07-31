@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Path, Line, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchReportOverview, ReportOverview, OverviewChild } from '../../services/adminOrphanReportService';
 import { fetchTeacherOverview, TeacherReportOverview, TeacherOverview } from '../../services/adminTeacherService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
@@ -30,7 +31,11 @@ const CANVAS = '#F6F7F9';
 const DANGER = '#E5484D';
 const DANGER_SOFT = '#FCEDED';
 
-const MONTH_NAMES = [
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+const MONTH_FALLBACKS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
@@ -163,10 +168,11 @@ function FilterSheet({
   onClose: () => void;
   allLabel: string;
 }) {
+  const { t } = useLocale();
   const options: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: allLabel },
-    { key: 'submitted', label: 'Submitted' },
-    { key: 'missing', label: 'Missing' },
+    { key: 'submitted', label: t('admin_orphan_overview.filter_submitted', 'Submitted') },
+    { key: 'missing', label: t('admin_orphan_overview.filter_missing', 'Missing') },
   ];
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -175,7 +181,7 @@ function FilterSheet({
         <View style={styles.filterSheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>Filter</Text>
+            <Text style={styles.sheetTitle}>{t('admin_orphan_overview.filter_title', 'Filter')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.sheetCloseBtn}>
               <CloseIcon color={SUBTLE} />
             </TouchableOpacity>
@@ -219,6 +225,7 @@ const ChildRow = React.memo(function ChildRow({
   item: OverviewChild;
   onPress: (item: OverviewChild) => void;
 }) {
+  const { t } = useLocale();
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={() => onPress(item)}>
       <UserAvatar
@@ -234,10 +241,12 @@ const ChildRow = React.memo(function ChildRow({
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         {item.submitted ? (
           <Text style={styles.metaSubmitted} numberOfLines={1}>
-            Submitted{item.submitted_by ? ` by ${item.submitted_by}` : ''}
+            {item.submitted_by
+              ? t('admin_orphan_overview.submitted_by', 'Submitted by {name}').replace('{name}', item.submitted_by)
+              : t('admin_orphan_overview.submitted', 'Submitted')}
           </Text>
         ) : (
-          <Text style={styles.metaMissing}>Not submitted yet</Text>
+          <Text style={styles.metaMissing}>{t('admin_orphan_overview.not_submitted', 'Not submitted yet')}</Text>
         )}
       </View>
       <ChevronRightIcon color="#C4C9CF" />
@@ -253,6 +262,7 @@ const TeacherRow = React.memo(function TeacherRow({
   item: TeacherOverview;
   onPress: (item: TeacherOverview) => void;
 }) {
+  const { t } = useLocale();
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={() => onPress(item)}>
       <UserAvatar
@@ -268,10 +278,12 @@ const TeacherRow = React.memo(function TeacherRow({
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         {item.submitted ? (
           <Text style={styles.metaSubmitted} numberOfLines={1}>
-            Submitted{item.submitted_by ? ` by ${item.submitted_by}` : ''}
+            {item.submitted_by
+              ? t('admin_orphan_overview.submitted_by', 'Submitted by {name}').replace('{name}', item.submitted_by)
+              : t('admin_orphan_overview.submitted', 'Submitted')}
           </Text>
         ) : (
-          <Text style={styles.metaMissing}>Not submitted yet</Text>
+          <Text style={styles.metaMissing}>{t('admin_orphan_overview.not_submitted', 'Not submitted yet')}</Text>
         )}
       </View>
       <ChevronRightIcon color="#C4C9CF" />
@@ -297,6 +309,7 @@ export default function AdminOrphanOverviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [activeTab, setActiveTab] = useState<OverviewTab>('children');
 
@@ -325,7 +338,7 @@ export default function AdminOrphanOverviewScreen() {
       const data = await fetchReportOverview(token);
       setOverview(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report overview.');
+      setError(err instanceof Error ? err.message : t('admin_orphan_overview.load_error', 'Failed to load report overview.'));
     }
   }, [token]);
 
@@ -336,7 +349,7 @@ export default function AdminOrphanOverviewScreen() {
       const data = await fetchTeacherOverview(token);
       setTeacherOverview(data);
     } catch (err) {
-      setTeacherError(err instanceof Error ? err.message : 'Failed to load teacher report overview.');
+      setTeacherError(err instanceof Error ? err.message : t('admin_orphan_overview.load_teacher_error', 'Failed to load teacher report overview.'));
     }
   }, [token]);
 
@@ -393,7 +406,7 @@ export default function AdminOrphanOverviewScreen() {
   );
 
   const now = new Date();
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthLabel = `${t(`common.month_${MONTH_KEYS[now.getMonth()]}`, MONTH_FALLBACKS[now.getMonth()])} ${now.getFullYear()}`;
 
   const submitted = overview?.submitted_count ?? 0;
   const total = overview?.total_count ?? 0;
@@ -418,10 +431,10 @@ export default function AdminOrphanOverviewScreen() {
 
   const filteredTeachers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return teachers.filter((t) => {
-      const matchesQuery = !q || t.name.toLowerCase().includes(q);
+    return teachers.filter((teacher) => {
+      const matchesQuery = !q || teacher.name.toLowerCase().includes(q);
       const matchesStatus =
-        statusFilter === 'all' || (statusFilter === 'submitted' ? t.submitted : !t.submitted);
+        statusFilter === 'all' || (statusFilter === 'submitted' ? teacher.submitted : !teacher.submitted);
       return matchesQuery && matchesStatus;
     });
   }, [teachers, query, statusFilter]);
@@ -451,10 +464,10 @@ export default function AdminOrphanOverviewScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
           <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Monthly Reports</Text>
+          <Text style={styles.headerTitle}>{t('admin_orphan_overview.header_title', 'Monthly Reports')}</Text>
           <Text style={styles.headerSubtitle}>{monthLabel}</Text>
         </View>
         <TouchableOpacity
@@ -473,14 +486,14 @@ export default function AdminOrphanOverviewScreen() {
           activeOpacity={0.8}
           onPress={() => setActiveTab('children')}
         >
-          <Text style={[styles.tabBtnText, isChildrenTab && styles.tabBtnTextActive]}>Children</Text>
+          <Text style={[styles.tabBtnText, isChildrenTab && styles.tabBtnTextActive]}>{t('admin_orphan_overview.tab_children', 'Children')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, !isChildrenTab && styles.tabBtnActive]}
           activeOpacity={0.8}
           onPress={() => setActiveTab('teachers')}
         >
-          <Text style={[styles.tabBtnText, !isChildrenTab && styles.tabBtnTextActive]}>Teachers</Text>
+          <Text style={[styles.tabBtnText, !isChildrenTab && styles.tabBtnTextActive]}>{t('admin_orphan_overview.tab_teachers', 'Teachers')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -490,7 +503,7 @@ export default function AdminOrphanOverviewScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={isChildrenTab ? 'Search children...' : 'Search teachers...'}
+          placeholder={isChildrenTab ? t('admin_orphan_overview.search_children_placeholder', 'Search children...') : t('admin_orphan_overview.search_teachers_placeholder', 'Search teachers...')}
           placeholderTextColor={SUBTLE}
           style={styles.searchInput}
           autoCorrect={false}
@@ -518,7 +531,7 @@ export default function AdminOrphanOverviewScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{currentError}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={currentReload}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -534,12 +547,12 @@ export default function AdminOrphanOverviewScreen() {
                 <View style={styles.emptyWrap}>
                   <EmptyIcon />
                   <Text style={styles.emptyTitle}>
-                    {children.length === 0 ? 'No children assigned yet' : 'No matches'}
+                    {children.length === 0 ? t('admin_orphan_overview.empty_children_title', 'No children assigned yet') : t('admin_orphan_overview.empty_no_matches', 'No matches')}
                   </Text>
                   <Text style={styles.emptyBody}>
                     {children.length === 0
-                      ? 'Reports will show up here once children are assigned.'
-                      : 'Try a different name or clear your filter.'}
+                      ? t('admin_orphan_overview.empty_children_body', 'Reports will show up here once children are assigned.')
+                      : t('admin_orphan_overview.empty_no_matches_body', 'Try a different name or clear your filter.')}
                   </Text>
                 </View>
               }
@@ -555,12 +568,12 @@ export default function AdminOrphanOverviewScreen() {
                 <View style={styles.emptyWrap}>
                   <EmptyIcon />
                   <Text style={styles.emptyTitle}>
-                    {teachers.length === 0 ? 'No teachers yet' : 'No matches'}
+                    {teachers.length === 0 ? t('admin_orphan_overview.empty_teachers_title', 'No teachers yet') : t('admin_orphan_overview.empty_no_matches', 'No matches')}
                   </Text>
                   <Text style={styles.emptyBody}>
                     {teachers.length === 0
-                      ? 'Reports will show up here once teachers are added.'
-                      : 'Try a different name or clear your filter.'}
+                      ? t('admin_orphan_overview.empty_teachers_body', 'Reports will show up here once teachers are added.')
+                      : t('admin_orphan_overview.empty_no_matches_body', 'Try a different name or clear your filter.')}
                   </Text>
                 </View>
               }
@@ -574,21 +587,21 @@ export default function AdminOrphanOverviewScreen() {
                 icon={<PeopleIcon color={EMERALD} />}
                 iconBg={EMERALD_SOFT}
                 value={String(isChildrenTab ? total : teacherTotal)}
-                label="Total"
+                label={t('admin_orphan_overview.stat_total', 'Total')}
               />
               <View style={styles.footerDivider} />
               <FooterStat
                 icon={<PersonIcon color={EMERALD} />}
                 iconBg={EMERALD_SOFT}
                 value={String(isChildrenTab ? submitted : teacherSubmitted)}
-                label="Submitted"
+                label={t('admin_orphan_overview.stat_submitted', 'Submitted')}
               />
               <View style={styles.footerDivider} />
               <FooterStat
                 icon={<PersonIcon color={DANGER} />}
                 iconBg={DANGER_SOFT}
                 value={String(isChildrenTab ? missing : teacherMissing)}
-                label="Missing"
+                label={t('admin_orphan_overview.stat_missing', 'Missing')}
               />
             </View>
           </View>
@@ -600,7 +613,7 @@ export default function AdminOrphanOverviewScreen() {
         value={statusFilter}
         onSelect={setStatusFilter}
         onClose={() => setFilterSheetOpen(false)}
-        allLabel={isChildrenTab ? 'All children' : 'All teachers'}
+        allLabel={isChildrenTab ? t('admin_orphan_overview.filter_all_children', 'All children') : t('admin_orphan_overview.filter_all_teachers', 'All teachers')}
       />
 
     </View>
