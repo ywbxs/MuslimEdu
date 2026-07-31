@@ -14,6 +14,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -73,9 +74,10 @@ export default function GradeScaleBuilderScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const gradingSystemId: number = route.params?.gradingSystemId;
-  const gradingSystemName: string = route.params?.gradingSystemName ?? 'Grading System';
+  const gradingSystemName: string = route.params?.gradingSystemName ?? t('grade_scale_builder.grading_system_fallback', 'Grading System');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,15 +109,15 @@ export default function GradeScaleBuilderScreen() {
           }))
         );
       } else {
-        setScaleName(`${gradingSystemName} Scale`);
+        setScaleName(t('grade_scale_builder.default_scale_name', '{name} Scale').replace('{name}', gradingSystemName));
         setBands([blankBand()]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load grade scale.');
+      setError(err instanceof Error ? err.message : t('grade_scale_builder.load_error', 'Failed to load grade scale.'));
     } finally {
       setLoading(false);
     }
-  }, [token, gradingSystemId, gradingSystemName]);
+  }, [token, gradingSystemId, gradingSystemName, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -134,24 +136,26 @@ export default function GradeScaleBuilderScreen() {
   const addBand = () => setBands((prev) => [...prev, blankBand()]);
 
   const validate = (): string | null => {
-    if (!scaleName.trim()) return 'Scale name is required.';
-    if (bands.length === 0) return 'Add at least one band.';
+    if (!scaleName.trim()) return t('grade_scale_builder.name_required', 'Scale name is required.');
+    if (bands.length === 0) return t('grade_scale_builder.need_one_band', 'Add at least one band.');
     for (const b of bands) {
-      if (!b.label.trim()) return 'Every band needs a label (e.g. "A", "Pass").';
-      if (Number.isNaN(b.min_score) || Number.isNaN(b.max_score)) return 'Band scores must be numbers.';
-      if (b.max_score < b.min_score) return `"${b.label}" has a max score below its min score.`;
+      if (!b.label.trim()) return t('grade_scale_builder.label_required', 'Every band needs a label (e.g. "A", "Pass").');
+      if (Number.isNaN(b.min_score) || Number.isNaN(b.max_score)) return t('grade_scale_builder.scores_must_be_numbers', 'Band scores must be numbers.');
+      if (b.max_score < b.min_score) {
+        return t('grade_scale_builder.max_below_min', '"{label}" has a max score below its min score.').replace('{label}', b.label);
+      }
     }
     return null;
   };
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('grade_scale_builder.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     const validationError = validate();
     if (validationError) {
-      Alert.alert('Check the bands', validationError);
+      Alert.alert(t('grade_scale_builder.check_bands', 'Check the bands'), validationError);
       return;
     }
 
@@ -170,13 +174,13 @@ export default function GradeScaleBuilderScreen() {
     try {
       if (currentScale) {
         await createGradeScaleNewVersion(token, currentScale.id, payload, scaleName.trim());
-        Alert.alert('Saved', `Version ${currentScale.version + 1} of this scale was created.`);
+        Alert.alert(t('grade_scale_builder.saved', 'Saved'), t('grade_scale_builder.version_created', 'Version {version} of this scale was created.').replace('{version}', String(currentScale.version + 1)));
       } else {
         await createGradeScale(token, gradingSystemId, scaleName.trim(), payload);
       }
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the grade scale.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('grade_scale_builder.save_error', 'Could not save the grade scale.'));
     } finally {
       setSaving(false);
     }
@@ -220,25 +224,29 @@ export default function GradeScaleBuilderScreen() {
         {currentScale ? (
           <View style={styles.versionBanner}>
             <Text style={styles.versionBannerText}>
-              Editing bands creates version {currentScale.version + 1}. Version {currentScale.version} stays
-              intact for any grade already recorded against it.
+              {t(
+                'grade_scale_builder.version_banner',
+                'Editing bands creates version {next}. Version {current} stays intact for any grade already recorded against it.',
+              )
+                .replace('{next}', String(currentScale.version + 1))
+                .replace('{current}', String(currentScale.version))}
             </Text>
           </View>
         ) : null}
 
-        <Text style={styles.label}>Scale Name</Text>
+        <Text style={styles.label}>{t('grade_scale_builder.scale_name', 'Scale Name')}</Text>
         <TextInput
           style={styles.input}
           value={scaleName}
           onChangeText={setScaleName}
-          placeholder="e.g. Standard Percentage Scale"
+          placeholder={t('grade_scale_builder.scale_name_placeholder', 'e.g. Standard Percentage Scale')}
           placeholderTextColor={theme.textMuted}
         />
 
         <View style={styles.bandsHeaderRow}>
-          <Text style={styles.label}>Bands</Text>
+          <Text style={styles.label}>{t('grade_scale_builder.bands', 'Bands')}</Text>
           <TouchableOpacity onPress={addBand}>
-            <Text style={styles.addBandText}>+ Add band</Text>
+            <Text style={styles.addBandText}>{t('grade_scale_builder.add_band', '+ Add band')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -246,7 +254,7 @@ export default function GradeScaleBuilderScreen() {
           <View key={band.key} style={styles.bandCard}>
             <View style={styles.bandRowTop}>
               <View style={styles.bandScoreField}>
-                <Text style={styles.fieldLabel}>Min</Text>
+                <Text style={styles.fieldLabel}>{t('grade_scale_builder.min', 'Min')}</Text>
                 <TextInput
                   style={styles.smallInput}
                   keyboardType="numeric"
@@ -255,7 +263,7 @@ export default function GradeScaleBuilderScreen() {
                 />
               </View>
               <View style={styles.bandScoreField}>
-                <Text style={styles.fieldLabel}>Max</Text>
+                <Text style={styles.fieldLabel}>{t('grade_scale_builder.max', 'Max')}</Text>
                 <TextInput
                   style={styles.smallInput}
                   keyboardType="numeric"
@@ -264,7 +272,7 @@ export default function GradeScaleBuilderScreen() {
                 />
               </View>
               <View style={styles.bandLabelField}>
-                <Text style={styles.fieldLabel}>Label</Text>
+                <Text style={styles.fieldLabel}>{t('grade_scale_builder.label', 'Label')}</Text>
                 <TextInput
                   style={styles.smallInput}
                   value={band.label}
@@ -274,7 +282,7 @@ export default function GradeScaleBuilderScreen() {
                 />
               </View>
               <View style={styles.bandGpaField}>
-                <Text style={styles.fieldLabel}>GPA</Text>
+                <Text style={styles.fieldLabel}>{t('grade_scale_builder.gpa', 'GPA')}</Text>
                 <TextInput
                   style={styles.smallInput}
                   keyboardType="numeric"
@@ -296,12 +304,12 @@ export default function GradeScaleBuilderScreen() {
                   onValueChange={(v) => updateBand(band.key, { is_passing: v })}
                   trackColor={{ true: theme.accent }}
                 />
-                <Text style={styles.pillText}>Passing</Text>
+                <Text style={styles.pillText}>{t('grade_scale_builder.passing', 'Passing')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => removeBand(band.key)} disabled={bands.length <= 1}>
                 <Text style={[styles.removeText, bands.length <= 1 && styles.removeTextDisabled]}>
-                  Remove
+                  {t('grade_scale_builder.remove', 'Remove')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -313,7 +321,9 @@ export default function GradeScaleBuilderScreen() {
             <ActivityIndicator color={theme.onAccent} />
           ) : (
             <Text style={styles.saveButtonText}>
-              {currentScale ? `Save as Version ${currentScale.version + 1}` : 'Create Grade Scale'}
+              {currentScale
+                ? t('grade_scale_builder.save_as_version', 'Save as Version {version}').replace('{version}', String(currentScale.version + 1))
+                : t('grade_scale_builder.create', 'Create Grade Scale')}
             </Text>
           )}
         </TouchableOpacity>
