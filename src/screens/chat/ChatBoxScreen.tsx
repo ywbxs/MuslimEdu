@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import { fetchChatMessages, sendMessage, ChatMessage } from '../../services/chatService';
@@ -47,6 +48,7 @@ export default function ChatBoxScreen() {
   const route = useRoute();
   const { threadId: initialThreadId, userId, name, photo } = (route.params as RouteParams) ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [threadId, setThreadId] = useState<number | undefined>(initialThreadId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -121,7 +123,7 @@ export default function ChatBoxScreen() {
       setMessages((prev) => prev.map((m) => (m.id === tempId ? result.chat : m)));
     } catch {
       // Leave the optimistic bubble but mark it failed
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, message: `${text} (failed to send)` } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, message: `${text} ${t('chat_box.failed_to_send', '(failed to send)')}` } : m)));
     } finally {
       setIsSending(false);
     }
@@ -135,7 +137,7 @@ export default function ChatBoxScreen() {
     >
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerCenter} onPress={() => setProfileUserId(userId)} activeOpacity={0.8}>
           <UserAvatar name={name} photo={photo} size={32} ringColor={HAIRLINE} dotColor={null} />
@@ -163,14 +165,14 @@ export default function ChatBoxScreen() {
               </Text>
             </View>
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>Say hello to start the conversation 👋</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('chat_box.empty', 'Say hello to start the conversation 👋')}</Text>}
         />
       )}
 
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
-          placeholder="Type a message"
+          placeholder={t('chat_box.placeholder', 'Type a message')}
           placeholderTextColor={SUBTLE}
           value={draft}
           onChangeText={setDraft}
@@ -181,7 +183,7 @@ export default function ChatBoxScreen() {
           onPress={onSend}
           disabled={!draft.trim() || isSending}
         >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Text style={styles.sendButtonText}>{t('chat_box.send', 'Send')}</Text>
         </TouchableOpacity>
       </View>
 
