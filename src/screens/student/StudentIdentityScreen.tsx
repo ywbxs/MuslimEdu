@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, ScrollView, Share, StyleSheet, Text, T
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import { fetchStudentIdentity, StudentIdentity } from '../../services/studentIdentityService';
 
@@ -10,6 +11,7 @@ export default function StudentIdentityScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
   const [identity, setIdentity] = useState<StudentIdentity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,58 +21,58 @@ export default function StudentIdentityScreen() {
     setLoading(true);
     setError(null);
     try { setIdentity(await fetchStudentIdentity(token)); }
-    catch (e: any) { setError(e?.message ?? 'Could not load your student ID.'); }
+    catch (e: any) { setError(e?.message ?? t('student_identity.load_error', 'Could not load your student ID.')); }
     finally { setLoading(false); }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => { load(); }, [load]);
 
   const shareIdentity = async () => {
     if (!identity) return;
-    await Share.share({ message: `${identity.name}\nStudent number: ${identity.student_number ?? 'Not assigned'}\n${identity.school.name ?? 'MuslimEdu'}` });
+    await Share.share({ message: `${identity.name}\n${t('student_identity.student_number_label', 'Student number')}: ${identity.student_number ?? t('student_identity.not_assigned', 'Not assigned')}\n${identity.school.name ?? 'MuslimEdu'}` });
   };
 
-  if (loading) return <View style={[styles.center, { paddingTop: insets.top }]}><ActivityIndicator size="large" color={EMERALD} /><Text style={styles.muted}>Loading your student ID…</Text></View>;
-  if (error || !identity) return <View style={[styles.center, { paddingTop: insets.top }]}><Text style={styles.errorTitle}>Student ID unavailable</Text><Text style={styles.muted}>{error ?? 'No identity record was returned.'}</Text><TouchableOpacity onPress={load} style={styles.retry}><Text style={styles.retryText}>Try again</Text></TouchableOpacity></View>;
+  if (loading) return <View style={[styles.center, { paddingTop: insets.top }]}><ActivityIndicator size="large" color={EMERALD} /><Text style={styles.muted}>{t('student_identity.loading', 'Loading your student ID…')}</Text></View>;
+  if (error || !identity) return <View style={[styles.center, { paddingTop: insets.top }]}><Text style={styles.errorTitle}>{t('student_identity.unavailable_title', 'Student ID unavailable')}</Text><Text style={styles.muted}>{error ?? t('student_identity.no_record', 'No identity record was returned.')}</Text><TouchableOpacity onPress={load} style={styles.retry}><Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text></TouchableOpacity></View>;
 
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}><Text style={styles.backText}>‹</Text></TouchableOpacity>
-        <View><Text style={styles.title}>My Student ID</Text><Text style={styles.subtitle}>Your official school identity</Text></View>
+        <View><Text style={styles.title}>{t('student_identity.title', 'My Student ID')}</Text><Text style={styles.subtitle}>{t('student_identity.subtitle', 'Your official school identity')}</Text></View>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.idCard}>
           <View style={styles.cardTop}>
             {identity.school.logo ? <Image source={{ uri: identity.school.logo }} style={styles.logo} /> : <View style={styles.logoFallback}><Text style={styles.logoText}>M</Text></View>}
-            <View style={styles.schoolText}><Text style={styles.schoolName}>{identity.school.name ?? 'MuslimEdu'}</Text><Text style={styles.cardCaption}>STUDENT IDENTITY CARD</Text></View>
+            <View style={styles.schoolText}><Text style={styles.schoolName}>{identity.school.name ?? 'MuslimEdu'}</Text><Text style={styles.cardCaption}>{t('student_identity.card_caption', 'STUDENT IDENTITY CARD')}</Text></View>
           </View>
           <View style={styles.cardDivider} />
           <View style={styles.profileRow}>
             {identity.photo ? <Image source={{ uri: identity.photo }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Text style={styles.avatarText}>{identity.name.slice(0, 1).toUpperCase()}</Text></View>}
-            <View style={styles.profileText}><Text style={styles.name}>{identity.name}</Text><Text style={styles.number}>{identity.student_number ?? 'Number pending'}</Text></View>
+            <View style={styles.profileText}><Text style={styles.name}>{identity.name}</Text><Text style={styles.number}>{identity.student_number ?? t('student_identity.number_pending', 'Number pending')}</Text></View>
           </View>
           <View style={styles.cardDivider} />
-          <IdentityRow label="Program" value={identity.academic.program} />
-          <IdentityRow label="Class / Section" value={[identity.academic.class_name, identity.academic.section].filter(Boolean).join(' / ')} />
-          <IdentityRow label="Academic year" value={identity.academic.academic_year} />
-          <View style={styles.statusPill}><View style={styles.statusDot} /><Text style={styles.statusText}>{identity.academic.status ?? 'Active student'}</Text></View>
+          <IdentityRow label={t('student_identity.program', 'Program')} value={identity.academic.program} />
+          <IdentityRow label={t('student_identity.class_section', 'Class / Section')} value={[identity.academic.class_name, identity.academic.section].filter(Boolean).join(' / ')} />
+          <IdentityRow label={t('student_identity.academic_year', 'Academic year')} value={identity.academic.academic_year} />
+          <View style={styles.statusPill}><View style={styles.statusDot} /><Text style={styles.statusText}>{identity.academic.status ?? t('student_identity.active_student', 'Active student')}</Text></View>
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Student number</Text>
-          <Text style={styles.bigNumber}>{identity.student_number ?? 'Not assigned yet'}</Text>
-          <Text style={styles.muted}>This number is assigned by your school and cannot be edited from the app.</Text>
+          <Text style={styles.sectionTitle}>{t('student_identity.student_number_label', 'Student number')}</Text>
+          <Text style={styles.bigNumber}>{identity.student_number ?? t('student_identity.not_assigned_yet', 'Not assigned yet')}</Text>
+          <Text style={styles.muted}>{t('student_identity.number_note', 'This number is assigned by your school and cannot be edited from the app.')}</Text>
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Digital identity</Text>
-          <Text style={styles.muted}>Your school can use this identity payload for QR or ID verification. The app does not invent a scannable QR code when the backend has not enabled one.</Text>
-          <View style={styles.payload}><Text style={styles.payloadLabel}>VERIFICATION PAYLOAD</Text><Text style={styles.payloadText} numberOfLines={3}>{identity.qr_payload}</Text></View>
-          {!identity.qr_available ? <Text style={styles.pending}>QR display will appear once QR verification is enabled by the school.</Text> : null}
+          <Text style={styles.sectionTitle}>{t('student_identity.digital_identity', 'Digital identity')}</Text>
+          <Text style={styles.muted}>{t('student_identity.digital_identity_note', 'Your school can use this identity payload for QR or ID verification. The app does not invent a scannable QR code when the backend has not enabled one.')}</Text>
+          <View style={styles.payload}><Text style={styles.payloadLabel}>{t('student_identity.verification_payload', 'VERIFICATION PAYLOAD')}</Text><Text style={styles.payloadText} numberOfLines={3}>{identity.qr_payload}</Text></View>
+          {!identity.qr_available ? <Text style={styles.pending}>{t('student_identity.qr_pending', 'QR display will appear once QR verification is enabled by the school.')}</Text> : null}
         </View>
 
-        <TouchableOpacity style={styles.shareButton} onPress={shareIdentity}><Text style={styles.shareText}>Share student details</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.shareButton} onPress={shareIdentity}><Text style={styles.shareText}>{t('student_identity.share_button', 'Share student details')}</Text></TouchableOpacity>
       </ScrollView>
     </View>
   );

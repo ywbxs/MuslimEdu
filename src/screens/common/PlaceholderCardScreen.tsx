@@ -4,6 +4,7 @@ import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
+import { useLocale } from '../../context/LocaleContext';
 interface PlaceholderCardScreenProps {
   title: string;
   emoji: string;
@@ -17,6 +18,7 @@ interface PlaceholderCardScreenProps {
  */
 export default function PlaceholderCardScreen({ title, emoji, description }: PlaceholderCardScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useLocale();
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -28,7 +30,7 @@ export default function PlaceholderCardScreen({ title, emoji, description }: Pla
           <View style={styles.emojiCircle}>
             <Text style={styles.emoji}>{emoji}</Text>
           </View>
-          <Text style={styles.cardTitle}>{title} is on the way</Text>
+          <Text style={styles.cardTitle}>{title} {t('placeholder_card.is_on_the_way', 'is on the way')}</Text>
           <Text style={styles.cardDescription}>{description}</Text>
         </View>
       </View>

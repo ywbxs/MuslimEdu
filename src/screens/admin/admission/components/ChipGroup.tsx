@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { md3 } from '../theme';
+import { useLocale } from '../../../../context/LocaleContext';
 
 export interface ChipOption {
   id: number;
@@ -24,6 +25,7 @@ export default function ChipGroup({
   error?: string | null;
   emptyHint?: string;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, error && styles.labelError]}>
@@ -31,7 +33,7 @@ export default function ChipGroup({
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       {options.length === 0 ? (
-        <Text style={styles.emptyHint}>{emptyHint ?? 'None available yet.'}</Text>
+        <Text style={styles.emptyHint}>{emptyHint ?? t('chip_group.none_available', 'None available yet.')}</Text>
       ) : (
         <View style={styles.row}>
           {options.map((opt) => {
