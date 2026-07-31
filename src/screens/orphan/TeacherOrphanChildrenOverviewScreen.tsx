@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Path, Line, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchReportOverview, ReportOverview, OverviewChild } from '../../services/adminOrphanReportService';
 import { StudentSummary } from '../../services/adminService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
@@ -31,7 +32,11 @@ const CANVAS = '#F6F7F9';
 const DANGER = '#E5484D';
 const DANGER_SOFT = '#FCEDED';
 
-const MONTH_NAMES = [
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+const MONTH_FALLBACKS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
@@ -161,10 +166,11 @@ function FilterSheet({
   onSelect: (v: StatusFilter) => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const options: { key: StatusFilter; label: string }[] = [
-    { key: 'all', label: 'All children' },
-    { key: 'submitted', label: 'Submitted' },
-    { key: 'missing', label: 'Missing' },
+    { key: 'all', label: t('teacher_orphan_overview.filter_all', 'All children') },
+    { key: 'submitted', label: t('teacher_orphan_overview.filter_submitted', 'Submitted') },
+    { key: 'missing', label: t('teacher_orphan_overview.filter_missing', 'Missing') },
   ];
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -173,7 +179,7 @@ function FilterSheet({
         <View style={styles.filterSheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>Filter</Text>
+            <Text style={styles.sheetTitle}>{t('teacher_orphan_overview.filter_title', 'Filter')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.sheetCloseBtn}>
               <CloseIcon color={SUBTLE} />
             </TouchableOpacity>
@@ -217,6 +223,7 @@ const ChildRow = React.memo(function ChildRow({
   item: OverviewChild;
   onPress: (item: OverviewChild) => void;
 }) {
+  const { t } = useLocale();
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={() => onPress(item)}>
       <UserAvatar
@@ -232,10 +239,12 @@ const ChildRow = React.memo(function ChildRow({
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         {item.submitted ? (
           <Text style={styles.metaSubmitted} numberOfLines={1}>
-            Submitted{item.submitted_by ? ` by ${item.submitted_by}` : ''}
+            {item.submitted_by
+              ? t('teacher_orphan_overview.submitted_by', 'Submitted by {name}').replace('{name}', item.submitted_by)
+              : t('teacher_orphan_overview.submitted', 'Submitted')}
           </Text>
         ) : (
-          <Text style={styles.metaMissing}>Not submitted yet</Text>
+          <Text style={styles.metaMissing}>{t('teacher_orphan_overview.not_submitted', 'Not submitted yet')}</Text>
         )}
       </View>
       <ChevronRightIcon color="#C4C9CF" />
@@ -255,6 +264,7 @@ export default function TeacherOrphanChildrenOverviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [overview, setOverview] = useState<ReportOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -276,7 +286,7 @@ export default function TeacherOrphanChildrenOverviewScreen() {
       const data = await fetchReportOverview(token);
       setOverview(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report overview.');
+      setError(err instanceof Error ? err.message : t('teacher_orphan_overview.load_error', 'Failed to load report overview.'));
     }
   }, [token]);
 
@@ -341,7 +351,8 @@ export default function TeacherOrphanChildrenOverviewScreen() {
   };
 
   const now = new Date();
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthIndex = now.getMonth();
+  const monthLabel = `${t(`common.month_${MONTH_KEYS[monthIndex]}`, MONTH_FALLBACKS[monthIndex])} ${now.getFullYear()}`;
   const submitted = overview?.submitted_count ?? 0;
   const total = overview?.total_count ?? 0;
   const missing = Math.max(total - submitted, 0);
@@ -371,10 +382,10 @@ export default function TeacherOrphanChildrenOverviewScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
           <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Monthly Reports</Text>
+          <Text style={styles.headerTitle}>{t('teacher_orphan_overview.header_title', 'Monthly Reports')}</Text>
           <Text style={styles.headerSubtitle}>{monthLabel}</Text>
         </View>
         <TouchableOpacity
@@ -392,7 +403,7 @@ export default function TeacherOrphanChildrenOverviewScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search children..."
+          placeholder={t('teacher_orphan_overview.search_placeholder', 'Search children...')}
           placeholderTextColor={SUBTLE}
           style={styles.searchInput}
           autoCorrect={false}
@@ -420,7 +431,7 @@ export default function TeacherOrphanChildrenOverviewScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -435,12 +446,12 @@ export default function TeacherOrphanChildrenOverviewScreen() {
               <View style={styles.emptyWrap}>
                 <EmptyIcon />
                 <Text style={styles.emptyTitle}>
-                  {children.length === 0 ? 'No children assigned yet' : 'No matches'}
+                  {children.length === 0 ? t('teacher_orphan_overview.empty_title_none', 'No children assigned yet') : t('teacher_orphan_overview.empty_title_no_matches', 'No matches')}
                 </Text>
                 <Text style={styles.emptyBody}>
                   {children.length === 0
-                    ? 'Reports will show up here once children are assigned.'
-                    : 'Try a different name or clear your filter.'}
+                    ? t('teacher_orphan_overview.empty_body_none', 'Reports will show up here once children are assigned.')
+                    : t('teacher_orphan_overview.empty_body_no_matches', 'Try a different name or clear your filter.')}
                 </Text>
               </View>
             }
@@ -453,21 +464,21 @@ export default function TeacherOrphanChildrenOverviewScreen() {
                 icon={<PeopleIcon color={EMERALD} />}
                 iconBg={EMERALD_SOFT}
                 value={String(total)}
-                label="Total"
+                label={t('teacher_orphan_overview.stat_total', 'Total')}
               />
               <View style={styles.footerDivider} />
               <FooterStat
                 icon={<PersonIcon color={EMERALD} />}
                 iconBg={EMERALD_SOFT}
                 value={String(submitted)}
-                label="Submitted"
+                label={t('teacher_orphan_overview.stat_submitted', 'Submitted')}
               />
               <View style={styles.footerDivider} />
               <FooterStat
                 icon={<PersonIcon color={DANGER} />}
                 iconBg={DANGER_SOFT}
                 value={String(missing)}
-                label="Missing"
+                label={t('teacher_orphan_overview.stat_missing', 'Missing')}
               />
             </View>
           </View>
