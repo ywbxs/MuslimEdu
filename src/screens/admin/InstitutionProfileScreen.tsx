@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -57,9 +58,10 @@ import {
  * years/terms are the same Academic Setup module.
  */
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+const DAY_FALLBACKS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
+const INSTITUTION_TYPE_FALLBACKS: Record<InstitutionType, string> = {
   mahad: 'Mahad',
   madrasa: 'Madrasa',
   markaz: 'Markaz',
@@ -67,13 +69,13 @@ const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
   orphanage: 'Orphan School',
 };
 
-const CALENDAR_TYPE_LABELS: Record<CalendarType, string> = {
+const CALENDAR_TYPE_FALLBACKS: Record<CalendarType, string> = {
   gregorian: 'Gregorian',
   hijri: 'Hijri',
   dual: 'Dual (Hijri + Gregorian)',
 };
 
-const YEAR_STRUCTURE_LABELS: Record<AcademicYearStructure, string> = {
+const YEAR_STRUCTURE_FALLBACKS: Record<AcademicYearStructure, string> = {
   semester: 'Semester',
   trimester: 'Trimester',
   quarter: 'Quarter',
@@ -103,6 +105,11 @@ export default function InstitutionProfileScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
+  const institutionTypeLabel = (type: InstitutionType) => t(`institution_profile.type_${type}`, INSTITUTION_TYPE_FALLBACKS[type]);
+  const calendarTypeLabel = (type: CalendarType) => t(`institution_profile.calendar_${type}`, CALENDAR_TYPE_FALLBACKS[type]);
+  const yearStructureLabel = (s: AcademicYearStructure) => t(`institution_profile.year_structure_${s}`, YEAR_STRUCTURE_FALLBACKS[s]);
+  const dayLabel = (i: number) => t(`institution_profile.day_${DAY_KEYS[i]}`, DAY_FALLBACKS[i]);
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SetupStatus | null>(null);
@@ -157,11 +164,11 @@ export default function InstitutionProfileScreen() {
       setExistingLogoUrl(s.logo);
       setExistingSealUrl(s.seal);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load institution profile.');
+      setError(err instanceof Error ? err.message : t('institution_profile.load_error', 'Failed to load institution profile.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -188,7 +195,7 @@ export default function InstitutionProfileScreen() {
       if (err instanceof InvalidPhotoTypeError) {
         setPhotoError(err.message);
       } else {
-        setPhotoError('Could not process that image. Please try a different one.');
+        setPhotoError(t('institution_profile.photo_process_error', 'Could not process that image. Please try a different one.'));
       }
     } finally {
       setPickingField(null);
@@ -199,15 +206,15 @@ export default function InstitutionProfileScreen() {
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('institution_profile.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Institution name is required.');
+      Alert.alert(t('common.error', 'Error'), t('institution_profile.name_required', 'Institution name is required.'));
       return;
     }
     if (!validateHours(hoursStart) || !validateHours(hoursEnd)) {
-      Alert.alert('Error', 'School hours must be in 24-hour HH:MM format, e.g. 08:00.');
+      Alert.alert(t('common.error', 'Error'), t('institution_profile.hours_format_error', 'School hours must be in 24-hour HH:MM format, e.g. 08:00.'));
       return;
     }
 
@@ -231,12 +238,12 @@ export default function InstitutionProfileScreen() {
         logo: newLogo ? { uri: newLogo.uri, fileName: newLogo.fileName, type: newLogo.type } : undefined,
         seal: newSeal ? { uri: newSeal.uri, fileName: newSeal.fileName, type: newSeal.type } : undefined,
       });
-      Alert.alert('Saved', 'Institution profile updated.');
+      Alert.alert(t('institution_profile.saved', 'Saved'), t('institution_profile.saved_message', 'Institution profile updated.'));
       setNewLogo(null);
       setNewSeal(null);
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the institution profile.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('institution_profile.save_error', 'Could not save the institution profile.'));
     } finally {
       setSubmitting(false);
     }
@@ -249,7 +256,7 @@ export default function InstitutionProfileScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Institution Profile</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('institution_profile.title', 'Institution Profile')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
@@ -276,79 +283,83 @@ export default function InstitutionProfileScreen() {
             <View style={styles.errorBanner}>
               <Text style={styles.errorBannerText}>{error}</Text>
               <TouchableOpacity onPress={load}>
-                <Text style={styles.retryText}>Retry</Text>
+                <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {/* Branding */}
-          <Text style={styles.sectionTitle}>Branding</Text>
+          <Text style={styles.sectionTitle}>{t('institution_profile.branding', 'Branding')}</Text>
           <View style={styles.brandingRow}>
             <PhotoSlot
-              label="Logo"
+              label={t('institution_profile.logo', 'Logo')}
               uri={newLogo?.uri ?? existingLogoUrl}
               busy={pickingField === 'logo'}
               onPress={() => pickPhoto('logo')}
               theme={theme}
+              changeText={t('institution_profile.change', 'Change')}
+              addText={t('institution_profile.add', 'Add')}
             />
             <PhotoSlot
-              label="Official Seal"
+              label={t('institution_profile.official_seal', 'Official Seal')}
               uri={newSeal?.uri ?? existingSealUrl}
               busy={pickingField === 'seal'}
               onPress={() => pickPhoto('seal')}
               theme={theme}
+              changeText={t('institution_profile.change', 'Change')}
+              addText={t('institution_profile.add', 'Add')}
             />
           </View>
           <Text style={styles.hint}>
-            Max {formatBytes(MAX_PHOTO_BYTES)} - larger images are compressed automatically. JPG, JPEG, or PNG.
+            {t('institution_profile.photo_hint', 'Max {size} - larger images are compressed automatically. JPG, JPEG, or PNG.').replace('{size}', formatBytes(MAX_PHOTO_BYTES))}
           </Text>
           {photoError ? <Text style={styles.errorText}>{photoError}</Text> : null}
 
           {/* Basic info */}
-          <Text style={styles.sectionTitle}>Basic Information</Text>
-          <Field label="Institution Name" value={name} onChangeText={setName} placeholder="Institution name" theme={theme} styles={styles} />
-          <Field label="Arabic Name (optional)" value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" theme={theme} styles={styles} />
-          <Field label="Email (optional)" value={email} onChangeText={setEmail} placeholder="school@example.com" keyboardType="email-address" theme={theme} styles={styles} />
-          <Field label="Phone (optional)" value={phone} onChangeText={setPhone} placeholder="Phone number" keyboardType="phone-pad" theme={theme} styles={styles} />
-          <Field label="Address (optional)" value={address} onChangeText={setAddress} placeholder="Address" multiline theme={theme} styles={styles} />
+          <Text style={styles.sectionTitle}>{t('institution_profile.basic_information', 'Basic Information')}</Text>
+          <Field label={t('institution_profile.institution_name', 'Institution Name')} value={name} onChangeText={setName} placeholder={t('institution_profile.institution_name_placeholder', 'Institution name')} theme={theme} styles={styles} />
+          <Field label={t('institution_profile.arabic_name', 'Arabic Name (optional)')} value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" theme={theme} styles={styles} />
+          <Field label={t('institution_profile.email', 'Email (optional)')} value={email} onChangeText={setEmail} placeholder="school@example.com" keyboardType="email-address" theme={theme} styles={styles} />
+          <Field label={t('institution_profile.phone', 'Phone (optional)')} value={phone} onChangeText={setPhone} placeholder={t('institution_profile.phone_placeholder', 'Phone number')} keyboardType="phone-pad" theme={theme} styles={styles} />
+          <Field label={t('institution_profile.address', 'Address (optional)')} value={address} onChangeText={setAddress} placeholder={t('institution_profile.address_placeholder', 'Address')} multiline theme={theme} styles={styles} />
 
           {/* Institution type */}
-          <Text style={styles.sectionTitle}>Institution Type</Text>
+          <Text style={styles.sectionTitle}>{t('institution_profile.institution_type', 'Institution Type')}</Text>
           <View style={styles.chipRow}>
             {status.institution_types.map((type) => (
               <Chip
                 key={type}
-                label={INSTITUTION_TYPE_LABELS[type]}
+                label={institutionTypeLabel(type)}
                 selected={institutionType === type}
                 onPress={() => setInstitutionType(type)}
                 styles={styles}
               />
             ))}
           </View>
-          <Text style={styles.hint}>Only sets editable starting defaults - nothing here is hardcoded to this choice.</Text>
+          <Text style={styles.hint}>{t('institution_profile.institution_type_hint', 'Only sets editable starting defaults - nothing here is hardcoded to this choice.')}</Text>
 
           {/* Localization & calendar */}
-          <Text style={styles.sectionTitle}>Localization &amp; Calendar</Text>
-          <Field label="Timezone" value={timezone} onChangeText={setTimezone} placeholder="e.g. Asia/Karachi" theme={theme} styles={styles} />
-          <Field label="Default Language" value={defaultLanguage} onChangeText={setDefaultLanguage} placeholder="e.g. en" theme={theme} styles={styles} />
-          <Field label="Secondary Language (optional)" value={secondaryLanguage} onChangeText={setSecondaryLanguage} placeholder="e.g. ar" theme={theme} styles={styles} />
-          <Text style={styles.label}>Calendar Type</Text>
+          <Text style={styles.sectionTitle}>{t('institution_profile.localization_calendar', 'Localization & Calendar')}</Text>
+          <Field label={t('institution_profile.timezone', 'Timezone')} value={timezone} onChangeText={setTimezone} placeholder="e.g. Asia/Karachi" theme={theme} styles={styles} />
+          <Field label={t('institution_profile.default_language', 'Default Language')} value={defaultLanguage} onChangeText={setDefaultLanguage} placeholder="e.g. en" theme={theme} styles={styles} />
+          <Field label={t('institution_profile.secondary_language', 'Secondary Language (optional)')} value={secondaryLanguage} onChangeText={setSecondaryLanguage} placeholder="e.g. ar" theme={theme} styles={styles} />
+          <Text style={styles.label}>{t('institution_profile.calendar_type', 'Calendar Type')}</Text>
           <View style={styles.chipRow}>
             {status.calendar_types.map((type) => (
-              <Chip key={type} label={CALENDAR_TYPE_LABELS[type]} selected={calendarType === type} onPress={() => setCalendarType(type)} styles={styles} />
+              <Chip key={type} label={calendarTypeLabel(type)} selected={calendarType === type} onPress={() => setCalendarType(type)} styles={styles} />
             ))}
           </View>
 
           {/* Schedule */}
-          <Text style={styles.sectionTitle}>Working Days &amp; Hours</Text>
+          <Text style={styles.sectionTitle}>{t('institution_profile.working_days_hours', 'Working Days & Hours')}</Text>
           <View style={styles.chipRow}>
-            {DAY_LABELS.map((label, i) => (
-              <Chip key={label} label={label} selected={workingDays.includes(i)} onPress={() => toggleDay(i)} styles={styles} />
+            {DAY_KEYS.map((key, i) => (
+              <Chip key={key} label={dayLabel(i)} selected={workingDays.includes(i)} onPress={() => toggleDay(i)} styles={styles} />
             ))}
           </View>
           <View style={styles.hoursRow}>
             <View style={styles.hoursField}>
-              <Text style={styles.label}>Start (24h)</Text>
+              <Text style={styles.label}>{t('institution_profile.start_24h', 'Start (24h)')}</Text>
               <TextInput
                 style={styles.input}
                 value={hoursStart}
@@ -359,7 +370,7 @@ export default function InstitutionProfileScreen() {
               />
             </View>
             <View style={styles.hoursField}>
-              <Text style={styles.label}>End (24h)</Text>
+              <Text style={styles.label}>{t('institution_profile.end_24h', 'End (24h)')}</Text>
               <TextInput
                 style={styles.input}
                 value={hoursEnd}
@@ -372,14 +383,17 @@ export default function InstitutionProfileScreen() {
           </View>
 
           {/* Academic year structure */}
-          <Text style={styles.sectionTitle}>Academic Year Structure</Text>
+          <Text style={styles.sectionTitle}>{t('institution_profile.academic_year_structure', 'Academic Year Structure')}</Text>
           <View style={styles.chipRow}>
             {status.academic_year_structures.map((s) => (
-              <Chip key={s} label={YEAR_STRUCTURE_LABELS[s]} selected={yearStructure === s} onPress={() => setYearStructure(s)} styles={styles} />
+              <Chip key={s} label={yearStructureLabel(s)} selected={yearStructure === s} onPress={() => setYearStructure(s)} styles={styles} />
             ))}
           </View>
           <Text style={styles.hint}>
-            Changing this only affects new academic years going forward - existing years and terms keep the structure they were created with.
+            {t(
+              'institution_profile.year_structure_hint',
+              'Changing this only affects new academic years going forward - existing years and terms keep the structure they were created with.',
+            )}
           </Text>
 
           <TouchableOpacity
@@ -387,7 +401,7 @@ export default function InstitutionProfileScreen() {
             disabled={submitting}
             onPress={onSave}
           >
-            {submitting ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+            {submitting ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.saveButtonText}>{t('institution_profile.save_changes', 'Save Changes')}</Text>}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -454,12 +468,16 @@ function PhotoSlot({
   busy,
   onPress,
   theme,
+  changeText,
+  addText,
 }: {
   label: string;
   uri: string | null;
   busy: boolean;
   onPress: () => void;
   theme: AcademicGlassTheme;
+  changeText: string;
+  addText: string;
 }) {
   return (
     <TouchableOpacity style={slotStyles.wrap} onPress={onPress} activeOpacity={0.85} disabled={busy}>
@@ -475,7 +493,7 @@ function PhotoSlot({
           </View>
         ) : null}
       </View>
-      <Text style={[slotStyles.label, { color: theme.textSecondary }]}>{uri ? `Change ${label}` : `Add ${label}`}</Text>
+      <Text style={[slotStyles.label, { color: theme.textSecondary }]}>{uri ? `${changeText} ${label}` : `${addText} ${label}`}</Text>
     </TouchableOpacity>
   );
 }
