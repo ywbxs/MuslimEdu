@@ -16,6 +16,7 @@ import axios from 'axios';
 import Svg, { Polyline } from 'react-native-svg';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -38,7 +39,9 @@ const CurriculumListScreen = () => {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
+  const statusLabel = (status: string) => t(`curriculum_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
   const [curricula, setCurricula] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +77,7 @@ const CurriculumListScreen = () => {
       setCurricula(response.data.curricula || []);
     } catch (error) {
       console.error('Error fetching curricula:', error);
-      Alert.alert('Error', 'Failed to load curricula');
+      Alert.alert(t('common.error', 'Error'), t('curriculum_list.load_error', 'Failed to load curricula'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -99,12 +102,12 @@ const CurriculumListScreen = () => {
 
   const handleDelete = (curriculum) => {
     Alert.alert(
-      'Delete Curriculum',
-      `Delete "${curriculum.name}"? This can't be undone.`,
+      t('curriculum_list.delete_title', 'Delete Curriculum'),
+      t('curriculum_list.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', curriculum.name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('curriculum_list.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -120,8 +123,8 @@ const CurriculumListScreen = () => {
               );
               fetchCurricula();
             } catch (error) {
-              const msg = error.response?.data?.message || 'Failed to delete curriculum';
-              Alert.alert('Error', msg);
+              const msg = error.response?.data?.message || t('curriculum_list.delete_error', 'Failed to delete curriculum');
+              Alert.alert(t('common.error', 'Error'), msg);
             }
           },
         },
@@ -152,17 +155,17 @@ const CurriculumListScreen = () => {
         <Text style={styles.name}>{item.name}</Text>
 
         <View style={styles.infoRow}>
-          <Text style={styles.label}>Department:</Text>
-          <Text style={styles.value}>{item.department_name || 'None'}</Text>
+          <Text style={styles.label}>{t('curriculum_list.department_label', 'Department:')}</Text>
+          <Text style={styles.value}>{item.department_name || t('common.none', 'None')}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.label}>Effective Year:</Text>
-          <Text style={styles.value}>{item.effective_school_year_name || 'Not set'}</Text>
+          <Text style={styles.label}>{t('curriculum_list.effective_year_label', 'Effective Year:')}</Text>
+          <Text style={styles.value}>{item.effective_school_year_name || t('curriculum_list.not_set', 'Not set')}</Text>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statChip}>
-            <Text style={styles.statChipText}>{item.classes_count} classes</Text>
+            <Text style={styles.statChipText}>{t('curriculum_list.n_classes', '{n} classes').replace('{n}', String(item.classes_count))}</Text>
           </View>
         </View>
 
@@ -171,19 +174,19 @@ const CurriculumListScreen = () => {
             style={styles.actionButtonGhost}
             onPress={() => navigation.navigate('CurriculumVersions', { curriculumId: item.id, curriculumName: item.name })}
           >
-            <Text style={styles.actionButtonGhostText}>Versions</Text>
+            <Text style={styles.actionButtonGhostText}>{t('curriculum_list.versions', 'Versions')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleCurriculumPress(item.id)}
           >
-            <Text style={styles.actionButtonText}>Edit</Text>
+            <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('curriculum_list.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -212,7 +215,7 @@ const CurriculumListScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Curricula</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('curriculum_list.title', 'Curricula')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>
@@ -230,13 +233,13 @@ const CurriculumListScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Curricula</Text>
+        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('curriculum_list.title', 'Curricula')}</Text>
         {isAdminRole ? (
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CurriculumForm')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('curriculum_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -246,7 +249,7 @@ const CurriculumListScreen = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search curriculum name or code..."
+          placeholder={t('curriculum_list.search_placeholder', 'Search curriculum name or code...')}
           value={searchTerm}
           onChangeText={handleSearch}
           placeholderTextColor={theme.textMuted}
@@ -269,7 +272,7 @@ const CurriculumListScreen = () => {
                 statusFilter === status && styles.filterButtonTextActive,
               ]}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -292,11 +295,13 @@ const CurriculumListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon="📘"
-            title="No curricula found"
+            title={t('curriculum_list.empty_title', 'No curricula found')}
             subtitle={
               searchTerm
-                ? `Nothing matches "${searchTerm}".`
-                : `No ${statusFilter === 'all' ? '' : statusFilter + ' '}curricula yet.`
+                ? t('curriculum_list.no_match', 'Nothing matches "{query}".').replace('{query}', searchTerm)
+                : statusFilter === 'all'
+                ? t('curriculum_list.empty_all', 'No curricula yet.')
+                : t('curriculum_list.empty_status', 'No {status} curricula yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
             colors={theme}
           />

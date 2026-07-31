@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -29,6 +30,8 @@ const CurriculumFormScreen = () => {
   const route = useRoute();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const statusLabel = (status: string) => t(`curriculum_form.status_${status}`, labelize(status));
   const curriculumId = route.params?.curriculumId;
   const isEditing = !!curriculumId;
 
@@ -129,12 +132,12 @@ const CurriculumFormScreen = () => {
           status: curriculum.status || 'active',
         });
       } else {
-        Alert.alert('Error', 'Curriculum not found');
+        Alert.alert(t('common.error', 'Error'), t('curriculum_form.not_found', 'Curriculum not found'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching curriculum:', error);
-      Alert.alert('Error', 'Failed to load curriculum');
+      Alert.alert(t('common.error', 'Error'), t('curriculum_form.load_error', 'Failed to load curriculum'));
     }
   };
 
@@ -149,7 +152,7 @@ const CurriculumFormScreen = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Curriculum name is required');
+      Alert.alert(t('common.error', 'Error'), t('curriculum_form.name_required', 'Curriculum name is required'));
       return false;
     }
     return true;
@@ -185,8 +188,8 @@ const CurriculumFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Curriculum updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('curriculum_form.success', 'Success'), t('curriculum_form.updated_message', 'Curriculum updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await axios.post(`${API_BASE_URL}/admin_curricula_create`, payload, {
@@ -195,16 +198,16 @@ const CurriculumFormScreen = () => {
             'Content-Type': 'application/json',
           },
         });
-        Alert.alert('Success', 'Curriculum created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('curriculum_form.success', 'Success'), t('curriculum_form.created_message', 'Curriculum created successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
       console.error('Error saving curriculum:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || 'Failed to save curriculum';
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || t('curriculum_form.save_error', 'Failed to save curriculum');
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -215,23 +218,23 @@ const CurriculumFormScreen = () => {
       case 'department_id':
         return (
           referenceData.departments.find((d) => d.id === parseInt(formData.department_id))?.name ||
-          'None'
+          t('common.none', 'None')
         );
       case 'program_id':
         return (
           referenceData.programs.find((p) => p.id === parseInt(formData.program_id))?.name ||
-          'None'
+          t('common.none', 'None')
         );
       case 'effective_school_year_id': {
         const sy = referenceData.school_years.find(
           (s) => s.id === parseInt(formData.effective_school_year_id)
         );
-        return sy?.session_title || sy?.title || sy?.name || 'Not set';
+        return sy?.session_title || sy?.title || sy?.name || t('curriculum_form.not_set', 'Not set');
       }
       case 'status':
-        return labelize(formData.status);
+        return statusLabel(formData.status);
       default:
-        return formData[field] || 'Select...';
+        return formData[field] || t('curriculum_form.select_placeholder', 'Select...');
     }
   };
 
@@ -249,16 +252,16 @@ const CurriculumFormScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Curriculum' : 'Create Curriculum'}
+          {isEditing ? t('curriculum_form.edit_title', 'Edit Curriculum') : t('curriculum_form.create_title', 'Create Curriculum')}
         </Text>
       </View>
 
       <View style={styles.formContainer}>
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Curriculum Name *</Text>
+          <Text style={styles.label}>{t('curriculum_form.name_label', 'Curriculum Name *')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., STEM Track"
+            placeholder={t('curriculum_form.name_placeholder', 'e.g., STEM Track')}
             value={formData.name}
             onChangeText={(text) => updateField('name', text)}
             placeholderTextColor={theme.textMuted}
@@ -266,7 +269,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Code</Text>
+          <Text style={styles.label}>{t('curriculum_form.code_label', 'Code')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., STEM"
@@ -277,7 +280,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Department</Text>
+          <Text style={styles.label}>{t('curriculum_form.department_label', 'Department')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('department_id')}
@@ -287,7 +290,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Program</Text>
+          <Text style={styles.label}>{t('curriculum_form.program_label', 'Program')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('program_id')}
@@ -297,7 +300,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Effective School Year</Text>
+          <Text style={styles.label}>{t('curriculum_form.effective_year_label', 'Effective School Year')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('effective_school_year_id')}
@@ -309,10 +312,10 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('curriculum_form.description_label', 'Description')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Optional description"
+            placeholder={t('curriculum_form.description_placeholder', 'Optional description')}
             value={formData.description}
             onChangeText={(text) => updateField('description', text)}
             multiline
@@ -321,7 +324,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Status</Text>
+          <Text style={styles.label}>{t('curriculum_form.status_label', 'Status')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('status')}
@@ -339,7 +342,7 @@ const CurriculumFormScreen = () => {
             <ActivityIndicator size="small" color={theme.onAccent} />
           ) : (
             <Text style={styles.submitButtonText}>
-              {isEditing ? 'Save Changes' : 'Create Curriculum'}
+              {isEditing ? t('curriculum_form.save_changes', 'Save Changes') : t('curriculum_form.create_title', 'Create Curriculum')}
             </Text>
           )}
         </TouchableOpacity>
@@ -348,7 +351,7 @@ const CurriculumFormScreen = () => {
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -361,7 +364,7 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Department</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_department', 'Select Department')}</Text>
             <FlatList
               data={referenceData.departments}
               renderItem={({ item }) => (
@@ -374,20 +377,20 @@ const CurriculumFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No departments found</Text>
+                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_departments_found', 'No departments found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('department_id', '')}
             >
-              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>{t('curriculum_form.clear_selection', 'Clear selection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -402,7 +405,7 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Program</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_program', 'Select Program')}</Text>
             <FlatList
               data={referenceData.programs}
               renderItem={({ item }) => (
@@ -415,20 +418,20 @@ const CurriculumFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No programs found</Text>
+                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_programs_found', 'No programs found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('program_id', '')}
             >
-              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>{t('curriculum_form.clear_selection', 'Clear selection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -443,7 +446,7 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Effective School Year</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_effective_year', 'Select Effective School Year')}</Text>
             <FlatList
               data={referenceData.school_years}
               renderItem={({ item }) => (
@@ -460,20 +463,20 @@ const CurriculumFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No school years found</Text>
+                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_school_years_found', 'No school years found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('effective_school_year_id', '')}
             >
-              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>{t('curriculum_form.clear_selection', 'Clear selection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -488,21 +491,21 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Status</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_status', 'Select Status')}</Text>
             {STATUSES.map((status) => (
               <TouchableOpacity
                 key={status}
                 style={styles.modalItem}
                 onPress={() => handleSelectOption('status', status)}
               >
-                <Text style={styles.modalItemText}>{labelize(status)}</Text>
+                <Text style={styles.modalItemText}>{statusLabel(status)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
