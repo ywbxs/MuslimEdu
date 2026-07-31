@@ -473,12 +473,16 @@ export default function StudentDashboard() {
               onPress={() => (navigation as any).navigate('OrphanReport')}
             />
           ) : null}
-          <QuickActionCard
-            icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-            title={t('student_dashboard.my_progress_title', 'My Progress')}
-            description={t('student_dashboard.my_progress_desc', 'Track your learning progress')}
-            onPress={() => (navigation as any).navigate('MyProgress')}
-          />
+          {/* Academic progress (attendance/grades/memorization) - hidden for
+              orphan schools, which have no classes/subjects/grading. */}
+          {!isOrphan && (
+            <QuickActionCard
+              icon={<ProgressBarsIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.my_progress_title', 'My Progress')}
+              description={t('student_dashboard.my_progress_desc', 'Track your learning progress')}
+              onPress={() => (navigation as any).navigate('MyProgress')}
+            />
+          )}
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('student_dashboard.notifications_title', 'Notifications')}
