@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherReports, TeacherReport } from '../../services/adminTeacherService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -44,6 +45,7 @@ function formatMonth(monthStr: string) {
 /** Full-screen, tap-to-dismiss viewer for a report photo. */
 function PhotoViewerModal({ uri, onClose }: { uri: string | null; onClose: () => void }) {
   const { width, height } = Dimensions.get('window');
+  const { t } = useLocale();
   return (
     <Modal visible={!!uri} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.viewerBackdrop} activeOpacity={1} onPress={onClose}>
@@ -55,7 +57,7 @@ function PhotoViewerModal({ uri, onClose }: { uri: string | null; onClose: () =>
           />
         )}
         <TouchableOpacity style={styles.viewerCloseBtn} onPress={onClose} hitSlop={12}>
-          <Text style={styles.viewerCloseText}>Close</Text>
+          <Text style={styles.viewerCloseText}>{t('common.close', 'Close')}</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -68,6 +70,7 @@ export default function AdminTeacherReportDetailScreen() {
   const route = useRoute();
   const { teacherId, teacherName } = (route.params as { teacherId: number; teacherName: string }) ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [reports, setReports] = useState<TeacherReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,9 +84,9 @@ export default function AdminTeacherReportDetailScreen() {
       const data = await fetchTeacherReports(token, teacherId);
       setReports(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports.');
+      setError(err instanceof Error ? err.message : t('admin_teacher_report_detail.load_error', 'Failed to load reports.'));
     }
-  }, [token, teacherId]);
+  }, [token, teacherId, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -95,7 +98,7 @@ export default function AdminTeacherReportDetailScreen() {
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{teacherName}</Text>
         <View style={{ width: 40 }} />
@@ -116,14 +119,14 @@ export default function AdminTeacherReportDetailScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.sectionLabel}>History</Text>
+          <Text style={styles.sectionLabel}>{t('admin_teacher_report_detail.history', 'History')}</Text>
           {reports.length === 0 ? (
-            <Text style={styles.emptyText}>No monthly reports submitted yet.</Text>
+            <Text style={styles.emptyText}>{t('admin_teacher_report_detail.empty', 'No monthly reports submitted yet.')}</Text>
           ) : (
             reports.map((report) => (
               <View key={report.id} style={styles.reportCard}>
@@ -132,9 +135,9 @@ export default function AdminTeacherReportDetailScreen() {
                 </View>
 
                 <View style={styles.ratingsRow}>
-                  <RatingBox label="Teaching" value={report.teaching_effectiveness_rating} />
-                  <RatingBox label="Engagement" value={report.classroom_engagement_rating} />
-                  <RatingBox label="Growth" value={report.professional_growth_rating} />
+                  <RatingBox label={t('admin_teacher_report_detail.teaching', 'Teaching')} value={report.teaching_effectiveness_rating} />
+                  <RatingBox label={t('admin_teacher_report_detail.engagement', 'Engagement')} value={report.classroom_engagement_rating} />
+                  <RatingBox label={t('admin_teacher_report_detail.growth', 'Growth')} value={report.professional_growth_rating} />
                 </View>
 
                 {report.note ? <Text style={styles.reportNote}>{report.note}</Text> : null}
@@ -156,7 +159,7 @@ export default function AdminTeacherReportDetailScreen() {
                 <View style={styles.reportFooterRow}>
                   <View style={styles.submittedByDot} />
                   <Text style={styles.reportSubmittedBy}>
-                    Submitted by {report.submitted_by ?? 'a staff member'}
+                    {t('admin_teacher_report_detail.submitted_by', 'Submitted by')} {report.submitted_by ?? t('admin_teacher_report_detail.staff_member', 'a staff member')}
                   </Text>
                 </View>
               </View>
