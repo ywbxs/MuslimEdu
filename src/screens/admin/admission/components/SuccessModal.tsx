@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Animated, Easing } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { md3 } from '../theme';
+import { useLocale } from '../../../../context/LocaleContext';
 
 function AnimatedCheck({ progress }: { progress: Animated.Value }) {
   return (
@@ -32,6 +33,7 @@ export default function AdmissionSuccessModal({
   onViewStudent: () => void;
   onAdmitAnother: () => void;
 }) {
+  const { t } = useLocale();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.85)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -115,16 +117,16 @@ export default function AdmissionSuccessModal({
             </Animated.View>
           </Animated.View>
 
-          <Text style={styles.title}>Student admitted successfully.</Text>
+          <Text style={styles.title}>{t('admission_success.title', 'Student admitted successfully.')}</Text>
           <Text style={styles.subtitle}>
-            <Text style={styles.subtitleName}>{studentName}</Text> is now enrolled in your school.
+            <Text style={styles.subtitleName}>{studentName}</Text> {t('admission_success.enrolled', 'is now enrolled in your school.')}
           </Text>
 
           <TouchableOpacity style={styles.filledButton} onPress={onViewStudent} activeOpacity={0.88}>
-            <Text style={styles.filledButtonText}>View Student</Text>
+            <Text style={styles.filledButtonText}>{t('admission_success.view_student', 'View Student')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.outlinedButton} onPress={onAdmitAnother} activeOpacity={0.88}>
-            <Text style={styles.outlinedButtonText}>Admit Another Student</Text>
+            <Text style={styles.outlinedButtonText}>{t('admission_success.admit_another', 'Admit Another Student')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

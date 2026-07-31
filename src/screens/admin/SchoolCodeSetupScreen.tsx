@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { setSchoolCode } from '../../services/adminService';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
@@ -56,6 +57,7 @@ function cleanNumber(v: string) {
  */
 export default function SchoolCodeSetupScreen() {
   const { token, updateUser } = useAuth();
+  const { t } = useLocale();
   const [letters, setLetters] = useState('');
   const [number, setNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -66,15 +68,15 @@ export default function SchoolCodeSetupScreen() {
 
   const onSave = async () => {
     if (!token) {
-      setError('Your session expired. Please log in again.');
+      setError(t('school_code_setup.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (letters.length < 2) {
-      setError('Enter at least 2 letters for the prefix.');
+      setError(t('school_code_setup.letters_required', 'Enter at least 2 letters for the prefix.'));
       return;
     }
     if (number.length < 2) {
-      setError('Enter at least 2 digits for the number.');
+      setError(t('school_code_setup.number_required', 'Enter at least 2 digits for the number.'));
       return;
     }
     setError(null);
@@ -83,7 +85,7 @@ export default function SchoolCodeSetupScreen() {
       const result = await setSchoolCode(token, letters, number);
       updateUser({ school_code: result.school_code });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the school code.');
+      setError(err instanceof Error ? err.message : t('school_code_setup.save_error', 'Could not save the school code.'));
     } finally {
       setSubmitting(false);
     }
@@ -97,23 +99,22 @@ export default function SchoolCodeSetupScreen() {
           <View style={styles.iconWrap}>
             <LockIcon />
           </View>
-          <Text style={styles.title}>Set up your school code</Text>
+          <Text style={styles.title}>{t('school_code_setup.title', 'Set up your school code')}</Text>
           <Text style={styles.subtitle}>
-            Every student your school admits will get an ID built from this code, so pick it carefully -
-            once saved, it's locked and can't be changed.
+            {t('school_code_setup.subtitle', "Every student your school admits will get an ID built from this code, so pick it carefully - once saved, it's locked and can't be changed.")}
           </Text>
 
           <GlassCard surface="light" radius={RADIUS.lg} style={styles.previewCard}>
-            <Text style={styles.previewLabel}>YOUR SCHOOL CODE WILL BE</Text>
+            <Text style={styles.previewLabel}>{t('school_code_setup.preview_label', 'YOUR SCHOOL CODE WILL BE')}</Text>
             <Text style={styles.previewValue}>{preview}</Text>
           </GlassCard>
 
           <View style={styles.row}>
             <View style={styles.fieldSmall}>
-              <Text style={styles.label}>Letters</Text>
+              <Text style={styles.label}>{t('school_code_setup.letters_label', 'Letters')}</Text>
               <GlassInput
                 value={letters}
-                onChangeText={(t) => setLetters(cleanLetters(t))}
+                onChangeText={(v) => setLetters(cleanLetters(v))}
                 placeholder="MLP"
                 autoCapitalize="characters"
                 maxLength={4}
@@ -121,10 +122,10 @@ export default function SchoolCodeSetupScreen() {
               />
             </View>
             <View style={styles.fieldLarge}>
-              <Text style={styles.label}>Number</Text>
+              <Text style={styles.label}>{t('school_code_setup.number_label', 'Number')}</Text>
               <GlassInput
                 value={number}
-                onChangeText={(t) => setNumber(cleanNumber(t))}
+                onChangeText={(v) => setNumber(cleanNumber(v))}
                 placeholder="2648"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -136,7 +137,7 @@ export default function SchoolCodeSetupScreen() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <GlassButton
-            label="Save & Continue"
+            label={t('school_code_setup.save_continue', 'Save & Continue')}
             onPress={onSave}
             disabled={!canSubmit}
             loading={submitting}
