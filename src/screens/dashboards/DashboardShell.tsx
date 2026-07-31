@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#EAF7EF';
@@ -38,6 +39,7 @@ interface DashboardShellProps {
 export default function DashboardShell({ title, children }: DashboardShellProps) {
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { t } = useLocale();
   const [photoFailed, setPhotoFailed] = useState(false);
 
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
@@ -47,7 +49,7 @@ export default function DashboardShell({ title, children }: DashboardShellProps)
     <View style={styles.flex}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
+          <Text style={styles.greetingSmall}>{t('dashboard_shell.greeting', 'Assalamu Alaykum,')}</Text>
           <Text style={styles.greetingName}>{user?.name}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>{title}</Text>
