@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -79,6 +80,7 @@ export default function AcademicTermFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const sessionId: number = route.params?.sessionId;
   const termId: number | undefined = route.params?.termId;
@@ -108,9 +110,9 @@ export default function AcademicTermFormScreen() {
       try {
         setLoading(true);
         const terms = await fetchAcademicTerms(token, sessionId);
-        const term = terms.find((t) => t.id === termId);
+        const term = terms.find((x) => x.id === termId);
         if (!term) {
-          setError('Term not found.');
+          setError(t('academic_term_form.not_found', 'Term not found.'));
           return;
         }
         setName(term.name);
@@ -126,22 +128,22 @@ export default function AcademicTermFormScreen() {
         setExamEnd(term.exam_end ?? '');
         setClosureDate(term.closure_date ?? '');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load term.');
+        setError(err instanceof Error ? err.message : t('academic_term_form.load_error', 'Failed to load term.'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [isEditing, sessionId, termId, token]);
+  }, [isEditing, sessionId, termId, token, t]);
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('academic_term_form.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Term name is required.');
+      Alert.alert(t('common.error', 'Error'), t('academic_term_form.name_required', 'Term name is required.'));
       return;
     }
 
@@ -171,7 +173,7 @@ export default function AcademicTermFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the term.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_term_form.save_error', 'Could not save the term.'));
     } finally {
       setSubmitting(false);
     }
@@ -184,7 +186,7 @@ export default function AcademicTermFormScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{isEditing ? 'Edit Term' : 'Add Term'}</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{isEditing ? t('academic_term_form.edit_title', 'Edit Term') : t('academic_term_form.add_title', 'Add Term')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
@@ -208,29 +210,29 @@ export default function AcademicTermFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Term Name</Text>
+        <Text style={styles.label}>{t('academic_term_form.name_label', 'Term Name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Fall Semester"
+          placeholder={t('academic_term_form.name_placeholder', 'e.g. Fall Semester')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Term Type</Text>
+        <Text style={styles.label}>{t('academic_term_form.type_label', 'Term Type')}</Text>
         <View style={styles.typeRow}>
-          {TERM_TYPES.map((t) => (
+          {TERM_TYPES.map((termTypeOption) => (
             <TouchableOpacity
-              key={t}
-              style={[styles.typeChip, termType === t && styles.typeChipSelected]}
-              onPress={() => setTermType(t)}
+              key={termTypeOption}
+              style={[styles.typeChip, termType === termTypeOption && styles.typeChipSelected]}
+              onPress={() => setTermType(termTypeOption)}
             >
-              <Text style={[styles.typeChipText, termType === t && styles.typeChipTextSelected]}>{t}</Text>
+              <Text style={[styles.typeChipText, termType === termTypeOption && styles.typeChipTextSelected]}>{t(`academic_term_form.type_${termTypeOption}`, termTypeOption)}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Order</Text>
+        <Text style={styles.label}>{t('academic_term_form.order_label', 'Order')}</Text>
         <TextInput
           style={styles.input}
           value={order}
@@ -240,31 +242,31 @@ export default function AcademicTermFormScreen() {
           keyboardType="number-pad"
         />
 
-        <Text style={styles.sectionLabel}>Term dates</Text>
+        <Text style={styles.sectionLabel}>{t('academic_term_form.term_dates', 'Term dates')}</Text>
         <View style={styles.dateRow}>
-          <DateField label="Start" value={startDate} onChangeText={setStartDate} theme={theme} styles={styles} />
-          <DateField label="End" value={endDate} onChangeText={setEndDate} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.start', 'Start')} value={startDate} onChangeText={setStartDate} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.end', 'End')} value={endDate} onChangeText={setEndDate} theme={theme} styles={styles} />
         </View>
 
-        <Text style={styles.sectionLabel}>Enrollment window</Text>
+        <Text style={styles.sectionLabel}>{t('academic_term_form.enrollment_window', 'Enrollment window')}</Text>
         <View style={styles.dateRow}>
-          <DateField label="Start" value={enrollmentStart} onChangeText={setEnrollmentStart} theme={theme} styles={styles} />
-          <DateField label="End" value={enrollmentEnd} onChangeText={setEnrollmentEnd} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.start', 'Start')} value={enrollmentStart} onChangeText={setEnrollmentStart} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.end', 'End')} value={enrollmentEnd} onChangeText={setEnrollmentEnd} theme={theme} styles={styles} />
         </View>
 
-        <Text style={styles.sectionLabel}>Grading window</Text>
+        <Text style={styles.sectionLabel}>{t('academic_term_form.grading_window', 'Grading window')}</Text>
         <View style={styles.dateRow}>
-          <DateField label="Start" value={gradingStart} onChangeText={setGradingStart} theme={theme} styles={styles} />
-          <DateField label="End" value={gradingEnd} onChangeText={setGradingEnd} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.start', 'Start')} value={gradingStart} onChangeText={setGradingStart} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.end', 'End')} value={gradingEnd} onChangeText={setGradingEnd} theme={theme} styles={styles} />
         </View>
 
-        <Text style={styles.sectionLabel}>Exam window</Text>
+        <Text style={styles.sectionLabel}>{t('academic_term_form.exam_window', 'Exam window')}</Text>
         <View style={styles.dateRow}>
-          <DateField label="Start" value={examStart} onChangeText={setExamStart} theme={theme} styles={styles} />
-          <DateField label="End" value={examEnd} onChangeText={setExamEnd} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.start', 'Start')} value={examStart} onChangeText={setExamStart} theme={theme} styles={styles} />
+          <DateField label={t('academic_term_form.end', 'End')} value={examEnd} onChangeText={setExamEnd} theme={theme} styles={styles} />
         </View>
 
-        <Text style={styles.label}>Closure date (optional)</Text>
+        <Text style={styles.label}>{t('academic_term_form.closure_date_label', 'Closure date (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={closureDate}
@@ -276,9 +278,9 @@ export default function AcademicTermFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Set as current term</Text>
+            <Text style={styles.switchLabel}>{t('academic_term_form.set_current', 'Set as current term')}</Text>
             <Text style={styles.switchHelp}>
-              Makes this the active term within its academic year, replacing whichever term is current now.
+              {t('academic_term_form.set_current_help', 'Makes this the active term within its academic year, replacing whichever term is current now.')}
             </Text>
           </View>
           <Switch value={setCurrent} onValueChange={setSetCurrent} trackColor={{ true: theme.accent }} />
@@ -292,7 +294,7 @@ export default function AcademicTermFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Term'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('academic_term_form.save_changes', 'Save Changes') : t('academic_term_form.add_title', 'Add Term')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
