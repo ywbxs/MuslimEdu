@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, M
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAdminGradebookExamCategories,
   createExamCategory,
@@ -75,6 +76,7 @@ export default function AdminExamCategoriesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [categories, setCategories] = useState<ExamCategoryOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,13 +96,13 @@ export default function AdminExamCategoriesScreen() {
         const list = await fetchAdminGradebookExamCategories(token);
         setCategories(list);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load exam categories.');
+        setError(e?.message ?? t('admin_exam_categories.load_error', 'Could not load exam categories.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -125,12 +127,12 @@ export default function AdminExamCategoriesScreen() {
   const save = async () => {
     if (!token) return;
     if (!form.name.trim()) {
-      Alert.alert('Missing name', 'Give this category a name (e.g. Quizzes, Midterm, Final).');
+      Alert.alert(t('admin_exam_categories.missing_name_title', 'Missing name'), t('admin_exam_categories.missing_name_message', 'Give this category a name (e.g. Quizzes, Midterm, Final).'));
       return;
     }
     const weightValue = form.weight.trim() ? Number(form.weight) : null;
     if (weightValue !== null && (Number.isNaN(weightValue) || weightValue < 0 || weightValue > 100)) {
-      Alert.alert('Invalid weight', 'Weight must be a number between 0 and 100, or left blank.');
+      Alert.alert(t('admin_exam_categories.invalid_weight_title', 'Invalid weight'), t('admin_exam_categories.invalid_weight_message', 'Weight must be a number between 0 and 100, or left blank.'));
       return;
     }
     setIsSubmitting(true);
@@ -147,7 +149,7 @@ export default function AdminExamCategoriesScreen() {
       setIsModalVisible(false);
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('admin_exam_categories.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -155,17 +157,17 @@ export default function AdminExamCategoriesScreen() {
 
   const handleDelete = (c: ExamCategoryOption) => {
     if (!token) return;
-    Alert.alert('Delete category?', `"${c.name}" will be removed if nothing is using it yet.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin_exam_categories.delete_title', 'Delete category?'), `"${c.name}" ${t('admin_exam_categories.delete_message', 'will be removed if nothing is using it yet.')}`, [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('admin_exam_categories.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteExamCategory(token, c.id);
             setCategories((prev) => prev.filter((p) => p.id !== c.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'It may already be in use by exams, grades, or assessments.');
+            Alert.alert(t('admin_exam_categories.delete_error', 'Could not delete'), e?.message ?? t('admin_exam_categories.delete_in_use', 'It may already be in use by exams, grades, or assessments.'));
           }
         },
       },
@@ -178,15 +180,15 @@ export default function AdminExamCategoriesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Exam Categories</Text>
+        <Text style={styles.headerTitle}>{t('admin_exam_categories.title', 'Exam Categories')}</Text>
         <TouchableOpacity onPress={openNew} hitSlop={12} style={styles.newButton}>
           <IconPlus color={EMERALD} />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.subtitle}>
-        Weighted components (e.g. Quizzes, Midterm, Final) shared by Gradebook and Assessments.
-        {categories.some((c) => c.weight != null) ? ` Weights currently total ${totalWeight}%.` : ''}
+        {t('admin_exam_categories.subtitle', 'Weighted components (e.g. Quizzes, Midterm, Final) shared by Gradebook and Assessments.')}
+        {categories.some((c) => c.weight != null) ? ` ${t('admin_exam_categories.weights_total', 'Weights currently total {pct}%.').replace('{pct}', String(totalWeight))}` : ''}
       </Text>
 
       {error ? (
@@ -211,7 +213,7 @@ export default function AdminExamCategoriesScreen() {
           }}
           refreshing={isRefreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No exam categories yet. Tap + to add one (e.g. "Quizzes", "Final Exam").</Text>
+            <Text style={styles.emptyText}>{t('admin_exam_categories.empty', 'No exam categories yet. Tap + to add one (e.g. "Quizzes", "Final Exam").')}</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.card} onPress={() => openEdit(item)} activeOpacity={0.85}>
@@ -220,7 +222,7 @@ export default function AdminExamCategoriesScreen() {
                   {item.name}
                 </Text>
                 <View style={styles.weightBadge}>
-                  <Text style={styles.weightBadgeText}>{item.weight != null ? `${item.weight}%` : 'No weight set'}</Text>
+                  <Text style={styles.weightBadgeText}>{item.weight != null ? `${item.weight}%` : t('admin_exam_categories.no_weight_set', 'No weight set')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={10} style={{ marginLeft: 6 }}>
                   <IconTrash color={SUBTLE} />
@@ -235,21 +237,21 @@ export default function AdminExamCategoriesScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
-              <Text style={styles.modalTitle}>{form.categoryId ? 'Edit category' : 'New exam category'}</Text>
+              <Text style={styles.modalTitle}>{form.categoryId ? t('admin_exam_categories.edit_category', 'Edit category') : t('admin_exam_categories.new_category', 'New exam category')}</Text>
 
-              <Text style={styles.fieldLabel}>Name</Text>
+              <Text style={styles.fieldLabel}>{t('admin_exam_categories.name_label', 'Name')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Midterm"
+                placeholder={t('admin_exam_categories.name_placeholder', 'e.g. Midterm')}
                 placeholderTextColor={SUBTLE}
                 value={form.name}
                 onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Weight (%, optional)</Text>
+              <Text style={styles.fieldLabel}>{t('admin_exam_categories.weight_label', 'Weight (%, optional)')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. 30"
+                placeholder={t('admin_exam_categories.weight_placeholder', 'e.g. 30')}
                 keyboardType="numeric"
                 placeholderTextColor={SUBTLE}
                 value={form.weight}
@@ -262,11 +264,11 @@ export default function AdminExamCategoriesScreen() {
                   onPress={save}
                   disabled={isSubmitting}
                 >
-                  <Text style={styles.modalBtnPrimaryText}>{form.categoryId ? 'Save changes' : 'Create'}</Text>
+                  <Text style={styles.modalBtnPrimaryText}>{form.categoryId ? t('admin_exam_categories.save_changes', 'Save changes') : t('admin_exam_categories.create', 'Create')}</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsModalVisible(false)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Cancel</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

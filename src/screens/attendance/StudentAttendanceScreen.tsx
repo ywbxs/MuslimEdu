@@ -29,6 +29,7 @@ import {
   MONTHS,
   fetchAttendance,
 } from '../../services/studentAttendanceService';
+import { useLocale } from '../../context/LocaleContext';
 
 const STATUS_COLORS: Record<AttendanceStatusKey, string> = {
   present: '#1F9254',
@@ -51,6 +52,7 @@ interface Props {
 }
 
 const StudentAttendanceScreen: React.FC<Props> = () => {
+  const { t } = useLocale();
   const today = useMemo(() => new Date(), []);
   const [month, setMonth] = useState<number>(today.getMonth() + 1);
   const [year, setYear] = useState<number>(today.getFullYear());
@@ -73,14 +75,14 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
         setError(
           e?.response?.data?.message ??
             e?.message ??
-            'Could not load your attendance. Check your connection and try again.',
+            t('attendance_calendar.load_error', 'Could not load your attendance. Check your connection and try again.'),
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -116,7 +118,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
 
       <View style={styles.dayBody}>
         <Text style={styles.daySubject} numberOfLines={1}>
-          {item.is_homeroom ? 'Homeroom' : item.subject_name ?? 'Class'}
+          {item.is_homeroom ? t('attendance_calendar.homeroom', 'Homeroom') : item.subject_name ?? t('attendance_calendar.class_fallback', 'Class')}
         </Text>
         <Text style={styles.dayMeta}>{item.date}</Text>
       </View>
@@ -154,8 +156,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
       {data?.degraded ? (
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
-            Showing a simplified view. The attendance summary endpoint is not
-            deployed on this server yet.
+            {t('attendance_calendar.degraded_banner', 'Showing a simplified view. The attendance summary endpoint is not deployed on this server yet.')}
           </Text>
         </View>
       ) : null}
@@ -164,9 +165,9 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
         <>
           <View style={styles.rateCard}>
             <Text style={styles.rateValue}>{totals.attendance_rate}%</Text>
-            <Text style={styles.rateLabel}>Attendance rate this month</Text>
+            <Text style={styles.rateLabel}>{t('attendance_calendar.rate_label', 'Attendance rate this month')}</Text>
             <Text style={styles.rateSub}>
-              {totals.total} record{totals.total === 1 ? '' : 's'} logged
+              {totals.total} {totals.total === 1 ? t('attendance_calendar.record', 'record') : t('attendance_calendar.records', 'records')} {t('attendance_calendar.logged', 'logged')}
             </Text>
           </View>
 
@@ -176,7 +177,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
                 <Text style={[styles.statValue, { color: STATUS_COLORS[k] }]}>
                   {totals[k]}
                 </Text>
-                <Text style={styles.statLabel}>{k.charAt(0).toUpperCase() + k.slice(1)}</Text>
+                <Text style={styles.statLabel}>{t(`attendance_calendar.status_${k}`, k.charAt(0).toUpperCase() + k.slice(1))}</Text>
               </View>
             ))}
           </View>
@@ -185,7 +186,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
 
       {data && data.trend.length > 1 ? (
         <View style={styles.trendCard}>
-          <Text style={styles.sectionTitle}>Last {data.trend.length} months</Text>
+          <Text style={styles.sectionTitle}>{t('attendance_calendar.last_n_months', 'Last {n} months').replace('{n}', String(data.trend.length))}</Text>
 
           <View style={styles.trendRow}>
             {data.trend.map(point => {
@@ -210,7 +211,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
         </View>
       ) : null}
 
-      <Text style={styles.sectionTitle}>Daily record</Text>
+      <Text style={styles.sectionTitle}>{t('attendance_calendar.daily_record', 'Daily record')}</Text>
     </View>
   );
 
@@ -218,7 +219,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#1F9254" />
-        <Text style={styles.centerText}>Loading your attendance...</Text>
+        <Text style={styles.centerText}>{t('attendance_calendar.loading', 'Loading your attendance...')}</Text>
       </View>
     );
   }
@@ -226,10 +227,10 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
   if (error && !data) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorTitle}>{t('attendance_calendar.error_title', 'Something went wrong')}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retry} onPress={() => load(month, year)}>
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -245,9 +246,9 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
       ListHeaderComponent={Header}
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No attendance recorded</Text>
+          <Text style={styles.emptyTitle}>{t('attendance_calendar.empty_title', 'No attendance recorded')}</Text>
           <Text style={styles.emptyText}>
-            Nothing has been logged for {MONTHS[month - 1]} {year} yet.
+            {t('attendance_calendar.empty_desc', 'Nothing has been logged for {month} {year} yet.').replace('{month}', MONTHS[month - 1]).replace('{year}', String(year))}
           </Text>
         </View>
       }
