@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 
 /**
@@ -267,4 +268,32 @@ export async function fetchStudentEnrollmentWorkflowStatus(
   token: string
 ): Promise<StudentEnrollmentWorkflowStatus> {
   return authedPost('/student_enrollment_workflow_status', token, {});
+}
+
+const STUDENT_STATUS_CACHE_KEY = '@enrollment_status_cache_v1';
+
+/**
+ * Same fetch as above, but caches the last successful response per-user in
+ * AsyncStorage and falls back to it when the live call fails (e.g. offline) -
+ * so a student who already loaded their status once can still see their
+ * stages/current-stage instructions without connectivity. Re-throws the
+ * original error only if there's no cached response to fall back to,
+ * preserving today's error UX for a first-ever offline load.
+ */
+export async function fetchStudentEnrollmentWorkflowStatusCached(
+  token: string,
+  userId: number
+): Promise<{ data: StudentEnrollmentWorkflowStatus; fromCache: boolean }> {
+  const cacheKey = `${STUDENT_STATUS_CACHE_KEY}:${userId}`;
+  try {
+    const data = await fetchStudentEnrollmentWorkflowStatus(token);
+    AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
+    return { data, fromCache: false };
+  } catch (err) {
+    const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+    if (cached) {
+      return { data: JSON.parse(cached) as StudentEnrollmentWorkflowStatus, fromCache: true };
+    }
+    throw err;
+  }
 }

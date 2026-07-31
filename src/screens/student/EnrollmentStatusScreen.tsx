@@ -5,7 +5,7 @@ import Svg, { Polyline, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
-  fetchStudentEnrollmentWorkflowStatus,
+  fetchStudentEnrollmentWorkflowStatusCached,
   StudentEnrollmentWorkflowStatus,
 } from '../../services/enrollmentWorkflowService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
@@ -79,26 +79,28 @@ function formatDate(value: string | null | undefined) {
 export default function EnrollmentStatusScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLocale();
 
   const [data, setData] = useState<StudentEnrollmentWorkflowStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFromCache, setIsFromCache] = useState(false);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user) return;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await fetchStudentEnrollmentWorkflowStatus(token);
+      const { data: result, fromCache } = await fetchStudentEnrollmentWorkflowStatusCached(token, user.id);
       setData(result);
+      setIsFromCache(fromCache);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('enrollment_status.load_error', 'Could not load your enrollment status.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, t]);
+  }, [token, user, t]);
 
   useEffect(() => {
     load();
@@ -149,6 +151,14 @@ export default function EnrollmentStatusScreen() {
           </View>
         ) : (
           <>
+            {isFromCache ? (
+              <View style={styles.cacheBanner}>
+                <Text style={styles.cacheBannerText}>
+                  {t('enrollment_status.showing_cached', "Showing your last synced status - reconnect to check for updates.")}
+                </Text>
+              </View>
+            ) : null}
+
             {statusMeta ? (
               <View style={[styles.statusPill, { backgroundColor: statusMeta.soft, alignSelf: 'flex-start' }]}>
                 <Text style={[styles.statusPillText, { color: statusMeta.color }]}>{record ? t(`enrollment_status.status_${STATUS_LABEL_KEYS[record.status] ?? 'in_progress'}`, statusMeta.label) : statusMeta.label}</Text>
@@ -296,6 +306,9 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: INK, marginBottom: 8 },
   emptyDesc: { fontSize: 13.5, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
+
+  cacheBanner: { backgroundColor: '#F2F3F5', borderRadius: 12, padding: 12, marginBottom: 14 },
+  cacheBannerText: { color: SUBTLE, fontSize: 12.5, textAlign: 'center' },
 
   errorBanner: { backgroundColor: '#FCEDED', borderRadius: 12, padding: 14, alignItems: 'center' },
   errorText: { color: '#E5484D', fontSize: 13.5, textAlign: 'center', marginBottom: 10 },
