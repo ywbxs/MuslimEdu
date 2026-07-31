@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchGradebookRoster,
   submitGradebook,
@@ -74,6 +75,7 @@ export default function TeacherGradebookRosterScreen() {
     examCategoryLabel,
   } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [students, setStudents] = useState<GradebookRosterStudent[]>([]);
   const [totalMarks, setTotalMarks] = useState<number | null>(null);
@@ -102,11 +104,11 @@ export default function TeacherGradebookRosterScreen() {
       setMarks(initialMarks);
       setComments(initialComments);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load the roster.');
+      setError(err instanceof Error ? err.message : t('teacher_gradebook_roster.load_error', 'Could not load the roster.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, sectionId, subjectId, examCategoryId]);
+  }, [token, sectionId, subjectId, examCategoryId, t]);
 
   useEffect(() => {
     load();
@@ -123,7 +125,7 @@ export default function TeacherGradebookRosterScreen() {
     if (totalMarks) {
       const overLimit = Object.entries(marks).find(([, v]) => v !== '' && Number(v) > totalMarks);
       if (overLimit) {
-        setError(`A mark exceeds the total of ${totalMarks}. Fix it before saving.`);
+        setError(t('teacher_gradebook_roster.over_limit', 'A mark exceeds the total of {total}. Fix it before saving.').replace('{total}', String(totalMarks)));
         return;
       }
     }
@@ -142,9 +144,9 @@ export default function TeacherGradebookRosterScreen() {
         };
       });
       const result = await submitGradebook(token, sectionId, subjectId, examCategoryId, records);
-      setSaveMessage(result.message ?? 'Grades saved.');
+      setSaveMessage(result.message ?? t('teacher_gradebook_roster.saved', 'Grades saved.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save grades.');
+      setError(err instanceof Error ? err.message : t('teacher_gradebook_roster.save_error', 'Could not save grades.'));
     } finally {
       setIsSaving(false);
     }
@@ -162,7 +164,7 @@ export default function TeacherGradebookRosterScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? 'Grades'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? t('teacher_gradebook_roster.grades', 'Grades')}</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>
             {subjectLabel ?? ''}{examCategoryLabel ? ` · ${examCategoryLabel}` : ''}
           </Text>
@@ -172,7 +174,7 @@ export default function TeacherGradebookRosterScreen() {
 
       {totalMarks ? (
         <View style={styles.totalBar}>
-          <Text style={styles.totalBarText}>Out of {totalMarks} marks</Text>
+          <Text style={styles.totalBarText}>{t('teacher_gradebook_roster.out_of', 'Out of')} {totalMarks} {t('teacher_gradebook_roster.marks', 'marks')}</Text>
         </View>
       ) : null}
 
@@ -192,8 +194,8 @@ export default function TeacherGradebookRosterScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No students enrolled</Text>
-                <Text style={styles.emptyDesc}>This section has no enrolled students for the running session.</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_gradebook_roster.empty_title', 'No students enrolled')}</Text>
+                <Text style={styles.emptyDesc}>{t('teacher_gradebook_roster.empty_desc', 'This section has no enrolled students for the running session.')}</Text>
               </View>
             ) : null
           }
@@ -211,12 +213,11 @@ export default function TeacherGradebookRosterScreen() {
                 </View>
               ) : null}
               {students.length > 0 ? (
-                <Text style={styles.progressText}>{filledCount} of {students.length} entered</Text>
+                <Text style={styles.progressText}>{filledCount} {t('teacher_gradebook_roster.of', 'of')} {students.length} {t('teacher_gradebook_roster.entered', 'entered')}</Text>
               ) : null}
               {students.length > 0 ? (
                 <Text style={styles.noteText}>
-                  The comment field is shared across every subject for this exam - leave it blank to keep whatever
-                  another subject teacher already wrote.
+                  {t('teacher_gradebook_roster.shared_comment_note', "The comment field is shared across every subject for this exam - leave it blank to keep whatever another subject teacher already wrote.")}
                 </Text>
               ) : null}
             </>
@@ -228,7 +229,7 @@ export default function TeacherGradebookRosterScreen() {
                 <Text style={styles.rowName} numberOfLines={1}>{item.student_name}</Text>
                 <TextInput
                   style={styles.commentInput}
-                  placeholder="Comment (optional, shared)"
+                  placeholder={t('teacher_gradebook_roster.comment_placeholder', 'Comment (optional, shared)')}
                   placeholderTextColor={SUBTLE}
                   value={comments[item.student_id] ?? ''}
                   onChangeText={(text) => setComments((prev) => ({ ...prev, [item.student_id]: text }))}
@@ -256,7 +257,7 @@ export default function TeacherGradebookRosterScreen() {
             {isSaving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Grades</Text>
+              <Text style={styles.saveButtonText}>{t('teacher_gradebook_roster.save_grades', 'Save Grades')}</Text>
             )}
           </TouchableOpacity>
         </View>

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
 import { GlassButton, GlassInput } from '../../components/glass/GlassKit';
@@ -30,7 +31,11 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const ERROR = '#BA1A1A';
 
-const STEP_LABELS = ['Institution', 'Profile', 'Academic Year'];
+const STEP_LABELS = [
+  { key: 'institution', label: 'Institution' },
+  { key: 'profile', label: 'Profile' },
+  { key: 'academic_year', label: 'Academic Year' },
+];
 
 const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
   mahad: 'Mahad',
@@ -69,6 +74,7 @@ function BuildingIcon() {
  */
 export default function AcademicSetupWizardScreen() {
   const { token, updateUser } = useAuth();
+  const { t } = useLocale();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [step, setStep] = useState(0);
@@ -97,11 +103,11 @@ export default function AcademicSetupWizardScreen() {
       setAddress(data.school.address ?? '');
       setPhone(data.school.phone ?? '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load setup status.');
+      setError(err instanceof Error ? err.message : t('academic_setup_wizard.load_error', 'Could not load setup status.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -113,7 +119,7 @@ export default function AcademicSetupWizardScreen() {
 
     if (step === 0) {
       if (!institutionType) {
-        setError('Choose an institution type to continue.');
+        setError(t('academic_setup_wizard.choose_institution_type', 'Choose an institution type to continue.'));
         return;
       }
       setSubmitting(true);
@@ -121,7 +127,7 @@ export default function AcademicSetupWizardScreen() {
         await saveInstitutionProfile(token, { institution_type: institutionType });
         setStep(1);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not save institution type.');
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_type_error', 'Could not save institution type.'));
       } finally {
         setSubmitting(false);
       }
@@ -130,7 +136,7 @@ export default function AcademicSetupWizardScreen() {
 
     if (step === 1) {
       if (!name.trim()) {
-        setError('Institution name is required.');
+        setError(t('academic_setup_wizard.name_required', 'Institution name is required.'));
         return;
       }
       setSubmitting(true);
@@ -143,7 +149,7 @@ export default function AcademicSetupWizardScreen() {
         });
         setStep(2);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not save institution profile.');
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_profile_error', 'Could not save institution profile.'));
       } finally {
         setSubmitting(false);
       }
@@ -152,7 +158,7 @@ export default function AcademicSetupWizardScreen() {
 
     if (step === 2) {
       if (!yearTitle.trim()) {
-        setError('Enter a title for your first academic year (e.g. "2026-2027").');
+        setError(t('academic_setup_wizard.year_title_required', 'Enter a title for your first academic year (e.g. "2026-2027").'));
         return;
       }
       setSubmitting(true);
@@ -164,7 +170,7 @@ export default function AcademicSetupWizardScreen() {
           institution_type: school.institution_type ?? undefined,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not finish setup.');
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.finish_error', 'Could not finish setup.'));
       } finally {
         setSubmitting(false);
       }
@@ -195,18 +201,18 @@ export default function AcademicSetupWizardScreen() {
           <View style={styles.iconWrap}>
             <BuildingIcon />
           </View>
-          <Text style={styles.title}>Set up your school</Text>
+          <Text style={styles.title}>{t('academic_setup_wizard.title', 'Set up your school')}</Text>
           <Text style={styles.subtitle}>
-            A few quick steps before your Admin, Teacher, and Student portals go live.
+            {t('academic_setup_wizard.subtitle', 'A few quick steps before your Admin, Teacher, and Student portals go live.')}
           </Text>
 
           <View style={styles.stepper}>
-            {STEP_LABELS.map((label, i) => (
-              <View key={label} style={styles.stepperItem}>
+            {STEP_LABELS.map((step_, i) => (
+              <View key={step_.key} style={styles.stepperItem}>
                 <View style={[styles.stepDot, i < step && styles.stepDotDone, i === step && styles.stepDotActive]}>
                   {i < step ? <CheckIcon /> : <Text style={[styles.stepDotText, i === step && styles.stepDotTextActive]}>{i + 1}</Text>}
                 </View>
-                <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{label}</Text>
+                <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{t(`academic_setup_wizard.step_${step_.key}`, step_.label)}</Text>
               </View>
             ))}
           </View>
@@ -214,9 +220,9 @@ export default function AcademicSetupWizardScreen() {
           <GlassCard surface="light" radius={RADIUS.lg} style={styles.stepCard}>
             {step === 0 && (
               <View>
-                <Text style={styles.stepHeading}>What type of institution is this?</Text>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.institution_type_heading', 'What type of institution is this?')}</Text>
                 <Text style={styles.stepHint}>
-                  This only picks editable starting defaults - everything can be renamed or changed later.
+                  {t('academic_setup_wizard.institution_type_hint', 'This only picks editable starting defaults - everything can be renamed or changed later.')}
                 </Text>
                 {status.institution_types.map((type) => (
                   <TouchableOpacity
@@ -228,7 +234,7 @@ export default function AcademicSetupWizardScreen() {
                     <View style={[styles.radio, institutionType === type && styles.radioSelected]}>
                       {institutionType === type ? <View style={styles.radioDot} /> : null}
                     </View>
-                    <Text style={styles.optionLabel}>{INSTITUTION_TYPE_LABELS[type]}</Text>
+                    <Text style={styles.optionLabel}>{t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -236,25 +242,25 @@ export default function AcademicSetupWizardScreen() {
 
             {step === 1 && (
               <View>
-                <Text style={styles.stepHeading}>Institution profile</Text>
-                <Text style={styles.label}>Name</Text>
-                <GlassInput value={name} onChangeText={setName} placeholder="Institution name" style={styles.input} />
-                <Text style={styles.label}>Arabic name (optional)</Text>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
+                <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
+                <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
                 <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
-                <Text style={styles.label}>Address (optional)</Text>
-                <GlassInput value={address} onChangeText={setAddress} placeholder="Address" style={styles.input} />
-                <Text style={styles.label}>Phone (optional)</Text>
-                <GlassInput value={phone} onChangeText={setPhone} placeholder="Phone number" keyboardType="phone-pad" style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
+                <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
+                <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
               </View>
             )}
 
             {step === 2 && (
               <View>
-                <Text style={styles.stepHeading}>Your first academic year</Text>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.year_heading', 'Your first academic year')}</Text>
                 <Text style={styles.stepHint}>
-                  You can add more academic years and terms later from Academic Setup in the admin menu.
+                  {t('academic_setup_wizard.year_hint', 'You can add more academic years and terms later from Academic Setup in the admin menu.')}
                 </Text>
-                <Text style={styles.label}>Academic year title</Text>
+                <Text style={styles.label}>{t('academic_setup_wizard.year_title_label', 'Academic year title')}</Text>
                 <GlassInput
                   value={yearTitle}
                   onChangeText={setYearTitle}
@@ -269,10 +275,10 @@ export default function AcademicSetupWizardScreen() {
 
           <View style={styles.actions}>
             {step > 0 ? (
-              <GlassButton label="Back" variant="ghost" onPress={goBack} disabled={submitting} style={styles.backButton} />
+              <GlassButton label={t('common.back', 'Back')} variant="ghost" onPress={goBack} disabled={submitting} style={styles.backButton} />
             ) : null}
             <GlassButton
-              label={step === 2 ? 'Finish Setup' : 'Continue'}
+              label={step === 2 ? t('academic_setup_wizard.finish_setup', 'Finish Setup') : t('academic_setup_wizard.continue', 'Continue')}
               onPress={goNext}
               loading={submitting}
               style={styles.nextButton}
