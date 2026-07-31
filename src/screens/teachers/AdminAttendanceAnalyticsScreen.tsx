@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, ClassOption } from '../../services/adminService';
 import {
   fetchAttendanceAnalytics,
@@ -31,6 +32,13 @@ const STATUS_META: Record<keyof AttendanceStatusCounts, { label: string; color: 
   excused: { label: 'Excused', color: '#4C6EF5' },
   leave: { label: 'Leave', color: '#8A5CF6' },
 };
+const STATUS_LABEL_KEYS: Record<keyof AttendanceStatusCounts, string> = {
+  present: 'present',
+  late: 'late',
+  absent: 'absent',
+  excused: 'excused',
+  leave: 'leave',
+};
 
 const RANGE_PRESETS: { key: string; label: string; days: number }[] = [
   { key: '7d', label: '7 days', days: 7 },
@@ -55,6 +63,7 @@ function IconChevronLeft({ color }: { color: string }) {
 // this is hand-rolled with react-native-svg <Rect>s - good enough for a
 // glance at the trend without pulling in a dependency for one screen.
 function TrendChart({ trend }: { trend: AttendanceAnalytics['daily_trend'] }) {
+  const { t } = useLocale();
   const width = 320;
   const height = 120;
   const barGap = 3;
@@ -69,7 +78,7 @@ function TrendChart({ trend }: { trend: AttendanceAnalytics['daily_trend'] }) {
   if (trend.length === 0) {
     return (
       <View style={styles.trendEmpty}>
-        <Text style={styles.trendEmptyText}>No attendance recorded in this range yet.</Text>
+        <Text style={styles.trendEmptyText}>{t('admin_attendance_analytics.trend_empty', 'No attendance recorded in this range yet.')}</Text>
       </View>
     );
   }
@@ -122,6 +131,7 @@ export default function AdminAttendanceAnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -159,11 +169,11 @@ export default function AdminAttendanceAnalyticsScreen() {
       });
       setAnalytics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load attendance analytics.');
+      setError(err instanceof Error ? err.message : t('admin_attendance_analytics.load_error', 'Could not load attendance analytics.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, selectedClassId, range]);
+  }, [token, selectedClassId, range, t]);
 
   useEffect(() => {
     load();
@@ -178,7 +188,7 @@ export default function AdminAttendanceAnalyticsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Attendance Analytics</Text>
+        <Text style={styles.headerTitle}>{t('admin_attendance_analytics.title', 'Attendance Analytics')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -190,7 +200,7 @@ export default function AdminAttendanceAnalyticsScreen() {
               style={[styles.chip, rangeKey === preset.key && styles.chipActive]}
               onPress={() => setRangeKey(preset.key)}
             >
-              <Text style={[styles.chipText, rangeKey === preset.key && styles.chipTextActive]}>{preset.label}</Text>
+              <Text style={[styles.chipText, rangeKey === preset.key && styles.chipTextActive]}>{t(`admin_attendance_analytics.range_${preset.key}`, preset.label)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -200,7 +210,7 @@ export default function AdminAttendanceAnalyticsScreen() {
             style={[styles.chip, selectedClassId === null && styles.chipActive]}
             onPress={() => setSelectedClassId(null)}
           >
-            <Text style={[styles.chipText, selectedClassId === null && styles.chipTextActive]}>All classes</Text>
+            <Text style={[styles.chipText, selectedClassId === null && styles.chipTextActive]}>{t('admin_attendance_analytics.all_classes', 'All classes')}</Text>
           </TouchableOpacity>
           {classes.map((c) => (
             <TouchableOpacity
@@ -228,17 +238,17 @@ export default function AdminAttendanceAnalyticsScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{analytics?.attendance_percentage ?? 0}%</Text>
-              <Text style={styles.statLabel}>Attendance rate</Text>
+              <Text style={styles.statLabel}>{t('admin_attendance_analytics.attendance_rate', 'Attendance rate')}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{analytics?.total_marked ?? 0}</Text>
-              <Text style={styles.statLabel}>Records marked</Text>
+              <Text style={styles.statLabel}>{t('admin_attendance_analytics.records_marked', 'Records marked')}</Text>
             </View>
           </View>
         )}
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Status breakdown</Text>
+          <Text style={styles.cardTitle}>{t('admin_attendance_analytics.status_breakdown', 'Status breakdown')}</Text>
           {isLoading ? (
             <Skeleton width="100%" height={14} borderRadius={7} style={{ marginTop: 12 }} />
           ) : (
@@ -249,7 +259,7 @@ export default function AdminAttendanceAnalyticsScreen() {
               <View key={key} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: STATUS_META[key].color }]} />
                 <Text style={styles.legendText}>
-                  {STATUS_META[key].label} {counts[key]}
+                  {t(`admin_attendance_analytics.status_${STATUS_LABEL_KEYS[key]}`, STATUS_META[key].label)} {counts[key]}
                 </Text>
               </View>
             ))}
@@ -257,8 +267,8 @@ export default function AdminAttendanceAnalyticsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Daily trend</Text>
-          <Text style={styles.cardSubtitle}>Bar color reflects that day's attendance rate</Text>
+          <Text style={styles.cardTitle}>{t('admin_attendance_analytics.daily_trend', 'Daily trend')}</Text>
+          <Text style={styles.cardSubtitle}>{t('admin_attendance_analytics.daily_trend_subtitle', "Bar color reflects that day's attendance rate")}</Text>
           {isLoading ? (
             <Skeleton width="100%" height={120} borderRadius={12} style={{ marginTop: 12 }} />
           ) : (
