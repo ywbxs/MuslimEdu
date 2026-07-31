@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import graduation from '../../services/graduationService';
+import { useLocale } from '../../context/LocaleContext';
 
 const C = {
   bg: '#F5F7F6',
@@ -33,6 +34,7 @@ const DECISION_COLOR: Record<string, string> = {
 };
 
 export default function AcademicGraduationScreen({ navigation }: any) {
+  const { t } = useLocale();
   const [tab, setTab] = useState<'evaluate' | 'requirements' | 'records'>('evaluate');
 
   // --- evaluate tab ---
@@ -61,18 +63,18 @@ export default function AcademicGraduationScreen({ navigation }: any) {
       const r = await graduation.requirements();
       setSets(r.sets || []);
     } catch (e: any) {
-      Alert.alert('Could not load requirement sets', e.message);
+      Alert.alert(t('academic_graduation.load_requirements_error', 'Could not load requirement sets'), e.message);
     }
-  }, []);
+  }, [t]);
 
   const loadRecords = useCallback(async () => {
     try {
       const r = await graduation.list();
       setRecords(r.data || r.snapshots || []);
     } catch (e: any) {
-      Alert.alert('Could not load completion records', e.message);
+      Alert.alert(t('academic_graduation.load_records_error', 'Could not load completion records'), e.message);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadRequirements();
@@ -81,14 +83,14 @@ export default function AcademicGraduationScreen({ navigation }: any) {
 
   const evaluate = async () => {
     if (!student) {
-      Alert.alert('Enter a student ID first');
+      Alert.alert(t('academic_graduation.enter_student_id', 'Enter a student ID first'));
       return;
     }
     try {
       setBusy(true);
       setEv(await graduation.evaluate(Number(student), type));
     } catch (e: any) {
-      Alert.alert('Could not evaluate', e.message);
+      Alert.alert(t('academic_graduation.evaluate_error', 'Could not evaluate'), e.message);
     } finally {
       setBusy(false);
     }
@@ -98,16 +100,16 @@ export default function AcademicGraduationScreen({ navigation }: any) {
     if (!student) return;
     try {
       await graduation.save({ student_id: Number(student), completion_type: type });
-      Alert.alert('Saved', 'Completion snapshot saved for review.');
+      Alert.alert(t('academic_graduation.saved', 'Saved'), t('academic_graduation.snapshot_saved', 'Completion snapshot saved for review.'));
       loadRecords();
     } catch (e: any) {
-      Alert.alert('Could not save', e.message);
+      Alert.alert(t('academic_graduation.save_error', 'Could not save'), e.message);
     }
   };
 
   const saveRequirementSet = async () => {
     if (!name || !minCredits) {
-      Alert.alert('Name and minimum credits are required');
+      Alert.alert(t('academic_graduation.name_credits_required', 'Name and minimum credits are required'));
       return;
     }
     try {
@@ -123,7 +125,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             : [],
         },
       });
-      Alert.alert('Saved', 'Requirement set is now active.');
+      Alert.alert(t('academic_graduation.saved', 'Saved'), t('academic_graduation.requirement_set_active', 'Requirement set is now active.'));
       setName('');
       setMinCredits('');
       setMinGpa('');
@@ -132,7 +134,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
       setRequiredSubjects('');
       loadRequirements();
     } catch (e: any) {
-      Alert.alert('Could not save requirement set', e.message);
+      Alert.alert(t('academic_graduation.save_requirement_error', 'Could not save requirement set'), e.message);
     }
   };
 
@@ -151,11 +153,11 @@ export default function AcademicGraduationScreen({ navigation }: any) {
     if (!selected) return;
     try {
       await graduation.approve({ id: selected.id, decision, reason: reason || undefined });
-      Alert.alert('Updated', `Marked as ${decision}.`);
+      Alert.alert(t('academic_graduation.updated', 'Updated'), t('academic_graduation.marked_as', 'Marked as {decision}.').replace('{decision}', decision));
       setSelected(null);
       loadRecords();
     } catch (e: any) {
-      Alert.alert('Could not update decision', e.message);
+      Alert.alert(t('academic_graduation.update_decision_error', 'Could not update decision'), e.message);
     }
   };
 
@@ -163,23 +165,27 @@ export default function AcademicGraduationScreen({ navigation }: any) {
     <SafeAreaView style={s.screen}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={s.back}>Back</Text>
+          <Text style={s.back}>{t('academic_graduation.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={s.title}>Graduation & Completion</Text>
+        <Text style={s.title}>{t('academic_graduation.title', 'Graduation & Completion')}</Text>
         <Text style={s.sub}>
-          Requirement sets, per-student eligibility evaluation, and approval decisions.
+          {t('academic_graduation.subtitle', 'Requirement sets, per-student eligibility evaluation, and approval decisions.')}
         </Text>
       </View>
 
       <View style={s.tabs}>
-        {(['evaluate', 'requirements', 'records'] as const).map((t) => (
+        {(['evaluate', 'requirements', 'records'] as const).map((tabKey) => (
           <TouchableOpacity
-            key={t}
-            onPress={() => setTab(t)}
-            style={[s.tab, tab === t && s.tabActive]}
+            key={tabKey}
+            onPress={() => setTab(tabKey)}
+            style={[s.tab, tab === tabKey && s.tabActive]}
           >
-            <Text style={[s.tabText, tab === t && s.tabTextActive]}>
-              {t === 'evaluate' ? 'Evaluate' : t === 'requirements' ? 'Requirements' : 'Records'}
+            <Text style={[s.tabText, tab === tabKey && s.tabTextActive]}>
+              {tabKey === 'evaluate'
+                ? t('academic_graduation.tab_evaluate', 'Evaluate')
+                : tabKey === 'requirements'
+                ? t('academic_graduation.tab_requirements', 'Requirements')
+                : t('academic_graduation.tab_records', 'Records')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -190,7 +196,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
           <View style={s.card}>
             <TextInput
               style={s.input}
-              placeholder="Student ID"
+              placeholder={t('academic_graduation.student_id_placeholder', 'Student ID')}
               placeholderTextColor={C.muted}
               value={student}
               onChangeText={setStudent}
@@ -198,17 +204,17 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             />
             <TextInput
               style={s.input}
-              placeholder="Completion type (graduation / promotion)"
+              placeholder={t('academic_graduation.completion_type_placeholder', 'Completion type (graduation / promotion)')}
               placeholderTextColor={C.muted}
               value={type}
               onChangeText={setType}
             />
             <View style={s.row}>
               <TouchableOpacity style={s.secondary} onPress={evaluate}>
-                <Text>Evaluate</Text>
+                <Text>{t('academic_graduation.evaluate', 'Evaluate')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.primary, { flex: 1 }]} onPress={saveSnapshot}>
-                <Text style={s.primaryText}>Save snapshot</Text>
+                <Text style={s.primaryText}>{t('academic_graduation.save_snapshot', 'Save snapshot')}</Text>
               </TouchableOpacity>
             </View>
             {busy ? <ActivityIndicator color={C.green} /> : null}
@@ -218,11 +224,14 @@ export default function AcademicGraduationScreen({ navigation }: any) {
                   {String(ev.decision).toUpperCase()}
                 </Text>
                 <Text style={s.meta}>
-                  Credits: {ev.credits ?? '-'} · GPA: {ev.gpa ?? '-'} · Failed: {ev.failed ?? 0} ·
-                  Attendance: {ev.attendance ?? '-'}%
+                  {t('academic_graduation.eval_meta', 'Credits: {credits} · GPA: {gpa} · Failed: {failed} · Attendance: {attendance}%')
+                    .replace('{credits}', String(ev.credits ?? '-'))
+                    .replace('{gpa}', String(ev.gpa ?? '-'))
+                    .replace('{failed}', String(ev.failed ?? 0))
+                    .replace('{attendance}', String(ev.attendance ?? '-'))}
                 </Text>
                 {(ev.reasons || []).length === 0 ? (
-                  <Text style={s.okText}>All requirements met.</Text>
+                  <Text style={s.okText}>{t('academic_graduation.all_requirements_met', 'All requirements met.')}</Text>
                 ) : (
                   (ev.reasons || []).map((x: string, i: number) => (
                     <Text key={i} style={s.reason}>
@@ -239,17 +248,17 @@ export default function AcademicGraduationScreen({ navigation }: any) {
       {tab === 'requirements' && (
         <ScrollView contentContainerStyle={s.content}>
           <View style={s.card}>
-            <Text style={s.label}>New / update requirement set</Text>
+            <Text style={s.label}>{t('academic_graduation.new_update_set', 'New / update requirement set')}</Text>
             <TextInput
               style={s.input}
-              placeholder="Name"
+              placeholder={t('academic_graduation.name_placeholder', 'Name')}
               placeholderTextColor={C.muted}
               value={name}
               onChangeText={setName}
             />
             <TextInput
               style={s.input}
-              placeholder="Minimum credits"
+              placeholder={t('academic_graduation.min_credits_placeholder', 'Minimum credits')}
               placeholderTextColor={C.muted}
               value={minCredits}
               onChangeText={setMinCredits}
@@ -257,7 +266,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             />
             <TextInput
               style={s.input}
-              placeholder="Minimum GPA (optional)"
+              placeholder={t('academic_graduation.min_gpa_placeholder', 'Minimum GPA (optional)')}
               placeholderTextColor={C.muted}
               value={minGpa}
               onChangeText={setMinGpa}
@@ -265,7 +274,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             />
             <TextInput
               style={s.input}
-              placeholder="Maximum failed subjects (optional)"
+              placeholder={t('academic_graduation.max_failed_placeholder', 'Maximum failed subjects (optional)')}
               placeholderTextColor={C.muted}
               value={maxFailed}
               onChangeText={setMaxFailed}
@@ -273,7 +282,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             />
             <TextInput
               style={s.input}
-              placeholder="Minimum attendance % (optional)"
+              placeholder={t('academic_graduation.min_attendance_placeholder', 'Minimum attendance % (optional)')}
               placeholderTextColor={C.muted}
               value={minAttendance}
               onChangeText={setMinAttendance}
@@ -281,27 +290,28 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             />
             <TextInput
               style={s.input}
-              placeholder="Required subject IDs, comma separated (optional)"
+              placeholder={t('academic_graduation.required_subjects_placeholder', 'Required subject IDs, comma separated (optional)')}
               placeholderTextColor={C.muted}
               value={requiredSubjects}
               onChangeText={setRequiredSubjects}
             />
             <TouchableOpacity style={s.primary} onPress={saveRequirementSet}>
-              <Text style={s.primaryText}>Save requirement set</Text>
+              <Text style={s.primaryText}>{t('academic_graduation.save_requirement_set', 'Save requirement set')}</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={s.sectionLabel}>Existing sets</Text>
+          <Text style={s.sectionLabel}>{t('academic_graduation.existing_sets', 'Existing sets')}</Text>
           {sets.length === 0 ? (
-            <Text style={s.empty}>No requirement sets configured yet.</Text>
+            <Text style={s.empty}>{t('academic_graduation.no_sets', 'No requirement sets configured yet.')}</Text>
           ) : (
             sets.map((set) => (
               <View key={set.id} style={s.card}>
                 <Text style={s.item}>{set.name}</Text>
                 <Text style={s.meta}>
-                  Credits ≥ {set.requirements?.minimum_credits ?? '-'} · GPA ≥{' '}
-                  {set.requirements?.minimum_gpa ?? '-'} · Attendance ≥{' '}
-                  {set.requirements?.minimum_attendance ?? '-'}%
+                  {t('academic_graduation.set_meta', 'Credits ≥ {credits} · GPA ≥ {gpa} · Attendance ≥ {attendance}%')
+                    .replace('{credits}', String(set.requirements?.minimum_credits ?? '-'))
+                    .replace('{gpa}', String(set.requirements?.minimum_gpa ?? '-'))
+                    .replace('{attendance}', String(set.requirements?.minimum_attendance ?? '-'))}
                 </Text>
               </View>
             ))
@@ -317,7 +327,7 @@ export default function AcademicGraduationScreen({ navigation }: any) {
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
               <TouchableOpacity style={s.card} onPress={() => openRecord(item)}>
-                <Text style={s.item}>Student #{item.student_id}</Text>
+                <Text style={s.item}>{t('academic_graduation.student_hash', 'Student #{id}').replace('{id}', String(item.student_id))}</Text>
                 <Text
                   style={[s.decision, { fontSize: 14, color: DECISION_COLOR[item.decision] || C.ink }]}
                 >
@@ -326,37 +336,37 @@ export default function AcademicGraduationScreen({ navigation }: any) {
                 <Text style={s.meta}>{item.completion_type}</Text>
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text style={s.empty}>No completion records yet.</Text>}
+            ListEmptyComponent={<Text style={s.empty}>{t('academic_graduation.no_records', 'No completion records yet.')}</Text>}
           />
           {selected ? (
             <View style={s.sheet}>
               <Text style={s.item}>
-                Student #{selected.student_id} · {selected.completion_type}
+                {t('academic_graduation.student_hash', 'Student #{id}').replace('{id}', String(selected.student_id))} · {selected.completion_type}
               </Text>
               <TextInput
                 style={s.input}
-                placeholder="Reason (optional)"
+                placeholder={t('academic_graduation.reason_placeholder', 'Reason (optional)')}
                 placeholderTextColor={C.muted}
                 value={reason}
                 onChangeText={setReason}
               />
               <View style={s.row}>
                 <TouchableOpacity style={s.secondary} onPress={() => decide('approved')}>
-                  <Text style={{ color: C.green }}>Approve</Text>
+                  <Text style={{ color: C.green }}>{t('academic_graduation.approve', 'Approve')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.secondary} onPress={() => decide('deferred')}>
-                  <Text style={{ color: C.amber }}>Defer</Text>
+                  <Text style={{ color: C.amber }}>{t('academic_graduation.defer', 'Defer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.secondary} onPress={() => decide('rejected')}>
-                  <Text style={{ color: C.red }}>Reject</Text>
+                  <Text style={{ color: C.red }}>{t('academic_graduation.reject', 'Reject')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.secondary} onPress={() => setSelected(null)}>
-                  <Text>Close</Text>
+                  <Text>{t('common.close', 'Close')}</Text>
                 </TouchableOpacity>
               </View>
               {audits.length > 0 ? (
                 <View>
-                  <Text style={s.sectionLabel}>Audit trail</Text>
+                  <Text style={s.sectionLabel}>{t('academic_graduation.audit_trail', 'Audit trail')}</Text>
                   {audits.map((a) => (
                     <Text key={a.id} style={s.meta}>
                       {a.action} by #{a.actor_id} {a.reason ? `— ${a.reason}` : ''}

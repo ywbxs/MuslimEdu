@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   BehaviorCategory,
@@ -52,13 +53,13 @@ const CANVAS = '#F5F7F6';
 const DANGER = '#BA1A1A';
 const ADMIN_ROLES = [1, 2];
 
-const SEVERITY_LABELS: Record<BehaviorSeverity, string> = {
+const SEVERITY_FALLBACKS: Record<BehaviorSeverity, string> = {
   minor: 'Minor',
   moderate: 'Moderate',
   major: 'Major',
 };
 
-const STATUS_LABELS: Record<BehaviorStatus, string> = {
+const STATUS_FALLBACKS: Record<BehaviorStatus, string> = {
   open: 'Open',
   reviewed: 'Reviewed',
   resolved: 'Resolved',
@@ -69,7 +70,10 @@ export default function BehaviorIncidentsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdmin = !!user && ADMIN_ROLES.includes(user.role_id);
+  const severityLabel = (s: BehaviorSeverity) => t(`behavior_incidents.severity_${s}`, SEVERITY_FALLBACKS[s]);
+  const statusLabel = (s: BehaviorStatus) => t(`behavior_incidents.status_${s}`, STATUS_FALLBACKS[s]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,19 +115,19 @@ export default function BehaviorIncidentsScreen() {
       setCategories(cats);
       setSections(secs);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load behavior incidents.');
+      setError(e?.message ?? t('behavior_incidents.load_error', 'Could not load behavior incidents.'));
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, isAdmin]);
+  }, [token, statusFilter, isAdmin, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const categoryLabel = useCallback(
-    (id: number) => categories.find((c) => c.id === id)?.label ?? 'Category',
-    [categories]
+    (id: number) => categories.find((c) => c.id === id)?.label ?? t('behavior_incidents.category_fallback', 'Category'),
+    [categories, t]
   );
 
   const loadRoster = async (sectionId: number) => {
@@ -133,7 +137,7 @@ export default function BehaviorIncidentsScreen() {
       const r = await fetchClassStudents(token, sectionId);
       setRoster(r.students);
     } catch (e: any) {
-      Alert.alert("Couldn't load students", e?.message ?? 'Please try again.');
+      Alert.alert(t('behavior_incidents.load_students_error', "Couldn't load students"), e?.message ?? t('common.try_again_full', 'Please try again.'));
       setRoster([]);
     } finally {
       setRosterLoading(false);
@@ -175,11 +179,11 @@ export default function BehaviorIncidentsScreen() {
   const onSave = async () => {
     if (!token) return;
     if (!editing && !fStudentId) {
-      Alert.alert('Missing info', 'Pick a section and a student first.');
+      Alert.alert(t('behavior_incidents.missing_info', 'Missing info'), t('behavior_incidents.missing_student_section', 'Pick a section and a student first.'));
       return;
     }
     if (!fCategoryId || !fDescription.trim() || !fIncidentDate.trim()) {
-      Alert.alert('Missing info', 'Category, description, and date are all required.');
+      Alert.alert(t('behavior_incidents.missing_info', 'Missing info'), t('behavior_incidents.missing_required_fields', 'Category, description, and date are all required.'));
       return;
     }
     setSaving(true);
@@ -201,17 +205,17 @@ export default function BehaviorIncidentsScreen() {
       });
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('behavior_incidents.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDelete = (inc: BehaviorIncident) => {
-    Alert.alert('Delete this incident?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('behavior_incidents.delete_title', 'Delete this incident?'), t('behavior_incidents.delete_message', 'This cannot be undone.'), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('behavior_incidents.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -219,7 +223,7 @@ export default function BehaviorIncidentsScreen() {
             await deleteBehaviorIncident(token, inc.id);
             setIncidents((prev) => prev.filter((x) => x.id !== inc.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('behavior_incidents.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -232,7 +236,7 @@ export default function BehaviorIncidentsScreen() {
       const saved = await notifyParentOfIncident(token, inc.id);
       setIncidents((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
     } catch (e: any) {
-      Alert.alert('Could not update', e?.message ?? 'Please try again.');
+      Alert.alert(t('behavior_incidents.update_error', 'Could not update'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     }
   };
 
@@ -250,7 +254,7 @@ export default function BehaviorIncidentsScreen() {
       });
       setIncidents((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
     } catch (e: any) {
-      Alert.alert('Could not update', e?.message ?? 'Please try again.');
+      Alert.alert(t('behavior_incidents.update_error', 'Could not update'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     }
   };
 
@@ -258,7 +262,7 @@ export default function BehaviorIncidentsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading behavior incidents…</Text>
+        <Text style={styles.centerText}>{t('behavior_incidents.loading', 'Loading behavior incidents…')}</Text>
       </View>
     );
   }
@@ -266,10 +270,10 @@ export default function BehaviorIncidentsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('behavior_incidents.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -284,9 +288,11 @@ export default function BehaviorIncidentsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Behavior & Discipline</Text>
+          <Text style={styles.headerTitle}>{t('behavior_incidents.title', 'Behavior & Discipline')}</Text>
           <Text style={styles.headerSub}>
-            {isAdmin ? 'All incidents in your school' : 'Incidents you reported or your homeroom'}
+            {isAdmin
+              ? t('behavior_incidents.subtitle_admin', 'All incidents in your school')
+              : t('behavior_incidents.subtitle_teacher', 'Incidents you reported or your homeroom')}
           </Text>
         </View>
       </View>
@@ -299,7 +305,7 @@ export default function BehaviorIncidentsScreen() {
             onPress={() => setStatusFilter(s)}
           >
             <Text style={[styles.filterChipText, statusFilter === s && styles.filterChipTextActive]}>
-              {s ? STATUS_LABELS[s] : 'All'}
+              {s ? statusLabel(s) : t('common.all', 'All')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -308,16 +314,18 @@ export default function BehaviorIncidentsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {incidents.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No behavior incidents on record.</Text>
+            <Text style={styles.emptyText}>{t('behavior_incidents.empty', 'No behavior incidents on record.')}</Text>
           </View>
         ) : (
           incidents.map((inc) => (
             <View key={inc.id} style={styles.card}>
               <View style={styles.rowBetween}>
                 <View style={styles.flexCol}>
-                  <Text style={styles.rowTitle}>{inc.student?.name ?? `Student ${inc.student_id}`}</Text>
+                  <Text style={styles.rowTitle}>
+                    {inc.student?.name ?? t('behavior_incidents.student_fallback', 'Student {id}').replace('{id}', String(inc.student_id))}
+                  </Text>
                   <Text style={styles.rowSub}>
-                    {inc.category?.label ?? categoryLabel(inc.behavior_category_id)} · {SEVERITY_LABELS[inc.severity]} ·{' '}
+                    {inc.category?.label ?? categoryLabel(inc.behavior_category_id)} · {severityLabel(inc.severity)} ·{' '}
                     {inc.incident_date?.slice(0, 10)}
                     {inc.section?.name ? ` · ${inc.section.name}` : ''}
                   </Text>
@@ -334,32 +342,34 @@ export default function BehaviorIncidentsScreen() {
                       : styles.statusOpen,
                   ]}
                 >
-                  {STATUS_LABELS[inc.status]}
+                  {statusLabel(inc.status)}
                 </Text>
               </View>
               <Text style={styles.description}>{inc.description}</Text>
-              {!!inc.action_taken && <Text style={styles.actionTaken}>Action taken: {inc.action_taken}</Text>}
+              {!!inc.action_taken && (
+                <Text style={styles.actionTaken}>{t('behavior_incidents.action_taken_prefix', 'Action taken:')} {inc.action_taken}</Text>
+              )}
               <Text style={styles.reportedBy}>
-                Reported by {inc.reporter?.name ?? 'a teacher'}
-                {inc.parent_notified_at ? ' · Parent notified' : ''}
+                {t('behavior_incidents.reported_by', 'Reported by')} {inc.reporter?.name ?? t('behavior_incidents.a_teacher', 'a teacher')}
+                {inc.parent_notified_at ? ` · ${t('behavior_incidents.parent_notified', 'Parent notified')}` : ''}
               </Text>
 
               <View style={styles.actionsRow}>
                 <TouchableOpacity onPress={() => openEdit(inc)}>
-                  <Text style={styles.actionLink}>Edit</Text>
+                  <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                 </TouchableOpacity>
                 {inc.status !== 'resolved' && (
                   <TouchableOpacity onPress={() => advanceStatus(inc, 'resolved')}>
-                    <Text style={styles.actionLink}>Mark resolved</Text>
+                    <Text style={styles.actionLink}>{t('behavior_incidents.mark_resolved', 'Mark resolved')}</Text>
                   </TouchableOpacity>
                 )}
                 {!inc.parent_notified_at && (
                   <TouchableOpacity onPress={() => onNotifyParent(inc)}>
-                    <Text style={styles.actionLink}>Notify parent</Text>
+                    <Text style={styles.actionLink}>{t('behavior_incidents.notify_parent', 'Notify parent')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => confirmDelete(inc)}>
-                  <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                  <Text style={[styles.actionLink, styles.deleteLink]}>{t('behavior_incidents.delete', 'Delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -369,7 +379,7 @@ export default function BehaviorIncidentsScreen() {
 
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={openNew}>
-          <Text style={styles.addBtnText}>+ Log Incident</Text>
+          <Text style={styles.addBtnText}>{t('behavior_incidents.log_incident', '+ Log Incident')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -377,11 +387,13 @@ export default function BehaviorIncidentsScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{editing ? 'Edit Incident' : 'Log Incident'}</Text>
+              <Text style={styles.modalTitle}>
+                {editing ? t('behavior_incidents.edit_incident', 'Edit Incident') : t('behavior_incidents.log_incident_title', 'Log Incident')}
+              </Text>
 
               {!editing && (
                 <>
-                  <Text style={styles.label}>Section</Text>
+                  <Text style={styles.label}>{t('behavior_incidents.section_label', 'Section')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
                     {sections.map((s) => (
                       <TouchableOpacity
@@ -394,7 +406,7 @@ export default function BehaviorIncidentsScreen() {
                     ))}
                   </ScrollView>
 
-                  <Text style={styles.label}>Student</Text>
+                  <Text style={styles.label}>{t('behavior_incidents.student_label', 'Student')}</Text>
                   {rosterLoading ? (
                     <ActivityIndicator color={EMERALD} style={{ marginTop: 8 }} />
                   ) : (
@@ -415,7 +427,7 @@ export default function BehaviorIncidentsScreen() {
                 </>
               )}
 
-              <Text style={styles.label}>Category</Text>
+              <Text style={styles.label}>{t('behavior_incidents.category_label', 'Category')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
                 {categories.map((c) => (
                   <TouchableOpacity
@@ -431,7 +443,7 @@ export default function BehaviorIncidentsScreen() {
                 ))}
               </ScrollView>
 
-              <Text style={styles.label}>Severity</Text>
+              <Text style={styles.label}>{t('behavior_incidents.severity_label', 'Severity')}</Text>
               <View style={styles.chipRow}>
                 {(['minor', 'moderate', 'major'] as const).map((s) => (
                   <TouchableOpacity
@@ -439,38 +451,38 @@ export default function BehaviorIncidentsScreen() {
                     style={[styles.chip, fSeverity === s && styles.chipActive]}
                     onPress={() => setFSeverity(s)}
                   >
-                    <Text style={[styles.chipText, fSeverity === s && styles.chipTextActive]}>{SEVERITY_LABELS[s]}</Text>
+                    <Text style={[styles.chipText, fSeverity === s && styles.chipTextActive]}>{severityLabel(s)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+              <Text style={styles.label}>{t('behavior_incidents.date_label', 'Date (YYYY-MM-DD)')}</Text>
               <TextInput style={styles.input} value={fIncidentDate} onChangeText={setFIncidentDate} placeholder="2026-07-28" />
 
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{t('behavior_incidents.description_label', 'Description')}</Text>
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={fDescription}
                 onChangeText={setFDescription}
                 multiline
-                placeholder="What happened"
+                placeholder={t('behavior_incidents.description_placeholder', 'What happened')}
               />
 
-              <Text style={styles.label}>Action taken (optional)</Text>
+              <Text style={styles.label}>{t('behavior_incidents.action_taken_label', 'Action taken (optional)')}</Text>
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={fActionTaken}
                 onChangeText={setFActionTaken}
                 multiline
-                placeholder="What was done about it"
+                placeholder={t('behavior_incidents.action_taken_placeholder', 'What was done about it')}
               />
 
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSave} onPress={onSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>

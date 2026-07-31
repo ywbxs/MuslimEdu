@@ -14,6 +14,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -47,6 +48,12 @@ function IconChevronLeft({ color }: { color: string }) {
   );
 }
 
+const WORKFLOW_STATUS_FALLBACKS: Record<string, string> = {
+  in_progress: 'in progress',
+  completed: 'completed',
+  withdrawn: 'withdrawn',
+};
+
 function formatDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -62,6 +69,8 @@ export default function EnrollmentWorkflowDetailScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
+  const workflowStatusLabel = (s: string) => t(`enrollment_workflow_detail.status_${s}`, WORKFLOW_STATUS_FALLBACKS[s] ?? s.replace('_', ' '));
 
   const recordId: number = route.params?.recordId;
 
@@ -85,11 +94,11 @@ export default function EnrollmentWorkflowDetailScreen() {
       setHistory(historyData.history);
       setStages(stagesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load this record.');
+      setError(err instanceof Error ? err.message : t('enrollment_workflow_detail.load_error', 'Failed to load this record.'));
     } finally {
       setLoading(false);
     }
-  }, [token, recordId]);
+  }, [token, recordId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +114,7 @@ export default function EnrollmentWorkflowDetailScreen() {
       setAdvanceModalVisible(false);
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not update the stage.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.advance_error', 'Could not update the stage.'));
     } finally {
       setBusy(false);
     }
@@ -114,12 +123,15 @@ export default function EnrollmentWorkflowDetailScreen() {
   const onWithdraw = () => {
     if (!record) return;
     Alert.alert(
-      'Withdraw Student',
-      `Withdraw ${record.student?.name ?? 'this student'} from the enrollment workflow? A new workflow must be started to re-enter them.`,
+      t('enrollment_workflow_detail.withdraw_title', 'Withdraw Student'),
+      t(
+        'enrollment_workflow_detail.withdraw_message',
+        'Withdraw {name} from the enrollment workflow? A new workflow must be started to re-enter them.',
+      ).replace('{name}', record.student?.name ?? t('enrollment_workflow_detail.this_student', 'this student')),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: t('enrollment_workflow_detail.withdraw', 'Withdraw'),
           style: 'destructive',
           onPress: async () => {
             if (!token || !record) return;
@@ -128,7 +140,7 @@ export default function EnrollmentWorkflowDetailScreen() {
               await withdrawEnrollmentWorkflow(token, record.id);
               load();
             } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Could not withdraw the student.');
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.withdraw_error', 'Could not withdraw the student.'));
             } finally {
               setBusy(false);
             }
@@ -145,7 +157,7 @@ export default function EnrollmentWorkflowDetailScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Record</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_workflow_detail.title', 'Enrollment Record')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
@@ -162,13 +174,13 @@ export default function EnrollmentWorkflowDetailScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Record</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_workflow_detail.title', 'Enrollment Record')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{error ?? 'Record not found.'}</Text>
+          <Text style={styles.errorText}>{error ?? t('enrollment_workflow_detail.not_found', 'Record not found.')}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -192,15 +204,17 @@ export default function EnrollmentWorkflowDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.summaryCard}>
-          <Text style={styles.studentName}>{record.student?.name ?? `Student #${record.user_id}`}</Text>
-          <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
-            {record.status.replace('_', ' ')}
+          <Text style={styles.studentName}>
+            {record.student?.name ?? t('enrollment_workflow_detail.student_fallback', 'Student #{id}').replace('{id}', String(record.user_id))}
           </Text>
-          <Text style={styles.currentStageLabel}>CURRENT STAGE</Text>
+          <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
+            {workflowStatusLabel(record.status)}
+          </Text>
+          <Text style={styles.currentStageLabel}>{t('enrollment_workflow_detail.current_stage', 'CURRENT STAGE')}</Text>
           <Text style={styles.currentStageValue}>{record.currentStage?.name ?? '—'}</Text>
           {record.notes ? (
             <>
-              <Text style={styles.currentStageLabel}>NOTES</Text>
+              <Text style={styles.currentStageLabel}>{t('enrollment_workflow_detail.notes', 'NOTES')}</Text>
               <Text style={styles.notesText}>{record.notes}</Text>
             </>
           ) : null}
@@ -213,21 +227,21 @@ export default function EnrollmentWorkflowDetailScreen() {
               onPress={() => setAdvanceModalVisible(true)}
               disabled={busy}
             >
-              <Text style={styles.advanceButtonText}>Move to Stage...</Text>
+              <Text style={styles.advanceButtonText}>{t('enrollment_workflow_detail.move_to_stage', 'Move to Stage...')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.withdrawButton]}
               onPress={onWithdraw}
               disabled={busy}
             >
-              <Text style={styles.withdrawButtonText}>Withdraw</Text>
+              <Text style={styles.withdrawButtonText}>{t('enrollment_workflow_detail.withdraw', 'Withdraw')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
-        <Text style={styles.sectionLabel}>History</Text>
+        <Text style={styles.sectionLabel}>{t('enrollment_workflow_detail.history', 'History')}</Text>
         {history.length === 0 ? (
-          <Text style={styles.emptyHistoryText}>No stage changes recorded yet.</Text>
+          <Text style={styles.emptyHistoryText}>{t('enrollment_workflow_detail.no_history', 'No stage changes recorded yet.')}</Text>
         ) : (
           history
             .slice()
@@ -237,12 +251,12 @@ export default function EnrollmentWorkflowDetailScreen() {
                 <View style={styles.historyDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.historyText}>
-                    {h.fromStage?.name ?? 'Started'} <Text style={styles.historyArrow}>→</Text>{' '}
+                    {h.fromStage?.name ?? t('enrollment_workflow_detail.started', 'Started')} <Text style={styles.historyArrow}>→</Text>{' '}
                     {h.toStage?.name ?? '—'}
                   </Text>
                   <Text style={styles.historyMeta}>
                     {formatDate(h.created_at)}
-                    {h.changedByUser?.name ? ` · by ${h.changedByUser.name}` : ''}
+                    {h.changedByUser?.name ? ` · ${t('enrollment_workflow_detail.by', 'by')} ${h.changedByUser.name}` : ''}
                   </Text>
                   {h.notes ? <Text style={styles.historyNotes}>{h.notes}</Text> : null}
                 </View>
@@ -259,7 +273,7 @@ export default function EnrollmentWorkflowDetailScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Move to Stage</Text>
+            <Text style={styles.modalTitle}>{t('enrollment_workflow_detail.move_to_stage_title', 'Move to Stage')}</Text>
             <FlatList
               data={stages}
               keyExtractor={(s) => s.id.toString()}
@@ -277,14 +291,14 @@ export default function EnrollmentWorkflowDetailScreen() {
                     ]}
                   >
                     {item.name}
-                    {item.id === record.current_stage_id ? ' (current)' : ''}
+                    {item.id === record.current_stage_id ? ` ${t('enrollment_workflow_detail.current_suffix', '(current)')}` : ''}
                   </Text>
                   {busy ? <ActivityIndicator size="small" color={theme.accent} /> : null}
                 </TouchableOpacity>
               )}
             />
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setAdvanceModalVisible(false)}>
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -208,6 +208,20 @@ interface ManageItem {
   lockedMessage?: string;
 }
 
+// Academic-subsystem tiles hidden entirely for orphan schools (institution_type
+// === 'orphanage') - they have no classes/subjects/grading/curriculum, so these
+// tiles either lead nowhere useful or into an empty/broken flow.
+const ACADEMIC_ITEM_KEYS = new Set([
+  'classes', 'academicSetup', 'gradingSystems', 'examCategories',
+  'gradebookReview', 'announcementReview', 'lessonPlanReview',
+  'assessmentReview', 'assessmentGrades', 'materialsReview',
+  'programsSubjects', 'timetableConflicts', 'attendanceConfig',
+  'academicFacilities', 'academicSchedule', 'academicCalendar',
+  'academicAnalytics', 'completionHub', 'graduation', 'promotionPolicy',
+  'documentTemplates', 'gradeRelease', 'orgStructure', 'behaviorIncidents',
+  'examinations', 'studentProgress', 'analyticsExtended', 'attendance',
+]);
+
 interface AdminDashboardProps {
   footer?: React.ReactNode;
 }
@@ -634,7 +648,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       route: 'AccountSettings',
       icon: (c) => <GearIcon color={c} />,
     },
-  ].filter((item) => !(isOrphanSchool && item.key === 'classes'));
+  ].filter((item) => !(isOrphanSchool && ACADEMIC_ITEM_KEYS.has(item.key)));
 
   // --- Parallax + fade for the background layer only. The ScrollView content
   // (greeting, reports card, grid) scrolls at normal speed on top, so it

@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, StudentSummary, ChildStatus } from '../../services/adminService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
@@ -122,11 +123,12 @@ function FilterSheet({
   onSelect: (v: FilterValue) => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const options: { key: FilterValue; label: string }[] = [
-    { key: 'all', label: 'All children' },
-    { key: 'active', label: 'Active' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'inactive', label: 'Inactive' },
+    { key: 'all', label: t('student_list.filter_all', 'All children') },
+    { key: 'active', label: t('student_list.filter_active', 'Active') },
+    { key: 'pending', label: t('student_list.filter_pending', 'Pending') },
+    { key: 'inactive', label: t('student_list.filter_inactive', 'Inactive') },
   ];
 
   return (
@@ -136,7 +138,7 @@ function FilterSheet({
         <View style={styles.filterSheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>Filter</Text>
+            <Text style={styles.sheetTitle}>{t('student_list.filter_title', 'Filter')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.sheetCloseBtn}>
               <IconClose color={SUBTLE} />
             </TouchableOpacity>
@@ -184,6 +186,7 @@ export default function StudentListScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { token, user } = useAuth();
+  const { t } = useLocale();
 
   const [students, setStudents] = useState<StudentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,7 +207,7 @@ export default function StudentListScreen() {
       const data = await fetchStudents(token);
       setStudents(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load students.');
+      setError(err instanceof Error ? err.message : t('student_list.load_error', 'Failed to load students.'));
     }
   }, [token]);
 
@@ -221,7 +224,7 @@ export default function StudentListScreen() {
     setIsRefreshing(false);
   };
 
-  const title = user?.is_orphan ? 'Children' : 'Students';
+  const title = user?.is_orphan ? t('student_list.title_children', 'Children') : t('student_list.title_students', 'Students');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -263,7 +266,7 @@ export default function StudentListScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
           <IconChevronLeft color={EMERALD} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.headerRightRow}>
@@ -289,7 +292,7 @@ export default function StudentListScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={`Search ${title.toLowerCase()}...`}
+          placeholder={t('student_list.search_placeholder', 'Search {title}...').replace('{title}', title.toLowerCase())}
           placeholderTextColor={SUBTLE}
           style={styles.searchInput}
           autoCorrect={false}
@@ -312,13 +315,15 @@ export default function StudentListScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>
-            {students.length === 0 ? `No ${title.toLowerCase()} found.` : 'No matches for your search.'}
+            {students.length === 0
+              ? t('student_list.empty_none', 'No {title} found.').replace('{title}', title.toLowerCase())
+              : t('student_list.empty_no_matches', 'No matches for your search.')}
           </Text>
         </View>
       ) : (
@@ -351,7 +356,7 @@ export default function StudentListScreen() {
                   {joined ? (
                     <View style={styles.joinedChip}>
                       <IconCalendar color={EMERALD} />
-                      <Text style={styles.joinedChipText}>Joined {joined}</Text>
+                      <Text style={styles.joinedChipText}>{t('student_list.joined', 'Joined {date}').replace('{date}', joined)}</Text>
                     </View>
                   ) : null}
                 </View>

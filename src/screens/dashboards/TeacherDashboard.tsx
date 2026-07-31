@@ -528,81 +528,87 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               onPress={() => (navigation as any).navigate('Reports')}
             />
           ) : null}
-          <QuickActionCard
-            icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.my_classes_title', 'My Classes')}
-            description={t('teacher_dashboard.my_classes_desc', 'View and manage your assigned classes')}
-            onPress={() => (navigation as any).navigate('TeacherMyClasses')}
-          />
-          <QuickActionCard
-            icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.take_attendance_title', 'Take Attendance')}
-            description={t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes")}
-            onPress={() => (navigation as any).navigate('TeacherAttendanceClasses')}
-          />
-          <QuickActionCard
-            icon={<GradeIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.enter_grades_title', 'Enter Grades')}
-            description={t('teacher_dashboard.enter_grades_desc', 'Record marks for your assigned subjects')}
-            onPress={() => (navigation as any).navigate('TeacherGradebookClasses')}
-          />
-          <QuickActionCard
-            icon={<AnnouncementIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.announcements_title', 'Announcements')}
-            description={t('teacher_dashboard.announcements_desc', 'Post updates to your classes')}
-            onPress={() => (navigation as any).navigate('TeacherAnnouncements')}
-          />
-          <QuickActionCard
-            icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.behavior_title', 'Behavior & Discipline')}
-            description={t('teacher_dashboard.behavior_desc', 'Log and track student behavior incidents')}
-            onPress={() => (navigation as any).navigate('BehaviorIncidents')}
-          />
-          <QuickActionCard
-            icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.examinations_title', 'Examinations')}
-            description={t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades')}
-            onPress={() => (navigation as any).navigate('Examinations')}
-          />
-          <QuickActionCard
-            icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.student_progress_title', 'Student Progress')}
-            description={t(
-              'teacher_dashboard.student_progress_desc',
-              'Attendance, grades, behavior, memorization in one view',
-            )}
-            onPress={() => (navigation as any).navigate('StudentProgress')}
-          />
-          <QuickActionCard
-            icon={<LessonPlanIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.lesson_plans_title', 'Lesson Plans')}
-            description={t('teacher_dashboard.lesson_plans_desc', 'Draft, submit, and revise your lesson plans')}
-            onPress={() => (navigation as any).navigate('TeacherLessonPlans')}
-          />
-          <QuickActionCard
-            icon={<AssessmentIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.assessments_title', 'Assessments')}
-            description={t(
-              'teacher_dashboard.assessments_desc',
-              'Create assignments, quizzes, and grade submissions',
-            )}
-            onPress={() => (navigation as any).navigate('TeacherAssessments')}
-          />
-          <QuickActionCard
-            icon={<StarIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.assessment_grades_title', 'Assessment Grades')}
-            description={t('teacher_dashboard.assessment_grades_desc', 'Weighted grade breakdown for your sections')}
-            onPress={() => (navigation as any).navigate('TeacherAssessmentGrades')}
-          />
-          <QuickActionCard
-            icon={<DocumentIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.materials_title', 'Materials')}
-            description={t(
-              'teacher_dashboard.materials_desc',
-              'Share lecture notes, slides, and other resources',
-            )}
-            onPress={() => (navigation as any).navigate('TeacherMaterials')}
-          />
+          {/* Academic-subsystem cards - hidden entirely for orphan schools
+              (no classes/subjects/grading/curriculum there). */}
+          {!isOrphan && (
+            <>
+              <QuickActionCard
+                icon={<ProgressBarsIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.my_classes_title', 'My Classes')}
+                description={t('teacher_dashboard.my_classes_desc', 'View and manage your assigned classes')}
+                onPress={() => (navigation as any).navigate('TeacherMyClasses')}
+              />
+              <QuickActionCard
+                icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.take_attendance_title', 'Take Attendance')}
+                description={t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes")}
+                onPress={() => (navigation as any).navigate('TeacherAttendanceClasses')}
+              />
+              <QuickActionCard
+                icon={<GradeIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.enter_grades_title', 'Enter Grades')}
+                description={t('teacher_dashboard.enter_grades_desc', 'Record marks for your assigned subjects')}
+                onPress={() => (navigation as any).navigate('TeacherGradebookClasses')}
+              />
+              <QuickActionCard
+                icon={<AnnouncementIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.announcements_title', 'Announcements')}
+                description={t('teacher_dashboard.announcements_desc', 'Post updates to your classes')}
+                onPress={() => (navigation as any).navigate('TeacherAnnouncements')}
+              />
+              <QuickActionCard
+                icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.behavior_title', 'Behavior & Discipline')}
+                description={t('teacher_dashboard.behavior_desc', 'Log and track student behavior incidents')}
+                onPress={() => (navigation as any).navigate('BehaviorIncidents')}
+              />
+              <QuickActionCard
+                icon={<AssessmentIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.examinations_title', 'Examinations')}
+                description={t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades')}
+                onPress={() => (navigation as any).navigate('Examinations')}
+              />
+              <QuickActionCard
+                icon={<AssessmentIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.student_progress_title', 'Student Progress')}
+                description={t(
+                  'teacher_dashboard.student_progress_desc',
+                  'Attendance, grades, behavior, memorization in one view',
+                )}
+                onPress={() => (navigation as any).navigate('StudentProgress')}
+              />
+              <QuickActionCard
+                icon={<LessonPlanIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.lesson_plans_title', 'Lesson Plans')}
+                description={t('teacher_dashboard.lesson_plans_desc', 'Draft, submit, and revise your lesson plans')}
+                onPress={() => (navigation as any).navigate('TeacherLessonPlans')}
+              />
+              <QuickActionCard
+                icon={<AssessmentIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.assessments_title', 'Assessments')}
+                description={t(
+                  'teacher_dashboard.assessments_desc',
+                  'Create assignments, quizzes, and grade submissions',
+                )}
+                onPress={() => (navigation as any).navigate('TeacherAssessments')}
+              />
+              <QuickActionCard
+                icon={<StarIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.assessment_grades_title', 'Assessment Grades')}
+                description={t('teacher_dashboard.assessment_grades_desc', 'Weighted grade breakdown for your sections')}
+                onPress={() => (navigation as any).navigate('TeacherAssessmentGrades')}
+              />
+              <QuickActionCard
+                icon={<DocumentIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.materials_title', 'Materials')}
+                description={t(
+                  'teacher_dashboard.materials_desc',
+                  'Share lecture notes, slides, and other resources',
+                )}
+                onPress={() => (navigation as any).navigate('TeacherMaterials')}
+              />
+            </>
+          )}
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('teacher_dashboard.notifications_title', 'Notifications')}

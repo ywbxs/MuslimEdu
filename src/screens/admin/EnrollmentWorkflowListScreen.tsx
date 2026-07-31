@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -51,6 +52,12 @@ const STATUS_FILTERS: Array<'in_progress' | 'completed' | 'withdrawn' | 'all'> =
   'all',
 ];
 
+const WORKFLOW_STATUS_FALLBACKS: Record<string, string> = {
+  in_progress: 'in progress',
+  completed: 'completed',
+  withdrawn: 'withdrawn',
+};
+
 function IconChevronLeft({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -65,6 +72,8 @@ export default function EnrollmentWorkflowListScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
+  const workflowStatusLabel = (s: string) => t(`enrollment_workflow_list.status_${s}`, WORKFLOW_STATUS_FALLBACKS[s] ?? s.replace('_', ' '));
 
   const [records, setRecords] = useState<WorkflowRecord[]>([]);
   const [statusFilter, setStatusFilter] = useState<typeof STATUS_FILTERS[number]>('in_progress');
@@ -93,11 +102,11 @@ export default function EnrollmentWorkflowListScreen() {
       setSessionChecked(true);
       setRecords(list);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load enrollment records.');
+      setError(err instanceof Error ? err.message : t('enrollment_workflow_list.load_error', 'Failed to load enrollment records.'));
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter]);
+  }, [token, statusFilter, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,8 +117,8 @@ export default function EnrollmentWorkflowListScreen() {
   const openPicker = async () => {
     if (!currentSession) {
       Alert.alert(
-        'No Academic Year Set',
-        'Set a current academic year before starting enrollment workflows for students.'
+        t('enrollment_workflow_list.no_session_title', 'No Academic Year Set'),
+        t('enrollment_workflow_list.no_session_message', 'Set a current academic year before starting enrollment workflows for students.'),
       );
       return;
     }
@@ -119,7 +128,7 @@ export default function EnrollmentWorkflowListScreen() {
       const list = await fetchStudents(token!, '');
       setStudents(list);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load students.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_list.load_students_error', 'Failed to load students.'));
     } finally {
       setStudentsLoading(false);
     }
@@ -149,7 +158,7 @@ export default function EnrollmentWorkflowListScreen() {
       setStudentSearch('');
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not start the workflow.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_list.start_error', 'Could not start the workflow.'));
     } finally {
       setStarting(null);
     }
@@ -167,11 +176,13 @@ export default function EnrollmentWorkflowListScreen() {
         onPress={() => (navigation as any).navigate('EnrollmentWorkflowDetail', { recordId: item.id })}
       >
         <View style={{ flex: 1 }}>
-          <Text style={styles.studentName}>{item.student?.name ?? `Student #${item.user_id}`}</Text>
-          <Text style={styles.stageText}>{item.currentStage?.name ?? 'Unknown stage'}</Text>
+          <Text style={styles.studentName}>
+            {item.student?.name ?? t('enrollment_workflow_list.student_fallback', 'Student #{id}').replace('{id}', String(item.user_id))}
+          </Text>
+          <Text style={styles.stageText}>{item.currentStage?.name ?? t('enrollment_workflow_list.unknown_stage', 'Unknown stage')}</Text>
         </View>
         <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
-          {item.status.replace('_', ' ')}
+          {workflowStatusLabel(item.status)}
         </Text>
       </TouchableOpacity>
     );
@@ -194,7 +205,7 @@ export default function EnrollmentWorkflowListScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Records</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_workflow_list.title', 'Enrollment Records')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>{[0, 1, 2, 3, 4].map(renderSkeletonCard)}</View>
@@ -212,14 +223,14 @@ export default function EnrollmentWorkflowListScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Records</Text>
         <TouchableOpacity style={styles.addButton} onPress={openPicker}>
-          <Text style={styles.addButtonText}>+ Start</Text>
+          <Text style={styles.addButtonText}>{t('enrollment_workflow_list.start', '+ Start')}</Text>
         </TouchableOpacity>
       </View>
 
       {sessionChecked && !currentSession ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>
-            No academic year is set as current yet - set one before starting workflows.
+            {t('enrollment_workflow_list.no_current_year', 'No academic year is set as current yet - set one before starting workflows.')}
           </Text>
         </View>
       ) : null}
@@ -228,7 +239,7 @@ export default function EnrollmentWorkflowListScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -241,7 +252,7 @@ export default function EnrollmentWorkflowListScreen() {
             onPress={() => setStatusFilter(status)}
           >
             <Text style={[styles.filterButtonText, statusFilter === status && styles.filterButtonTextActive]}>
-              {status === 'all' ? 'All' : status.replace('_', ' ')}
+              {status === 'all' ? t('common.all', 'All') : workflowStatusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -256,11 +267,11 @@ export default function EnrollmentWorkflowListScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="📋"
-            title="No records here"
+            title={t('enrollment_workflow_list.empty_title', 'No records here')}
             subtitle={
               statusFilter === 'all'
-                ? 'No students have been started in the enrollment workflow yet.'
-                : `No ${statusFilter.replace('_', ' ')} records right now.`
+                ? t('enrollment_workflow_list.empty_subtitle_all', 'No students have been started in the enrollment workflow yet.')
+                : t('enrollment_workflow_list.empty_subtitle_status', 'No {status} records right now.').replace('{status}', workflowStatusLabel(statusFilter))
             }
             colors={theme}
           />
@@ -271,10 +282,10 @@ export default function EnrollmentWorkflowListScreen() {
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Start Enrollment Workflow</Text>
+            <Text style={styles.modalTitle}>{t('enrollment_workflow_list.modal_title', 'Start Enrollment Workflow')}</Text>
             <TextInput
               style={styles.modalSearch}
-              placeholder="Search students..."
+              placeholder={t('enrollment_workflow_list.search_placeholder', 'Search students...')}
               value={studentSearch}
               onChangeText={searchStudents}
               placeholderTextColor={theme.textMuted}
@@ -297,12 +308,14 @@ export default function EnrollmentWorkflowListScreen() {
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
-                  <Text style={styles.modalEmptyText}>No students match "{studentSearch}".</Text>
+                  <Text style={styles.modalEmptyText}>
+                    {t('enrollment_workflow_list.no_match', 'No students match "{query}".').replace('{query}', studentSearch)}
+                  </Text>
                 }
               />
             )}
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setPickerVisible(false)}>
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

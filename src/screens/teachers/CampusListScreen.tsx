@@ -16,6 +16,7 @@ import axios from 'axios';
 import Svg, { Polyline } from 'react-native-svg';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -39,7 +40,9 @@ const CampusListScreen = () => {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
+  const statusLabel = (status: string) => t(`campus_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
   const [campuses, setCampuses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +78,7 @@ const CampusListScreen = () => {
       setCampuses(response.data.campuses || []);
     } catch (error) {
       console.error('Error fetching campuses:', error);
-      Alert.alert('Error', 'Failed to load campuses');
+      Alert.alert(t('common.error', 'Error'), t('campus_list.load_error', 'Failed to load campuses'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,12 +107,12 @@ const CampusListScreen = () => {
 
   const handleDelete = (campus) => {
     Alert.alert(
-      'Delete Campus',
-      `Delete "${campus.name}"? This can't be undone.`,
+      t('campus_list.delete_title', 'Delete Campus'),
+      t('campus_list.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', campus.name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('campus_list.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -125,8 +128,8 @@ const CampusListScreen = () => {
               );
               fetchCampuses();
             } catch (error) {
-              const msg = error.response?.data?.message || 'Failed to delete campus';
-              Alert.alert('Error', msg);
+              const msg = error.response?.data?.message || t('campus_list.delete_error', 'Failed to delete campus');
+              Alert.alert(t('common.error', 'Error'), msg);
             }
           },
         },
@@ -158,7 +161,7 @@ const CampusListScreen = () => {
           <Text style={styles.name}>{item.name}</Text>
           {item.is_main ? (
             <View style={styles.mainBadge}>
-              <Text style={styles.mainBadgeText}>Main</Text>
+              <Text style={styles.mainBadgeText}>{t('campus_list.main', 'Main')}</Text>
             </View>
           ) : null}
         </View>
@@ -167,10 +170,10 @@ const CampusListScreen = () => {
 
         <View style={styles.statsRow}>
           <View style={styles.statChip}>
-            <Text style={styles.statChipText}>{item.departments_count} departments</Text>
+            <Text style={styles.statChipText}>{t('campus_list.n_departments', '{n} departments').replace('{n}', String(item.departments_count))}</Text>
           </View>
           <View style={styles.statChip}>
-            <Text style={styles.statChipText}>{item.classes_count} classes</Text>
+            <Text style={styles.statChipText}>{t('campus_list.n_classes', '{n} classes').replace('{n}', String(item.classes_count))}</Text>
           </View>
         </View>
 
@@ -179,13 +182,13 @@ const CampusListScreen = () => {
             style={styles.actionButton}
             onPress={() => handleCampusPress(item.id)}
           >
-            <Text style={styles.actionButtonText}>Edit</Text>
+            <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('campus_list.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -214,7 +217,7 @@ const CampusListScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Campuses</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('campus_list.title', 'Campuses')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>
@@ -238,7 +241,7 @@ const CampusListScreen = () => {
             style={styles.addButton}
             onPress={() => navigation.navigate('CampusForm')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('campus_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -248,7 +251,7 @@ const CampusListScreen = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search campus name or code..."
+          placeholder={t('campus_list.search_placeholder', 'Search campus name or code...')}
           value={searchTerm}
           onChangeText={handleSearch}
           placeholderTextColor={theme.textMuted}
@@ -271,7 +274,7 @@ const CampusListScreen = () => {
                 statusFilter === status && styles.filterButtonTextActive,
               ]}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -294,11 +297,13 @@ const CampusListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon="🏢"
-            title="No campuses found"
+            title={t('campus_list.empty_title', 'No campuses found')}
             subtitle={
               searchTerm
-                ? `Nothing matches "${searchTerm}".`
-                : `No ${statusFilter === 'all' ? '' : statusFilter + ' '}campuses yet.`
+                ? t('campus_list.no_match', 'Nothing matches "{query}".').replace('{query}', searchTerm)
+                : statusFilter === 'all'
+                ? t('campus_list.empty_all', 'No campuses yet.')
+                : t('campus_list.empty_status', 'No {status} campuses yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
             colors={theme}
           />

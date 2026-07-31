@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAssessmentTargets,
   fetchTeacherAssessments,
@@ -43,18 +44,20 @@ const RED_SOFT = '#FDECEC';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const STATUS_FILTERS: { key: 'all' | AssessmentStatus; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'draft', label: 'Draft' },
-  { key: 'published', label: 'Published' },
-];
+const STATUS_FILTER_KEYS: ('all' | AssessmentStatus)[] = ['all', 'draft', 'published'];
+const STATUS_FILTER_FALLBACKS: Record<'all' | AssessmentStatus, string> = {
+  all: 'All',
+  draft: 'Draft',
+  published: 'Published',
+};
 
-const TYPES: { key: AssessmentType; label: string }[] = [
-  { key: 'assignment', label: 'Assignment' },
-  { key: 'quiz', label: 'Quiz' },
-  { key: 'project', label: 'Project' },
-  { key: 'exam', label: 'Exam' },
-];
+const TYPE_KEYS: AssessmentType[] = ['assignment', 'quiz', 'project', 'exam'];
+const TYPE_FALLBACKS: Record<AssessmentType, string> = {
+  assignment: 'Assignment',
+  quiz: 'Quiz',
+  project: 'Project',
+  exam: 'Exam',
+};
 
 function statusColor(status: AssessmentStatus) {
   return status === 'published' ? EMERALD : SUBTLE;
@@ -134,6 +137,10 @@ export default function TeacherAssessmentsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
+  const statusFilterLabel = (key: 'all' | AssessmentStatus) =>
+    t(`teacher_assessments.status_filter_${key}`, STATUS_FILTER_FALLBACKS[key]);
+  const typeLabel = (key: AssessmentType) => t(`teacher_assessments.type_${key}`, TYPE_FALLBACKS[key]);
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [targets, setTargets] = useState<AssessmentTarget[]>([]);
@@ -147,8 +154,8 @@ export default function TeacherAssessmentsScreen() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const targetKey = (t: AssessmentTarget) => `${t.section_id}:${t.subject_id}`;
-  const selectedTarget = targets.find((t) => targetKey(t) === form.targetKey) ?? null;
+  const targetKey = (target: AssessmentTarget) => `${target.section_id}:${target.subject_id}`;
+  const selectedTarget = targets.find((target) => targetKey(target) === form.targetKey) ?? null;
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -166,7 +173,7 @@ export default function TeacherAssessmentsScreen() {
           setExamCategories(targetData.examCategories);
         }
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load assessments.');
+        setError(e?.message ?? t('teacher_assessments.load_error', 'Could not load assessments.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -216,7 +223,7 @@ export default function TeacherAssessmentsScreen() {
   const save = async (publish: boolean) => {
     if (!token) return;
     if (!form.title.trim()) {
-      Alert.alert('Missing title', 'Give this assessment a title.');
+      Alert.alert(t('teacher_assessments.missing_title_title', 'Missing title'), t('teacher_assessments.missing_title_message', 'Give this assessment a title.'));
       return;
     }
     setIsSubmitting(true);
@@ -234,7 +241,7 @@ export default function TeacherAssessmentsScreen() {
         });
       } else {
         if (!selectedTarget) {
-          Alert.alert('Pick a class', 'Choose which section/subject this is for.');
+          Alert.alert(t('teacher_assessments.pick_class_title', 'Pick a class'), t('teacher_assessments.pick_class_message', 'Choose which section/subject this is for.'));
           setIsSubmitting(false);
           return;
         }
@@ -255,7 +262,7 @@ export default function TeacherAssessmentsScreen() {
       setIsModalVisible(false);
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_assessments.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -263,21 +270,25 @@ export default function TeacherAssessmentsScreen() {
 
   const handleDelete = (a: Assessment) => {
     if (!token) return;
-    Alert.alert('Delete draft?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAssessment(token, a.id);
-            setAssessments((prev) => prev.filter((p) => p.id !== a.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('teacher_assessments.delete_confirm_title', 'Delete draft?'),
+      t('teacher_assessments.delete_confirm_message', 'This cannot be undone.'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAssessment(token, a.id);
+              setAssessments((prev) => prev.filter((p) => p.id !== a.id));
+            } catch (e: any) {
+              Alert.alert(t('teacher_assessments.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const visible = useMemo(() => assessments, [assessments]);
@@ -288,7 +299,7 @@ export default function TeacherAssessmentsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assessments</Text>
+        <Text style={styles.headerTitle}>{t('teacher_assessments.header_title', 'Assessments')}</Text>
         <TouchableOpacity onPress={openNew} hitSlop={12} style={styles.newButton}>
           <IconPlus color={EMERALD} />
         </TouchableOpacity>
@@ -296,18 +307,18 @@ export default function TeacherAssessmentsScreen() {
 
       <FlatList
         horizontal
-        data={STATUS_FILTERS}
-        keyExtractor={(f) => f.key}
+        data={STATUS_FILTER_KEYS}
+        keyExtractor={(f) => f}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
         renderItem={({ item }) => {
-          const active = item.key === statusFilter;
+          const active = item === statusFilter;
           return (
             <TouchableOpacity
-              onPress={() => setStatusFilter(item.key)}
+              onPress={() => setStatusFilter(item)}
               style={[styles.filterChip, active && styles.filterChipActive]}
             >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{item.label}</Text>
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{statusFilterLabel(item)}</Text>
             </TouchableOpacity>
           );
         }}
@@ -335,7 +346,7 @@ export default function TeacherAssessmentsScreen() {
           }}
           refreshing={isRefreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No assessments yet. Tap + to create your first one.</Text>
+            <Text style={styles.emptyText}>{t('teacher_assessments.empty', 'No assessments yet. Tap + to create your first one.')}</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.card} onPress={() => openEdit(item)} activeOpacity={0.85}>
@@ -344,7 +355,7 @@ export default function TeacherAssessmentsScreen() {
                   {item.title}
                 </Text>
                 <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) + '22' }]}>
-                  <Text style={[styles.statusBadgeText, { color: statusColor(item.status) }]}>{item.status}</Text>
+                  <Text style={[styles.statusBadgeText, { color: statusColor(item.status) }]}>{statusFilterLabel(item.status)}</Text>
                 </View>
                 {item.status === 'draft' ? (
                   <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={10} style={{ marginLeft: 6 }}>
@@ -353,10 +364,10 @@ export default function TeacherAssessmentsScreen() {
                 ) : null}
               </View>
               <Text style={styles.cardMeta}>
-                {item.section_name} · {item.subject_name} · {item.type}
+                {item.section_name} · {item.subject_name} · {typeLabel(item.type)}
                 {item.exam_category_name ? ` · ${item.exam_category_name}` : ''}
-                {item.due_at ? ` · due ${item.due_at.slice(0, 10)}` : ''}
-                {item.max_score != null ? ` · ${item.max_score} pts` : ''}
+                {item.due_at ? ` · ${t('teacher_assessments.due', 'due {date}').replace('{date}', item.due_at.slice(0, 10))}` : ''}
+                {item.max_score != null ? ` · ${t('teacher_assessments.points', '{n} pts').replace('{n}', String(item.max_score))}` : ''}
               </Text>
               {item.status === 'published' ? (
                 <TouchableOpacity
@@ -365,7 +376,9 @@ export default function TeacherAssessmentsScreen() {
                 >
                   <IconUsers color={EMERALD} />
                   <Text style={styles.gradeButtonText}>
-                    {item.submission_count ?? 0} submitted · {item.graded_count ?? 0} graded
+                    {t('teacher_assessments.submitted_graded', '{submitted} submitted · {graded} graded')
+                      .replace('{submitted}', String(item.submission_count ?? 0))
+                      .replace('{graded}', String(item.graded_count ?? 0))}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -378,15 +391,15 @@ export default function TeacherAssessmentsScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
-              <Text style={styles.modalTitle}>{form.assessmentId ? 'Edit assessment' : 'New assessment'}</Text>
+              <Text style={styles.modalTitle}>{form.assessmentId ? t('teacher_assessments.edit_title', 'Edit assessment') : t('teacher_assessments.new_title', 'New assessment')}</Text>
 
               {!form.assessmentId ? (
                 <>
-                  <Text style={styles.fieldLabel}>Class</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_assessments.class_label', 'Class')}</Text>
                   <FlatList
                     horizontal
                     data={targets}
-                    keyExtractor={(t) => targetKey(t)}
+                    keyExtractor={(target) => targetKey(target)}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 4 }}
                     renderItem={({ item }) => {
@@ -405,17 +418,17 @@ export default function TeacherAssessmentsScreen() {
                     }}
                   />
 
-                  <Text style={styles.fieldLabel}>Type</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_assessments.type_label', 'Type')}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                    {TYPES.map((t) => {
-                      const active = t.key === form.type;
+                    {TYPE_KEYS.map((typeKey) => {
+                      const active = typeKey === form.type;
                       return (
                         <TouchableOpacity
-                          key={t.key}
-                          onPress={() => setForm((f) => ({ ...f, type: t.key }))}
+                          key={typeKey}
+                          onPress={() => setForm((f) => ({ ...f, type: typeKey }))}
                           style={[styles.chip, active && styles.chipActive, { marginBottom: 8 }]}
                         >
-                          <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.label}</Text>
+                          <Text style={[styles.chipText, active && styles.chipTextActive]}>{typeLabel(typeKey)}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -424,17 +437,17 @@ export default function TeacherAssessmentsScreen() {
               ) : (
                 <Text style={styles.fieldLabel}>
                   {assessments.find((a) => a.id === form.assessmentId)?.section_name} ·{' '}
-                  {assessments.find((a) => a.id === form.assessmentId)?.subject_name} · {form.type}
+                  {assessments.find((a) => a.id === form.assessmentId)?.subject_name} · {typeLabel(form.type)}
                 </Text>
               )}
 
-              <Text style={styles.fieldLabel}>Exam category (optional)</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_assessments.exam_category_label', 'Exam category (optional)')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                 <TouchableOpacity
                   onPress={() => setForm((f) => ({ ...f, examCategoryId: null }))}
                   style={[styles.chip, form.examCategoryId === null && styles.chipActive, { marginBottom: 8 }]}
                 >
-                  <Text style={[styles.chipText, form.examCategoryId === null && styles.chipTextActive]}>None</Text>
+                  <Text style={[styles.chipText, form.examCategoryId === null && styles.chipTextActive]}>{t('common.none', 'None')}</Text>
                 </TouchableOpacity>
                 {examCategories.map((c) => {
                   const active = c.id === form.examCategoryId;
@@ -453,10 +466,10 @@ export default function TeacherAssessmentsScreen() {
                 })}
               </View>
 
-              <Text style={styles.fieldLabel}>Title</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_assessments.title_label', 'Title')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Tajweed rules — worksheet 3"
+                placeholder={t('teacher_assessments.title_placeholder', 'e.g. Tajweed rules — worksheet 3')}
                 placeholderTextColor={SUBTLE}
                 value={form.title}
                 onChangeText={(v) => setForm((f) => ({ ...f, title: v }))}
@@ -464,7 +477,7 @@ export default function TeacherAssessmentsScreen() {
 
               <View style={styles.row2}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Max score</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_assessments.max_score_label', 'Max score')}</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="100"
@@ -475,7 +488,7 @@ export default function TeacherAssessmentsScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Due date</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_assessments.due_date_label', 'Due date')}</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="YYYY-MM-DD"
@@ -486,18 +499,18 @@ export default function TeacherAssessmentsScreen() {
                 </View>
               </View>
 
-              <Text style={styles.fieldLabel}>Instructions</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_assessments.instructions_label', 'Instructions')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
-                placeholder="What students need to do"
+                placeholder={t('teacher_assessments.instructions_placeholder', 'What students need to do')}
                 placeholderTextColor={SUBTLE}
                 value={form.instructions}
                 onChangeText={(v) => setForm((f) => ({ ...f, instructions: v }))}
               />
 
               <View style={styles.switchRow}>
-                <Text style={styles.fieldLabelInline}>Allow resubmission after grading</Text>
+                <Text style={styles.fieldLabelInline}>{t('teacher_assessments.allow_resubmission', 'Allow resubmission after grading')}</Text>
                 <Switch
                   value={form.allowResubmission}
                   onValueChange={(v) => setForm((f) => ({ ...f, allowResubmission: v }))}
@@ -512,12 +525,12 @@ export default function TeacherAssessmentsScreen() {
                       {form.attachment.name}
                     </Text>
                     <TouchableOpacity onPress={() => setForm((f) => ({ ...f, attachment: null }))}>
-                      <Text style={{ color: RED, fontSize: 12 }}>Remove</Text>
+                      <Text style={{ color: RED, fontSize: 12 }}>{t('common.remove', 'Remove')}</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.attachButton} onPress={pickAttachment}>
-                    <Text style={styles.attachButtonText}>Attach reference material</Text>
+                    <Text style={styles.attachButtonText}>{t('teacher_assessments.attach_reference', 'Attach reference material')}</Text>
                   </TouchableOpacity>
                 )
               ) : null}
@@ -528,18 +541,18 @@ export default function TeacherAssessmentsScreen() {
                   onPress={() => save(false)}
                   disabled={isSubmitting}
                 >
-                  <Text style={styles.modalBtnGhostText}>Save draft</Text>
+                  <Text style={styles.modalBtnGhostText}>{t('teacher_assessments.save_draft', 'Save draft')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.modalBtnPrimary]}
                   onPress={() => save(true)}
                   disabled={isSubmitting}
                 >
-                  <Text style={styles.modalBtnPrimaryText}>Publish</Text>
+                  <Text style={styles.modalBtnPrimaryText}>{t('teacher_assessments.publish', 'Publish')}</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsModalVisible(false)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Cancel</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

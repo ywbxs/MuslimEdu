@@ -17,6 +17,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchClassSubjects,
   assignClassSubject,
@@ -44,6 +45,9 @@ const DAYS: { key: string; label: string }[] = [
   { key: 'friday', label: 'Fri' },
   { key: 'saturday', label: 'Sat' },
 ];
+
+const dayShortLabel = (t: (key: string, fallback: string) => string, dayKey: string) =>
+  t(`class_subjects.day_short_${dayKey}`, DAYS.find((d) => d.key === dayKey)?.label ?? dayKey);
 
 function IconChevronLeft({ color }: { color: string }) {
   return (
@@ -117,9 +121,9 @@ function RowSkeleton({ styles, theme }: { styles: any; theme: AcademicGlassTheme
   );
 }
 
-function timeLabel(row: ClassSubjectRow): string | null {
+function timeLabel(row: ClassSubjectRow, t: (key: string, fallback: string) => string): string | null {
   if (!row.day_of_week && !row.start_time) return null;
-  const dayLabel = DAYS.find((d) => d.key === row.day_of_week)?.label;
+  const dayLabel = row.day_of_week ? dayShortLabel(t, row.day_of_week) : undefined;
   const time = row.start_time && row.end_time ? `${row.start_time}-${row.end_time}` : row.start_time;
   return [dayLabel, time].filter(Boolean).join(' · ');
 }
@@ -163,6 +167,7 @@ function SubjectEditSheet({
   styles: any;
   theme: AcademicGlassTheme;
 }) {
+  const { t } = useLocale();
   const [subjectId, setSubjectId] = useState<number | null>(editingRow?.subject_id ?? null);
   const [teacherId, setTeacherId] = useState<number | null>(editingRow?.teacher_id ?? null);
   const [day, setDay] = useState<string | null>(editingRow?.day_of_week ?? null);
@@ -211,7 +216,7 @@ function SubjectEditSheet({
       >
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{editingRow ? 'Edit Subject' : 'Add Subject'}</Text>
+            <Text style={styles.sheetTitle}>{editingRow ? t('class_subjects.edit_title', 'Edit Subject') : t('class_subjects.add_title', 'Add Subject')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <IconClose color={theme.textSecondary} />
             </TouchableOpacity>
@@ -223,7 +228,7 @@ function SubjectEditSheet({
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
-              <Text style={styles.fieldLabel}>Subject</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.subject_label', 'Subject')}</Text>
               <View style={styles.chipsWrap}>
                 {subjects.map((s) => {
                   const active = s.id === subjectId;
@@ -243,7 +248,7 @@ function SubjectEditSheet({
               <View style={styles.newSubjectRow}>
                 <TextInput
                   style={styles.newSubjectInput}
-                  placeholder="New subject name"
+                  placeholder={t('class_subjects.new_subject_placeholder', 'New subject name')}
                   placeholderTextColor={theme.textSecondary}
                   value={newSubjectName}
                   onChangeText={setNewSubjectName}
@@ -262,38 +267,38 @@ function SubjectEditSheet({
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.fieldLabel}>Teacher</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.teacher_label', 'Teacher')}</Text>
               <View style={styles.chipsWrap}>
                 <TouchableOpacity
                   style={[styles.chip, teacherId === null && styles.chipActive]}
                   onPress={() => setTeacherId(null)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.chipText, teacherId === null && styles.chipTextActive]}>Unassigned</Text>
+                  <Text style={[styles.chipText, teacherId === null && styles.chipTextActive]}>{t('class_subjects.unassigned', 'Unassigned')}</Text>
                 </TouchableOpacity>
-                {teachers.map((t) => {
-                  const active = t.id === teacherId;
+                {teachers.map((teacher) => {
+                  const active = teacher.id === teacherId;
                   return (
                     <TouchableOpacity
-                      key={t.id}
+                      key={teacher.id}
                       style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setTeacherId(t.id)}
+                      onPress={() => setTeacherId(teacher.id)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.name}</Text>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{teacher.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <Text style={styles.fieldLabel}>Day</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.day_label', 'Day')}</Text>
               <View style={styles.chipsWrap}>
                 <TouchableOpacity
                   style={[styles.chip, day === null && styles.chipActive]}
                   onPress={() => setDay(null)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.chipText, day === null && styles.chipTextActive]}>None</Text>
+                  <Text style={[styles.chipText, day === null && styles.chipTextActive]}>{t('common.none', 'None')}</Text>
                 </TouchableOpacity>
                 {DAYS.map((d) => {
                   const active = d.key === day;
@@ -304,17 +309,17 @@ function SubjectEditSheet({
                       onPress={() => setDay(d.key)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{dayShortLabel(t, d.key)}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <Text style={styles.fieldLabel}>Time (24h, e.g. 09:00)</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.time_label', 'Time (24h, e.g. 09:00)')}</Text>
               <View style={styles.timeRow}>
                 <TextInput
                   style={styles.timeInput}
-                  placeholder="Start"
+                  placeholder={t('class_subjects.start_placeholder', 'Start')}
                   placeholderTextColor={theme.textSecondary}
                   value={startTime}
                   onChangeText={setStartTime}
@@ -324,7 +329,7 @@ function SubjectEditSheet({
                 <Text style={styles.timeDash}>-</Text>
                 <TextInput
                   style={styles.timeInput}
-                  placeholder="End"
+                  placeholder={t('class_subjects.end_placeholder', 'End')}
                   placeholderTextColor={theme.textSecondary}
                   value={endTime}
                   onChangeText={setEndTime}
@@ -333,17 +338,17 @@ function SubjectEditSheet({
                 />
               </View>
               {!timeValid ? (
-                <Text style={styles.timeError}>Use HH:MM for both start and end, e.g. 09:00 and 09:45.</Text>
+                <Text style={styles.timeError}>{t('class_subjects.time_error', 'Use HH:MM for both start and end, e.g. 09:00 and 09:45.')}</Text>
               ) : null}
 
-              <Text style={styles.fieldLabel}>Room</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.room_label', 'Room')}</Text>
               <View style={styles.chipsWrap}>
                 <TouchableOpacity
                   style={[styles.chip, roomId === null && styles.chipActive]}
                   onPress={() => setRoomId(null)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.chipText, roomId === null && styles.chipTextActive]}>None</Text>
+                  <Text style={[styles.chipText, roomId === null && styles.chipTextActive]}>{t('common.none', 'None')}</Text>
                 </TouchableOpacity>
                 {rooms.map((r) => {
                   const active = r.id === roomId;
@@ -360,25 +365,25 @@ function SubjectEditSheet({
                 })}
               </View>
 
-              <Text style={styles.fieldLabel}>Semester Term</Text>
+              <Text style={styles.fieldLabel}>{t('class_subjects.semester_term_label', 'Semester Term')}</Text>
               <View style={styles.chipsWrap}>
                 <TouchableOpacity
                   style={[styles.chip, semesterTermId === null && styles.chipActive]}
                   onPress={() => setSemesterTermId(null)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.chipText, semesterTermId === null && styles.chipTextActive]}>None</Text>
+                  <Text style={[styles.chipText, semesterTermId === null && styles.chipTextActive]}>{t('common.none', 'None')}</Text>
                 </TouchableOpacity>
-                {semesterTerms.map((t) => {
-                  const active = t.id === semesterTermId;
+                {semesterTerms.map((term) => {
+                  const active = term.id === semesterTermId;
                   return (
                     <TouchableOpacity
-                      key={t.id}
+                      key={term.id}
                       style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setSemesterTermId(t.id)}
+                      onPress={() => setSemesterTermId(term.id)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.name}</Text>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{term.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -401,13 +406,13 @@ function SubjectEditSheet({
                   })
                 }
               >
-                <Text style={styles.saveBtnText}>Save</Text>
+                <Text style={styles.saveBtnText}>{t('common.save', 'Save')}</Text>
               </TouchableOpacity>
 
               {onDelete ? (
                 <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.75} onPress={onDelete}>
                   <IconTrash color={theme.danger} />
-                  <Text style={styles.deleteBtnText}>Remove subject from class</Text>
+                  <Text style={styles.deleteBtnText}>{t('class_subjects.remove_subject', 'Remove subject from class')}</Text>
                 </TouchableOpacity>
               ) : null}
             </ScrollView>
@@ -424,6 +429,7 @@ export default function AdminClassSubjectsScreen() {
   const route = useRoute<any>();
   const { sectionId, classLabel } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -454,7 +460,7 @@ export default function AdminClassSubjectsScreen() {
         setRooms(data.rooms);
         setSemesterTerms(data.semesterTerms);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load subjects.');
+        setError(err instanceof Error ? err.message : t('class_subjects.load_error', 'Could not load subjects.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -481,7 +487,7 @@ export default function AdminClassSubjectsScreen() {
       setSubjects((prev) => (prev.some((s) => s.id === created.id) ? prev : [...prev, created]));
       return created;
     } catch (err) {
-      Alert.alert('Could not add subject', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('class_subjects.add_subject_error', 'Could not add subject'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
       return null;
     }
   };
@@ -511,7 +517,7 @@ export default function AdminClassSubjectsScreen() {
       setEditingRow(null);
       await load({ silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save this subject.');
+      setError(err instanceof Error ? err.message : t('class_subjects.save_error', 'Could not save this subject.'));
       setEditingRow(null);
     } finally {
       setIsSaving(false);
@@ -526,7 +532,7 @@ export default function AdminClassSubjectsScreen() {
       setEditingRow(null);
       await load({ silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove this subject.');
+      setError(err instanceof Error ? err.message : t('class_subjects.remove_error', 'Could not remove this subject.'));
       setEditingRow(null);
     } finally {
       setIsSaving(false);
@@ -545,7 +551,7 @@ export default function AdminClassSubjectsScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Subjects & Schedule
+            {t('class_subjects.header_title', 'Subjects & Schedule')}
           </Text>
           {sectionName ? (
             <Text style={styles.headerSubtitle} numberOfLines={1}>
@@ -580,25 +586,25 @@ export default function AdminClassSubjectsScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No subjects yet</Text>
+                <Text style={styles.emptyTitle}>{t('class_subjects.empty_title', 'No subjects yet')}</Text>
                 <Text style={styles.emptyDesc}>
-                  Tap the + button to add a subject, assign a teacher, and set its weekly time slot.
+                  {t('class_subjects.empty_desc', 'Tap the + button to add a subject, assign a teacher, and set its weekly time slot.')}
                 </Text>
               </View>
             ) : null
           }
           renderItem={({ item }) => {
             const assigned = !!item.teacher_id;
-            const schedule = timeLabel(item);
+            const schedule = timeLabel(item, t);
             return (
               <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => setEditingRow(item)}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{item.subject_name ?? 'Subject'}</Text>
+                  <Text style={styles.cardTitle}>{item.subject_name ?? t('class_subjects.subject_fallback', 'Subject')}</Text>
                   <View style={styles.metaRow}>
                     <View style={[styles.badge, assigned ? styles.badgeAssigned : styles.badgeUnassigned]}>
                       <IconPerson color={assigned ? theme.accent : theme.warning} />
                       <Text style={[styles.badgeText, assigned ? styles.badgeTextAssigned : styles.badgeTextUnassigned]}>
-                        {assigned ? item.teacher_name : 'No teacher'}
+                        {assigned ? item.teacher_name : t('class_subjects.no_teacher', 'No teacher')}
                       </Text>
                     </View>
                     {schedule ? (
@@ -615,7 +621,7 @@ export default function AdminClassSubjectsScreen() {
                     ) : null}
                   </View>
                 </View>
-                <Text style={styles.changeText}>Edit</Text>
+                <Text style={styles.changeText}>{t('common.edit', 'Edit')}</Text>
               </TouchableOpacity>
             );
           }}

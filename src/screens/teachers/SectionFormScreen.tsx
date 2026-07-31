@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -34,6 +35,8 @@ const SectionFormScreen = () => {
   const route = useRoute();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const statusLabel = (status: string) => t(`section_form.status_${status}`, labelize(status));
   const sectionId = route.params?.sectionId;
   const presetClassId = route.params?.classId;
   const isEditing = !!sectionId;
@@ -131,12 +134,12 @@ const SectionFormScreen = () => {
           status: section.status || 'active',
         });
       } else {
-        Alert.alert('Error', 'Section not found');
+        Alert.alert(t('common.error', 'Error'), t('section_form.not_found', 'Section not found'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching section:', error);
-      Alert.alert('Error', 'Failed to load section');
+      Alert.alert(t('common.error', 'Error'), t('section_form.load_error', 'Failed to load section'));
     }
   };
 
@@ -151,15 +154,15 @@ const SectionFormScreen = () => {
 
   const validateForm = () => {
     if (!isEditing && !formData.class_id) {
-      Alert.alert('Error', 'Please select a class');
+      Alert.alert(t('common.error', 'Error'), t('section_form.select_class_required', 'Please select a class'));
       return false;
     }
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Section name is required');
+      Alert.alert(t('common.error', 'Error'), t('section_form.name_required', 'Section name is required'));
       return false;
     }
     if (formData.capacity && parseInt(formData.capacity) < 1) {
-      Alert.alert('Error', 'Capacity must be greater than 0');
+      Alert.alert(t('common.error', 'Error'), t('section_form.capacity_invalid', 'Capacity must be greater than 0'));
       return false;
     }
     return true;
@@ -193,8 +196,8 @@ const SectionFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Section updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('section_form.success', 'Success'), t('section_form.updated_message', 'Section updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await axios.post(
@@ -207,16 +210,16 @@ const SectionFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Section created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('section_form.success', 'Success'), t('section_form.created_message', 'Section created successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
       console.error('Error saving section:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || 'Failed to save section';
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || t('section_form.save_error', 'Failed to save section');
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -225,16 +228,16 @@ const SectionFormScreen = () => {
   const getDisplayValue = (field) => {
     switch (field) {
       case 'class_id':
-        return classes.find((c) => c.id === parseInt(formData.class_id))?.name || 'Select...';
+        return classes.find((c) => c.id === parseInt(formData.class_id))?.name || t('section_form.select_placeholder', 'Select...');
       case 'class_teacher_id':
         return (
-          teachers.find((t) => t.id === parseInt(formData.class_teacher_id))?.name ||
-          'Not assigned'
+          teachers.find((teacher) => teacher.id === parseInt(formData.class_teacher_id))?.name ||
+          t('section_form.not_assigned', 'Not assigned')
         );
       case 'status':
-        return labelize(formData.status);
+        return statusLabel(formData.status);
       default:
-        return formData[field] || 'Select...';
+        return formData[field] || t('section_form.select_placeholder', 'Select...');
     }
   };
 
@@ -252,16 +255,16 @@ const SectionFormScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Section' : 'Create Section'}
+          {isEditing ? t('section_form.edit_title', 'Edit Section') : t('section_form.create_title', 'Create Section')}
         </Text>
       </View>
 
       <View style={styles.formContainer}>
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Class *</Text>
+          <Text style={styles.label}>{t('section_form.class_label', 'Class *')}</Text>
           {isEditing ? (
             <View style={[styles.selectButton, styles.selectButtonDisabled]}>
-              <Text style={styles.selectButtonText}>{className || 'Unknown'}</Text>
+              <Text style={styles.selectButtonText}>{className || t('section_form.unknown', 'Unknown')}</Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -272,12 +275,12 @@ const SectionFormScreen = () => {
             </TouchableOpacity>
           )}
           {isEditing && (
-            <Text style={styles.hint}>A section's class can't be changed after creation.</Text>
+            <Text style={styles.hint}>{t('section_form.class_locked_hint', "A section's class can't be changed after creation.")}</Text>
           )}
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Section Name *</Text>
+          <Text style={styles.label}>{t('section_form.name_label', 'Section Name *')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., A"
@@ -288,7 +291,7 @@ const SectionFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Adviser</Text>
+          <Text style={styles.label}>{t('section_form.adviser_label', 'Adviser')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('class_teacher_id')}
@@ -298,7 +301,7 @@ const SectionFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Capacity</Text>
+          <Text style={styles.label}>{t('section_form.capacity_label', 'Capacity')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., 40"
@@ -310,7 +313,7 @@ const SectionFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Room Number</Text>
+          <Text style={styles.label}>{t('section_form.room_label', 'Room Number')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., 204"
@@ -321,7 +324,7 @@ const SectionFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Status</Text>
+          <Text style={styles.label}>{t('section_form.status_label', 'Status')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('status')}
@@ -339,7 +342,7 @@ const SectionFormScreen = () => {
             <ActivityIndicator size="small" color={theme.onAccent} />
           ) : (
             <Text style={styles.submitButtonText}>
-              {isEditing ? 'Save Changes' : 'Create Section'}
+              {isEditing ? t('section_form.save_changes', 'Save Changes') : t('section_form.create_title', 'Create Section')}
             </Text>
           )}
         </TouchableOpacity>
@@ -348,7 +351,7 @@ const SectionFormScreen = () => {
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -361,7 +364,7 @@ const SectionFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Class</Text>
+            <Text style={styles.modalTitle}>{t('section_form.select_class', 'Select Class')}</Text>
             <FlatList
               data={classes}
               renderItem={({ item }) => (
@@ -374,14 +377,14 @@ const SectionFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No classes found</Text>
+                <Text style={styles.modalEmptyText}>{t('section_form.no_classes_found', 'No classes found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -396,7 +399,7 @@ const SectionFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Adviser</Text>
+            <Text style={styles.modalTitle}>{t('section_form.select_adviser', 'Select Adviser')}</Text>
             <FlatList
               data={teachers}
               renderItem={({ item }) => (
@@ -409,20 +412,20 @@ const SectionFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>No teachers found</Text>
+                <Text style={styles.modalEmptyText}>{t('section_form.no_teachers_found', 'No teachers found')}</Text>
               }
             />
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleSelectOption('class_teacher_id', '')}
             >
-              <Text style={[styles.modalItemText, { color: theme.danger }]}>Clear selection</Text>
+              <Text style={[styles.modalItemText, { color: theme.danger }]}>{t('section_form.clear_selection', 'Clear selection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -437,21 +440,21 @@ const SectionFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Status</Text>
+            <Text style={styles.modalTitle}>{t('section_form.select_status', 'Select Status')}</Text>
             {STATUSES.map((status) => (
               <TouchableOpacity
                 key={status}
                 style={styles.modalItem}
                 onPress={() => handleSelectOption('status', status)}
               >
-                <Text style={styles.modalItemText}>{labelize(status)}</Text>
+                <Text style={styles.modalItemText}>{statusLabel(status)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

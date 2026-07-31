@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   CapabilityFlag,
@@ -47,6 +48,7 @@ export default function PermissionsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [tab, setTab] = useState<Tab>('grants');
   const [loading, setLoading] = useState(true);
@@ -79,19 +81,19 @@ export default function PermissionsScreen() {
       setGrants(g);
       setFlags(f);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load permissions.');
+      setError(e?.message ?? t('permissions.load_error', 'Could not load permissions.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const roleLabel = useCallback(
-    (roleId: number) => catalog?.roles?.[String(roleId)] ?? `Role ${roleId}`,
-    [catalog]
+    (roleId: number) => catalog?.roles?.[String(roleId)] ?? t('permissions.role_fallback', 'Role {id}').replace('{id}', String(roleId)),
+    [catalog, t]
   );
   const permLabel = useCallback(
     (key: string) => catalog?.permission_keys?.[key] ?? key,
@@ -129,7 +131,7 @@ export default function PermissionsScreen() {
 
   const onSaveGrant = async () => {
     if (!token || fRoleId == null || !fPermKey) {
-      Alert.alert('Missing info', 'Choose a role and a permission first.');
+      Alert.alert(t('permissions.missing_info', 'Missing info'), t('permissions.choose_role_permission', 'Choose a role and a permission first.'));
       return;
     }
     setSaving(true);
@@ -149,29 +151,35 @@ export default function PermissionsScreen() {
       });
       setFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('permissions.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeleteGrant = (g: PermissionGrant) => {
-    Alert.alert('Remove grant?', `${roleLabel(g.role_id)} will lose "${permLabel(g.permission_key)}".`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deletePermissionGrant(token, g.id);
-            setGrants((prev) => prev.filter((x) => x.id !== g.id));
-          } catch (e: any) {
-            Alert.alert('Could not remove', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('permissions.remove_grant_title', 'Remove grant?'),
+      t('permissions.remove_grant_message', '{role} will lose "{perm}".')
+        .replace('{role}', roleLabel(g.role_id))
+        .replace('{perm}', permLabel(g.permission_key)),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('permissions.remove', 'Remove'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deletePermissionGrant(token, g.id);
+              setGrants((prev) => prev.filter((x) => x.id !== g.id));
+            } catch (e: any) {
+              Alert.alert(t('permissions.remove_error', 'Could not remove'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const toggleFlag = async (flag: CapabilityFlag) => {
@@ -180,7 +188,7 @@ export default function PermissionsScreen() {
       const saved = await saveCapabilityFlag(token, flag.module_key, !flag.is_enabled, flag.config);
       setFlags((prev) => prev.map((f) => (f.module_key === saved.module_key ? saved : f)));
     } catch (e: any) {
-      Alert.alert('Could not update', e?.message ?? 'Please try again.');
+      Alert.alert(t('permissions.update_error', 'Could not update'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     }
   };
 
@@ -188,7 +196,7 @@ export default function PermissionsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading permissions…</Text>
+        <Text style={styles.centerText}>{t('permissions.loading', 'Loading permissions…')}</Text>
       </View>
     );
   }
@@ -196,10 +204,10 @@ export default function PermissionsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('permissions.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -212,17 +220,17 @@ export default function PermissionsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Permissions</Text>
-          <Text style={styles.headerSub}>Role capabilities and optional modules</Text>
+          <Text style={styles.headerTitle}>{t('permissions.title', 'Permissions')}</Text>
+          <Text style={styles.headerSub}>{t('permissions.subtitle', 'Role capabilities and optional modules')}</Text>
         </View>
       </View>
 
       <View style={styles.tabRow}>
         <TouchableOpacity style={[styles.tab, tab === 'grants' && styles.tabActive]} onPress={() => setTab('grants')}>
-          <Text style={[styles.tabText, tab === 'grants' && styles.tabTextActive]}>Role Grants</Text>
+          <Text style={[styles.tabText, tab === 'grants' && styles.tabTextActive]}>{t('permissions.tab_grants', 'Role Grants')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tab, tab === 'modules' && styles.tabActive]} onPress={() => setTab('modules')}>
-          <Text style={[styles.tabText, tab === 'modules' && styles.tabTextActive]}>Optional Modules</Text>
+          <Text style={[styles.tabText, tab === 'modules' && styles.tabTextActive]}>{t('permissions.tab_modules', 'Optional Modules')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -230,7 +238,7 @@ export default function PermissionsScreen() {
         {tab === 'grants' ? (
           grants.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No permission grants yet. Add one to give a role fine-grained access.</Text>
+              <Text style={styles.emptyText}>{t('permissions.empty_grants', 'No permission grants yet. Add one to give a role fine-grained access.')}</Text>
             </View>
           ) : (
             grants.map((g) => (
@@ -240,18 +248,18 @@ export default function PermissionsScreen() {
                     <Text style={styles.rowTitle}>{permLabel(g.permission_key)}</Text>
                     <Text style={styles.rowSub}>
                       {roleLabel(g.role_id)}
-                      {g.can_approve ? ' · can approve' : ''}
-                      {g.can_override ? ' · can override' : ''}
-                      {!g.is_active ? ' · inactive' : ''}
+                      {g.can_approve ? ` · ${t('permissions.can_approve', 'can approve')}` : ''}
+                      {g.can_override ? ` · ${t('permissions.can_override', 'can override')}` : ''}
+                      {!g.is_active ? ` · ${t('permissions.inactive', 'inactive')}` : ''}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.actionsRow}>
                   <TouchableOpacity onPress={() => openEditGrant(g)}>
-                    <Text style={styles.actionLink}>Edit</Text>
+                    <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => confirmDeleteGrant(g)}>
-                    <Text style={[styles.actionLink, styles.deleteLink]}>Remove</Text>
+                    <Text style={[styles.actionLink, styles.deleteLink]}>{t('permissions.remove', 'Remove')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -259,7 +267,7 @@ export default function PermissionsScreen() {
           )
         ) : flags.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No optional modules configured for this school yet.</Text>
+            <Text style={styles.emptyText}>{t('permissions.empty_modules', 'No optional modules configured for this school yet.')}</Text>
           </View>
         ) : (
           flags.map((f) => (
@@ -267,7 +275,7 @@ export default function PermissionsScreen() {
               <View style={styles.rowBetween}>
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>{f.label}</Text>
-                  <Text style={styles.rowSub}>{f.is_enabled ? 'Enabled for this school' : 'Disabled'}</Text>
+                  <Text style={styles.rowSub}>{f.is_enabled ? t('permissions.enabled', 'Enabled for this school') : t('permissions.disabled', 'Disabled')}</Text>
                 </View>
                 <Switch value={f.is_enabled} onValueChange={() => toggleFlag(f)} trackColor={{ false: '#D8DED9', true: EMERALD }} />
               </View>
@@ -279,7 +287,7 @@ export default function PermissionsScreen() {
       {tab === 'grants' && (
         <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TouchableOpacity style={styles.addBtn} onPress={openNewGrant}>
-            <Text style={styles.addBtnText}>+ Add Grant</Text>
+            <Text style={styles.addBtnText}>{t('permissions.add_grant', '+ Add Grant')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -287,9 +295,9 @@ export default function PermissionsScreen() {
       <Modal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editing ? 'Edit Grant' : 'New Grant'}</Text>
+            <Text style={styles.modalTitle}>{editing ? t('permissions.edit_grant', 'Edit Grant') : t('permissions.new_grant', 'New Grant')}</Text>
 
-            <Text style={styles.label}>Role</Text>
+            <Text style={styles.label}>{t('permissions.role_label', 'Role')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {roleOptions.map((r) => (
                 <TouchableOpacity
@@ -303,7 +311,7 @@ export default function PermissionsScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>Permission</Text>
+            <Text style={styles.label}>{t('permissions.permission_label', 'Permission')}</Text>
             <ScrollView style={styles.permList} nestedScrollEnabled>
               {permOptions.map((p) => (
                 <TouchableOpacity
@@ -318,24 +326,24 @@ export default function PermissionsScreen() {
             </ScrollView>
 
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Can access</Text>
+              <Text style={styles.label}>{t('permissions.can_access', 'Can access')}</Text>
               <Switch value={fCanAccess} onValueChange={setFCanAccess} trackColor={{ false: '#D8DED9', true: EMERALD }} />
             </View>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Can approve</Text>
+              <Text style={styles.label}>{t('permissions.can_approve_label', 'Can approve')}</Text>
               <Switch value={fCanApprove} onValueChange={setFCanApprove} trackColor={{ false: '#D8DED9', true: EMERALD }} />
             </View>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Can override</Text>
+              <Text style={styles.label}>{t('permissions.can_override_label', 'Can override')}</Text>
               <Switch value={fCanOverride} onValueChange={setFCanOverride} trackColor={{ false: '#D8DED9', true: EMERALD }} />
             </View>
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveGrant} disabled={saving}>
-                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>

@@ -18,6 +18,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE_URL } from '../../config/api';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { useLocale } from '../../context/LocaleContext';
+
+const SHIFT_FALLBACKS: Record<string, string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+const CLASS_TYPE_FALLBACKS: Record<string, string> = { 'face-to-face': 'Face-to-face', online: 'Online', hybrid: 'Hybrid' };
+const STATUS_FALLBACKS: Record<string, string> = { active: 'Active', pending: 'Pending', closed: 'Closed', archived: 'Archived' };
 
 const CreateClassScreen = () => {
   const navigation = useNavigation();
@@ -26,6 +31,10 @@ const CreateClassScreen = () => {
   const isEditMode = !!classId;
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const shiftLabel = (key: string) => t(`create_class.shift_${key}`, SHIFT_FALLBACKS[key] ?? key);
+  const classTypeLabel = (key: string) => t(`create_class.class_type_${key}`, CLASS_TYPE_FALLBACKS[key] ?? key);
+  const statusLabel = (key: string) => t(`create_class.status_${key}`, STATUS_FALLBACKS[key] ?? key);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -133,7 +142,7 @@ const CreateClassScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching reference data:', error);
-      Alert.alert('Error', isEditMode ? 'Failed to load class details' : 'Failed to load reference data');
+      Alert.alert(t('common.error', 'Error'), isEditMode ? t('create_class.load_detail_error', 'Failed to load class details') : t('create_class.load_reference_error', 'Failed to load reference data'));
     } finally {
       setLoading(false);
     }
@@ -153,27 +162,27 @@ const CreateClassScreen = () => {
 
   const validateForm = () => {
     if (!formData.class_code.trim()) {
-      Alert.alert('Error', 'Class code is required');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_class_code', 'Class code is required'));
       return false;
     }
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Class name is required');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_class_name', 'Class name is required'));
       return false;
     }
     if (!formData.grade_level) {
-      Alert.alert('Error', 'Grade level is required');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_grade_level', 'Grade level is required'));
       return false;
     }
     if (!formData.school_year_id) {
-      Alert.alert('Error', 'School year is required');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_school_year', 'School year is required'));
       return false;
     }
     if (!formData.max_capacity || parseInt(formData.max_capacity) < 1) {
-      Alert.alert('Error', 'Max capacity must be greater than 0');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_max_capacity', 'Max capacity must be greater than 0'));
       return false;
     }
     if (formData.start_date > formData.end_date) {
-      Alert.alert('Error', 'Start date cannot be after end date');
+      Alert.alert(t('common.error', 'Error'), t('create_class.error_date_order', 'Start date cannot be after end date'));
       return false;
     }
     return true;
@@ -208,9 +217,9 @@ const CreateClassScreen = () => {
           }
         );
 
-        Alert.alert('Success', 'Class updated successfully', [
+        Alert.alert(t('common.success', 'Success'), t('create_class.update_success', 'Class updated successfully'), [
           {
-            text: 'OK',
+            text: t('common.ok', 'OK'),
             onPress: () => navigation.navigate('ClassDetail', { classId }),
           },
         ]);
@@ -228,9 +237,9 @@ const CreateClassScreen = () => {
         }
       );
 
-      Alert.alert('Success', 'Class created successfully', [
+      Alert.alert(t('common.success', 'Success'), t('create_class.create_success', 'Class created successfully'), [
         {
-          text: 'OK',
+          text: t('common.ok', 'OK'),
           onPress: () => {
             navigation.navigate('ClassDetail', { classId: response.data.class.id });
           },
@@ -240,8 +249,8 @@ const CreateClassScreen = () => {
       console.error(isEditMode ? 'Error updating class:' : 'Error creating class:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || (isEditMode ? 'Failed to update class' : 'Failed to create class');
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || (isEditMode ? t('create_class.update_error', 'Failed to update class') : t('create_class.create_error', 'Failed to create class'));
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -249,21 +258,22 @@ const CreateClassScreen = () => {
 
   const getDisplayValue = (field) => {
     const value = formData[field];
-    if (!value) return 'Select...';
+    const selectPlaceholder = t('create_class.select_placeholder', 'Select...');
+    if (!value) return selectPlaceholder;
 
     switch (field) {
       case 'department_id':
-        return referenceData.departments.find((d) => d.id === parseInt(value))?.name || 'Select...';
+        return referenceData.departments.find((d) => d.id === parseInt(value))?.name || selectPlaceholder;
       case 'campus_id':
-        return referenceData.campuses.find((c) => c.id === parseInt(value))?.name || 'Select...';
+        return referenceData.campuses.find((c) => c.id === parseInt(value))?.name || selectPlaceholder;
       case 'curriculum_id':
-        return referenceData.curricula.find((c) => c.id === parseInt(value))?.name || 'Select...';
+        return referenceData.curricula.find((c) => c.id === parseInt(value))?.name || selectPlaceholder;
       case 'school_year_id':
         return referenceData.school_years.find((sy) => sy.id === parseInt(value))?.title
           || referenceData.school_years.find((sy) => sy.id === parseInt(value))?.name
-          || 'Select...';
+          || selectPlaceholder;
       case 'semester_term_id':
-        return referenceData.semester_terms.find((st) => st.id === parseInt(value))?.name || 'Select...';
+        return referenceData.semester_terms.find((st) => st.id === parseInt(value))?.name || selectPlaceholder;
       default:
         return value;
     }
@@ -282,16 +292,16 @@ const CreateClassScreen = () => {
       <GlassBackground variant="canvas" />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Class' : 'Create New Class'}</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? t('create_class.edit_title', 'Edit Class') : t('create_class.create_title', 'Create New Class')}</Text>
       </View>
 
       <View style={styles.formContainer}>
         {/* Class Code */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Class Code *</Text>
+          <Text style={styles.label}>{t('create_class.class_code_label', 'Class Code *')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., 9-A-2024"
+            placeholder={t('create_class.class_code_placeholder', 'e.g., 9-A-2024')}
             value={formData.class_code}
             onChangeText={(text) => updateField('class_code', text.toUpperCase())}
             placeholderTextColor={theme.textMuted}
@@ -300,10 +310,10 @@ const CreateClassScreen = () => {
 
         {/* Class Name */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Class Name *</Text>
+          <Text style={styles.label}>{t('create_class.class_name_label', 'Class Name *')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Class 9-A"
+            placeholder={t('create_class.class_name_placeholder', 'e.g., Class 9-A')}
             value={formData.name}
             onChangeText={(text) => updateField('name', text)}
             placeholderTextColor={theme.textMuted}
@@ -312,10 +322,10 @@ const CreateClassScreen = () => {
 
         {/* Grade Level */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Grade Level *</Text>
+          <Text style={styles.label}>{t('create_class.grade_level_label', 'Grade Level *')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="1-12"
+            placeholder={t('create_class.grade_level_placeholder', '1-12')}
             value={formData.grade_level}
             onChangeText={(text) => updateField('grade_level', text)}
             keyboardType="number-pad"
@@ -325,10 +335,10 @@ const CreateClassScreen = () => {
 
         {/* Section */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Section</Text>
+          <Text style={styles.label}>{t('create_class.section_label', 'Section')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., A"
+            placeholder={t('create_class.section_placeholder', 'e.g., A')}
             value={formData.section}
             onChangeText={(text) => updateField('section', text)}
             placeholderTextColor={theme.textMuted}
@@ -337,7 +347,7 @@ const CreateClassScreen = () => {
 
         {/* School Year */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>School Year *</Text>
+          <Text style={styles.label}>{t('create_class.school_year_label', 'School Year *')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('school_year_id')}
@@ -348,7 +358,7 @@ const CreateClassScreen = () => {
 
         {/* Department */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Department</Text>
+          <Text style={styles.label}>{t('create_class.department_label', 'Department')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('department_id')}
@@ -359,7 +369,7 @@ const CreateClassScreen = () => {
 
         {/* Campus */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Campus</Text>
+          <Text style={styles.label}>{t('create_class.campus_label', 'Campus')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('campus_id')}
@@ -370,7 +380,7 @@ const CreateClassScreen = () => {
 
         {/* Curriculum */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Curriculum</Text>
+          <Text style={styles.label}>{t('create_class.curriculum_label', 'Curriculum')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('curriculum_id')}
@@ -381,7 +391,7 @@ const CreateClassScreen = () => {
 
         {/* Semester/Term */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Semester/Term</Text>
+          <Text style={styles.label}>{t('create_class.semester_term_label', 'Semester/Term')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('semester_term_id')}
@@ -392,33 +402,33 @@ const CreateClassScreen = () => {
 
         {/* Shift */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Shift *</Text>
+          <Text style={styles.label}>{t('create_class.shift_label', 'Shift *')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('shift')}
           >
             <Text style={styles.selectButtonText}>
-              {formData.shift.charAt(0).toUpperCase() + formData.shift.slice(1)}
+              {shiftLabel(formData.shift)}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Class Type */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Class Type *</Text>
+          <Text style={styles.label}>{t('create_class.class_type_label', 'Class Type *')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('class_type')}
           >
             <Text style={styles.selectButtonText}>
-              {formData.class_type.charAt(0).toUpperCase() + formData.class_type.slice(1)}
+              {classTypeLabel(formData.class_type)}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Max Capacity */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Max Capacity *</Text>
+          <Text style={styles.label}>{t('create_class.max_capacity_label', 'Max Capacity *')}</Text>
           <TextInput
             style={styles.input}
             placeholder="50"
@@ -431,23 +441,23 @@ const CreateClassScreen = () => {
 
         {/* Status */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Status *</Text>
+          <Text style={styles.label}>{t('create_class.status_label', 'Status *')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('status')}
           >
             <Text style={styles.selectButtonText}>
-              {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
+              {statusLabel(formData.status)}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Room Number */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Room Number</Text>
+          <Text style={styles.label}>{t('create_class.room_number_label', 'Room Number')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., A101"
+            placeholder={t('create_class.room_number_placeholder', 'e.g., A101')}
             value={formData.room_number}
             onChangeText={(text) => updateField('room_number', text)}
             placeholderTextColor={theme.textMuted}
@@ -456,10 +466,10 @@ const CreateClassScreen = () => {
 
         {/* Building */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Building</Text>
+          <Text style={styles.label}>{t('create_class.building_label', 'Building')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Building A"
+            placeholder={t('create_class.building_placeholder', 'e.g., Building A')}
             value={formData.building}
             onChangeText={(text) => updateField('building', text)}
             placeholderTextColor={theme.textMuted}
@@ -468,10 +478,10 @@ const CreateClassScreen = () => {
 
         {/* Floor */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Floor</Text>
+          <Text style={styles.label}>{t('create_class.floor_label', 'Floor')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., 1st Floor"
+            placeholder={t('create_class.floor_placeholder', 'e.g., 1st Floor')}
             value={formData.floor}
             onChangeText={(text) => updateField('floor', text)}
             placeholderTextColor={theme.textMuted}
@@ -480,7 +490,7 @@ const CreateClassScreen = () => {
 
         {/* Start Date */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Start Date *</Text>
+          <Text style={styles.label}>{t('create_class.start_date_label', 'Start Date *')}</Text>
           <TextInput
             style={styles.input}
             placeholder="YYYY-MM-DD"
@@ -492,7 +502,7 @@ const CreateClassScreen = () => {
 
         {/* End Date */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>End Date *</Text>
+          <Text style={styles.label}>{t('create_class.end_date_label', 'End Date *')}</Text>
           <TextInput
             style={styles.input}
             placeholder="YYYY-MM-DD"
@@ -504,10 +514,10 @@ const CreateClassScreen = () => {
 
         {/* Description */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('create_class.description_label', 'Description')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Add notes or description"
+            placeholder={t('create_class.description_placeholder', 'Add notes or description')}
             value={formData.description}
             onChangeText={(text) => updateField('description', text)}
             multiline
@@ -525,7 +535,7 @@ const CreateClassScreen = () => {
           {submitting ? (
             <ActivityIndicator size="small" color={theme.onAccent} />
           ) : (
-            <Text style={styles.submitButtonText}>{isEditMode ? 'Save Changes' : 'Create Class'}</Text>
+            <Text style={styles.submitButtonText}>{isEditMode ? t('common.save_changes', 'Save Changes') : t('create_class.create_class', 'Create Class')}</Text>
           )}
         </TouchableOpacity>
 
@@ -534,7 +544,7 @@ const CreateClassScreen = () => {
           onPress={() => navigation.goBack()}
           disabled={submitting}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -547,7 +557,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Department</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_department', 'Select Department')}</Text>
             <FlatList
               data={referenceData.departments}
               renderItem={({ item }) => (
@@ -564,7 +574,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -578,7 +588,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Campus</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_campus', 'Select Campus')}</Text>
             <FlatList
               data={referenceData.campuses}
               renderItem={({ item }) => (
@@ -595,7 +605,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -609,7 +619,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Curriculum</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_curriculum', 'Select Curriculum')}</Text>
             <FlatList
               data={referenceData.curricula}
               renderItem={({ item }) => (
@@ -626,7 +636,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -640,7 +650,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select School Year</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_school_year', 'Select School Year')}</Text>
             <FlatList
               data={referenceData.school_years}
               renderItem={({ item }) => (
@@ -657,7 +667,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -671,7 +681,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Shift</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_shift', 'Select Shift')}</Text>
             {dropdowns.shifts.map((shift) => (
               <TouchableOpacity
                 key={shift}
@@ -679,7 +689,7 @@ const CreateClassScreen = () => {
                 onPress={() => handleSelectOption('shift', shift)}
               >
                 <Text style={styles.modalItemText}>
-                  {shift.charAt(0).toUpperCase() + shift.slice(1)}
+                  {shiftLabel(shift)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -687,7 +697,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -701,7 +711,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Class Type</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_class_type', 'Select Class Type')}</Text>
             {dropdowns.class_types.map((type) => (
               <TouchableOpacity
                 key={type}
@@ -709,10 +719,7 @@ const CreateClassScreen = () => {
                 onPress={() => handleSelectOption('class_type', type)}
               >
                 <Text style={styles.modalItemText}>
-                  {type
-                    .split('-')
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                    .join(' ')}
+                  {classTypeLabel(type)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -720,7 +727,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -734,7 +741,7 @@ const CreateClassScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Status</Text>
+            <Text style={styles.modalTitle}>{t('create_class.select_status', 'Select Status')}</Text>
             {dropdowns.statuses.map((status) => (
               <TouchableOpacity
                 key={status}
@@ -742,7 +749,7 @@ const CreateClassScreen = () => {
                 onPress={() => handleSelectOption('status', status)}
               >
                 <Text style={styles.modalItemText}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {statusLabel(status)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -750,7 +757,7 @@ const CreateClassScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setActiveModal(null)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

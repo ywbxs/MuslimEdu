@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchSectionRoster,
   fetchEligibleStudents,
@@ -108,6 +109,7 @@ function AddStudentsModal({
   onAdded: () => void;
 }) {
   const { token } = useAuth();
+  const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [search, setSearch] = useState('');
@@ -124,12 +126,12 @@ function AddStudentsModal({
         const data = await fetchEligibleStudents(token, sectionId, q);
         setCandidates(data);
       } catch (err) {
-        Alert.alert('Error', err instanceof Error ? err.message : 'Could not load students.');
+        Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('section_students.load_students_error', 'Could not load students.'));
       } finally {
         setLoading(false);
       }
     },
-    [token, sectionId]
+    [token, sectionId, t]
   );
 
   useFocusEffect(
@@ -159,7 +161,7 @@ function AddStudentsModal({
       onAdded();
       onClose();
     } catch (err) {
-      Alert.alert('Could not add students', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('section_students.add_error', 'Could not add students'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -172,7 +174,7 @@ function AddStudentsModal({
           <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.backButton}>
             <IconClose color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Students</Text>
+          <Text style={styles.headerTitle}>{t('section_students.add_students', 'Add Students')}</Text>
           <View style={{ width: 32 }} />
         </View>
 
@@ -180,7 +182,7 @@ function AddStudentsModal({
           <IconSearch color={theme.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name or email"
+            placeholder={t('section_students.search_placeholder', 'Search by name or email')}
             placeholderTextColor={theme.textSecondary}
             value={search}
             onChangeText={handleSearchChange}
@@ -200,9 +202,9 @@ function AddStudentsModal({
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No students found</Text>
+                <Text style={styles.emptyTitle}>{t('section_students.no_students_found', 'No students found')}</Text>
                 <Text style={styles.emptyDesc}>
-                  Everyone matching this search is already enrolled here, or none exist yet.
+                  {t('section_students.no_students_found_desc', 'Everyone matching this search is already enrolled here, or none exist yet.')}
                 </Text>
               </View>
             }
@@ -215,7 +217,7 @@ function AddStudentsModal({
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={styles.rowName}>{item.name}</Text>
                     <Text style={styles.rowEmail} numberOfLines={1}>
-                      {elsewhere ? 'Currently in another section' : item.email}
+                      {elsewhere ? t('section_students.in_another_section', 'Currently in another section') : item.email}
                     </Text>
                   </View>
                   <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
@@ -237,7 +239,12 @@ function AddStudentsModal({
               <ActivityIndicator color={theme.onAccent} />
             ) : (
               <Text style={styles.confirmButtonText}>
-                {selectedIds.length > 0 ? `Add ${selectedIds.length} student${selectedIds.length > 1 ? 's' : ''}` : 'Select students'}
+                {selectedIds.length > 0
+                  ? (selectedIds.length > 1
+                      ? t('section_students.add_n_students', 'Add {n} students')
+                      : t('section_students.add_one_student', 'Add {n} student')
+                    ).replace('{n}', String(selectedIds.length))
+                  : t('section_students.select_students', 'Select students')}
               </Text>
             )}
           </TouchableOpacity>
@@ -262,6 +269,7 @@ function TransferModal({
   onTransferred: () => void;
 }) {
   const { token } = useAuth();
+  const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -274,9 +282,9 @@ function TransferModal({
       setLoading(true);
       fetchAllSections(token)
         .then((data) => setSections(data.filter((s) => s.id !== currentSectionId)))
-        .catch((err) => Alert.alert('Error', err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('section_students.load_sections_error', 'Could not load sections.')))
         .finally(() => setLoading(false));
-    }, [visible, token, currentSectionId])
+    }, [visible, token, currentSectionId, t])
   );
 
   const handlePick = async (section: SectionOption) => {
@@ -287,7 +295,7 @@ function TransferModal({
       onTransferred();
       onClose();
     } catch (err) {
-      Alert.alert('Could not transfer', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('section_students.transfer_error', 'Could not transfer'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setMovingId(null);
     }
@@ -301,7 +309,7 @@ function TransferModal({
             <IconClose color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Move {student?.name ?? ''}
+            {t('section_students.move', 'Move {name}').replace('{name}', student?.name ?? '')}
           </Text>
           <View style={{ width: 32 }} />
         </View>
@@ -318,7 +326,7 @@ function TransferModal({
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No other sections</Text>
+                <Text style={styles.emptyTitle}>{t('section_students.no_other_sections', 'No other sections')}</Text>
               </View>
             }
             renderItem={({ item }) => {
@@ -333,8 +341,9 @@ function TransferModal({
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{item.name}</Text>
                     <Text style={styles.rowEmail}>
-                      {item.class_name ?? 'Unassigned class'} · {item.current_enrollment}
-                      {item.capacity ? `/${item.capacity}` : ''} students{full ? ' · Full' : ''}
+                      {item.class_name ?? t('section_students.unassigned_class', 'Unassigned class')} · {item.current_enrollment}
+                      {item.capacity ? `/${item.capacity}` : ''} {t('section_students.students_suffix', 'students')}
+                      {full ? ` · ${t('section_students.full', 'Full')}` : ''}
                     </Text>
                   </View>
                   {movingId === item.id ? <ActivityIndicator color={theme.accent} /> : <IconSwap color={theme.textSecondary} />}
@@ -354,6 +363,7 @@ export default function SectionStudentsScreen() {
   const route = useRoute<any>();
   const { sectionId } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -373,13 +383,13 @@ export default function SectionStudentsScreen() {
         const data = await fetchSectionRoster(token, sectionId);
         setRoster(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load the section roster.');
+        setError(err instanceof Error ? err.message : t('section_students.load_roster_error', 'Could not load the section roster.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token, sectionId]
+    [token, sectionId, t]
   );
 
   useFocusEffect(
@@ -394,22 +404,26 @@ export default function SectionStudentsScreen() {
   };
 
   const handleRemove = (student: SectionEnrolledStudent) => {
-    Alert.alert('Remove student', `Remove ${student.name} from this section?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token || !sectionId) return;
-          try {
-            await removeStudentFromSection(token, sectionId, student.id);
-            load({ silent: true });
-          } catch (err) {
-            Alert.alert('Could not remove', err instanceof Error ? err.message : 'Please try again.');
-          }
+    Alert.alert(
+      t('section_students.remove_title', 'Remove student'),
+      t('section_students.remove_message', 'Remove {name} from this section?').replace('{name}', student.name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('section_students.remove', 'Remove'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token || !sectionId) return;
+            try {
+              await removeStudentFromSection(token, sectionId, student.id);
+              load({ silent: true });
+            } catch (err) {
+              Alert.alert(t('section_students.remove_error', 'Could not remove'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -420,7 +434,7 @@ export default function SectionStudentsScreen() {
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {roster ? `${roster.class_name ?? ''} · ${roster.section_name}` : 'Students'}
+          {roster ? `${roster.class_name ?? ''} · ${roster.section_name}` : t('section_students.title', 'Students')}
         </Text>
         <TouchableOpacity onPress={() => setAddVisible(true)} hitSlop={10} style={styles.addButton}>
           <IconPlus color={theme.accent} />
@@ -430,8 +444,9 @@ export default function SectionStudentsScreen() {
       {roster ? (
         <View style={styles.summaryBar}>
           <Text style={styles.summaryText}>
-            {roster.current_enrollment}
-            {roster.capacity ? ` / ${roster.capacity}` : ''} students enrolled
+            {t('section_students.enrolled_count', '{current}{capacity} students enrolled')
+              .replace('{current}', String(roster.current_enrollment))
+              .replace('{capacity}', roster.capacity ? ` / ${roster.capacity}` : '')}
           </Text>
         </View>
       ) : null}
@@ -451,8 +466,8 @@ export default function SectionStudentsScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No students enrolled yet</Text>
-                <Text style={styles.emptyDesc}>Tap the + button to add students to this section.</Text>
+                <Text style={styles.emptyTitle}>{t('section_students.empty_title', 'No students enrolled yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('section_students.empty_desc', 'Tap the + button to add students to this section.')}</Text>
               </View>
             ) : null
           }

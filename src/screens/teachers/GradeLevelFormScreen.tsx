@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -28,6 +29,9 @@ const GradeLevelFormScreen = () => {
   const route = useRoute();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const statusLabel = (status: string) => t(`grade_level_form.status_${status}`, labelize(status));
+  const stageLabel = (stage: string) => t(`grade_level_form.stage_${stage}`, labelize(stage));
   const gradeLevelId = route.params?.gradeLevelId;
   const isEditing = !!gradeLevelId;
 
@@ -75,12 +79,12 @@ const GradeLevelFormScreen = () => {
           status: gradeLevel.status || 'active',
         });
       } else {
-        Alert.alert('Error', 'Grade level not found');
+        Alert.alert(t('common.error', 'Error'), t('grade_level_form.not_found', 'Grade level not found'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching grade level:', error);
-      Alert.alert('Error', 'Failed to load grade level');
+      Alert.alert(t('common.error', 'Error'), t('grade_level_form.load_error', 'Failed to load grade level'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +101,7 @@ const GradeLevelFormScreen = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Grade level name is required');
+      Alert.alert(t('common.error', 'Error'), t('grade_level_form.name_required', 'Grade level name is required'));
       return false;
     }
     return true;
@@ -130,8 +134,8 @@ const GradeLevelFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Grade level updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('grade_level_form.success', 'Success'), t('grade_level_form.updated_message', 'Grade level updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await axios.post(`${API_BASE_URL}/admin_grade_levels_create`, payload, {
@@ -140,16 +144,16 @@ const GradeLevelFormScreen = () => {
             'Content-Type': 'application/json',
           },
         });
-        Alert.alert('Success', 'Grade level created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('grade_level_form.success', 'Success'), t('grade_level_form.created_message', 'Grade level created successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
       console.error('Error saving grade level:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || 'Failed to save grade level';
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || t('grade_level_form.save_error', 'Failed to save grade level');
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -158,11 +162,11 @@ const GradeLevelFormScreen = () => {
   const getDisplayValue = (field) => {
     switch (field) {
       case 'status':
-        return labelize(formData.status);
+        return statusLabel(formData.status);
       case 'education_stage':
-        return formData.education_stage ? labelize(formData.education_stage) : 'Select...';
+        return formData.education_stage ? stageLabel(formData.education_stage) : t('grade_level_form.select_placeholder', 'Select...');
       default:
-        return formData[field] || 'Select...';
+        return formData[field] || t('grade_level_form.select_placeholder', 'Select...');
     }
   };
 
@@ -180,16 +184,16 @@ const GradeLevelFormScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {isEditing ? 'Edit Grade Level' : 'Create Grade Level'}
+            {isEditing ? t('grade_level_form.edit_title', 'Edit Grade Level') : t('grade_level_form.create_title', 'Create Grade Level')}
           </Text>
         </View>
 
         <View style={styles.formContainer}>
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Grade Level Name *</Text>
+            <Text style={styles.label}>{t('grade_level_form.name_label', 'Grade Level Name *')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Grade 5"
+              placeholder={t('grade_level_form.name_placeholder', 'e.g., Grade 5')}
               value={formData.name}
               onChangeText={(text) => updateField('name', text)}
               placeholderTextColor={theme.textMuted}
@@ -197,7 +201,7 @@ const GradeLevelFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Arabic Name</Text>
+            <Text style={styles.label}>{t('grade_level_form.arabic_name_label', 'Arabic Name')}</Text>
             <TextInput
               style={styles.input}
               placeholder="الاسم بالعربية"
@@ -208,7 +212,7 @@ const GradeLevelFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Code</Text>
+            <Text style={styles.label}>{t('grade_level_form.code_label', 'Code')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g., G5"
@@ -219,7 +223,7 @@ const GradeLevelFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Educational Stage</Text>
+            <Text style={styles.label}>{t('grade_level_form.stage_label', 'Educational Stage')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setActiveModal('education_stage')}
@@ -229,8 +233,8 @@ const GradeLevelFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Display Order</Text>
-            <Text style={styles.helperText}>Lower numbers appear first in lists. Leave blank to add to the end.</Text>
+            <Text style={styles.label}>{t('grade_level_form.order_label', 'Display Order')}</Text>
+            <Text style={styles.helperText}>{t('grade_level_form.order_hint', 'Lower numbers appear first in lists. Leave blank to add to the end.')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g., 5"
@@ -242,7 +246,7 @@ const GradeLevelFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Status</Text>
+            <Text style={styles.label}>{t('grade_level_form.status_label', 'Status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setActiveModal('status')}
@@ -260,7 +264,7 @@ const GradeLevelFormScreen = () => {
               <ActivityIndicator size="small" color={theme.onAccent} />
             ) : (
               <Text style={styles.submitButtonText}>
-                {isEditing ? 'Save Changes' : 'Create Grade Level'}
+                {isEditing ? t('grade_level_form.save_changes', 'Save Changes') : t('grade_level_form.create_title', 'Create Grade Level')}
               </Text>
             )}
           </TouchableOpacity>
@@ -269,7 +273,7 @@ const GradeLevelFormScreen = () => {
             style={styles.cancelButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -282,21 +286,21 @@ const GradeLevelFormScreen = () => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Educational Stage</Text>
+              <Text style={styles.modalTitle}>{t('grade_level_form.select_stage', 'Select Educational Stage')}</Text>
               {EDUCATION_STAGES.map((stage) => (
                 <TouchableOpacity
                   key={stage}
                   style={styles.modalItem}
                   onPress={() => handleSelectOption('education_stage', stage)}
                 >
-                  <Text style={styles.modalItemText}>{labelize(stage)}</Text>
+                  <Text style={styles.modalItemText}>{stageLabel(stage)}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setActiveModal(null)}
               >
-                <Text style={styles.modalCloseText}>Close</Text>
+                <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -311,21 +315,21 @@ const GradeLevelFormScreen = () => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Status</Text>
+              <Text style={styles.modalTitle}>{t('grade_level_form.select_status', 'Select Status')}</Text>
               {STATUSES.map((status) => (
                 <TouchableOpacity
                   key={status}
                   style={styles.modalItem}
                   onPress={() => handleSelectOption('status', status)}
                 >
-                  <Text style={styles.modalItemText}>{labelize(status)}</Text>
+                  <Text style={styles.modalItemText}>{statusLabel(status)}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setActiveModal(null)}
               >
-                <Text style={styles.modalCloseText}>Close</Text>
+                <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </View>
           </View>

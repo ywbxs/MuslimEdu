@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -49,6 +50,7 @@ export default function ProgramsCatalogScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [tab, setTab] = useState<Tab>('programs');
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -64,11 +66,11 @@ export default function ProgramsCatalogScreen() {
       setPrograms(p);
       setSubjects(s);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load the catalog.');
+      setError(err instanceof Error ? err.message : t('programs_catalog.load_error', 'Failed to load the catalog.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -77,45 +79,53 @@ export default function ProgramsCatalogScreen() {
   );
 
   const handleDeleteProgram = (program: Program) => {
-    Alert.alert('Delete Program', `Delete "${program.name}"? This can't be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteProgram(token, program.id);
-            load();
-          } catch (err) {
-            // Backend blocks deletion while subjects are still assigned to
-            // it - surface that message as-is.
-            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete program.');
-          }
+    Alert.alert(
+      t('programs_catalog.delete_program_title', 'Delete Program'),
+      t('programs_catalog.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', program.name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('programs_catalog.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteProgram(token, program.id);
+              load();
+            } catch (err) {
+              // Backend blocks deletion while subjects are still assigned to
+              // it - surface that message as-is.
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('programs_catalog.delete_program_error', 'Failed to delete program.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleDeleteSubject = (subject: Subject) => {
-    Alert.alert('Delete Subject', `Delete "${subject.name}"? This can't be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteSubject(token, subject.id);
-            load();
-          } catch (err) {
-            // Backend blocks deletion while still assigned to a class -
-            // surface that message as-is.
-            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete subject.');
-          }
+    Alert.alert(
+      t('programs_catalog.delete_subject_title', 'Delete Subject'),
+      t('programs_catalog.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', subject.name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('programs_catalog.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteSubject(token, subject.id);
+              load();
+            } catch (err) {
+              // Backend blocks deletion while still assigned to a class -
+              // surface that message as-is.
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('programs_catalog.delete_subject_error', 'Failed to delete subject.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const renderProgram = ({ item }: { item: Program }) => (
@@ -131,12 +141,12 @@ export default function ProgramsCatalogScreen() {
       <View style={styles.metaRow}>
         {item.duration_terms ? (
           <View style={styles.typeChip}>
-            <Text style={styles.typeChipText}>{item.duration_terms} terms</Text>
+            <Text style={styles.typeChipText}>{t('programs_catalog.terms', '{n} terms').replace('{n}', String(item.duration_terms))}</Text>
           </View>
         ) : null}
         {item.status === 'inactive' ? (
           <View style={styles.inactiveChip}>
-            <Text style={styles.inactiveChipText}>Inactive</Text>
+            <Text style={styles.inactiveChipText}>{t('programs_catalog.inactive', 'Inactive')}</Text>
           </View>
         ) : null}
       </View>
@@ -148,10 +158,10 @@ export default function ProgramsCatalogScreen() {
           style={styles.editButton}
           onPress={() => (navigation as any).navigate('ProgramForm', { programId: item.id })}
         >
-          <Text style={styles.editButtonText}>Edit</Text>
+          <Text style={styles.editButtonText}>{t('common.edit', 'Edit')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteProgram(item)}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={styles.deleteButtonText}>{t('programs_catalog.delete', 'Delete')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -171,23 +181,23 @@ export default function ProgramsCatalogScreen() {
       <View style={styles.metaRow}>
         {item.units != null ? (
           <View style={styles.typeChip}>
-            <Text style={styles.typeChipText}>{item.units} units</Text>
+            <Text style={styles.typeChipText}>{t('programs_catalog.units', '{n} units').replace('{n}', String(item.units))}</Text>
           </View>
         ) : null}
         {item.status === 'inactive' ? (
           <View style={styles.inactiveChip}>
-            <Text style={styles.inactiveChipText}>Inactive</Text>
+            <Text style={styles.inactiveChipText}>{t('programs_catalog.inactive', 'Inactive')}</Text>
           </View>
         ) : null}
       </View>
       <Text style={styles.scaleStatus}>
         {item.prerequisites && item.prerequisites.length > 0
-          ? `Requires: ${item.prerequisites.map((p) => p.name).join(', ')}`
-          : 'No prerequisites'}
+          ? t('programs_catalog.requires', 'Requires: {list}').replace('{list}', item.prerequisites.map((p) => p.name).join(', '))
+          : t('programs_catalog.no_prerequisites', 'No prerequisites')}
       </Text>
       {item.corequisites && item.corequisites.length > 0 ? (
         <Text style={styles.scaleStatus}>
-          {`Alongside: ${item.corequisites.map((c) => c.name).join(', ')}`}
+          {t('programs_catalog.alongside', 'Alongside: {list}').replace('{list}', item.corequisites.map((c) => c.name).join(', '))}
         </Text>
       ) : null}
       <View style={styles.cardFooter}>
@@ -195,10 +205,10 @@ export default function ProgramsCatalogScreen() {
           style={styles.editButton}
           onPress={() => (navigation as any).navigate('SubjectForm', { subjectId: item.id })}
         >
-          <Text style={styles.editButtonText}>Edit</Text>
+          <Text style={styles.editButtonText}>{t('common.edit', 'Edit')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteSubject(item)}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={styles.deleteButtonText}>{t('programs_catalog.delete', 'Delete')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -216,7 +226,7 @@ export default function ProgramsCatalogScreen() {
       <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
         <IconChevronLeft color={theme.textPrimary} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Programs & Subjects</Text>
+      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Programs & Subjects')}</Text>
       {!loading ? (
         <TouchableOpacity
           style={styles.addButton}
@@ -224,7 +234,7 @@ export default function ProgramsCatalogScreen() {
             (navigation as any).navigate(tab === 'programs' ? 'ProgramForm' : 'SubjectForm')
           }
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.addButtonText}>{t('programs_catalog.add', '+ Add')}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.headerSpacer} />
@@ -255,7 +265,7 @@ export default function ProgramsCatalogScreen() {
           onPress={() => setTab('programs')}
         >
           <Text style={[styles.tabButtonText, tab === 'programs' && styles.tabButtonTextActive]}>
-            Programs ({programs.length})
+            {t('programs_catalog.tab_programs', 'Programs ({n})').replace('{n}', String(programs.length))}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -263,7 +273,7 @@ export default function ProgramsCatalogScreen() {
           onPress={() => setTab('subjects')}
         >
           <Text style={[styles.tabButtonText, tab === 'subjects' && styles.tabButtonTextActive]}>
-            Subjects ({subjects.length})
+            {t('programs_catalog.tab_subjects', 'Subjects ({n})').replace('{n}', String(subjects.length))}
           </Text>
         </TouchableOpacity>
       </View>
@@ -272,7 +282,7 @@ export default function ProgramsCatalogScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -286,9 +296,9 @@ export default function ProgramsCatalogScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="🏫"
-              title="No programs yet"
-              subtitle="Add a program (e.g. Hifz, Alimiyyah) to start organizing subjects under it."
-              actionLabel="Add Program"
+              title={t('programs_catalog.empty_programs_title', 'No programs yet')}
+              subtitle={t('programs_catalog.empty_programs_subtitle', 'Add a program (e.g. Hifz, Alimiyyah) to start organizing subjects under it.')}
+              actionLabel={t('programs_catalog.empty_programs_action', 'Add Program')}
               onAction={() => (navigation as any).navigate('ProgramForm')}
               colors={theme}
             />
@@ -303,9 +313,9 @@ export default function ProgramsCatalogScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="📖"
-              title="No subjects yet"
-              subtitle="Add a subject to the catalog so it can be used in curricula and assigned to classes."
-              actionLabel="Add Subject"
+              title={t('programs_catalog.empty_subjects_title', 'No subjects yet')}
+              subtitle={t('programs_catalog.empty_subjects_subtitle', 'Add a subject to the catalog so it can be used in curricula and assigned to classes.')}
+              actionLabel={t('programs_catalog.empty_subjects_action', 'Add Subject')}
               onAction={() => (navigation as any).navigate('SubjectForm')}
               colors={theme}
             />

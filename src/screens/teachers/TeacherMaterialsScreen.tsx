@@ -14,6 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle, Line } from 'react-native-svg';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchMaterialTargets,
   fetchTeacherMaterials,
@@ -37,15 +38,24 @@ const CANVAS = '#F6F7F9';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const CATEGORIES: { value: MaterialCategory; label: string }[] = [
-  { value: 'lecture_notes', label: 'Notes' },
-  { value: 'presentation', label: 'Slides' },
-  { value: 'video', label: 'Video' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'worksheet', label: 'Worksheet' },
-  { value: 'reading', label: 'Reading' },
-  { value: 'other', label: 'Other' },
+const CATEGORY_VALUES: MaterialCategory[] = [
+  'lecture_notes',
+  'presentation',
+  'video',
+  'audio',
+  'worksheet',
+  'reading',
+  'other',
 ];
+const CATEGORY_FALLBACKS: Record<MaterialCategory, string> = {
+  lecture_notes: 'Notes',
+  presentation: 'Slides',
+  video: 'Video',
+  audio: 'Audio',
+  worksheet: 'Worksheet',
+  reading: 'Reading',
+  other: 'Other',
+};
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
   return (
@@ -110,6 +120,9 @@ export default function TeacherMaterialsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
+  const categoryLabel = (value: MaterialCategory) =>
+    t(`teacher_materials.category_${value}`, CATEGORY_FALLBACKS[value]);
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [targets, setTargets] = useState<MaterialTarget[]>([]);
@@ -142,7 +155,7 @@ export default function TeacherMaterialsScreen() {
           setSelectedTargetKey(targetKey(targetList[0]));
         }
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load materials.');
+        setError(e?.message ?? t('teacher_materials.load_error', 'Could not load materials.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -157,8 +170,8 @@ export default function TeacherMaterialsScreen() {
     }, [load])
   );
 
-  const targetKey = (t: MaterialTarget) => `${t.section_id}:${t.subject_id}`;
-  const selectedTarget = targets.find((t) => targetKey(t) === selectedTargetKey) ?? null;
+  const targetKey = (target: MaterialTarget) => `${target.section_id}:${target.subject_id}`;
+  const selectedTarget = targets.find((target) => targetKey(target) === selectedTargetKey) ?? null;
 
   const resetCompose = () => {
     setTitle('');
@@ -183,18 +196,21 @@ export default function TeacherMaterialsScreen() {
       });
     } catch (e) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
-      Alert.alert('Could not attach file', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(
+        t('teacher_materials.attach_error_title', 'Could not attach file'),
+        e instanceof Error ? e.message : t('common.try_again_full', 'Please try again.'),
+      );
     }
   };
 
   const handleUpload = async () => {
     if (!token || !selectedTarget) return;
     if (!title.trim()) {
-      Alert.alert('Missing info', 'Please add a title.');
+      Alert.alert(t('teacher_materials.missing_info_title', 'Missing info'), t('teacher_materials.missing_title', 'Please add a title.'));
       return;
     }
     if (!file) {
-      Alert.alert('Missing file', 'Please attach a file to upload.');
+      Alert.alert(t('teacher_materials.missing_file_title', 'Missing file'), t('teacher_materials.missing_file_message', 'Please attach a file to upload.'));
       return;
     }
     setIsSubmitting(true);
@@ -211,7 +227,7 @@ export default function TeacherMaterialsScreen() {
       resetCompose();
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not upload', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_materials.upload_error_title', 'Could not upload'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -219,21 +235,25 @@ export default function TeacherMaterialsScreen() {
 
   const handleDelete = (item: Material) => {
     if (!token) return;
-    Alert.alert('Delete material?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMaterial(token, item.id);
-            setMaterials((prev) => prev.filter((m) => m.id !== item.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('teacher_materials.delete_confirm_title', 'Delete material?'),
+      t('teacher_materials.delete_confirm_message', 'This cannot be undone.'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMaterial(token, item.id);
+              setMaterials((prev) => prev.filter((m) => m.id !== item.id));
+            } catch (e: any) {
+              Alert.alert(t('teacher_materials.delete_error_title', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -247,7 +267,7 @@ export default function TeacherMaterialsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
             <IconChevronLeft color={INK} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Materials</Text>
+          <Text style={styles.headerTitle}>{t('teacher_materials.header_title', 'Materials')}</Text>
           <TouchableOpacity
             onPress={() => setIsComposing((v) => !v)}
             hitSlop={12}
@@ -259,11 +279,11 @@ export default function TeacherMaterialsScreen() {
 
         {isComposing ? (
           <View style={styles.composeCard}>
-            <Text style={styles.composeLabel}>Upload to</Text>
+            <Text style={styles.composeLabel}>{t('teacher_materials.upload_to', 'Upload to')}</Text>
             <FlatList
               horizontal
               data={targets}
-              keyExtractor={(t) => targetKey(t)}
+              keyExtractor={(target) => targetKey(target)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 4 }}
               renderItem={({ item }) => {
@@ -282,35 +302,35 @@ export default function TeacherMaterialsScreen() {
               }}
             />
 
-            <Text style={[styles.composeLabel, { marginTop: 12 }]}>Category</Text>
+            <Text style={[styles.composeLabel, { marginTop: 12 }]}>{t('teacher_materials.category', 'Category')}</Text>
             <FlatList
               horizontal
-              data={CATEGORIES}
-              keyExtractor={(c) => c.value}
+              data={CATEGORY_VALUES}
+              keyExtractor={(c) => c}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 4 }}
               renderItem={({ item }) => {
-                const active = item.value === category;
+                const active = item === category;
                 return (
                   <TouchableOpacity
-                    onPress={() => setCategory(item.value)}
+                    onPress={() => setCategory(item)}
                     style={[styles.chip, active && styles.chipActive]}
                   >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{categoryLabel(item)}</Text>
                   </TouchableOpacity>
                 );
               }}
             />
 
             <TextInput
-              placeholder="Title"
+              placeholder={t('teacher_materials.title_placeholder', 'Title')}
               placeholderTextColor={SUBTLE}
               value={title}
               onChangeText={setTitle}
               style={styles.input}
             />
             <TextInput
-              placeholder="Description (optional)"
+              placeholder={t('teacher_materials.description_placeholder', 'Description (optional)')}
               placeholderTextColor={SUBTLE}
               value={description}
               onChangeText={setDescription}
@@ -318,7 +338,7 @@ export default function TeacherMaterialsScreen() {
               style={[styles.input, styles.textArea]}
             />
             <TextInput
-              placeholder="Week / chapter label (optional)"
+              placeholder={t('teacher_materials.week_label_placeholder', 'Week / chapter label (optional)')}
               placeholderTextColor={SUBTLE}
               value={weekLabel}
               onChangeText={setWeekLabel}
@@ -338,20 +358,20 @@ export default function TeacherMaterialsScreen() {
             ) : (
               <TouchableOpacity onPress={pickFile} style={styles.attachButton}>
                 <IconPaperclip color={EMERALD} />
-                <Text style={styles.attachButtonText}>Attach a file</Text>
+                <Text style={styles.attachButtonText}>{t('teacher_materials.attach_file', 'Attach a file')}</Text>
               </TouchableOpacity>
             )}
 
             <View style={styles.composeActions}>
               <TouchableOpacity onPress={resetCompose} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleUpload}
                 disabled={isSubmitting || !selectedTarget}
                 style={[styles.postButton, (isSubmitting || !selectedTarget) && { opacity: 0.6 }]}
               >
-                <Text style={styles.postButtonText}>{isSubmitting ? 'Uploading…' : 'Upload'}</Text>
+                <Text style={styles.postButtonText}>{isSubmitting ? t('teacher_materials.uploading', 'Uploading…') : t('teacher_materials.upload', 'Upload')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -380,7 +400,7 @@ export default function TeacherMaterialsScreen() {
             refreshing={isRefreshing}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                No materials yet. Tap + to upload your first resource.
+                {t('teacher_materials.empty', 'No materials yet. Tap + to upload your first resource.')}
               </Text>
             }
             renderItem={({ item }) => (

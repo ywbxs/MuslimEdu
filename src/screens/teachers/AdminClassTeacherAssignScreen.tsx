@@ -14,6 +14,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchClassTeacherAssignments,
   assignClassTeacher,
@@ -104,12 +105,13 @@ function TeacherPicker({
   styles: any;
   theme: AcademicGlassTheme;
 }) {
+  const { t } = useLocale();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Assign Class Teacher</Text>
+            <Text style={styles.sheetTitle}>{t('class_teacher_assign.picker_title', 'Assign Class Teacher')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <IconClose color={theme.textSecondary} />
             </TouchableOpacity>
@@ -122,7 +124,7 @@ function TeacherPicker({
           ) : (
             <FlatList
               data={teachers}
-              keyExtractor={(t) => String(t.id)}
+              keyExtractor={(teacher) => String(teacher.id)}
               contentContainerStyle={{ paddingBottom: 24 }}
               ListHeaderComponent={
                 currentTeacherId ? (
@@ -130,7 +132,7 @@ function TeacherPicker({
                     <View style={[styles.optionIcon, { backgroundColor: theme.dangerSoft }]}>
                       <IconClose color={theme.danger} />
                     </View>
-                    <Text style={[styles.optionLabel, { color: theme.danger }]}>Remove class teacher</Text>
+                    <Text style={[styles.optionLabel, { color: theme.danger }]}>{t('class_teacher_assign.remove_class_teacher', 'Remove class teacher')}</Text>
                   </TouchableOpacity>
                 ) : null
               }
@@ -151,7 +153,7 @@ function TeacherPicker({
                 );
               }}
               ListEmptyComponent={
-                <Text style={styles.emptyPickerText}>No teachers found in your school yet.</Text>
+                <Text style={styles.emptyPickerText}>{t('class_teacher_assign.no_teachers', 'No teachers found in your school yet.')}</Text>
               }
             />
           )}
@@ -167,6 +169,7 @@ export default function AdminClassTeacherAssignScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [sections, setSections] = useState<ClassSection[]>([]);
   const [teachers, setTeachers] = useState<AssignableTeacher[]>([]);
@@ -195,7 +198,7 @@ export default function AdminClassTeacherAssignScreen() {
         setTeachers(data.teachers);
         if (statsData) setStats(statsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load classes.');
+        setError(err instanceof Error ? err.message : t('class_teacher_assign.load_error', 'Could not load classes.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -231,7 +234,7 @@ export default function AdminClassTeacherAssignScreen() {
     setIsSaving(true);
     try {
       await assignClassTeacher(token, activeSection.section_id, teacherId);
-      const teacherName = teacherId ? teachers.find((t) => t.id === teacherId)?.name ?? null : null;
+      const teacherName = teacherId ? teachers.find((teacher) => teacher.id === teacherId)?.name ?? null : null;
       setSections((prev) =>
         prev.map((s) =>
           s.section_id === activeSection.section_id
@@ -241,7 +244,7 @@ export default function AdminClassTeacherAssignScreen() {
       );
       setActiveSection(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update the class teacher.');
+      setError(err instanceof Error ? err.message : t('class_teacher_assign.update_error', 'Could not update the class teacher.'));
       setActiveSection(null);
     } finally {
       setIsSaving(false);
@@ -255,7 +258,7 @@ export default function AdminClassTeacherAssignScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Academic Management</Text>
+        <Text style={styles.headerTitle}>{t('class_teacher_assign.header_title', 'Academic Management')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -280,7 +283,7 @@ export default function AdminClassTeacherAssignScreen() {
                   onPress={() => (navigation as any).navigate('CampusList')}
                 >
                   <Text style={styles.statValue}>{stats?.campuses ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Campuses</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_campuses', 'Campuses')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.statCard}
@@ -288,7 +291,7 @@ export default function AdminClassTeacherAssignScreen() {
                   onPress={() => (navigation as any).navigate('GradeLevelList')}
                 >
                   <Text style={styles.statValue}>{stats?.grade_levels ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Grade Levels</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_grade_levels', 'Grade Levels')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.statCard}
@@ -296,7 +299,7 @@ export default function AdminClassTeacherAssignScreen() {
                   onPress={() => (navigation as any).navigate('DepartmentList')}
                 >
                   <Text style={styles.statValue}>{stats?.departments ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Departments</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_departments', 'Departments')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.statCard}
@@ -304,7 +307,7 @@ export default function AdminClassTeacherAssignScreen() {
                   onPress={() => (navigation as any).navigate('CurriculumList')}
                 >
                   <Text style={styles.statValue}>{stats?.curricula ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Curricula</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_curricula', 'Curricula')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.statCard}
@@ -312,23 +315,23 @@ export default function AdminClassTeacherAssignScreen() {
                   onPress={() => (navigation as any).navigate('ClassList')}
                 >
                   <Text style={styles.statValue}>{stats?.classes ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Classes</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_classes', 'Classes')}</Text>
                 </TouchableOpacity>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{stats?.sections ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Sections</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_sections', 'Sections')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{stats?.teachers ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Teachers</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_teachers', 'Teachers')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{stats?.subjects ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Subjects</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_subjects', 'Subjects')}</Text>
                 </View>
                 <View style={[styles.statCard, styles.statCardWide]}>
                   <Text style={styles.statValue}>{stats?.students ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Students Enrolled</Text>
+                  <Text style={styles.statLabel}>{t('class_teacher_assign.stat_students', 'Students Enrolled')}</Text>
                 </View>
               </View>
 
@@ -336,7 +339,7 @@ export default function AdminClassTeacherAssignScreen() {
                 <IconSearch color={theme.textSecondary} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search class or section..."
+                  placeholder={t('class_teacher_assign.search_placeholder', 'Search class or section...')}
                   placeholderTextColor={theme.textSecondary}
                   value={searchText}
                   onChangeText={setSearchText}
@@ -346,7 +349,12 @@ export default function AdminClassTeacherAssignScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
                 {(['all', 'assigned', 'unassigned'] as const).map((f) => {
                   const active = adviserFilter === f;
-                  const label = f === 'all' ? 'All' : f === 'assigned' ? 'Has adviser' : 'No adviser';
+                  const label =
+                    f === 'all'
+                      ? t('class_teacher_assign.filter_all', 'All')
+                      : f === 'assigned'
+                        ? t('class_teacher_assign.filter_assigned', 'Has adviser')
+                        : t('class_teacher_assign.filter_unassigned', 'No adviser');
                   return (
                     <TouchableOpacity
                       key={f}
@@ -370,18 +378,18 @@ export default function AdminClassTeacherAssignScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>{sections.length === 0 ? 'No classes yet' : 'No matches'}</Text>
+                <Text style={styles.emptyTitle}>{sections.length === 0 ? t('class_teacher_assign.empty_title_none', 'No classes yet') : t('class_teacher_assign.empty_title_no_matches', 'No matches')}</Text>
                 <Text style={styles.emptyDesc}>
                   {sections.length === 0
-                    ? 'Set up classes and sections first, then assign class teachers here.'
-                    : 'Try a different search or filter.'}
+                    ? t('class_teacher_assign.empty_desc_none', 'Set up classes and sections first, then assign class teachers here.')
+                    : t('class_teacher_assign.empty_desc_no_matches', 'Try a different search or filter.')}
                 </Text>
               </View>
             ) : null
           }
           renderItem={({ item }) => {
             const assigned = !!item.class_teacher_id;
-            const classLabel = `${item.class_name ?? 'Class'} - ${item.section_name}`;
+            const classLabel = `${item.class_name ?? t('class_teacher_assign.class_fallback', 'Class')} - ${item.section_name}`;
             return (
               <View style={styles.card}>
                 <TouchableOpacity style={styles.cardMain} activeOpacity={0.85} onPress={() => setActiveSection(item)}>
@@ -389,11 +397,11 @@ export default function AdminClassTeacherAssignScreen() {
                     <Text style={styles.cardTitle}>{classLabel}</Text>
                     <View style={[styles.badge, assigned ? styles.badgeAssigned : styles.badgeUnassigned]}>
                       <Text style={[styles.badgeText, assigned ? styles.badgeTextAssigned : styles.badgeTextUnassigned]}>
-                        {assigned ? item.class_teacher_name : 'Not assigned'}
+                        {assigned ? item.class_teacher_name : t('class_teacher_assign.not_assigned', 'Not assigned')}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.changeText}>{assigned ? 'Change' : 'Assign'}</Text>
+                  <Text style={styles.changeText}>{assigned ? t('common.change', 'Change') : t('class_teacher_assign.assign', 'Assign')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.subjectsRow}
@@ -405,7 +413,7 @@ export default function AdminClassTeacherAssignScreen() {
                     })
                   }
                 >
-                  <Text style={styles.subjectsRowText}>Manage subjects & schedule</Text>
+                  <Text style={styles.subjectsRowText}>{t('class_teacher_assign.manage_subjects', 'Manage subjects & schedule')}</Text>
                   <IconChevronRight color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>

@@ -10,6 +10,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAttendanceRoster,
   submitAttendance,
@@ -48,13 +49,13 @@ function fromISO(s: string) {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
-function formatDateLabel(iso: string) {
+function formatDateLabel(iso: string, t: (key: string, fallback?: string) => string) {
   const d = fromISO(iso);
   const today = toISO(new Date());
   const yestDate = new Date();
   yestDate.setDate(yestDate.getDate() - 1);
-  if (iso === today) return 'Today';
-  if (iso === toISO(yestDate)) return 'Yesterday';
+  if (iso === today) return t('teacher_attendance_roster.today', 'Today');
+  if (iso === toISO(yestDate)) return t('teacher_attendance_roster.yesterday', 'Yesterday');
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
@@ -139,6 +140,8 @@ export default function TeacherAttendanceRosterScreen() {
   const route = useRoute<any>();
   const { sectionId, subjectId, classLabel, subjectLabel, date: initialDate } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
+  const statusLabel = (status: AttendanceStatus) => t(`teacher_attendance_roster.status_${status}`, STATUS_META[status].label);
 
   const [date, setDate] = useState<string>(initialDate ?? toISO(new Date()));
   const [students, setStudents] = useState<RosterStudent[]>([]);
@@ -164,11 +167,11 @@ export default function TeacherAttendanceRosterScreen() {
       });
       setStatuses(initial);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load the roster.');
+      setError(err instanceof Error ? err.message : t('teacher_attendance_roster.load_error', 'Could not load the roster.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, sectionId, subjectId, date]);
+  }, [token, sectionId, subjectId, date, t]);
 
   useEffect(() => {
     load();
@@ -202,7 +205,11 @@ export default function TeacherAttendanceRosterScreen() {
   const handleSave = async () => {
     if (!token || !sectionId) return;
     if (markedCount < students.length) {
-      setError(`Mark all ${students.length} students before saving (${markedCount} done).`);
+      setError(
+        t('teacher_attendance_roster.mark_all_first', 'Mark all {total} students before saving ({done} done).')
+          .replace('{total}', String(students.length))
+          .replace('{done}', String(markedCount)),
+      );
       return;
     }
     setIsSaving(true);
@@ -214,9 +221,9 @@ export default function TeacherAttendanceRosterScreen() {
         status: statuses[s.student_id],
       }));
       const result = await submitAttendance(token, sectionId, subjectId, date, records);
-      setSaveMessage(result.message ?? 'Attendance saved.');
+      setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save attendance.');
+      setError(err instanceof Error ? err.message : t('teacher_attendance_roster.save_error', 'Could not save attendance.'));
     } finally {
       setIsSaving(false);
     }
@@ -230,7 +237,7 @@ export default function TeacherAttendanceRosterScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? 'Attendance'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? t('teacher_attendance_roster.title', 'Attendance')}</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>{subjectLabel ?? ''}</Text>
         </View>
         <TouchableOpacity
@@ -248,7 +255,7 @@ export default function TeacherAttendanceRosterScreen() {
         <TouchableOpacity onPress={() => shiftDate(-1)} hitSlop={10} style={styles.dateArrow}>
           <IconChevronLeft color={INK} size={18} />
         </TouchableOpacity>
-        <Text style={styles.dateLabel}>{formatDateLabel(date)}</Text>
+        <Text style={styles.dateLabel}>{formatDateLabel(date, t)}</Text>
         <TouchableOpacity onPress={() => shiftDate(1)} hitSlop={10} style={styles.dateArrow} disabled={isFuture}>
           <IconChevronRight color={isFuture ? '#D5D8DC' : INK} size={18} />
         </TouchableOpacity>
@@ -256,11 +263,11 @@ export default function TeacherAttendanceRosterScreen() {
 
       {!isLoading && students.length > 0 ? (
         <View style={styles.quickBar}>
-          <Text style={styles.quickBarLabel}>Quick mark:</Text>
+          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark:')}</Text>
           {ATTENDANCE_STATUSES.map((status) => (
             <TouchableOpacity key={status} style={styles.quickBarBtn} onPress={() => markAll(status)}>
               <Text style={[styles.quickBarBtnText, { color: STATUS_META[status].color }]}>
-                All {STATUS_META[status].label}
+                {t('teacher_attendance_roster.all_status', 'All {status}').replace('{status}', statusLabel(status))}
               </Text>
             </TouchableOpacity>
           ))}
@@ -282,8 +289,8 @@ export default function TeacherAttendanceRosterScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No students enrolled</Text>
-                <Text style={styles.emptyDesc}>This section has no enrolled students for the running session.</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_attendance_roster.empty_title', 'No students enrolled')}</Text>
+                <Text style={styles.emptyDesc}>{t('teacher_attendance_roster.empty_desc', 'This section has no enrolled students for the running session.')}</Text>
               </View>
             ) : null
           }
@@ -302,7 +309,9 @@ export default function TeacherAttendanceRosterScreen() {
               ) : null}
               {students.length > 0 ? (
                 <Text style={styles.progressText}>
-                  {markedCount} of {students.length} marked
+                  {t('teacher_attendance_roster.marked_progress', '{marked} of {total} marked')
+                    .replace('{marked}', String(markedCount))
+                    .replace('{total}', String(students.length))}
                   {Object.entries(summaryCounts).length > 0
                     ? '  ·  ' +
                       Object.entries(summaryCounts)
@@ -332,7 +341,7 @@ export default function TeacherAttendanceRosterScreen() {
             {isSaving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Attendance</Text>
+              <Text style={styles.saveButtonText}>{t('teacher_attendance_roster.save_attendance', 'Save Attendance')}</Text>
             )}
           </TouchableOpacity>
         </View>

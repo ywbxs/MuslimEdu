@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchReportStatus,
   submitReport,
@@ -36,11 +37,15 @@ const CANVAS = '#F6F7F9';
 const DANGER = '#E5484D';
 const DANGER_SOFT = '#FCEDED';
 
-const MONTH_NAMES = [
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+const MONTH_FALLBACKS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-const MONTH_ABBR = [
+const MONTH_ABBR_FALLBACKS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
@@ -209,6 +214,7 @@ function ReportDetailModal({
   month: TimelineMonth | null;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const report = month?.report ?? null;
 
   return (
@@ -228,22 +234,22 @@ function ReportDetailModal({
               <View style={styles.modalStatusRow}>
                 <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
                 <Text style={styles.modalStatusText}>
-                  {month?.submittedOn ? `Submitted on ${month.submittedOn}` : 'Submitted'}
+                  {month?.submittedOn ? t('orphan_report.submitted_on', 'Submitted on {date}').replace('{date}', month.submittedOn) : t('orphan_report.submitted', 'Submitted')}
                 </Text>
               </View>
               {report.submitted_by ? (
-                <Text style={styles.modalSubmittedBy}>By {report.submitted_by}</Text>
+                <Text style={styles.modalSubmittedBy}>{t('orphan_report.submitted_by', 'By {name}').replace('{name}', report.submitted_by)}</Text>
               ) : null}
 
               <View style={styles.modalRatingsRow}>
                 <View style={styles.modalRatingBox}>
-                  <Text style={styles.modalRatingLabel}>Academic</Text>
+                  <Text style={styles.modalRatingLabel}>{t('orphan_report.academic', 'Academic')}</Text>
                   <Text style={styles.modalRatingValue}>
                     {report.academic_rating != null ? `${report.academic_rating}/5` : '—'}
                   </Text>
                 </View>
                 <View style={styles.modalRatingBox}>
-                  <Text style={styles.modalRatingLabel}>Wellbeing</Text>
+                  <Text style={styles.modalRatingLabel}>{t('orphan_report.wellbeing', 'Wellbeing')}</Text>
                   <Text style={styles.modalRatingValue}>
                     {report.wellbeing_rating != null ? `${report.wellbeing_rating}/5` : '—'}
                   </Text>
@@ -252,14 +258,14 @@ function ReportDetailModal({
 
               {report.note ? (
                 <View style={styles.modalNoteWrap}>
-                  <Text style={styles.modalSectionLabel}>Note</Text>
+                  <Text style={styles.modalSectionLabel}>{t('orphan_report.note_label', 'Note')}</Text>
                   <Text style={styles.modalNoteText}>{report.note}</Text>
                 </View>
               ) : null}
 
               {report.photos?.length ? (
                 <View style={styles.modalNoteWrap}>
-                  <Text style={styles.modalSectionLabel}>Photos</Text>
+                  <Text style={styles.modalSectionLabel}>{t('orphan_report.photos_label', 'Photos')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {report.photos.map((uri, idx) => (
                       <Image key={`${uri}-${idx}`} source={{ uri }} style={styles.modalPhoto} />
@@ -273,9 +279,9 @@ function ReportDetailModal({
               <View style={[styles.calChip, { backgroundColor: DANGER_SOFT }]}>
                 <IconCalendar color={DANGER} />
               </View>
-              <Text style={styles.modalEmptyTitle}>No report submitted</Text>
+              <Text style={styles.modalEmptyTitle}>{t('orphan_report.no_report_title', 'No report submitted')}</Text>
               <Text style={styles.modalEmptyBody}>
-                Nothing was submitted for {month?.name} yet.
+                {t('orphan_report.no_report_body', 'Nothing was submitted for {month} yet.').replace('{month}', month?.name ?? '')}
               </Text>
             </View>
           )}
@@ -289,6 +295,7 @@ export default function OrphanReportScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [status, setStatus] = useState<ReportStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -310,7 +317,7 @@ export default function OrphanReportScreen() {
       const data = await fetchReportStatus(token);
       setStatus(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report status.');
+      setError(err instanceof Error ? err.message : t('orphan_report.load_error', 'Failed to load report status.'));
     }
   }, [token]);
 
@@ -320,7 +327,9 @@ export default function OrphanReportScreen() {
   }, [load]);
 
   const now = new Date();
-  const currentMonthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthName = (idx: number) => t(`common.month_${MONTH_KEYS[idx]}`, MONTH_FALLBACKS[idx]);
+  const monthAbbr = (idx: number) => t(`common.month_abbr_${MONTH_KEYS[idx]}`, MONTH_ABBR_FALLBACKS[idx]);
+  const currentMonthLabel = `${monthName(now.getMonth())} ${now.getFullYear()}`;
 
   const pickPhotos = async () => {
     if (photos.length >= MAX_PHOTOS) return;
@@ -345,7 +354,7 @@ export default function OrphanReportScreen() {
   const handleSubmit = async () => {
     if (!token) return;
     if (!academicRating || !wellbeingRating) {
-      Alert.alert('Almost done', 'Please select both an academic and wellbeing rating.');
+      Alert.alert(t('orphan_report.almost_done', 'Almost done'), t('orphan_report.select_ratings', 'Please select both an academic and wellbeing rating.'));
       return;
     }
     setIsSubmitting(true);
@@ -355,14 +364,14 @@ export default function OrphanReportScreen() {
         { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
         photos,
       );
-      Alert.alert('Report submitted', 'Your monthly report has been sent to your school admin.');
+      Alert.alert(t('orphan_report.submitted_title', 'Report submitted'), t('orphan_report.submitted_message', 'Your monthly report has been sent to your school admin.'));
       await load();
       setNote('');
       setAcademicRating(null);
       setWellbeingRating(null);
       setPhotos([]);
     } catch (err) {
-      Alert.alert('Something went wrong', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -392,15 +401,15 @@ export default function OrphanReportScreen() {
           const d = new Date(submittedOn);
           if (!isNaN(d.getTime())) {
             const hours24 = d.getHours();
-            const period = hours24 >= 12 ? 'PM' : 'AM';
+            const period = hours24 >= 12 ? t('common.pm', 'PM') : t('common.am', 'AM');
             const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
             const minutes = String(d.getMinutes()).padStart(2, '0');
-            onLabel = `${MONTH_ABBR[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} • ${hours12}:${minutes} ${period}`;
+            onLabel = `${monthAbbr(d.getMonth())} ${d.getDate()}, ${d.getFullYear()} • ${hours12}:${minutes} ${period}`;
           }
         }
         return {
           key: entry.report_month,
-          name: `${MONTH_NAMES[month - 1]} ${year}`,
+          name: `${monthName(month - 1)} ${year}`,
           submitted: entry.submitted,
           submittedOn: onLabel,
           report: entry.report,
@@ -421,9 +430,9 @@ export default function OrphanReportScreen() {
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
             <Polyline points="15 5 8 12 15 19" stroke={EMERALD} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Monthly Report</Text>
+        <Text style={styles.headerTitle}>{t('orphan_report.header_title', 'Monthly Report')}</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -444,7 +453,7 @@ export default function OrphanReportScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -456,7 +465,7 @@ export default function OrphanReportScreen() {
                 <IconDoc color={EMERALD} />
               </View>
               <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>Submit Your Monthly Report</Text>
+                <Text style={styles.cardTitle}>{t('orphan_report.submit_prompt', 'Submit Your Monthly Report')}</Text>
                 <Text style={styles.cardMonth}>{currentMonthLabel}</Text>
               </View>
             </View>
@@ -464,25 +473,25 @@ export default function OrphanReportScreen() {
 
             {alreadySubmitted ? (
               <View style={styles.doneBox}>
-                <Text style={styles.doneTitle}>You're all set for {currentMonthLabel}</Text>
+                <Text style={styles.doneTitle}>{t('orphan_report.all_set', "You're all set for {month}").replace('{month}', currentMonthLabel)}</Text>
                 <Text style={styles.doneBody}>
-                  Your report for this month is submitted. Check your submission history below.
+                  {t('orphan_report.already_submitted', 'Your report for this month is submitted. Check your submission history below.')}
                 </Text>
               </View>
             ) : (
               <>
                 <SectionHead
                   icon={<IconEdit color={EMERALD} />}
-                  title="How was your month?"
-                  subtitle="Tell us about your studies, activities, and how you are feeling."
+                  title={t('orphan_report.step_summary_title', 'How was your month?')}
+                  subtitle={t('orphan_report.step_summary_subtitle', 'Tell us about your studies, activities, and how you are feeling.')}
                 />
                 <View style={styles.noteWrap}>
                   <TextInput
                     style={styles.noteInput}
-                    placeholder="Write a short note about your month..."
+                    placeholder={t('orphan_report.note_placeholder', 'Write a short note about your month...')}
                     placeholderTextColor={SUBTLE}
                     value={note}
-                    onChangeText={(t) => setNote(t.slice(0, MAX_NOTE))}
+                    onChangeText={(value) => setNote(value.slice(0, MAX_NOTE))}
                     multiline
                     maxLength={MAX_NOTE}
                   />
@@ -491,30 +500,38 @@ export default function OrphanReportScreen() {
 
                 <SectionHead
                   icon={<IconCap color={EMERALD} />}
-                  title="Academic Rating"
-                  subtitle="Rate your academic performance this month."
+                  title={t('orphan_report.academic_rating_title', 'Academic Rating')}
+                  subtitle={t('orphan_report.academic_rating_subtitle', 'Rate your academic performance this month.')}
                 />
                 <RatingSelector
                   value={academicRating}
                   onChange={setAcademicRating}
-                  labels={{ 1: 'Poor', 3: 'Average', 5: 'Excellent' }}
+                  labels={{
+                    1: t('orphan_report.rating_poor', 'Poor'),
+                    3: t('orphan_report.rating_average', 'Average'),
+                    5: t('orphan_report.rating_excellent', 'Excellent'),
+                  }}
                 />
 
                 <SectionHead
                   icon={<IconHeart color={EMERALD} />}
-                  title="Wellbeing Rating"
-                  subtitle="Rate your overall wellbeing this month."
+                  title={t('orphan_report.wellbeing_rating_title', 'Wellbeing Rating')}
+                  subtitle={t('orphan_report.wellbeing_rating_subtitle', 'Rate your overall wellbeing this month.')}
                 />
                 <RatingSelector
                   value={wellbeingRating}
                   onChange={setWellbeingRating}
-                  labels={{ 1: 'Very Low', 3: 'Average', 5: 'Very High' }}
+                  labels={{
+                    1: t('orphan_report.rating_very_low', 'Very Low'),
+                    3: t('orphan_report.rating_average', 'Average'),
+                    5: t('orphan_report.rating_very_high', 'Very High'),
+                  }}
                 />
 
                 <SectionHead
                   icon={<IconImage color={EMERALD} />}
-                  title="Add Photos (Optional)"
-                  subtitle="Add photos of your activities, achievements or study progress."
+                  title={t('orphan_report.photos_title', 'Add Photos (Optional)')}
+                  subtitle={t('orphan_report.photos_subtitle', 'Add photos of your activities, achievements or study progress.')}
                 />
                 <TouchableOpacity
                   style={styles.dropzone}
@@ -524,9 +541,9 @@ export default function OrphanReportScreen() {
                 >
                   <IconImage color={EMERALD} />
                   <Text style={styles.dropTitle}>
-                    {photos.length >= MAX_PHOTOS ? 'Photo limit reached' : 'Tap to add photos'}
+                    {photos.length >= MAX_PHOTOS ? t('orphan_report.photo_limit_reached', 'Photo limit reached') : t('orphan_report.tap_to_add_photos', 'Tap to add photos')}
                   </Text>
-                  <Text style={styles.dropSub}>You can select up to {MAX_PHOTOS} images</Text>
+                  <Text style={styles.dropSub}>{t('orphan_report.photo_limit_hint', 'You can select up to {n} images').replace('{n}', String(MAX_PHOTOS))}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.thumbRow}>
@@ -574,7 +591,7 @@ export default function OrphanReportScreen() {
                   ) : (
                     <>
                       <IconSend color="#FFFFFF" />
-                      <Text style={styles.submitButtonText}>Submit Report</Text>
+                      <Text style={styles.submitButtonText}>{t('orphan_report.submit_report', 'Submit Report')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -589,17 +606,17 @@ export default function OrphanReportScreen() {
                 <View style={styles.historyHeadIconChip}>
                   <IconClock color="#FFFFFF" />
                 </View>
-                <Text style={styles.historyTitle}>Submission History</Text>
+                <Text style={styles.historyTitle}>{t('orphan_report.history_title', 'Submission History')}</Text>
               </View>
               {timeline.length > HISTORY_PREVIEW_COUNT ? (
                 <TouchableOpacity hitSlop={8} onPress={() => setShowAllHistory((v) => !v)}>
-                  <Text style={styles.viewAll}>{showAllHistory ? 'Show less' : 'View All'} ›</Text>
+                  <Text style={styles.viewAll}>{showAllHistory ? t('orphan_report.show_less', 'Show less') : t('orphan_report.view_all', 'View All')} ›</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
 
             {visibleTimeline.length === 0 ? (
-              <Text style={styles.emptyHistory}>No reports yet. Your first submission will show up here.</Text>
+              <Text style={styles.emptyHistory}>{t('orphan_report.empty_history', 'No reports yet. Your first submission will show up here.')}</Text>
             ) : (
               <View style={styles.timelineOuter}>
                 <View style={styles.timelineLine} />
@@ -628,7 +645,7 @@ export default function OrphanReportScreen() {
                         <Text style={styles.historyMonth}>{m.name}</Text>
                         {m.submitted ? (
                           <>
-                            <Text style={styles.historySubmittedOn}>Submitted</Text>
+                            <Text style={styles.historySubmittedOn}>{t('orphan_report.submitted', 'Submitted')}</Text>
                             {m.submittedOn ? (
                               <View style={styles.timelineTimestampRow}>
                                 <IconClock color={SUBTLE} />
@@ -637,12 +654,12 @@ export default function OrphanReportScreen() {
                             ) : null}
                           </>
                         ) : (
-                          <Text style={styles.historyMissing}>Missing</Text>
+                          <Text style={styles.historyMissing}>{t('orphan_report.missing', 'Missing')}</Text>
                         )}
                       </View>
                       <View style={[styles.statusBadge, m.submitted ? styles.statusBadgeOnTime : styles.statusBadgePending]}>
                         <Text style={[styles.statusBadgeText, m.submitted ? styles.statusBadgeTextOnTime : styles.statusBadgeTextPending]}>
-                          {m.submitted ? 'On time' : 'Pending'}
+                          {m.submitted ? t('orphan_report.on_time', 'On time') : t('orphan_report.pending', 'Pending')}
                         </Text>
                       </View>
                       <Text style={styles.chevron}>›</Text>

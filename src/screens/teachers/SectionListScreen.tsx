@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -31,6 +32,8 @@ const SectionListScreen = () => {
   const { classId: routeClassId } = route.params || {};
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const statusLabel = (status: string) => t(`section_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
   const [sections, setSections] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -101,7 +104,7 @@ const SectionListScreen = () => {
       setSections(response.data.sections || []);
     } catch (error) {
       console.error('Error fetching sections:', error);
-      Alert.alert('Error', 'Failed to load sections');
+      Alert.alert(t('common.error', 'Error'), t('section_list.load_error', 'Failed to load sections'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -126,12 +129,12 @@ const SectionListScreen = () => {
 
   const handleDelete = (section) => {
     Alert.alert(
-      'Delete Section',
-      `Delete "${section.name}"? This can't be undone.`,
+      t('section_list.delete_title', 'Delete Section'),
+      t('section_list.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', section.name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('section_list.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -148,8 +151,8 @@ const SectionListScreen = () => {
               );
               fetchSections();
             } catch (error) {
-              const msg = error.response?.data?.message || 'Failed to delete section';
-              Alert.alert('Error', msg);
+              const msg = error.response?.data?.message || t('section_list.delete_error', 'Failed to delete section');
+              Alert.alert(t('common.error', 'Error'), msg);
             }
           },
         },
@@ -158,8 +161,8 @@ const SectionListScreen = () => {
   };
 
   const classFilterLabel = classFilter
-    ? classes.find((c) => c.id === classFilter)?.name || 'Selected class'
-    : 'All Classes';
+    ? classes.find((c) => c.id === classFilter)?.name || t('section_list.selected_class', 'Selected class')
+    : t('section_list.all_classes', 'All Classes');
 
   const renderSectionCard = ({ item }) => {
     const badge = statusColors(theme, item.status);
@@ -170,7 +173,7 @@ const SectionListScreen = () => {
         onPress={() => handleSectionPress(item.id)}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.className}>{item.class_name || 'Unassigned class'}</Text>
+          <Text style={styles.className}>{item.class_name || t('section_list.unassigned_class', 'Unassigned class')}</Text>
           <Text style={[styles.statusBadgeText, { color: badge.color, backgroundColor: badge.backgroundColor }]}>
             {item.status}
           </Text>
@@ -179,12 +182,12 @@ const SectionListScreen = () => {
         <Text style={styles.name}>{item.name}</Text>
 
         <View style={styles.infoRow}>
-          <Text style={styles.label}>Adviser:</Text>
-          <Text style={styles.value}>{item.class_teacher_name || 'Not assigned'}</Text>
+          <Text style={styles.label}>{t('section_list.adviser_label', 'Adviser:')}</Text>
+          <Text style={styles.value}>{item.class_teacher_name || t('section_list.not_assigned', 'Not assigned')}</Text>
         </View>
         {item.room_number ? (
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Room:</Text>
+            <Text style={styles.label}>{t('section_list.room_label', 'Room:')}</Text>
             <Text style={styles.value}>{item.room_number}</Text>
           </View>
         ) : null}
@@ -203,12 +206,15 @@ const SectionListScreen = () => {
               />
             </View>
             <Text style={styles.enrollmentText}>
-              {item.current_enrollment}/{item.capacity} students ({pct}%)
+              {t('section_list.enrollment_with_capacity', '{current}/{capacity} students ({pct}%)')
+                .replace('{current}', String(item.current_enrollment))
+                .replace('{capacity}', String(item.capacity))
+                .replace('{pct}', String(pct))}
             </Text>
           </>
         ) : (
           <Text style={styles.enrollmentText}>
-            {item.current_enrollment} students (no capacity limit set)
+            {t('section_list.enrollment_no_capacity', '{n} students (no capacity limit set)').replace('{n}', String(item.current_enrollment))}
           </Text>
         )}
 
@@ -217,19 +223,19 @@ const SectionListScreen = () => {
             style={styles.studentsButton}
             onPress={() => navigation.navigate('SectionStudents', { sectionId: item.id })}
           >
-            <Text style={styles.studentsButtonText}>Students</Text>
+            <Text style={styles.studentsButtonText}>{t('section_list.students', 'Students')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleSectionPress(item.id)}
           >
-            <Text style={styles.actionButtonText}>Edit</Text>
+            <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('section_list.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -253,7 +259,7 @@ const SectionListScreen = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Sections</Text>
+          <Text style={styles.headerTitle}>{t('section_list.title', 'Sections')}</Text>
         </View>
         <View style={styles.listContainer}>
           {[0, 1, 2].map(renderSkeletonCard)}
@@ -272,7 +278,7 @@ const SectionListScreen = () => {
             style={styles.addButton}
             onPress={() => navigation.navigate('SectionForm')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('section_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -280,7 +286,7 @@ const SectionListScreen = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search section name..."
+          placeholder={t('section_list.search_placeholder', 'Search section name...')}
           value={searchTerm}
           onChangeText={handleSearch}
           placeholderTextColor={theme.textMuted}
@@ -311,7 +317,7 @@ const SectionListScreen = () => {
                 statusFilter === status && styles.filterButtonTextActive,
               ]}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -333,11 +339,13 @@ const SectionListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon="🧑‍🏫"
-            title="No sections found"
+            title={t('section_list.empty_title', 'No sections found')}
             subtitle={
               searchTerm
-                ? `Nothing matches "${searchTerm}".`
-                : `No ${statusFilter === 'all' ? '' : statusFilter + ' '}sections yet.`
+                ? t('section_list.no_match', 'Nothing matches "{query}".').replace('{query}', searchTerm)
+                : statusFilter === 'all'
+                ? t('section_list.empty_all', 'No sections yet.')
+                : t('section_list.empty_status', 'No {status} sections yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
             colors={theme}
           />
@@ -352,7 +360,7 @@ const SectionListScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter by Class</Text>
+            <Text style={styles.modalTitle}>{t('section_list.filter_by_class', 'Filter by Class')}</Text>
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => {
@@ -360,7 +368,7 @@ const SectionListScreen = () => {
                 setClassModalVisible(false);
               }}
             >
-              <Text style={styles.modalItemText}>All Classes</Text>
+              <Text style={styles.modalItemText}>{t('section_list.all_classes', 'All Classes')}</Text>
             </TouchableOpacity>
             <FlatList
               data={classes}
@@ -381,7 +389,7 @@ const SectionListScreen = () => {
               style={styles.modalCloseButton}
               onPress={() => setClassModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

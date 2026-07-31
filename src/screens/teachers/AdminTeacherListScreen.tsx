@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../services/adminTeacherService';
 import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
@@ -115,6 +116,7 @@ const TeacherRow = React.memo(function TeacherRow({
   item: TeacherOverview;
   onPress: (item: TeacherOverview) => void;
 }) {
+  const { t } = useLocale();
   return (
     <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={() => onPress(item)}>
       <UserAvatar
@@ -125,18 +127,20 @@ const TeacherRow = React.memo(function TeacherRow({
         dotColor={item.submitted ? EMERALD : DANGER}
       />
       <View style={[styles.flex1, { marginLeft: 14 }]}>
-        <Text style={styles.rowName} numberOfLines={1}>{item.name || 'Unnamed teacher'}</Text>
+        <Text style={styles.rowName} numberOfLines={1}>{item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}</Text>
         {item.submitted ? (
           <View style={[styles.statusPill, styles.statusPillOk]}>
             <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
             <Text style={styles.statusPillTextOk} numberOfLines={1}>
-              Report submitted{item.submitted_by ? ` · ${item.submitted_by}` : ''}
+              {item.submitted_by
+                ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
+                : t('admin_teacher_list.report_submitted', 'Report submitted')}
             </Text>
           </View>
         ) : (
           <View style={[styles.statusPill, styles.statusPillMissing]}>
             <View style={[styles.statusDot, { backgroundColor: DANGER }]} />
-            <Text style={styles.statusPillTextMissing}>Missing report</Text>
+            <Text style={styles.statusPillTextMissing}>{t('admin_teacher_list.missing_report', 'Missing report')}</Text>
           </View>
         )}
       </View>
@@ -157,10 +161,11 @@ function TeacherActionModal({
   onClose: () => void;
   onSelect: (action: 'profile' | 'documents' | 'report') => void;
 }) {
+  const { t } = useLocale();
   const options: { key: 'profile' | 'documents' | 'report'; label: string; desc: string; icon: (c: string) => React.ReactElement }[] = [
-    { key: 'profile', label: 'Profile', desc: 'View contact info and role details', icon: (c) => <IdCardIcon color={c} /> },
-    { key: 'documents', label: 'Documents', desc: 'ID, certificates, and other files', icon: (c) => <DocumentIcon color={c} /> },
-    { key: 'report', label: 'Monthly Report', desc: 'View this teacher\u2019s report history', icon: (c) => <ReportIcon color={c} /> },
+    { key: 'profile', label: t('admin_teacher_list.action_profile', 'Profile'), desc: t('admin_teacher_list.action_profile_desc', 'View contact info and role details'), icon: (c) => <IdCardIcon color={c} /> },
+    { key: 'documents', label: t('admin_teacher_list.action_documents', 'Documents'), desc: t('admin_teacher_list.action_documents_desc', 'ID, certificates, and other files'), icon: (c) => <DocumentIcon color={c} /> },
+    { key: 'report', label: t('admin_teacher_list.action_report', 'Monthly Report'), desc: t('admin_teacher_list.action_report_desc', 'View this teacher\u2019s report history'), icon: (c) => <ReportIcon color={c} /> },
   ];
 
   return (
@@ -211,6 +216,7 @@ function AddTeacherSheet({
   onCreated: () => void;
 }) {
   const { token } = useAuth();
+  const { t } = useLocale();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -233,11 +239,11 @@ function AddTeacherSheet({
   const handleCreate = async () => {
     if (!token) return;
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Almost done', 'Name, email, and password are required.');
+      Alert.alert(t('admin_teacher_list.almost_done', 'Almost done'), t('admin_teacher_list.error_required_fields', 'Name, email, and password are required.'));
       return;
     }
     if (password.trim().length < 6) {
-      Alert.alert('Almost done', 'Password must be at least 6 characters.');
+      Alert.alert(t('admin_teacher_list.almost_done', 'Almost done'), t('admin_teacher_list.error_password_length', 'Password must be at least 6 characters.'));
       return;
     }
     setIsSubmitting(true);
@@ -251,9 +257,9 @@ function AddTeacherSheet({
       resetForm();
       onClose();
       onCreated();
-      Alert.alert('Teacher added', `${name.trim()} can now log in with the email and password you set.`);
+      Alert.alert(t('admin_teacher_list.teacher_added_title', 'Teacher added'), t('admin_teacher_list.teacher_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim()));
     } catch (err) {
-      Alert.alert('Could not add teacher', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('admin_teacher_list.add_error_title', 'Could not add teacher'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -266,27 +272,27 @@ function AddTeacherSheet({
         <View style={styles.formSheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>Add Teacher</Text>
+            <Text style={styles.sheetTitle}>{t('admin_teacher_list.add_teacher_title', 'Add Teacher')}</Text>
             <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
               <CloseIcon color={SUBTLE} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.fieldLabel}>Full Name</Text>
+            <Text style={styles.fieldLabel}>{t('admin_teacher_list.full_name_label', 'Full Name')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="e.g. Ahmad bin Abdullah"
+              placeholder={t('admin_teacher_list.full_name_placeholder', 'e.g. Ahmad bin Abdullah')}
               placeholderTextColor={SUBTLE}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
             />
 
-            <Text style={styles.fieldLabel}>Email</Text>
+            <Text style={styles.fieldLabel}>{t('admin_teacher_list.email_label', 'Email')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="teacher@example.com"
+              placeholder={t('admin_teacher_list.email_placeholder', 'teacher@example.com')}
               placeholderTextColor={SUBTLE}
               value={email}
               onChangeText={setEmail}
@@ -294,10 +300,10 @@ function AddTeacherSheet({
               keyboardType="email-address"
             />
 
-            <Text style={styles.fieldLabel}>Password</Text>
+            <Text style={styles.fieldLabel}>{t('admin_teacher_list.password_label', 'Password')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="At least 6 characters"
+              placeholder={t('admin_teacher_list.password_placeholder', 'At least 6 characters')}
               placeholderTextColor={SUBTLE}
               value={password}
               onChangeText={setPassword}
@@ -305,10 +311,10 @@ function AddTeacherSheet({
               autoCapitalize="none"
             />
 
-            <Text style={styles.fieldLabel}>Phone (optional)</Text>
+            <Text style={styles.fieldLabel}>{t('admin_teacher_list.phone_label', 'Phone (optional)')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="e.g. 012-345 6789"
+              placeholder={t('admin_teacher_list.phone_placeholder', 'e.g. 012-345 6789')}
               placeholderTextColor={SUBTLE}
               value={phone}
               onChangeText={setPhone}
@@ -323,7 +329,7 @@ function AddTeacherSheet({
               {isSubmitting ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Add Teacher</Text>
+                <Text style={styles.submitButtonText}>{t('admin_teacher_list.add_teacher_title', 'Add Teacher')}</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -337,6 +343,7 @@ export default function AdminTeacherListScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [teachers, setTeachers] = useState<TeacherOverview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -353,7 +360,7 @@ export default function AdminTeacherListScreen() {
       const data = await fetchTeacherOverview(token);
       setTeachers(data.teachers);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load teachers.');
+      setError(err instanceof Error ? err.message : t('admin_teacher_list.load_error', 'Failed to load teachers.'));
     }
   }, [token]);
 
@@ -371,7 +378,7 @@ export default function AdminTeacherListScreen() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return teachers;
-    return teachers.filter((t) => t.name.toLowerCase().includes(q));
+    return teachers.filter((teacher) => teacher.name.toLowerCase().includes(q));
   }, [teachers, query]);
 
   const keyExtractor = useCallback((item: TeacherOverview) => String(item.teacher_id), []);
@@ -410,10 +417,10 @@ export default function AdminTeacherListScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
           <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Teachers</Text>
+          <Text style={styles.headerTitle}>{t('admin_teacher_list.header_title', 'Teachers')}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
           <PlusIcon color="#FFFFFF" />
@@ -424,7 +431,7 @@ export default function AdminTeacherListScreen() {
         <SearchIcon color={SUBTLE} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search teachers..."
+          placeholder={t('admin_teacher_list.search_placeholder', 'Search teachers...')}
           placeholderTextColor={SUBTLE}
           value={query}
           onChangeText={setQuery}
@@ -447,7 +454,7 @@ export default function AdminTeacherListScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -460,9 +467,9 @@ export default function AdminTeacherListScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyIcon />
-              <Text style={styles.emptyTitle}>No teachers found</Text>
+              <Text style={styles.emptyTitle}>{t('admin_teacher_list.empty_title', 'No teachers found')}</Text>
               <Text style={styles.emptyBody}>
-                {query ? 'Try a different search term.' : 'Teachers added to your school will show up here.'}
+                {query ? t('admin_teacher_list.empty_body_search', 'Try a different search term.') : t('admin_teacher_list.empty_body_none', 'Teachers added to your school will show up here.')}
               </Text>
             </View>
           }

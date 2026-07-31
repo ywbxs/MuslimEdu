@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Line, Circle, Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchTeacherReportStatus,
   submitTeacherReport,
@@ -38,7 +39,11 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = '#E5484D';
 const DANGER_SOFT = '#FCEDED';
 
-const MONTH_NAMES = [
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+const MONTH_FALLBACKS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
@@ -140,6 +145,7 @@ function TeacherReportDetailModal({
   month: TimelineMonth | null;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const report = month?.report ?? null;
 
   return (
@@ -158,27 +164,27 @@ function TeacherReportDetailModal({
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               <View style={styles.modalStatusRow}>
                 <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
-                <Text style={styles.modalStatusText}>Submitted</Text>
+                <Text style={styles.modalStatusText}>{t('teacher_orphan_report.submitted', 'Submitted')}</Text>
               </View>
               {report.submitted_by ? (
-                <Text style={styles.modalSubmittedBy}>By {report.submitted_by}</Text>
+                <Text style={styles.modalSubmittedBy}>{t('teacher_orphan_report.submitted_by', 'By {name}').replace('{name}', report.submitted_by)}</Text>
               ) : null}
 
               <View style={styles.modalRatingsRow}>
                 <View style={styles.modalRatingBox}>
-                  <Text style={styles.modalRatingLabel}>Teaching</Text>
+                  <Text style={styles.modalRatingLabel}>{t('teacher_orphan_report.rating_teaching', 'Teaching')}</Text>
                   <Text style={styles.modalRatingValue}>
                     {report.teaching_effectiveness_rating != null ? `${report.teaching_effectiveness_rating}/5` : '—'}
                   </Text>
                 </View>
                 <View style={styles.modalRatingBox}>
-                  <Text style={styles.modalRatingLabel}>Engagement</Text>
+                  <Text style={styles.modalRatingLabel}>{t('teacher_orphan_report.rating_engagement', 'Engagement')}</Text>
                   <Text style={styles.modalRatingValue}>
                     {report.classroom_engagement_rating != null ? `${report.classroom_engagement_rating}/5` : '—'}
                   </Text>
                 </View>
                 <View style={styles.modalRatingBox}>
-                  <Text style={styles.modalRatingLabel}>Growth</Text>
+                  <Text style={styles.modalRatingLabel}>{t('teacher_orphan_report.rating_growth', 'Growth')}</Text>
                   <Text style={styles.modalRatingValue}>
                     {report.professional_growth_rating != null ? `${report.professional_growth_rating}/5` : '—'}
                   </Text>
@@ -187,14 +193,14 @@ function TeacherReportDetailModal({
 
               {report.note ? (
                 <View style={styles.modalNoteWrap}>
-                  <Text style={styles.modalSectionLabel}>Note</Text>
+                  <Text style={styles.modalSectionLabel}>{t('teacher_orphan_report.note_label', 'Note')}</Text>
                   <Text style={styles.modalNoteText}>{report.note}</Text>
                 </View>
               ) : null}
 
               {report.photos?.length ? (
                 <View style={styles.modalNoteWrap}>
-                  <Text style={styles.modalSectionLabel}>Photos</Text>
+                  <Text style={styles.modalSectionLabel}>{t('teacher_orphan_report.photos_label', 'Photos')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {report.photos.map((uri, idx) => (
                       <Image key={`${uri}-${idx}`} source={{ uri }} style={styles.modalPhoto} />
@@ -208,8 +214,8 @@ function TeacherReportDetailModal({
               <View style={[styles.calChip, { backgroundColor: DANGER_SOFT }]}>
                 <IconCalendar color={DANGER} />
               </View>
-              <Text style={styles.modalEmptyTitle}>No report submitted</Text>
-              <Text style={styles.modalEmptyBody}>Nothing was submitted for {month?.name} yet.</Text>
+              <Text style={styles.modalEmptyTitle}>{t('teacher_orphan_report.no_report_title', 'No report submitted')}</Text>
+              <Text style={styles.modalEmptyBody}>{t('teacher_orphan_report.no_report_body', 'Nothing was submitted for {month} yet.').replace('{month}', month?.name ?? '')}</Text>
             </View>
           )}
         </View>
@@ -242,6 +248,7 @@ export default function TeacherOrphanReportScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [mode, setMode] = useState<'overview' | 'wizard'>('overview');
   const [status, setStatus] = useState<TeacherReportStatus | null>(null);
@@ -273,7 +280,8 @@ export default function TeacherOrphanReportScreen() {
   }, [load]);
 
   const now = new Date();
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthName = (idx: number) => t(`common.month_${MONTH_KEYS[idx]}`, MONTH_FALLBACKS[idx]);
+  const monthLabel = `${monthName(now.getMonth())} ${now.getFullYear()}`;
   const alreadySubmitted = status?.submitted_this_month ?? false;
 
   // Build a rolling 12-month timeline (current month first) client-side,
@@ -299,12 +307,13 @@ export default function TeacherOrphanReportScreen() {
       const report = byKey.get(`${y}-${m + 1}`) ?? null;
       months.push({
         key: `${y}-${m + 1}`,
-        name: `${MONTH_NAMES[m]} ${y}`,
+        name: `${monthName(m)} ${y}`,
         submitted: !!report,
         report,
       });
     }
     return months;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const resetForm = () => {
@@ -340,15 +349,15 @@ export default function TeacherOrphanReportScreen() {
         photos,
       );
       Alert.alert(
-        'Report submitted',
-        `Your ${wizardMonth?.name ?? 'monthly'} report has been sent to your school admin.`,
+        t('teacher_orphan_report.submitted_title', 'Report submitted'),
+        t('teacher_orphan_report.submitted_message', 'Your {month} report has been sent to your school admin.').replace('{month}', wizardMonth?.name ?? t('teacher_orphan_report.monthly_fallback', 'monthly')),
       );
       resetForm();
       setWizardMonth(null);
       await load();
       setMode('overview');
     } catch (err) {
-      Alert.alert('Something went wrong', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('teacher_orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -359,21 +368,25 @@ export default function TeacherOrphanReportScreen() {
       {
         id: 'summary',
         icon: <IconEdit />,
-        title: 'Teaching Summary',
-        subtitle: 'Share your teaching activities, lessons covered, challenges, and achievements this month.',
+        title: t('teacher_orphan_report.step_summary_title', 'Teaching Summary'),
+        subtitle: t('teacher_orphan_report.step_summary_subtitle', 'Share your teaching activities, lessons covered, challenges, and achievements this month.'),
         content: <NoteInput value={note} onChange={setNote} />,
         isValid: true,
       },
       {
         id: 'effectiveness',
         icon: <IconCap />,
-        title: 'Teaching Effectiveness',
-        subtitle: 'Rate your overall teaching effectiveness this month.',
+        title: t('teacher_orphan_report.step_effectiveness_title', 'Teaching Effectiveness'),
+        subtitle: t('teacher_orphan_report.step_effectiveness_subtitle', 'Rate your overall teaching effectiveness this month.'),
         content: (
           <RatingSelector
             value={teachingEffectiveness}
             onChange={setTeachingEffectiveness}
-            labels={{ 1: 'Needs Improve.', 3: 'Average', 5: 'Excellent' }}
+            labels={{
+              1: t('teacher_orphan_report.rating_needs_improvement', 'Needs Improve.'),
+              3: t('teacher_orphan_report.rating_average', 'Average'),
+              5: t('teacher_orphan_report.rating_excellent', 'Excellent'),
+            }}
           />
         ),
         isValid: !!teachingEffectiveness,
@@ -381,13 +394,17 @@ export default function TeacherOrphanReportScreen() {
       {
         id: 'engagement',
         icon: <IconHeart />,
-        title: 'Classroom Engagement',
-        subtitle: 'Rate how engaged your students were this month.',
+        title: t('teacher_orphan_report.step_engagement_title', 'Classroom Engagement'),
+        subtitle: t('teacher_orphan_report.step_engagement_subtitle', 'Rate how engaged your students were this month.'),
         content: (
           <RatingSelector
             value={classroomEngagement}
             onChange={setClassroomEngagement}
-            labels={{ 1: 'Low', 3: 'Average', 5: 'Very High' }}
+            labels={{
+              1: t('teacher_orphan_report.rating_low', 'Low'),
+              3: t('teacher_orphan_report.rating_average', 'Average'),
+              5: t('teacher_orphan_report.rating_very_high', 'Very High'),
+            }}
           />
         ),
         isValid: !!classroomEngagement,
@@ -395,13 +412,17 @@ export default function TeacherOrphanReportScreen() {
       {
         id: 'growth',
         icon: <IconTrend />,
-        title: 'Professional Growth',
-        subtitle: 'Rate your professional growth this month.',
+        title: t('teacher_orphan_report.step_growth_title', 'Professional Growth'),
+        subtitle: t('teacher_orphan_report.step_growth_subtitle', 'Rate your professional growth this month.'),
         content: (
           <RatingSelector
             value={professionalGrowth}
             onChange={setProfessionalGrowth}
-            labels={{ 1: 'Minimal', 3: 'Moderate', 5: 'Significant' }}
+            labels={{
+              1: t('teacher_orphan_report.rating_minimal', 'Minimal'),
+              3: t('teacher_orphan_report.rating_moderate', 'Moderate'),
+              5: t('teacher_orphan_report.rating_significant', 'Significant'),
+            }}
           />
         ),
         isValid: !!professionalGrowth,
@@ -409,13 +430,14 @@ export default function TeacherOrphanReportScreen() {
       {
         id: 'photos',
         icon: <IconImage />,
-        title: 'Add Photos',
-        subtitle: 'Optional — add photos of your teaching activities, achievements, or classroom moments.',
+        title: t('teacher_orphan_report.step_photos_title', 'Add Photos'),
+        subtitle: t('teacher_orphan_report.step_photos_subtitle', 'Optional — add photos of your teaching activities, achievements, or classroom moments.'),
         content: <PhotoPicker photos={photos} onChange={setPhotos} />,
         isValid: true,
       },
     ],
-    [note, teachingEffectiveness, classroomEngagement, professionalGrowth, photos],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [note, teachingEffectiveness, classroomEngagement, professionalGrowth, photos, t],
   );
 
   if (isLoading) {
@@ -431,9 +453,9 @@ export default function TeacherOrphanReportScreen() {
     const isMakeUp = !!wizardMonth && wizardMonth.key !== currentKey;
     return (
       <ReportStepWizard
-        headerTitle="Monthly Report"
+        headerTitle={t('teacher_orphan_report.header_title', 'Monthly Report')}
         monthLabel={wizardMonth?.name ?? monthLabel}
-        badgeLabel={isMakeUp ? 'Make-Up Report' : 'Monthly Report'}
+        badgeLabel={isMakeUp ? t('teacher_orphan_report.badge_makeup', 'Make-Up Report') : t('teacher_orphan_report.header_title', 'Monthly Report')}
         steps={steps}
         currentStepIndex={stepIndex}
         onStepChange={setStepIndex}
@@ -455,9 +477,9 @@ export default function TeacherOrphanReportScreen() {
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
             <Polyline points="15 5 8 12 15 19" stroke={EMERALD} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Monthly Report</Text>
+        <Text style={styles.headerTitle}>{t('teacher_orphan_report.header_title', 'Monthly Report')}</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -470,7 +492,7 @@ export default function TeacherOrphanReportScreen() {
             </View>
             <View style={styles.flex1}>
               <Text style={styles.cardTitle}>
-                {alreadySubmitted ? "You're all set" : 'Submit Your Monthly Report'}
+                {alreadySubmitted ? t('teacher_orphan_report.all_set', "You're all set") : t('teacher_orphan_report.submit_prompt', 'Submit Your Monthly Report')}
               </Text>
               <Text style={styles.cardMonth}>{monthLabel}</Text>
             </View>
@@ -480,14 +502,13 @@ export default function TeacherOrphanReportScreen() {
           {alreadySubmitted ? (
             <View style={styles.doneBox}>
               <Text style={styles.doneBody}>
-                Your teaching report for {monthLabel} has already been submitted. Check your submission
-                history below.
+                {t('teacher_orphan_report.already_submitted', 'Your teaching report for {month} has already been submitted. Check your submission history below.').replace('{month}', monthLabel)}
               </Text>
             </View>
           ) : (
             <>
               <Text style={styles.startBody}>
-                Share your teaching summary and rate your month to submit your report.
+                {t('teacher_orphan_report.start_body', 'Share your teaching summary and rate your month to submit your report.')}
               </Text>
               <TouchableOpacity
                 style={styles.submitButton}
@@ -495,7 +516,7 @@ export default function TeacherOrphanReportScreen() {
                 onPress={() => openWizardFor(timeline[0])}
               >
                 <IconEdit color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Start Report</Text>
+                <Text style={styles.submitButtonText}>{t('teacher_orphan_report.start_report', 'Start Report')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -508,10 +529,10 @@ export default function TeacherOrphanReportScreen() {
               <View style={styles.historyHeadIconChip}>
                 <IconClock color="#FFFFFF" />
               </View>
-              <Text style={styles.historyTitle}>Submission History</Text>
+              <Text style={styles.historyTitle}>{t('teacher_orphan_report.history_title', 'Submission History')}</Text>
             </View>
           </View>
-          <Text style={styles.historyHint}>Tap a missing month to submit a make-up report.</Text>
+          <Text style={styles.historyHint}>{t('teacher_orphan_report.history_hint', 'Tap a missing month to submit a make-up report.')}</Text>
 
           <View style={styles.timelineOuter}>
             <View style={styles.timelineLine} />
@@ -539,14 +560,14 @@ export default function TeacherOrphanReportScreen() {
                   <View style={styles.flex1}>
                     <Text style={styles.historyMonth}>{m.name}</Text>
                     {m.submitted ? (
-                      <Text style={styles.historySubmittedOn}>Submitted</Text>
+                      <Text style={styles.historySubmittedOn}>{t('teacher_orphan_report.submitted', 'Submitted')}</Text>
                     ) : (
-                      <Text style={styles.historyMissing}>Missing</Text>
+                      <Text style={styles.historyMissing}>{t('teacher_orphan_report.missing', 'Missing')}</Text>
                     )}
                   </View>
                   <View style={[styles.statusBadge, m.submitted ? styles.statusBadgeOnTime : styles.statusBadgePending]}>
                     <Text style={[styles.statusBadgeText, m.submitted ? styles.statusBadgeTextOnTime : styles.statusBadgeTextPending]}>
-                      {m.submitted ? 'On time' : 'Make up'}
+                      {m.submitted ? t('teacher_orphan_report.on_time', 'On time') : t('teacher_orphan_report.make_up', 'Make up')}
                     </Text>
                   </View>
                   <Text style={styles.chevron}>›</Text>
