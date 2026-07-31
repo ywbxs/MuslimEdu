@@ -20,6 +20,7 @@ import {
 import subjectLoadingService, {
   SubjectLoading,
 } from '../../services/subjectLoadingService';
+import {useLocale} from '../../context/LocaleContext';
 
 const C = {
   bg: '#F5F7F6',
@@ -34,28 +35,29 @@ const C = {
   red: '#C0392B',
 };
 
-function statusCopy(status?: string) {
+function statusCopy(t: (key: string, fallback?: string) => string, status?: string) {
   if (status === 'approved') {
-    return 'Officially loaded';
+    return t('student_subject_load.status_approved', 'Officially loaded');
   }
   if (status === 'submitted') {
-    return 'Waiting for registrar approval';
+    return t('student_subject_load.status_submitted', 'Waiting for registrar approval');
   }
   if (status === 'rejected') {
-    return 'Returned to your adviser';
+    return t('student_subject_load.status_rejected', 'Returned to your adviser');
   }
   if (status === 'draft') {
-    return 'Tentative, not yet submitted';
+    return t('student_subject_load.status_draft', 'Tentative, not yet submitted');
   }
   if (status === 'cancelled') {
-    return 'Cancelled';
+    return t('student_subject_load.status_cancelled', 'Cancelled');
   }
-  return 'No subject load yet';
+  return t('student_subject_load.status_none', 'No subject load yet');
 }
 
 type Props = {navigation: any};
 
 export default function StudentSubjectLoadScreen({navigation}: Props) {
+  const {t} = useLocale();
   const [current, setCurrent] = useState<SubjectLoading | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,12 +71,12 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
       setCurrent(res.current_load);
       setHistory(res.history || []);
     } catch (e: any) {
-      setError(e.message || 'Could not load your subjects.');
+      setError(e.message || t('student_subject_load.load_error', 'Could not load your subjects.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchAll();
@@ -103,21 +105,19 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
         }>
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={s.back}>Back</Text>
+            <Text style={s.back}>{t('common.back', 'Back')}</Text>
           </TouchableOpacity>
-          <Text style={s.title}>My Subjects</Text>
-          <Text style={s.subtitle}>{statusCopy(current?.status)}</Text>
+          <Text style={s.title}>{t('student_subject_load.title', 'My Subjects')}</Text>
+          <Text style={s.subtitle}>{statusCopy(t, current?.status)}</Text>
         </View>
 
         {error ? <Text style={s.error}>{error}</Text> : null}
 
         {!current ? (
           <View style={s.emptyCard}>
-            <Text style={s.emptyTitle}>Nothing loaded yet</Text>
+            <Text style={s.emptyTitle}>{t('student_subject_load.empty_title', 'Nothing loaded yet')}</Text>
             <Text style={s.emptyBody}>
-              Your adviser or the registrar has not loaded your subjects for this
-              term. Once they do, your schedule and Certificate of Registration
-              appear here.
+              {t('student_subject_load.empty_body', 'Your adviser or the registrar has not loaded your subjects for this term. Once they do, your schedule and Certificate of Registration appear here.')}
             </Text>
           </View>
         ) : (
@@ -126,17 +126,17 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
               <View style={s.statRow}>
                 <View style={s.stat}>
                   <Text style={s.statValue}>{current.total_subjects}</Text>
-                  <Text style={s.statLabel}>subjects</Text>
+                  <Text style={s.statLabel}>{t('student_subject_load.subjects', 'subjects')}</Text>
                 </View>
                 <View style={s.stat}>
                   <Text style={s.statValue}>{current.total_units}</Text>
-                  <Text style={s.statLabel}>units</Text>
+                  <Text style={s.statLabel}>{t('student_subject_load.units', 'units')}</Text>
                 </View>
                 <View style={s.stat}>
                   <Text style={s.statValue}>
                     {current.load_number || '-'}
                   </Text>
-                  <Text style={s.statLabel}>load no.</Text>
+                  <Text style={s.statLabel}>{t('student_subject_load.load_no', 'load no.')}</Text>
                 </View>
               </View>
             </View>
@@ -144,8 +144,7 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
             {current.status !== 'approved' ? (
               <View style={s.noticeCard}>
                 <Text style={s.noticeText}>
-                  This load is {current.status}. Subjects can still change until
-                  the registrar approves it.
+                  {t('student_subject_load.notice_prefix', 'This load is')} {current.status}. {t('student_subject_load.notice_suffix', 'Subjects can still change until the registrar approves it.')}
                 </Text>
               </View>
             ) : null}
@@ -154,14 +153,14 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
               <View key={item.id} style={s.card}>
                 <Text style={s.itemTitle}>
                   {item.subject_code ? item.subject_code + ' - ' : ''}
-                  {item.subject_name || 'Subject #' + item.subject_id}
+                  {item.subject_name || `${t('student_subject_load.subject_hash', 'Subject #')}${item.subject_id}`}
                 </Text>
                 <Text style={s.itemMeta}>
-                  {item.units} units · {item.load_type}
+                  {item.units} {t('student_subject_load.units', 'units')} · {item.load_type}
                   {item.status !== 'enrolled' ? ' · ' + item.status : ''}
                 </Text>
                 {item.final_grade ? (
-                  <Text style={s.grade}>Grade: {item.final_grade}</Text>
+                  <Text style={s.grade}>{t('student_subject_load.grade', 'Grade')}: {item.final_grade}</Text>
                 ) : null}
               </View>
             ))}
@@ -170,14 +169,14 @@ export default function StudentSubjectLoadScreen({navigation}: Props) {
 
         {history.length > 1 ? (
           <View>
-            <Text style={s.sectionTitle}>Previous terms</Text>
+            <Text style={s.sectionTitle}>{t('student_subject_load.previous_terms', 'Previous terms')}</Text>
             {history.map(h => (
               <View key={h.id} style={s.historyRow}>
                 <Text style={s.historyTitle}>
-                  {h.load_number || 'Load #' + h.id}
+                  {h.load_number || `${t('student_subject_load.load_hash', 'Load #')}${h.id}`}
                 </Text>
                 <Text style={s.historyMeta}>
-                  {h.total_subjects} subjects · {h.total_units} units ·{' '}
+                  {h.total_subjects} {t('student_subject_load.subjects', 'subjects')} · {h.total_units} {t('student_subject_load.units', 'units')} ·{' '}
                   {String(h.status).toUpperCase()}
                 </Text>
               </View>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'rea
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchAdminMaterialReview, Material } from '../../services/materialService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -18,6 +19,15 @@ const CANVAS = '#F6F7F9';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
+const CATEGORY_KEYS: Record<string, string> = {
+  lecture_notes: 'notes',
+  presentation: 'slides',
+  video: 'video',
+  audio: 'audio',
+  worksheet: 'worksheet',
+  reading: 'reading',
+  other: 'resource',
+};
 const CATEGORY_LABELS: Record<string, string> = {
   lecture_notes: 'Notes',
   presentation: 'Slides',
@@ -62,6 +72,7 @@ export default function AdminMaterialsReviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,13 +89,13 @@ export default function AdminMaterialsReviewScreen() {
         const list = await fetchAdminMaterialReview(token);
         setMaterials(list);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load materials.');
+        setError(e?.message ?? t('admin_materials_review.load_error', 'Could not load materials.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -96,10 +107,10 @@ export default function AdminMaterialsReviewScreen() {
   const sectionOptions = useMemo(() => {
     const seen = new Map<number, string>();
     materials.forEach((m) => {
-      if (!seen.has(m.section_id)) seen.set(m.section_id, m.section_name ?? `Section ${m.section_id}`);
+      if (!seen.has(m.section_id)) seen.set(m.section_id, m.section_name ?? `${t('admin_materials_review.section', 'Section')} ${m.section_id}`);
     });
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
-  }, [materials]);
+  }, [materials, t]);
 
   const visible = sectionFilter ? materials.filter((m) => m.section_id === sectionFilter) : materials;
 
@@ -109,13 +120,13 @@ export default function AdminMaterialsReviewScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Materials Review</Text>
+        <Text style={styles.headerTitle}>{t('admin_materials_review.title', 'Materials Review')}</Text>
       </View>
 
       {sectionOptions.length > 0 ? (
         <FlatList
           horizontal
-          data={[{ id: 0, name: 'All sections' }, ...sectionOptions]}
+          data={[{ id: 0, name: t('admin_materials_review.all_sections', 'All sections') }, ...sectionOptions]}
           keyExtractor={(s) => String(s.id)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10 }}
@@ -155,7 +166,7 @@ export default function AdminMaterialsReviewScreen() {
             load({ silent: true });
           }}
           refreshing={isRefreshing}
-          ListEmptyComponent={<Text style={styles.emptyText}>No materials uploaded yet.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('admin_materials_review.empty', 'No materials uploaded yet.')}</Text>}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
@@ -168,7 +179,7 @@ export default function AdminMaterialsReviewScreen() {
                 </Text>
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryBadgeText}>
-                    {CATEGORY_LABELS[item.category] ?? 'Resource'}
+                    {t(`admin_materials_review.category_${CATEGORY_KEYS[item.category] ?? 'resource'}`, CATEGORY_LABELS[item.category] ?? 'Resource')}
                   </Text>
                 </View>
               </View>

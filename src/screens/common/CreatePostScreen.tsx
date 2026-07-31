@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import { PickedImage, Post, PostPrivacy, createPost, repost, updatePost } from '../../services/postService';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../../utils/imagePrep';
@@ -43,15 +44,16 @@ function BackIcon() {
   );
 }
 
-const PRIVACY_OPTIONS: { key: PostPrivacy; label: string }[] = [
-  { key: 'school', label: 'School' },
-  { key: 'public', label: 'Public' },
-  { key: 'private', label: 'Only me' },
+const PRIVACY_OPTIONS: { key: PostPrivacy; labelKey: string; label: string }[] = [
+  { key: 'school', labelKey: 'school', label: 'School' },
+  { key: 'public', labelKey: 'public', label: 'Public' },
+  { key: 'private', labelKey: 'only_me', label: 'Only me' },
 ];
 
 export default function CreatePostScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
+  const { t } = useLocale();
   const navigation = useNavigation();
   const route = useRoute();
   const repostOfId = (route.params as any)?.repostOfId as number | undefined;
@@ -74,10 +76,10 @@ export default function CreatePostScreen() {
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
   useEffect(() => {
     if (!canPost) {
-      Alert.alert('Not allowed', 'Only admins and teachers can create or edit posts.');
+      Alert.alert(t('create_post.not_allowed_title', 'Not allowed'), t('create_post.not_allowed_message', 'Only admins and teachers can create or edit posts.'));
       navigation.goBack();
     }
-  }, [canPost, navigation]);
+  }, [canPost, navigation, t]);
 
   if (!canPost) return null;
 
@@ -103,7 +105,7 @@ export default function CreatePostScreen() {
           picked.push({ uri: prepared.uri, fileName: prepared.fileName, type: prepared.type });
         } catch (err) {
           if (err instanceof InvalidPhotoTypeError) {
-            Alert.alert('Unsupported photo', err.message);
+            Alert.alert(t('create_post.unsupported_photo', 'Unsupported photo'), err.message);
           }
         }
       }
@@ -128,7 +130,7 @@ export default function CreatePostScreen() {
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Couldn\u2019t post', err?.message ?? 'Please try again.');
+      Alert.alert(t('create_post.error_title', 'Couldn\u2019t post'), err?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -144,7 +146,7 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{editPost ? 'Edit Post' : repostOfId ? 'Repost' : 'New Post'}</Text>
+        <Text style={styles.headerTitle}>{editPost ? t('create_post.edit_title', 'Edit Post') : repostOfId ? t('create_post.repost_title', 'Repost') : t('create_post.new_title', 'New Post')}</Text>
         <TouchableOpacity
           style={[styles.postButton, !canSubmit && styles.postButtonDisabled]}
           onPress={submit}
@@ -154,7 +156,7 @@ export default function CreatePostScreen() {
           {submitting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.postButtonText}>{editPost ? 'Save' : repostOfId ? 'Repost' : 'Post'}</Text>
+            <Text style={styles.postButtonText}>{editPost ? t('create_post.save', 'Save') : repostOfId ? t('create_post.repost_button', 'Repost') : t('create_post.post_button', 'Post')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -164,7 +166,7 @@ export default function CreatePostScreen() {
           <UserAvatar name={user?.name ?? '?'} photo={user?.photo} size={42} dotColor={null} />
           <TextInput
             style={styles.input}
-            placeholder={repostOfId ? 'Add a comment (optional)...' : "What's on your mind?"}
+            placeholder={repostOfId ? t('create_post.comment_placeholder', 'Add a comment (optional)...') : t('create_post.mind_placeholder', "What's on your mind?")}
             placeholderTextColor={SUBTLE}
             value={content}
             onChangeText={setContent}
@@ -198,7 +200,7 @@ export default function CreatePostScreen() {
         )}
 
         <View style={styles.privacyRow}>
-          <Text style={styles.privacyLabel}>Who can see this?</Text>
+          <Text style={styles.privacyLabel}>{t('create_post.who_can_see', 'Who can see this?')}</Text>
           <View style={styles.segmented}>
             {PRIVACY_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -208,7 +210,7 @@ export default function CreatePostScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.segmentText, privacy === opt.key && styles.segmentTextActive]}>
-                  {opt.label}
+                  {t(`create_post.privacy_${opt.labelKey}`, opt.label)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -228,7 +230,7 @@ export default function CreatePostScreen() {
               <ActivityIndicator size="small" color={EMERALD} />
             ) : (
               <Text style={styles.addPhotoText}>
-                {images.length > 0 ? `Add photos (${images.length}/${MAX_IMAGES})` : 'Add photos'}
+                {images.length > 0 ? `${t('create_post.add_photos', 'Add photos')} (${images.length}/${MAX_IMAGES})` : t('create_post.add_photos', 'Add photos')}
               </Text>
             )}
           </TouchableOpacity>

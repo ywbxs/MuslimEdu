@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'rea
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchStudentAnnouncements, Announcement } from '../../services/announcementService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -58,6 +59,7 @@ export default function StudentAnnouncementsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,13 +75,13 @@ export default function StudentAnnouncementsScreen() {
         const list = await fetchStudentAnnouncements(token);
         setAnnouncements(list);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load announcements.');
+        setError(e?.message ?? t('student_announcements.load_error', 'Could not load announcements.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -94,7 +96,7 @@ export default function StudentAnnouncementsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Announcements</Text>
+        <Text style={styles.headerTitle}>{t('student_announcements.title', 'Announcements')}</Text>
       </View>
 
       {error ? (
@@ -119,7 +121,7 @@ export default function StudentAnnouncementsScreen() {
           }}
           refreshing={isRefreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No announcements yet for your class.</Text>
+            <Text style={styles.emptyText}>{t('student_announcements.empty', 'No announcements yet for your class.')}</Text>
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
@@ -137,12 +139,12 @@ export default function StudentAnnouncementsScreen() {
                 >
                   <IconPaperclip color={EMERALD} />
                   <Text style={styles.attachmentText} numberOfLines={1}>
-                    {item.attachment_name ?? 'Attachment'}
+                    {item.attachment_name ?? t('student_announcements.attachment', 'Attachment')}
                   </Text>
                 </TouchableOpacity>
               ) : null}
               <Text style={styles.cardMeta}>
-                {item.teacher_name ?? 'Teacher'} · {item.subject_name ?? 'Whole class'} · {item.posted_at}
+                {item.teacher_name ?? t('student_announcements.teacher', 'Teacher')} · {item.subject_name ?? t('student_announcements.whole_class', 'Whole class')} · {item.posted_at}
               </Text>
             </View>
           )}

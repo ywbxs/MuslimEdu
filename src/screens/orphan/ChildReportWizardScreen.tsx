@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchReportStatus, submitReport, PickedPhoto } from '../../services/orphanService';
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
@@ -11,6 +12,10 @@ const EMERALD = '#0F9D58';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -55,6 +60,7 @@ function IconImage() {
 export default function ChildReportWizardScreen() {
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,14 +88,14 @@ export default function ChildReportWizardScreen() {
   }, [load]);
 
   const now = new Date();
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthLabel = `${t(`child_report_wizard.month_${MONTH_KEYS[now.getMonth()]}`, MONTH_NAMES[now.getMonth()])} ${now.getFullYear()}`;
 
   const handleSubmit = async () => {
     if (!token || !academicRating || !wellbeingRating) return;
     setIsSubmitting(true);
     try {
       await submitReport(token, { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating }, photos);
-      Alert.alert('Report submitted', 'Your monthly report has been sent to your school admin.');
+      Alert.alert(t('child_report_wizard.submitted_title', 'Report submitted'), t('child_report_wizard.submitted_body', 'Your monthly report has been sent to your school admin.'));
       setNote('');
       setAcademicRating(null);
       setWellbeingRating(null);
@@ -97,7 +103,7 @@ export default function ChildReportWizardScreen() {
       setStepIndex(0);
       await load();
     } catch (err) {
-      Alert.alert('Something went wrong', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('child_report_wizard.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -108,21 +114,21 @@ export default function ChildReportWizardScreen() {
       {
         id: 'summary',
         icon: <IconEdit />,
-        title: 'Monthly Summary',
-        subtitle: 'Share how this month went — activities, progress, and anything your school admin should know.',
+        title: t('child_report_wizard.summary_title', 'Monthly Summary'),
+        subtitle: t('child_report_wizard.summary_subtitle', 'Share how this month went — activities, progress, and anything your school admin should know.'),
         content: <NoteInput value={note} onChange={setNote} />,
         isValid: true,
       },
       {
         id: 'academic',
         icon: <IconCap />,
-        title: 'Academic Rating',
-        subtitle: 'Rate overall academic progress this month.',
+        title: t('child_report_wizard.academic_title', 'Academic Rating'),
+        subtitle: t('child_report_wizard.academic_subtitle', 'Rate overall academic progress this month.'),
         content: (
           <RatingSelector
             value={academicRating}
             onChange={setAcademicRating}
-            labels={{ 1: 'Needs Improve.', 3: 'Average', 5: 'Excellent' }}
+            labels={{ 1: t('child_report_wizard.needs_improve', 'Needs Improve.'), 3: t('child_report_wizard.average', 'Average'), 5: t('child_report_wizard.excellent', 'Excellent') }}
           />
         ),
         isValid: !!academicRating,
@@ -130,13 +136,13 @@ export default function ChildReportWizardScreen() {
       {
         id: 'wellbeing',
         icon: <IconHeart />,
-        title: 'Wellbeing Rating',
-        subtitle: 'Rate overall wellbeing and engagement this month.',
+        title: t('child_report_wizard.wellbeing_title', 'Wellbeing Rating'),
+        subtitle: t('child_report_wizard.wellbeing_subtitle', 'Rate overall wellbeing and engagement this month.'),
         content: (
           <RatingSelector
             value={wellbeingRating}
             onChange={setWellbeingRating}
-            labels={{ 1: 'Low', 3: 'Average', 5: 'Very High' }}
+            labels={{ 1: t('child_report_wizard.low', 'Low'), 3: t('child_report_wizard.average', 'Average'), 5: t('child_report_wizard.very_high', 'Very High') }}
           />
         ),
         isValid: !!wellbeingRating,
@@ -144,13 +150,13 @@ export default function ChildReportWizardScreen() {
       {
         id: 'photos',
         icon: <IconImage />,
-        title: 'Add Photos',
-        subtitle: 'Optional — add photos from this month (up to 5).',
+        title: t('child_report_wizard.photos_title', 'Add Photos'),
+        subtitle: t('child_report_wizard.photos_subtitle', 'Optional — add photos from this month (up to 5).'),
         content: <PhotoPicker photos={photos} onChange={setPhotos} />,
         isValid: true,
       },
     ],
-    [note, academicRating, wellbeingRating, photos],
+    [note, academicRating, wellbeingRating, photos, t],
   );
 
   if (isLoading) {
@@ -164,17 +170,17 @@ export default function ChildReportWizardScreen() {
   if (alreadySubmitted) {
     return (
       <View style={styles.center}>
-        <Text style={styles.doneTitle}>You're all set</Text>
-        <Text style={styles.doneBody}>Your report for {monthLabel} has already been submitted.</Text>
+        <Text style={styles.doneTitle}>{t('child_report_wizard.all_set', "You're all set")}</Text>
+        <Text style={styles.doneBody}>{t('child_report_wizard.already_submitted', 'Your report for {month} has already been submitted.').replace('{month}', monthLabel)}</Text>
       </View>
     );
   }
 
   return (
     <ReportStepWizard
-      headerTitle="Monthly Report"
+      headerTitle={t('child_report_wizard.header_title', 'Monthly Report')}
       monthLabel={monthLabel}
-      badgeLabel="Monthly Report"
+      badgeLabel={t('child_report_wizard.header_title', 'Monthly Report')}
       steps={steps}
       currentStepIndex={stepIndex}
       onStepChange={setStepIndex}

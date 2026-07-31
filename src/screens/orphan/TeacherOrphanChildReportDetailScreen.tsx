@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { MonthlyReport } from '../../services/orphanService';
 import { fetchChildReports } from '../../services/adminOrphanReportService';
 import { Skeleton } from '../../components/Skeleton';
@@ -35,6 +36,7 @@ export default function TeacherOrphanChildReportDetailScreen() {
   const route = useRoute();
   const { studentId, studentName } = (route.params as { studentId: number; studentName: string }) ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,9 +53,9 @@ export default function TeacherOrphanChildReportDetailScreen() {
       const data = await fetchChildReports(token, studentId);
       setReports(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports.');
+      setError(err instanceof Error ? err.message : t('teacher_orphan_child_report_detail.load_error', 'Failed to load reports.'));
     }
-  }, [token, studentId]);
+  }, [token, studentId, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -70,7 +72,7 @@ export default function TeacherOrphanChildReportDetailScreen() {
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{studentName}</Text>
         <View style={{ width: 40 }} />
@@ -91,14 +93,14 @@ export default function TeacherOrphanChildReportDetailScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.sectionLabel}>History</Text>
+          <Text style={styles.sectionLabel}>{t('teacher_orphan_child_report_detail.history', 'History')}</Text>
           {reports.length === 0 ? (
-            <Text style={styles.emptyText}>No reports submitted yet.</Text>
+            <Text style={styles.emptyText}>{t('teacher_orphan_child_report_detail.empty', 'No reports submitted yet.')}</Text>
           ) : (
             reports.map((report) => (
               <View key={report.id} style={styles.reportCard}>
@@ -107,8 +109,8 @@ export default function TeacherOrphanChildReportDetailScreen() {
                 </View>
 
                 <View style={styles.gaugeRow}>
-                  <RatingGauge label="Academic" value={report.academic_rating} color={EMERALD} />
-                  <RatingGauge label="Wellbeing" value={report.wellbeing_rating} color={GOLD} />
+                  <RatingGauge label={t('teacher_orphan_child_report_detail.academic', 'Academic')} value={report.academic_rating} color={EMERALD} />
+                  <RatingGauge label={t('teacher_orphan_child_report_detail.wellbeing', 'Wellbeing')} value={report.wellbeing_rating} color={GOLD} />
                 </View>
 
                 {report.note ? (
@@ -117,7 +119,7 @@ export default function TeacherOrphanChildReportDetailScreen() {
                   </View>
                 ) : null}
 
-                <Text style={styles.reportSubmittedBy}>Submitted by {report.submitted_by ?? 'unknown'}</Text>
+                <Text style={styles.reportSubmittedBy}>{t('teacher_orphan_child_report_detail.submitted_by', 'Submitted by')} {report.submitted_by ?? t('teacher_orphan_child_report_detail.unknown', 'unknown')}</Text>
 
                 {report.photos.length > 0 && (
                   <View style={styles.photoGrid}>

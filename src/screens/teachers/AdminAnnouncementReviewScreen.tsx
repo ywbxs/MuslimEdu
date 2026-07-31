@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 import { fetchAdminAnnouncementReview, Announcement } from '../../services/announcementService';
 import { Skeleton } from '../../components/Skeleton';
@@ -56,6 +57,7 @@ function Picker<T extends { id: number; name: string }>({
   onSelect: (id: number) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.pickerBlock}>
       <Text style={styles.pickerLabel}>{label}</Text>
@@ -70,7 +72,7 @@ function Picker<T extends { id: number; name: string }>({
             <Text style={[styles.chipText, selectedId === opt.id ? styles.chipTextActive : null]}>{opt.name}</Text>
           </TouchableOpacity>
         ))}
-        {options.length === 0 ? <Text style={styles.emptyPickerText}>Nothing available yet.</Text> : null}
+        {options.length === 0 ? <Text style={styles.emptyPickerText}>{t('admin_announcement_review.nothing_available', 'Nothing available yet.')}</Text> : null}
       </View>
     </View>
   );
@@ -84,6 +86,7 @@ export default function AdminAnnouncementReviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -102,9 +105,9 @@ export default function AdminAnnouncementReviewScreen() {
     setIsLoadingFilters(true);
     fetchClasses(token)
       .then(setClasses)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load classes.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_announcement_review.classes_error', 'Could not load classes.')))
       .finally(() => setIsLoadingFilters(false));
-  }, [token]);
+  }, [token, t]);
 
   const onSelectClass = useCallback(
     (id: number) => {
@@ -115,10 +118,10 @@ export default function AdminAnnouncementReviewScreen() {
       setIsLoadingSections(true);
       fetchSections(token, String(id))
         .then(setSections)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_announcement_review.sections_error', 'Could not load sections.')))
         .finally(() => setIsLoadingSections(false));
     },
-    [token]
+    [token, t]
   );
 
   const loadReview = useCallback(() => {
@@ -127,9 +130,9 @@ export default function AdminAnnouncementReviewScreen() {
     setError(null);
     fetchAdminAnnouncementReview(token, sectionId)
       .then(setAnnouncements)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load announcements.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_announcement_review.announcements_error', 'Could not load announcements.')))
       .finally(() => setIsLoadingReview(false));
-  }, [token, sectionId]);
+  }, [token, sectionId, t]);
 
   useEffect(() => {
     loadReview();
@@ -142,7 +145,7 @@ export default function AdminAnnouncementReviewScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Announcements Review</Text>
+        <Text style={styles.headerTitle}>{t('admin_announcement_review.title', 'Announcements Review')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -161,12 +164,12 @@ export default function AdminAnnouncementReviewScreen() {
               <Skeleton width="100%" height={80} borderRadius={12} />
             ) : (
               <>
-                <Picker label="Class" options={classes} selectedId={classId} onSelect={onSelectClass} />
+                <Picker label={t('admin_announcement_review.class', 'Class')} options={classes} selectedId={classId} onSelect={onSelectClass} />
                 {classId ? (
                   isLoadingSections ? (
                     <Skeleton width="100%" height={40} borderRadius={12} style={{ marginTop: 8 }} />
                   ) : (
-                    <Picker label="Section" options={sections} selectedId={sectionId} onSelect={setSectionId} />
+                    <Picker label={t('admin_announcement_review.section', 'Section')} options={sections} selectedId={sectionId} onSelect={setSectionId} />
                   )
                 ) : null}
               </>
@@ -178,8 +181,8 @@ export default function AdminAnnouncementReviewScreen() {
             ) : null}
             {!isLoadingReview && sectionId && announcements.length === 0 && !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No announcements yet</Text>
-                <Text style={styles.emptyDesc}>Nothing has been posted to this section so far.</Text>
+                <Text style={styles.emptyTitle}>{t('admin_announcement_review.empty_title', 'No announcements yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('admin_announcement_review.empty_desc', 'Nothing has been posted to this section so far.')}</Text>
               </View>
             ) : null}
           </>
@@ -200,12 +203,12 @@ export default function AdminAnnouncementReviewScreen() {
               >
                 <IconPaperclip color={EMERALD} />
                 <Text style={styles.attachmentText} numberOfLines={1}>
-                  {item.attachment_name ?? 'Attachment'}
+                  {item.attachment_name ?? t('admin_announcement_review.attachment', 'Attachment')}
                 </Text>
               </TouchableOpacity>
             ) : null}
             <Text style={styles.cardMeta}>
-              {item.teacher_name ?? 'Teacher'} · {item.subject_name ?? 'Whole class'} · {item.posted_at}
+              {item.teacher_name ?? t('admin_announcement_review.teacher', 'Teacher')} · {item.subject_name ?? t('admin_announcement_review.whole_class', 'Whole class')} · {item.posted_at}
             </Text>
           </View>
         )}

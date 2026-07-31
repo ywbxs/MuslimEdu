@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +49,7 @@ export default function ChatListScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,13 +131,13 @@ export default function ChatListScreen() {
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={styles.headerTitle}>{t('chat_list.title', 'Messages')}</Text>
         <TouchableOpacity
           style={styles.newMessageBtn}
           onPress={() => searchInputRef.current?.focus()}
           hitSlop={10}
         >
-          <Text style={styles.newMessageBtnText}>+ New Message</Text>
+          <Text style={styles.newMessageBtnText}>+ {t('chat_list.new_message', 'New Message')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -143,7 +145,7 @@ export default function ChatListScreen() {
         <TextInput
           ref={searchInputRef}
           style={styles.searchInput}
-          placeholder="Search people to message"
+          placeholder={t('chat_list.search_placeholder', 'Search people to message')}
           placeholderTextColor={SUBTLE}
           value={query}
           onChangeText={onSearchChange}
@@ -158,7 +160,7 @@ export default function ChatListScreen() {
             data={searchResults}
             keyExtractor={(item) => String(item.user_id)}
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={<Text style={styles.emptyText}>No matching users.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyText}>{t('chat_list.no_matching_users', 'No matching users.')}</Text>}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => onPickUser(item)}>
                 <TouchableOpacity onPress={() => setProfileUserId(item.user_id)} hitSlop={6}>
@@ -166,7 +168,7 @@ export default function ChatListScreen() {
                 </TouchableOpacity>
                 <View style={styles.rowText}>
                   <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.preview}>Tap to start a conversation</Text>
+                  <Text style={styles.preview}>{t('chat_list.tap_to_start', 'Tap to start a conversation')}</Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -180,7 +182,7 @@ export default function ChatListScreen() {
           keyExtractor={(item) => String(item.thread_id)}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No conversations yet - search above to message someone.</Text>
+            <Text style={styles.emptyText}>{t('chat_list.no_conversations', 'No conversations yet - search above to message someone.')}</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -202,7 +204,7 @@ export default function ChatListScreen() {
                     style={[styles.preview, item.unread_count > 0 && styles.previewUnread]}
                     numberOfLines={1}
                   >
-                    {item.last_message ?? 'Say hello 👋'}
+                    {item.last_message ?? t('chat_list.say_hello', 'Say hello 👋')}
                   </Text>
                   {item.unread_count > 0 && (
                     <View style={styles.badge}>

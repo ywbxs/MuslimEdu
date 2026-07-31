@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
@@ -215,10 +216,15 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { user, token } = useAuth();
+  const { t } = useLocale();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const childLabel = user?.is_orphan ? 'children' : 'students';
-  const childTitle = user?.is_orphan ? 'Children' : 'Students';
+  const childLabel = user?.is_orphan
+    ? t('admin_dashboard.children_label', 'children')
+    : t('admin_dashboard.students_label', 'students');
+  const childTitle = user?.is_orphan
+    ? t('admin_dashboard.children_title', 'Children')
+    : t('admin_dashboard.students_title', 'Students');
   // Orphan schools have no academic-hub concept (no sections/classes to
   // assign teachers to) - only the Monthly Reports feature applies to them,
   // shown separately below via MonthlyReportsCard.
@@ -246,54 +252,60 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   const isGradingLocked = subscriptionStatus?.active === false;
   const gradingLockedMessage =
     subscriptionStatus?.reason === 'expired'
-      ? 'Your subscription has expired. Renew it to manage grading systems.'
-      : 'Grading Systems needs an active subscription. Contact your account owner to unlock it.';
+      ? t(
+          'admin_dashboard.grading_locked_expired',
+          'Your subscription has expired. Renew it to manage grading systems.',
+        )
+      : t(
+          'admin_dashboard.grading_locked_no_subscription',
+          'Grading Systems needs an active subscription. Contact your account owner to unlock it.',
+        );
 
   const items: ManageItem[] = [
     {
       key: 'students',
       title: childTitle,
-      desc: `View and manage all ${childLabel}`,
+      desc: t('admin_dashboard.students_desc', 'View and manage all {childLabel}').replace('{childLabel}', childLabel),
       variant: 'solid',
       route: 'StudentsList',
       icon: (c) => <PeopleIcon color={c} />,
     },
     {
       key: 'teachers',
-      title: 'Teachers',
-      desc: 'Manage teachers and permissions',
+      title: t('admin_dashboard.teachers_title', 'Teachers'),
+      desc: t('admin_dashboard.teachers_desc', 'Manage teachers and permissions'),
       variant: 'soft',
       route: 'AdminTeacherList',
       icon: (c) => <PresentationIcon color={c} />,
     },
     {
       key: 'classes',
-      title: 'Academic',
-      desc: 'Assign class teachers to sections',
+      title: t('admin_dashboard.classes_title', 'Academic'),
+      desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),
       variant: 'soft',
       route: 'AdminClassTeacherAssign',
       icon: (c) => <BookIcon color={c} />,
     },
     {
       key: 'enrollment',
-      title: 'Enrollment',
-      desc: 'Configure enrollment stages',
+      title: t('admin_dashboard.enrollment_title', 'Enrollment'),
+      desc: t('admin_dashboard.enrollment_desc', 'Configure enrollment stages'),
       variant: 'soft',
       route: 'EnrollmentStages',
       icon: (c) => <StagesIcon color={c} />,
     },
     {
       key: 'academicSetup',
-      title: 'Academic Setup',
-      desc: 'Manage academic years and terms',
+      title: t('admin_dashboard.academic_setup_title', 'Academic Setup'),
+      desc: t('admin_dashboard.academic_setup_desc', 'Manage academic years and terms'),
       variant: 'soft',
       route: 'AcademicYears',
       icon: (c) => <GearIcon color={c} />,
     },
     {
       key: 'gradingSystems',
-      title: 'Grading Systems',
-      desc: 'Build grading systems and grade scales',
+      title: t('admin_dashboard.grading_systems_title', 'Grading Systems'),
+      desc: t('admin_dashboard.grading_systems_desc', 'Build grading systems and grade scales'),
       variant: 'soft',
       route: 'GradingSystems',
       icon: (c) => <GraduationCapIcon color={c} />,
@@ -302,8 +314,11 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'examCategories',
-      title: 'Exam Categories',
-      desc: 'Manage weighted components shared by Gradebook and Assessments',
+      title: t('admin_dashboard.exam_categories_title', 'Exam Categories'),
+      desc: t(
+        'admin_dashboard.exam_categories_desc',
+        'Manage weighted components shared by Gradebook and Assessments',
+      ),
       variant: 'soft',
       route: 'AdminExamCategories',
       icon: (c) => <ExamCategoriesIcon color={c} />,
@@ -312,8 +327,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'gradebookReview',
-      title: 'Gradebook Review',
-      desc: 'See the grades teachers have entered, by class and exam',
+      title: t('admin_dashboard.gradebook_review_title', 'Gradebook Review'),
+      desc: t('admin_dashboard.gradebook_review_desc', 'See the grades teachers have entered, by class and exam'),
       variant: 'soft',
       route: 'AdminGradebookReview',
       icon: (c) => <GradebookIcon color={c} />,
@@ -322,32 +337,38 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'announcementReview',
-      title: 'Announcements Review',
-      desc: 'See what teachers have posted, by class and section',
+      title: t('admin_dashboard.announcement_review_title', 'Announcements Review'),
+      desc: t('admin_dashboard.announcement_review_desc', 'See what teachers have posted, by class and section'),
       variant: 'soft',
       route: 'AdminAnnouncementReview',
       icon: (c) => <AnnouncementReviewIcon color={c} />,
     },
     {
       key: 'lessonPlanReview',
-      title: 'Lesson Plans Review',
-      desc: 'Approve or reject submitted lesson plans, by class and section',
+      title: t('admin_dashboard.lesson_plan_review_title', 'Lesson Plans Review'),
+      desc: t(
+        'admin_dashboard.lesson_plan_review_desc',
+        'Approve or reject submitted lesson plans, by class and section',
+      ),
       variant: 'soft',
       route: 'AdminLessonPlanReview',
       icon: (c) => <LessonPlanReviewIcon color={c} />,
     },
     {
       key: 'assessmentReview',
-      title: 'Assessments Review',
-      desc: 'See assignments, quizzes, and grading progress, by class and section',
+      title: t('admin_dashboard.assessment_review_title', 'Assessments Review'),
+      desc: t(
+        'admin_dashboard.assessment_review_desc',
+        'See assignments, quizzes, and grading progress, by class and section',
+      ),
       variant: 'soft',
       route: 'AdminAssessmentReview',
       icon: (c) => <AssessmentReviewIcon color={c} />,
     },
     {
       key: 'assessmentGrades',
-      title: 'Assessment Grades',
-      desc: 'Weighted grade breakdown by section and subject',
+      title: t('admin_dashboard.assessment_grades_title', 'Assessment Grades'),
+      desc: t('admin_dashboard.assessment_grades_desc', 'Weighted grade breakdown by section and subject'),
       variant: 'soft',
       route: 'AdminAssessmentGrades',
       icon: (c) => <ExamCategoriesIcon color={c} />,
@@ -356,256 +377,259 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'materialsReview',
-      title: 'Materials Review',
-      desc: 'See what teachers have shared, by section and subject',
+      title: t('admin_dashboard.materials_review_title', 'Materials Review'),
+      desc: t('admin_dashboard.materials_review_desc', 'See what teachers have shared, by section and subject'),
       variant: 'soft',
       route: 'AdminMaterialsReview',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'programsSubjects',
-      title: 'Programs & Subjects',
-      desc: 'Manage the school\'s program and subject catalog',
+      title: t('admin_dashboard.programs_subjects_title', 'Programs & Subjects'),
+      desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's program and subject catalog"),
       variant: 'soft',
       route: 'ProgramsCatalog',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'studentNumbers',
-      title: 'Student Numbers',
-      desc: 'Set how student numbers are built and previewed',
+      title: t('admin_dashboard.student_numbers_title', 'Student Numbers'),
+      desc: t('admin_dashboard.student_numbers_desc', 'Set how student numbers are built and previewed'),
       variant: 'soft',
       route: 'StudentNumberConfig',
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'academicFacilities',
-      title: 'Facilities',
-      desc: 'Buildings, rooms and learning spaces',
+      title: t('admin_dashboard.academic_facilities_title', 'Facilities'),
+      desc: t('admin_dashboard.academic_facilities_desc', 'Buildings, rooms and learning spaces'),
       variant: 'soft',
       route: 'AcademicFacilities',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'academicSchedule',
-      title: 'Timetable',
-      desc: 'Conflict-checked school schedules',
+      title: t('admin_dashboard.academic_schedule_title', 'Timetable'),
+      desc: t('admin_dashboard.academic_schedule_desc', 'Conflict-checked school schedules'),
       variant: 'soft',
       route: 'AcademicSchedule',
       icon: (c) => <CalendarIcon color={c} />,
     },
     {
       key: 'academicCalendar',
-      title: 'Calendar',
-      desc: 'Exams, holidays and school events',
+      title: t('admin_dashboard.academic_calendar_title', 'Calendar'),
+      desc: t('admin_dashboard.academic_calendar_desc', 'Exams, holidays and school events'),
       variant: 'soft',
       route: 'AcademicCalendar',
       icon: (c) => <CalendarIcon color={c} />,
     },
     {
       key: 'academicAnalytics',
-      title: 'Analytics',
-      desc: 'Read-only academic KPIs',
+      title: t('admin_dashboard.academic_analytics_title', 'Analytics'),
+      desc: t('admin_dashboard.academic_analytics_desc', 'Read-only academic KPIs'),
       variant: 'soft',
       route: 'AcademicAnalytics',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'completionHub',
-      title: 'Completion Hub',
-      desc: 'Six-phase release health and audit',
+      title: t('admin_dashboard.completion_hub_title', 'Completion Hub'),
+      desc: t('admin_dashboard.completion_hub_desc', 'Six-phase release health and audit'),
       variant: 'soft',
       route: 'AcademicCompletionHub',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'graduation',
-      title: 'Graduation & Completion',
-      desc: 'Requirement sets, eligibility, and approval decisions',
+      title: t('admin_dashboard.graduation_title', 'Graduation & Completion'),
+      desc: t('admin_dashboard.graduation_desc', 'Requirement sets, eligibility, and approval decisions'),
       variant: 'soft',
       route: 'AcademicGraduation',
       icon: (c) => <GraduationCapIcon color={c} />,
     },
     {
       key: 'promotionPolicy',
-      title: 'Promotion & Policy',
-      desc: 'Promotion, retention, remedial and probation rules',
+      title: t('admin_dashboard.promotion_policy_title', 'Promotion & Policy'),
+      desc: t('admin_dashboard.promotion_policy_desc', 'Promotion, retention, remedial and probation rules'),
       variant: 'soft',
       route: 'AcademicPolicy',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'documentTemplates',
-      title: 'Document Templates',
-      desc: 'Report cards, transcripts, COR and certificates',
+      title: t('admin_dashboard.document_templates_title', 'Document Templates'),
+      desc: t('admin_dashboard.document_templates_desc', 'Report cards, transcripts, COR and certificates'),
       variant: 'soft',
       route: 'DocumentTemplates',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'gradeRelease',
-      title: 'Grade Release',
-      desc: 'Release and lock finalized grades',
+      title: t('admin_dashboard.grade_release_title', 'Grade Release'),
+      desc: t('admin_dashboard.grade_release_desc', 'Release and lock finalized grades'),
       variant: 'soft',
       route: 'GradeRelease',
       icon: (c) => <GradebookIcon color={c} />,
     },
     {
       key: 'studentIdRules',
-      title: 'Student ID Rules',
-      desc: 'Configure the student ID format and preview',
+      title: t('admin_dashboard.student_id_rules_title', 'Student ID Rules'),
+      desc: t('admin_dashboard.student_id_rules_desc', 'Configure the student ID format and preview'),
       variant: 'soft',
       route: 'StudentIdConfig',
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'studentLifecycle',
-      title: 'Student Lifecycle',
-      desc: 'Transfers, withdrawals, reactivation and archive',
+      title: t('admin_dashboard.student_lifecycle_title', 'Student Lifecycle'),
+      desc: t('admin_dashboard.student_lifecycle_desc', 'Transfers, withdrawals, reactivation and archive'),
       variant: 'soft',
       route: 'StudentLifecycle',
       icon: (c) => <PeopleIcon color={c} />,
     },
     {
       key: 'timetableConflicts',
-      title: 'Timetable Conflicts',
-      desc: 'Check room and teacher scheduling conflicts',
+      title: t('admin_dashboard.timetable_conflicts_title', 'Timetable Conflicts'),
+      desc: t('admin_dashboard.timetable_conflicts_desc', 'Check room and teacher scheduling conflicts'),
       variant: 'soft',
       route: 'TimetableConflicts',
       icon: (c) => <CalendarIcon color={c} />,
     },
     {
       key: 'attendanceConfig',
-      title: 'Attendance Config',
-      desc: 'Statuses and capture methods for your school',
+      title: t('admin_dashboard.attendance_config_title', 'Attendance Config'),
+      desc: t('admin_dashboard.attendance_config_desc', 'Statuses and capture methods for your school'),
       variant: 'soft',
       route: 'AttendanceConfig',
       icon: (c) => <GearIcon color={c} />,
     },
     {
       key: 'permissions',
-      title: 'Permissions',
-      desc: 'Role capabilities and optional modules',
+      title: t('admin_dashboard.permissions_title', 'Permissions'),
+      desc: t('admin_dashboard.permissions_desc', 'Role capabilities and optional modules'),
       variant: 'soft',
       route: 'Permissions',
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'security',
-      title: 'Security',
-      desc: 'Two-factor authentication and device sessions',
+      title: t('admin_dashboard.security_title', 'Security'),
+      desc: t('admin_dashboard.security_desc', 'Two-factor authentication and device sessions'),
       variant: 'soft',
       route: 'SecuritySettings',
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'orgStructure',
-      title: 'Org Structure',
-      desc: 'Faculties, colleges, institutes, streams',
+      title: t('admin_dashboard.org_structure_title', 'Org Structure'),
+      desc: t('admin_dashboard.org_structure_desc', 'Faculties, colleges, institutes, streams'),
       variant: 'soft',
       route: 'OrgStructure',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'behaviorIncidents',
-      title: 'Behavior & Discipline',
-      desc: 'School-wide behavior incidents',
+      title: t('admin_dashboard.behavior_incidents_title', 'Behavior & Discipline'),
+      desc: t('admin_dashboard.behavior_incidents_desc', 'School-wide behavior incidents'),
       variant: 'soft',
       route: 'BehaviorIncidents',
       icon: (c) => <GearIcon color={c} />,
     },
     {
       key: 'examinations',
-      title: 'Examinations',
-      desc: 'Schedule exams and manage grades',
+      title: t('admin_dashboard.examinations_title', 'Examinations'),
+      desc: t('admin_dashboard.examinations_desc', 'Schedule exams and manage grades'),
       variant: 'soft',
       route: 'Examinations',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'studentProgress',
-      title: 'Student Progress',
-      desc: 'Attendance, grades, behavior, memorization',
+      title: t('admin_dashboard.student_progress_title', 'Student Progress'),
+      desc: t('admin_dashboard.student_progress_desc', 'Attendance, grades, behavior, memorization'),
       variant: 'soft',
       route: 'StudentProgress',
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'integrationSettings',
-      title: 'Integrations',
-      desc: 'Finance, library and third-party connections',
+      title: t('admin_dashboard.integration_settings_title', 'Integrations'),
+      desc: t('admin_dashboard.integration_settings_desc', 'Finance, library and third-party connections'),
       variant: 'soft',
       route: 'IntegrationSettings',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'localizationSettings',
-      title: 'Localization',
-      desc: 'Languages, RTL and translation management',
+      title: t('admin_dashboard.localization_settings_title', 'Localization'),
+      desc: t('admin_dashboard.localization_settings_desc', 'Languages, RTL and translation management'),
       variant: 'soft',
       route: 'LocalizationSettings',
       icon: (c) => <GearIcon color={c} />,
     },
     {
       key: 'authorizationAudit',
-      title: 'Authorization Audit',
-      desc: 'Review role access and permission changes',
+      title: t('admin_dashboard.authorization_audit_title', 'Authorization Audit'),
+      desc: t('admin_dashboard.authorization_audit_desc', 'Review role access and permission changes'),
       variant: 'soft',
       route: 'AuthorizationAudit',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'analyticsExtended',
-      title: 'Analytics Dashboard',
-      desc: 'Extended KPIs and school-wide reporting',
+      title: t('admin_dashboard.analytics_extended_title', 'Analytics Dashboard'),
+      desc: t('admin_dashboard.analytics_extended_desc', 'Extended KPIs and school-wide reporting'),
       variant: 'soft',
       route: 'AnalyticsDashboard',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'notifications',
-      title: 'Notifications',
-      desc: 'Academic updates, grade releases and schedule changes',
+      title: t('admin_dashboard.notifications_title', 'Notifications'),
+      desc: t('admin_dashboard.notifications_desc', 'Academic updates, grade releases and schedule changes'),
       variant: 'soft',
       route: 'Notifications',
       icon: (c) => <AnnouncementReviewIcon color={c} />,
     },
     {
       key: 'fees',
-      title: 'Fee Reports',
-      desc: 'View and manage fee collections',
+      title: t('admin_dashboard.fees_title', 'Fee Reports'),
+      desc: t('admin_dashboard.fees_desc', 'View and manage fee collections'),
       variant: 'solid',
       route: null,
       icon: (c) => <DocumentIcon color={c} />,
     },
     {
       key: 'attendance',
-      title: 'Attendance',
-      desc: 'Track daily attendance',
+      title: t('admin_dashboard.attendance_title', 'Attendance'),
+      desc: t('admin_dashboard.attendance_desc', 'Track daily attendance'),
       variant: 'soft',
       route: 'AdminAttendanceAnalytics',
       icon: (c) => <CalendarIcon color={c} />,
     },
     {
       key: 'studentDocumentRequests',
-      title: 'Document Requests',
-      desc: 'Issue or reject student document requests',
+      title: t('admin_dashboard.student_document_requests_title', 'Document Requests'),
+      desc: t('admin_dashboard.student_document_requests_desc', 'Issue or reject student document requests'),
       variant: 'soft',
       route: 'AdminStudentDocuments',
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
       key: 'studentServiceRequests',
-      title: 'Service Requests',
-      desc: 'Guidance, counselling and other student tickets',
+      title: t('admin_dashboard.student_service_requests_title', 'Service Requests'),
+      desc: t(
+        'admin_dashboard.student_service_requests_desc',
+        'Guidance, counselling and other student tickets',
+      ),
       variant: 'soft',
       route: 'AdminStudentServices',
       icon: (c) => <CatalogIcon color={c} />,
     },
     {
       key: 'accountSettings',
-      title: 'Account Settings',
-      desc: 'Language, theme, privacy and password',
+      title: t('admin_dashboard.account_settings_title', 'Account Settings'),
+      desc: t('admin_dashboard.account_settings_desc', 'Language, theme, privacy and password'),
       variant: 'soft',
       route: 'AccountSettings',
       icon: (c) => <GearIcon color={c} />,
@@ -679,7 +703,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
         {/* Greeting + avatar (foreground, scrolls at normal speed over the bg) */}
         <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
+            <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
             <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
           </View>
           <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
@@ -696,7 +720,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
-          <Text style={styles.sectionLabel}>Manage</Text>
+          <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
           <View style={styles.grid}>
             {items.map((item) => {
               const solid = item.variant === 'solid';
@@ -708,7 +732,10 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
                   style={[styles.card, solid ? styles.cardSolid : styles.cardSoft]}
                   onPress={() => {
                     if (item.locked) {
-                      Alert.alert('Locked', item.lockedMessage ?? 'This feature is currently locked.');
+                      Alert.alert(
+                        t('admin_dashboard.locked_title', 'Locked'),
+                        item.lockedMessage ?? t('admin_dashboard.locked_default_message', 'This feature is currently locked.'),
+                      );
                       return;
                     }
                     if (item.route) (navigation as any).navigate(item.route);

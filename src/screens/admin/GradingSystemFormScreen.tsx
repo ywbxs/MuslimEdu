@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -64,6 +65,7 @@ export default function GradingSystemFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const gradingSystemId: number | undefined = route.params?.gradingSystemId;
   const isEditing = !!gradingSystemId;
@@ -86,7 +88,7 @@ export default function GradingSystemFormScreen() {
         const systems = await fetchGradingSystems(token);
         const system = systems.find((s) => s.id === gradingSystemId);
         if (!system) {
-          setError('Grading system not found.');
+          setError(t('grading_system_form.not_found', 'Grading system not found.'));
           return;
         }
         setName(system.name);
@@ -95,22 +97,22 @@ export default function GradingSystemFormScreen() {
         setIsDefault(system.is_default);
         setIsActive(system.status === 'active');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load grading system.');
+        setError(err instanceof Error ? err.message : t('grading_system_form.load_error', 'Failed to load grading system.'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [isEditing, gradingSystemId, token]);
+  }, [isEditing, gradingSystemId, token, t]);
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('grading_system_form.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Grading system name is required.');
+      Alert.alert(t('common.error', 'Error'), t('grading_system_form.name_required', 'Grading system name is required.'));
       return;
     }
 
@@ -130,7 +132,7 @@ export default function GradingSystemFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the grading system.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('grading_system_form.save_error', 'Could not save the grading system.'));
     } finally {
       setSubmitting(false);
     }
@@ -144,7 +146,7 @@ export default function GradingSystemFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? 'Edit Grading System' : 'Add Grading System'}
+            {isEditing ? t('grading_system_form.edit_title', 'Edit Grading System') : t('grading_system_form.add_title', 'Add Grading System')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -171,39 +173,39 @@ export default function GradingSystemFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Name</Text>
+        <Text style={styles.label}>{t('grading_system_form.name_label', 'Name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. High School Percentage Grading"
+          placeholder={t('grading_system_form.name_placeholder', 'e.g. High School Percentage Grading')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Type</Text>
+        <Text style={styles.label}>{t('grading_system_form.type_label', 'Type')}</Text>
         <View style={styles.typeGrid}>
-          {GRADING_SYSTEM_TYPES.map((t) => {
-            const selected = t === type;
+          {GRADING_SYSTEM_TYPES.map((gt) => {
+            const selected = gt === type;
             return (
               <TouchableOpacity
-                key={t}
+                key={gt}
                 style={[styles.typeOption, selected && styles.typeOptionSelected]}
-                onPress={() => setType(t)}
+                onPress={() => setType(gt)}
               >
                 <Text style={[styles.typeOptionText, selected && styles.typeOptionTextSelected]}>
-                  {TYPE_LABELS[t]}
+                  {t(`grading_system_form.type_${gt}`, TYPE_LABELS[gt])}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <Text style={styles.label}>Description (optional)</Text>
+        <Text style={styles.label}>{t('grading_system_form.description_label', 'Description (optional)')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder="Notes on when/where this grading system applies"
+          placeholder={t('grading_system_form.description_placeholder', 'Notes on when/where this grading system applies')}
           placeholderTextColor={theme.textMuted}
           multiline
           numberOfLines={3}
@@ -211,9 +213,9 @@ export default function GradingSystemFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Default</Text>
+            <Text style={styles.switchLabel}>{t('grading_system_form.default', 'Default')}</Text>
             <Text style={styles.switchHelp}>
-              The default grading system is used when nothing more specific applies.
+              {t('grading_system_form.default_help', 'The default grading system is used when nothing more specific applies.')}
             </Text>
           </View>
           <Switch value={isDefault} onValueChange={setIsDefault} trackColor={{ true: theme.accent }} />
@@ -221,9 +223,9 @@ export default function GradingSystemFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Active</Text>
+            <Text style={styles.switchLabel}>{t('grading_system_form.active', 'Active')}</Text>
             <Text style={styles.switchHelp}>
-              Inactive grading systems are hidden from new assignments but kept for history.
+              {t('grading_system_form.active_help', 'Inactive grading systems are hidden from new assignments but kept for history.')}
             </Text>
           </View>
           <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: theme.accent }} />
@@ -237,7 +239,7 @@ export default function GradingSystemFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Grading System'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('grading_system_form.save_changes', 'Save Changes') : t('grading_system_form.add_title', 'Add Grading System')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

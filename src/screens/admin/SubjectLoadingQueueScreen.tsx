@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import subjectLoadingService from '../../services/subjectLoadingService';
+import {useLocale} from '../../context/LocaleContext';
 
 const C = {
   bg: '#F5F7F6',
@@ -38,12 +39,12 @@ const C = {
 };
 
 const FILTERS = [
-  {key: '', label: 'All'},
-  {key: 'draft', label: 'Draft'},
-  {key: 'submitted', label: 'For approval'},
-  {key: 'approved', label: 'Approved'},
-  {key: 'rejected', label: 'Returned'},
-  {key: 'cancelled', label: 'Cancelled'},
+  {key: '', labelKey: 'all', label: 'All'},
+  {key: 'draft', labelKey: 'draft', label: 'Draft'},
+  {key: 'submitted', labelKey: 'for_approval', label: 'For approval'},
+  {key: 'approved', labelKey: 'approved', label: 'Approved'},
+  {key: 'rejected', labelKey: 'returned', label: 'Returned'},
+  {key: 'cancelled', labelKey: 'cancelled', label: 'Cancelled'},
 ];
 
 function toneFor(status: string) {
@@ -62,6 +63,7 @@ function toneFor(status: string) {
 type Props = {navigation: any};
 
 export default function SubjectLoadingQueueScreen({navigation}: Props) {
+  const {t} = useLocale();
   const [rows, setRows] = useState<any[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [status, setStatus] = useState('');
@@ -81,12 +83,12 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
       setRows(res.loadings || []);
       setCounts(res.counts || {});
     } catch (e: any) {
-      setError(e.message || 'Could not load the subject loading queue.');
+      setError(e.message || t('subject_loading_queue.load_error', 'Could not load the subject loading queue.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [status, search]);
+  }, [status, search, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -101,9 +103,9 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
   return (
     <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Text style={s.title}>Subject Loading</Text>
+        <Text style={s.title}>{t('subject_loading_queue.title', 'Subject Loading')}</Text>
         <Text style={s.subtitle}>
-          {counts.submitted || 0} waiting for approval
+          {counts.submitted || 0} {t('subject_loading_queue.waiting_for_approval', 'waiting for approval')}
         </Text>
       </View>
 
@@ -120,7 +122,7 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
               style={[s.chip, active ? s.chipActive : null]}
               onPress={() => setStatus(f.key)}>
               <Text style={[s.chipText, active ? s.chipTextActive : null]}>
-                {f.label}
+                {t(`subject_loading_queue.filter_${f.labelKey}`, f.label)}
                 {f.key && counts[f.key] ? ' ' + counts[f.key] : ''}
               </Text>
             </TouchableOpacity>
@@ -130,7 +132,7 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
 
       <TextInput
         style={s.search}
-        placeholder={'Search student name'}
+        placeholder={t('subject_loading_queue.search_placeholder', 'Search student name')}
         placeholderTextColor={C.muted}
         value={search}
         onChangeText={setSearch}
@@ -171,14 +173,14 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
                 }>
                 <View style={{flex: 1}}>
                   <Text style={s.rowTitle}>
-                    {item.student_name || 'Student #' + item.student_id}
+                    {item.student_name || `${t('subject_loading_queue.student_hash', 'Student #')}${item.student_id}`}
                   </Text>
                   <Text style={s.rowMeta}>
-                    {item.total_subjects} subjects · {item.total_units} units
+                    {item.total_subjects} {t('subject_loading_queue.subjects', 'subjects')} · {item.total_units} {t('subject_loading_queue.units', 'units')}
                     {item.load_number ? ' · ' + item.load_number : ''}
                   </Text>
                   {item.has_override ? (
-                    <Text style={s.overrideTag}>Contains an override</Text>
+                    <Text style={s.overrideTag}>{t('subject_loading_queue.contains_override', 'Contains an override')}</Text>
                   ) : null}
                 </View>
                 <View style={[s.badge, {backgroundColor: tone.bg}]}>
@@ -191,7 +193,7 @@ export default function SubjectLoadingQueueScreen({navigation}: Props) {
           }}
           ListEmptyComponent={
             <View style={s.center}>
-              <Text style={s.muted}>Nothing here yet.</Text>
+              <Text style={s.muted}>{t('subject_loading_queue.empty', 'Nothing here yet.')}</Text>
             </View>
           }
         />

@@ -10,6 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
 import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
@@ -254,6 +255,7 @@ function StatItem({
 
 export default function StudentDashboard() {
   const { user, token } = useAuth();
+  const { t } = useLocale();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -288,8 +290,14 @@ export default function StudentDashboard() {
   }, [isOrphan, token]);
 
   const handlePlaceholderPress = useCallback((title: string) => {
-    Alert.alert('Coming soon', `${title} isn't wired up yet - tell me which to build out next.`);
-  }, []);
+    Alert.alert(
+      t('student_dashboard.coming_soon_title', 'Coming soon'),
+      t('student_dashboard.coming_soon_message', "{title} isn't wired up yet - tell me which to build out next.").replace(
+        '{title}',
+        title,
+      ),
+    );
+  }, [t]);
 
   // --- Overview stats: wired to real submission history (orphan-only). ---
   const history = status?.history ?? [];
@@ -352,7 +360,7 @@ export default function StudentDashboard() {
         {/* Greeting */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.greetingSmall}>Assalamu Alaykum,</Text>
+            <Text style={styles.greetingSmall}>{t('student_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
             <Text style={styles.greetingName}>{user?.name}</Text>
           </View>
           <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
@@ -373,13 +381,15 @@ export default function StudentDashboard() {
                 <PersonIcon color={PALE_GREEN} size={22} />
               </View>
               <View>
-                <Text style={styles.glassTitle}>Profile</Text>
-                <Text style={styles.glassSubtitle}>Your personal information</Text>
+                <Text style={styles.glassTitle}>{t('student_dashboard.profile_title', 'Profile')}</Text>
+                <Text style={styles.glassSubtitle}>
+                  {t('student_dashboard.profile_subtitle', 'Your personal information')}
+                </Text>
               </View>
             </View>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => handlePlaceholderPress('Editing your profile')}
+              onPress={() => handlePlaceholderPress(t('student_dashboard.editing_profile', 'Editing your profile'))}
               hitSlop={8}
             >
               <PencilIcon color={PALE_GREEN} size={16} />
@@ -387,13 +397,17 @@ export default function StudentDashboard() {
           </View>
 
           <View style={styles.glassDivider} />
-          <GlassRow icon={<PersonIcon />} label="Name" value={user?.name} />
+          <GlassRow icon={<PersonIcon />} label={t('student_dashboard.name_label', 'Name')} value={user?.name} />
           <View style={styles.glassDivider} />
-          <GlassRow icon={<MailIcon />} label="Email" value={user?.email} />
+          <GlassRow icon={<MailIcon />} label={t('student_dashboard.email_label', 'Email')} value={user?.email} />
           {user?.code ? (
             <>
               <View style={styles.glassDivider} />
-              <GlassRow icon={<IdCardIcon />} label="Student Code" value={user.code} />
+              <GlassRow
+                icon={<IdCardIcon />}
+                label={t('student_dashboard.student_code_label', 'Student Code')}
+                value={user.code}
+              />
             </>
           ) : null}
         </View>
@@ -418,11 +432,17 @@ export default function StudentDashboard() {
               <DocCheckIcon color="#FFFFFF" size={24} />
             </View>
             <View style={styles.reportTextWrap}>
-              <Text style={styles.reportTitle}>Monthly Report</Text>
+              <Text style={styles.reportTitle}>{t('student_dashboard.monthly_report_title', 'Monthly Report')}</Text>
               <Text style={styles.reportSubtitle}>
                 {status?.submitted_this_month
-                  ? 'Submitted for this month - view your history any time'
-                  : 'Submit how your month went, and see your submission history'}
+                  ? t(
+                      'student_dashboard.monthly_report_submitted',
+                      'Submitted for this month - view your history any time',
+                    )
+                  : t(
+                      'student_dashboard.monthly_report_pending',
+                      'Submit how your month went, and see your submission history',
+                    )}
               </Text>
             </View>
             <View style={styles.reportArrowButton}>
@@ -433,12 +453,12 @@ export default function StudentDashboard() {
 
         {/* Quick Actions */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('student_dashboard.quick_actions', 'Quick Actions')}</Text>
           <TouchableOpacity
             style={styles.viewAllRow}
-            onPress={() => handlePlaceholderPress('Viewing all quick actions')}
+            onPress={() => handlePlaceholderPress(t('student_dashboard.viewing_all_actions', 'Viewing all quick actions'))}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{t('common.view_all', 'View All')}</Text>
             <ChevronRightIcon color={EMERALD} size={15} />
           </TouchableOpacity>
         </View>
@@ -448,40 +468,40 @@ export default function StudentDashboard() {
           {isOrphan ? (
             <QuickActionCard
               icon={<DocumentIcon color={EMERALD} size={20} />}
-              title="My Reports"
-              description="View your report submissions"
+              title={t('student_dashboard.my_reports_title', 'My Reports')}
+              description={t('student_dashboard.my_reports_desc', 'View your report submissions')}
               onPress={() => (navigation as any).navigate('OrphanReport')}
             />
           ) : null}
           <QuickActionCard
             icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-            title="My Progress"
-            description="Track your learning progress"
+            title={t('student_dashboard.my_progress_title', 'My Progress')}
+            description={t('student_dashboard.my_progress_desc', 'Track your learning progress')}
             onPress={() => (navigation as any).navigate('MyProgress')}
           />
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
-            title="Notifications"
-            description="Stay updated with important alerts"
+            title={t('student_dashboard.notifications_title', 'Notifications')}
+            description={t('student_dashboard.notifications_desc', 'Stay updated with important alerts')}
             badge={0}
             onPress={() => (navigation as any).navigate('Notifications')}
           />
           <QuickActionCard
             icon={<DocumentIcon color={EMERALD} size={20} />}
-            title="Documents"
-            description="Request report cards, COR and certificates"
+            title={t('student_dashboard.documents_title', 'Documents')}
+            description={t('student_dashboard.documents_desc', 'Request report cards, COR and certificates')}
             onPress={() => (navigation as any).navigate('StudentDocuments')}
           />
           <QuickActionCard
             icon={<CheckCircleIcon color={EMERALD} size={20} />}
-            title="Services"
-            description="Guidance, counselling and other requests"
+            title={t('student_dashboard.services_title', 'Services')}
+            description={t('student_dashboard.services_desc', 'Guidance, counselling and other requests')}
             onPress={() => (navigation as any).navigate('StudentServices')}
           />
           <QuickActionCard
             icon={<GearIcon color={EMERALD} size={20} />}
-            title="Settings"
-            description="Language, theme, privacy and password"
+            title={t('student_dashboard.settings_title', 'Settings')}
+            description={t('student_dashboard.settings_desc', 'Language, theme, privacy and password')}
             onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
@@ -490,10 +510,10 @@ export default function StudentDashboard() {
         {isOrphan ? (
           <View style={styles.overviewCard}>
             <View style={styles.overviewHeaderRow}>
-              <Text style={styles.overviewTitle}>This Month Overview</Text>
+              <Text style={styles.overviewTitle}>{t('student_dashboard.month_overview_title', 'This Month Overview')}</Text>
               <TouchableOpacity
                 style={styles.monthPill}
-                onPress={() => handlePlaceholderPress('Choosing a different month')}
+                onPress={() => handlePlaceholderPress(t('student_dashboard.choosing_month', 'Choosing a different month'))}
               >
                 <Text style={styles.monthPillText}>{monthLabel}</Text>
                 <ChevronDownIcon color={SUBTLE} size={14} />
@@ -512,22 +532,36 @@ export default function StudentDashboard() {
               </View>
             ) : (
               <View style={styles.statsRow}>
-                <StatItem icon={<DocumentIcon color={EMERALD} size={20} />} value={reportsSubmitted} label="Reports Submitted" />
+                <StatItem
+                  icon={<DocumentIcon color={EMERALD} size={20} />}
+                  value={reportsSubmitted}
+                  label={t('student_dashboard.reports_submitted_label', 'Reports Submitted')}
+                />
                 <StatItem
                   icon={<StarIcon color={EMERALD} size={20} />}
                   value={averageScore}
                   unit={averageScore !== '-' ? '%' : undefined}
-                  label="Average Score"
+                  label={t('student_dashboard.average_score_label', 'Average Score')}
                 />
-                <StatItem icon={<CheckCircleIcon color={EMERALD} size={20} />} value="-" label="Activities Completed" />
-                <StatItem icon={<ClockIcon color={EMERALD} size={20} />} value="-" label="Time Spent" />
+                <StatItem
+                  icon={<CheckCircleIcon color={EMERALD} size={20} />}
+                  value="-"
+                  label={t('student_dashboard.activities_completed_label', 'Activities Completed')}
+                />
+                <StatItem
+                  icon={<ClockIcon color={EMERALD} size={20} />}
+                  value="-"
+                  label={t('student_dashboard.time_spent_label', 'Time Spent')}
+                />
               </View>
             )}
 
             <View style={styles.noteBox}>
               <Text style={styles.noteText}>
-                Reports Submitted and Average Score are wired to your real submission history.
-                Activities Completed and Time Spent will connect once those features are built.
+                {t(
+                  'student_dashboard.stats_note',
+                  'Reports Submitted and Average Score are wired to your real submission history. Activities Completed and Time Spent will connect once those features are built.',
+                )}
               </Text>
             </View>
           </View>

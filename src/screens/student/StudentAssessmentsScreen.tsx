@@ -4,6 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchStudentAssessments, submitAssessmentWork, Assessment } from '../../services/assessmentService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -38,12 +39,12 @@ function IconPaperclip({ color, size = 14 }: { color: string; size?: number }) {
   );
 }
 
-function statusInfo(a: Assessment): { label: string; color: string } {
+function statusInfo(t: (key: string, fallback?: string) => string, a: Assessment): { label: string; color: string } {
   const s = a.my_submission;
-  if (!s) return a.is_overdue ? { label: 'Overdue', color: RED } : { label: 'Not started', color: SUBTLE };
-  if (s.status === 'graded') return { label: `Graded · ${s.score ?? '—'}${a.max_score != null ? `/${a.max_score}` : ''}`, color: EMERALD };
-  if (s.status === 'resubmission_requested') return { label: 'Resubmit requested', color: AMBER };
-  return { label: 'Submitted', color: EMERALD };
+  if (!s) return a.is_overdue ? { label: t('student_assessments.overdue', 'Overdue'), color: RED } : { label: t('student_assessments.not_started', 'Not started'), color: SUBTLE };
+  if (s.status === 'graded') return { label: `${t('student_assessments.graded', 'Graded')} · ${s.score ?? '—'}${a.max_score != null ? `/${a.max_score}` : ''}`, color: EMERALD };
+  if (s.status === 'resubmission_requested') return { label: t('student_assessments.resubmit_requested', 'Resubmit requested'), color: AMBER };
+  return { label: t('student_assessments.submitted', 'Submitted'), color: EMERALD };
 }
 
 function CardSkeleton() {
@@ -64,6 +65,7 @@ export default function StudentAssessmentsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,13 +86,13 @@ export default function StudentAssessmentsScreen() {
         const list = await fetchStudentAssessments(token);
         setAssessments(list);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load your assignments.');
+        setError(e?.message ?? t('student_assessments.load_error', 'Could not load your assignments.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -115,7 +117,7 @@ export default function StudentAssessmentsScreen() {
   const submit = async () => {
     if (!token || !active) return;
     if (!textResponse.trim() && !attachment) {
-      Alert.alert('Nothing to submit', 'Write a response or attach a file first.');
+      Alert.alert(t('student_assessments.nothing_to_submit_title', 'Nothing to submit'), t('student_assessments.nothing_to_submit_message', 'Write a response or attach a file first.'));
       return;
     }
     setIsSubmitting(true);
@@ -128,7 +130,7 @@ export default function StudentAssessmentsScreen() {
       setActive(null);
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not submit', e?.message ?? 'Please try again.');
+      Alert.alert(t('student_assessments.submit_error', 'Could not submit'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +150,7 @@ export default function StudentAssessmentsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assignments</Text>
+        <Text style={styles.headerTitle}>{t('student_assessments.title', 'Assignments')}</Text>
       </View>
 
       {error ? (
@@ -172,9 +174,9 @@ export default function StudentAssessmentsScreen() {
             load({ silent: true });
           }}
           refreshing={isRefreshing}
-          ListEmptyComponent={<Text style={styles.emptyText}>Nothing assigned right now.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('student_assessments.empty', 'Nothing assigned right now.')}</Text>}
           renderItem={({ item }) => {
-            const info = statusInfo(item);
+            const info = statusInfo(t, item);
             return (
               <TouchableOpacity style={styles.card} onPress={() => openSubmit(item)} activeOpacity={0.85}>
                 <View style={styles.cardTopRow}>
@@ -187,11 +189,11 @@ export default function StudentAssessmentsScreen() {
                 </View>
                 <Text style={styles.cardMeta}>
                   {item.subject_name} · {item.type}
-                  {item.due_at ? ` · due ${item.due_at.slice(0, 10)}` : ''}
+                  {item.due_at ? ` · ${t('student_assessments.due', 'due')} ${item.due_at.slice(0, 10)}` : ''}
                 </Text>
                 {item.my_submission?.feedback ? (
                   <Text style={styles.feedbackNote} numberOfLines={2}>
-                    Feedback: {item.my_submission.feedback}
+                    {t('student_assessments.feedback', 'Feedback')}: {item.my_submission.feedback}
                   </Text>
                 ) : null}
                 {item.attachment_url ? (
@@ -201,7 +203,7 @@ export default function StudentAssessmentsScreen() {
                   >
                     <IconPaperclip color={EMERALD} />
                     <Text style={styles.attachmentText} numberOfLines={1}>
-                      {item.attachment_name ?? 'Prompt attachment'}
+                      {item.attachment_name ?? t('student_assessments.prompt_attachment', 'Prompt attachment')}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -220,15 +222,15 @@ export default function StudentAssessmentsScreen() {
 
               {active && !canSubmit(active) ? (
                 <Text style={{ color: RED, fontSize: 12.5, marginTop: 10 }}>
-                  This has already been graded and can't be resubmitted.
+                  {t('student_assessments.graded_locked', "This has already been graded and can't be resubmitted.")}
                 </Text>
               ) : (
                 <>
-                  <Text style={styles.fieldLabel}>Your response</Text>
+                  <Text style={styles.fieldLabel}>{t('student_assessments.your_response', 'Your response')}</Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     multiline
-                    placeholder="Type your answer here"
+                    placeholder={t('student_assessments.response_placeholder', 'Type your answer here')}
                     placeholderTextColor={SUBTLE}
                     value={textResponse}
                     onChangeText={setTextResponse}
@@ -240,12 +242,12 @@ export default function StudentAssessmentsScreen() {
                         {attachment.name}
                       </Text>
                       <TouchableOpacity onPress={() => setAttachment(null)}>
-                        <Text style={{ color: RED, fontSize: 12 }}>Remove</Text>
+                        <Text style={{ color: RED, fontSize: 12 }}>{t('student_assessments.remove', 'Remove')}</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity style={styles.attachButton} onPress={pickAttachment}>
-                      <Text style={styles.attachButtonText}>Attach a file</Text>
+                      <Text style={styles.attachButtonText}>{t('student_assessments.attach_file', 'Attach a file')}</Text>
                     </TouchableOpacity>
                   )}
 
@@ -255,13 +257,13 @@ export default function StudentAssessmentsScreen() {
                     disabled={isSubmitting}
                   >
                     <Text style={styles.modalBtnPrimaryText}>
-                      {active?.my_submission ? 'Resubmit' : 'Submit'}
+                      {active?.my_submission ? t('student_assessments.resubmit', 'Resubmit') : t('student_assessments.submit', 'Submit')}
                     </Text>
                   </TouchableOpacity>
                 </>
               )}
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 14 }} onPress={() => setActive(null)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Close</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

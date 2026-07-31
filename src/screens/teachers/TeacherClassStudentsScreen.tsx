@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClassStudents, ClassStudent } from '../../services/teacherClassService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
@@ -86,6 +87,7 @@ function DetailRow({ icon, label, value }: { icon: React.ReactElement; label: st
 }
 
 function StudentSheet({ student, onClose }: { student: ClassStudent | null; onClose: () => void }) {
+  const { t } = useLocale();
   return (
     <Modal visible={!!student} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
@@ -98,9 +100,9 @@ function StudentSheet({ student, onClose }: { student: ClassStudent | null; onCl
               <UserAvatar name={student.name} photo={student.photo} size={84} dotColor={null} style={{ alignSelf: 'center', marginBottom: 16 }} />
               <Text style={styles.sheetName}>{student.name}</Text>
               <View style={styles.detailCard}>
-                <DetailRow icon={<IconMail color={SUBTLE} />} label="Email" value={student.email} />
-                <DetailRow icon={<IconPhone color={SUBTLE} />} label="Phone" value={student.phone} />
-                <DetailRow icon={<IconPin color={SUBTLE} />} label="Address" value={student.address} />
+                <DetailRow icon={<IconMail color={SUBTLE} />} label={t('teacher_class_students.email', 'Email')} value={student.email} />
+                <DetailRow icon={<IconPhone color={SUBTLE} />} label={t('teacher_class_students.phone', 'Phone')} value={student.phone} />
+                <DetailRow icon={<IconPin color={SUBTLE} />} label={t('teacher_class_students.address', 'Address')} value={student.address} />
               </View>
             </ScrollView>
           ) : null}
@@ -128,6 +130,7 @@ export default function TeacherClassStudentsScreen() {
   const route = useRoute<any>();
   const { sectionId, classLabel } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [students, setStudents] = useState<ClassStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,13 +147,13 @@ export default function TeacherClassStudentsScreen() {
         const data = await fetchClassStudents(token, sectionId);
         setStudents(data.students);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load the class roster.');
+        setError(err instanceof Error ? err.message : t('teacher_class_students.load_error', 'Could not load the class roster.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token, sectionId]
+    [token, sectionId, t]
   );
 
   useFocusEffect(
@@ -171,7 +174,7 @@ export default function TeacherClassStudentsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? 'Class Roster'}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? t('teacher_class_students.title', 'Class Roster')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -191,8 +194,8 @@ export default function TeacherClassStudentsScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No students enrolled yet</Text>
-                <Text style={styles.emptyDesc}>Once students are admitted into this section, they'll show up here.</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_class_students.empty_title', 'No students enrolled yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('teacher_class_students.empty_desc', "Once students are admitted into this section, they'll show up here.")}</Text>
               </View>
             ) : null
           }

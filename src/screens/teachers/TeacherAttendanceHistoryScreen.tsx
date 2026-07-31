@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-nat
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAttendanceHistory,
   fetchAttendanceRoster,
@@ -29,6 +30,13 @@ const STATUS_META: Record<AttendanceStatus, { label: string; color: string; soft
   absent: { label: 'Absent', color: '#E5484D', soft: '#FCEDED' },
   excused: { label: 'Excused', color: '#4C6EF5', soft: '#EAEDFC' },
   leave: { label: 'Leave', color: '#8A5CF6', soft: '#F0EAFC' },
+};
+const STATUS_LABEL_KEYS: Record<AttendanceStatus, string> = {
+  present: 'present',
+  late: 'late',
+  absent: 'absent',
+  excused: 'excused',
+  leave: 'leave',
 };
 
 const RANGE_PRESETS: { key: string; label: string; days: number }[] = [
@@ -73,6 +81,7 @@ export default function TeacherAttendanceHistoryScreen() {
   const route = useRoute<any>();
   const { sectionId, subjectId, classLabel, subjectLabel } = route.params ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [rangeKey, setRangeKey] = useState('30d');
   const [records, setRecords] = useState<HistoryRecord[]>([]);
@@ -104,11 +113,11 @@ export default function TeacherAttendanceHistoryScreen() {
       });
       setNameById(map);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load attendance history.');
+      setError(err instanceof Error ? err.message : t('teacher_attendance_history.load_error', 'Could not load attendance history.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, sectionId, subjectId, range]);
+  }, [token, sectionId, subjectId, range, t]);
 
   useEffect(() => {
     load();
@@ -134,7 +143,7 @@ export default function TeacherAttendanceHistoryScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? 'Attendance History'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{classLabel ?? t('teacher_attendance_history.title', 'Attendance History')}</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>{subjectLabel ?? ''}</Text>
         </View>
         <View style={{ width: 32 }} />
@@ -147,7 +156,7 @@ export default function TeacherAttendanceHistoryScreen() {
             style={[styles.chip, rangeKey === preset.key && styles.chipActive]}
             onPress={() => setRangeKey(preset.key)}
           >
-            <Text style={[styles.chipText, rangeKey === preset.key && styles.chipTextActive]}>{preset.label}</Text>
+            <Text style={[styles.chipText, rangeKey === preset.key && styles.chipTextActive]}>{t(`teacher_attendance_history.range_${preset.key}`, preset.label)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -167,8 +176,8 @@ export default function TeacherAttendanceHistoryScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No records in this range</Text>
-                <Text style={styles.emptyDesc}>Attendance you take for this class will show up here.</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_attendance_history.empty_title', 'No records in this range')}</Text>
+                <Text style={styles.emptyDesc}>{t('teacher_attendance_history.empty_desc', 'Attendance you take for this class will show up here.')}</Text>
               </View>
             ) : null
           }
@@ -187,10 +196,10 @@ export default function TeacherAttendanceHistoryScreen() {
             return (
               <View style={styles.row}>
                 <Text style={styles.rowName} numberOfLines={1}>
-                  {nameById[item.student_id] ?? `Student #${item.student_id}`}
+                  {nameById[item.student_id] ?? `${t('teacher_attendance_history.student_hash', 'Student #')}${item.student_id}`}
                 </Text>
                 <View style={[styles.statusPill, { backgroundColor: meta.soft }]}>
-                  <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.label}</Text>
+                  <Text style={[styles.statusPillText, { color: meta.color }]}>{t(`teacher_attendance_history.status_${STATUS_LABEL_KEYS[item.status]}`, meta.label)}</Text>
                 </View>
               </View>
             );

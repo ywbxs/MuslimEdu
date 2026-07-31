@@ -10,6 +10,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchAttendanceClasses, AttendanceClassOption } from '../../services/teacherAttendanceService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -87,6 +88,7 @@ export default function TeacherAttendanceClassesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
   const [classes, setClasses] = useState<AttendanceClassOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -101,13 +103,13 @@ export default function TeacherAttendanceClassesScreen() {
         const data = await fetchAttendanceClasses(token);
         setClasses(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load your attendance classes.');
+        setError(err instanceof Error ? err.message : t('teacher_attendance_classes.load_error', 'Could not load your attendance classes.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -128,7 +130,7 @@ export default function TeacherAttendanceClassesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Take Attendance</Text>
+        <Text style={styles.headerTitle}>{t('teacher_attendance_classes.title', 'Take Attendance')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -147,9 +149,9 @@ export default function TeacherAttendanceClassesScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>Nothing to take attendance for yet</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_attendance_classes.empty_title', 'Nothing to take attendance for yet')}</Text>
                 <Text style={styles.emptyDesc}>
-                  You'll see a card here once you're made a class teacher or assigned to teach a subject period.
+                  {t('teacher_attendance_classes.empty_desc', "You'll see a card here once you're made a class teacher or assigned to teach a subject period.")}
                 </Text>
               </View>
             ) : null
@@ -172,7 +174,7 @@ export default function TeacherAttendanceClassesScreen() {
                     sectionId: item.section_id,
                     subjectId: item.subject_id,
                     classLabel: `${item.class_name ?? ''} - ${item.section_name}`.trim(),
-                    subjectLabel: item.subject_name ?? (isHomeroom ? 'Homeroom / Daily' : 'Subject'),
+                    subjectLabel: item.subject_name ?? (isHomeroom ? t('teacher_attendance_classes.homeroom_daily', 'Homeroom / Daily') : t('teacher_attendance_classes.subject', 'Subject')),
                     date: todayISO(),
                   })
                 }
@@ -182,12 +184,12 @@ export default function TeacherAttendanceClassesScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>
-                    {item.class_name ?? 'Class'} - {item.section_name}
+                    {item.class_name ?? t('teacher_attendance_classes.class_fallback', 'Class')} - {item.section_name}
                   </Text>
                   <View style={styles.cardMetaRow}>
                     <View style={[styles.pill, isHomeroom ? styles.pillEmerald : styles.pillAmber]}>
                       <Text style={[styles.pillText, isHomeroom ? styles.pillTextEmerald : styles.pillTextAmber]}>
-                        {isHomeroom ? 'Homeroom' : item.subject_name ?? 'Subject'}
+                        {isHomeroom ? t('teacher_attendance_classes.homeroom', 'Homeroom') : item.subject_name ?? t('teacher_attendance_classes.subject', 'Subject')}
                       </Text>
                     </View>
                     {!isHomeroom && item.start_time ? (

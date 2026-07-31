@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import DashboardShell, { SUBTLE, INK } from './DashboardShell';
+import { useLocale } from '../../context/LocaleContext';
 
 interface PlaceholderDashboardProps {
   roleLabel: string;
@@ -13,13 +14,13 @@ interface PlaceholderDashboardProps {
  * (see AdminDashboard.tsx as the reference pattern) as each role gets built.
  */
 export default function PlaceholderDashboard({ roleLabel, footer }: PlaceholderDashboardProps) {
+  const { t } = useLocale();
   return (
     <DashboardShell title={roleLabel} footer={footer}>
       <View style={styles.center}>
-        <Text style={styles.title}>{roleLabel} dashboard</Text>
+        <Text style={styles.title}>{roleLabel} {t('placeholder_dashboard.dashboard', 'dashboard')}</Text>
         <Text style={styles.subtitle}>
-          This dashboard hasn't been built yet — login and logout already
-          work for this role, we just haven't added the features.
+          {t('placeholder_dashboard.not_built', "This dashboard hasn't been built yet — login and logout already work for this role, we just haven't added the features.")}
         </Text>
       </View>
     </DashboardShell>

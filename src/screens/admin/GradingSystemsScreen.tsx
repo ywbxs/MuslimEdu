@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -58,6 +59,7 @@ export default function GradingSystemsScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [systems, setSystems] = useState<GradingSystem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,11 +72,11 @@ export default function GradingSystemsScreen() {
       const data = await fetchGradingSystems(token);
       setSystems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load grading systems.');
+      setError(err instanceof Error ? err.message : t('grading_systems.load_error', 'Failed to load grading systems.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,12 +86,12 @@ export default function GradingSystemsScreen() {
 
   const handleDelete = (system: GradingSystem) => {
     Alert.alert(
-      'Delete Grading System',
-      `Delete "${system.name}"? This can't be undone.`,
+      t('grading_systems.delete_title', 'Delete Grading System'),
+      `${t('grading_systems.delete_confirm', 'Delete')} "${system.name}"? ${t('grading_systems.delete_irreversible', "This can't be undone.")}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('grading_systems.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
@@ -100,7 +102,7 @@ export default function GradingSystemsScreen() {
               // Backend blocks deletion while grade scales still exist under
               // it - surface that message as-is, same convention as
               // AcademicYearsScreen's delete-in-use handling.
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete grading system.');
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('grading_systems.delete_error', 'Failed to delete grading system.'));
             }
           },
         },
@@ -125,26 +127,26 @@ export default function GradingSystemsScreen() {
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
           {item.is_default ? (
             <View style={styles.defaultBadge}>
-              <Text style={styles.defaultBadgeText}>Default</Text>
+              <Text style={styles.defaultBadgeText}>{t('grading_systems.default', 'Default')}</Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.metaRow}>
           <View style={styles.typeChip}>
-            <Text style={styles.typeChipText}>{TYPE_LABELS[item.type] ?? item.type}</Text>
+            <Text style={styles.typeChipText}>{t(`grading_systems.type_${item.type}`, TYPE_LABELS[item.type] ?? item.type)}</Text>
           </View>
           {item.status === 'inactive' ? (
             <View style={styles.inactiveChip}>
-              <Text style={styles.inactiveChipText}>Inactive</Text>
+              <Text style={styles.inactiveChipText}>{t('grading_systems.inactive', 'Inactive')}</Text>
             </View>
           ) : null}
         </View>
 
         <Text style={styles.scaleStatus}>
           {scale
-            ? `Scale "${scale.name}" v${scale.version} · ${scale.bands?.length ?? 0} bands`
-            : 'No grade scale defined yet'}
+            ? `${t('grading_systems.scale', 'Scale')} "${scale.name}" v${scale.version} · ${scale.bands?.length ?? 0} ${t('grading_systems.bands', 'bands')}`
+            : t('grading_systems.no_scale', 'No grade scale defined yet')}
         </Text>
 
         <View style={styles.cardFooter}>
@@ -154,10 +156,10 @@ export default function GradingSystemsScreen() {
               (navigation as any).navigate('GradingSystemForm', { gradingSystemId: item.id })
             }
           >
-            <Text style={styles.editButtonText}>Edit</Text>
+            <Text style={styles.editButtonText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('grading_systems.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -178,7 +180,7 @@ export default function GradingSystemsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Grading Systems</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('grading_systems.title', 'Grading Systems')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
@@ -199,7 +201,7 @@ export default function GradingSystemsScreen() {
           style={styles.addButton}
           onPress={() => (navigation as any).navigate('GradingSystemForm')}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -207,13 +209,13 @@ export default function GradingSystemsScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
       <Text style={styles.helperText}>
-        Define how grades are computed and labeled. Tap a system to build or version its grade scale.
+        {t('grading_systems.helper', 'Define how grades are computed and labeled. Tap a system to build or version its grade scale.')}
       </Text>
 
       <FlatList
@@ -224,9 +226,9 @@ export default function GradingSystemsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="🎓"
-            title="No grading systems yet"
-            subtitle="Add a grading system (e.g. Percentage, GPA) to start building grade scales."
-            actionLabel="Add Grading System"
+            title={t('grading_systems.empty_title', 'No grading systems yet')}
+            subtitle={t('grading_systems.empty_subtitle', 'Add a grading system (e.g. Percentage, GPA) to start building grade scales.')}
+            actionLabel={t('grading_systems.add_system', 'Add Grading System')}
             onAction={() => (navigation as any).navigate('GradingSystemForm')}
             colors={theme}
           />

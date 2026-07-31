@@ -22,6 +22,7 @@ import {
 import subjectLoadingService, {
   SubjectLoading,
 } from '../../services/subjectLoadingService';
+import {useLocale} from '../../context/LocaleContext';
 
 const C = {
   bg: '#F5F7F6',
@@ -39,6 +40,7 @@ const C = {
 type Props = {navigation: any; route: any};
 
 export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
+  const {t} = useLocale();
   const loadingId: number = route?.params?.loadingId;
 
   const [record, setRecord] = useState<SubjectLoading | null>(null);
@@ -65,11 +67,11 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
         setAudits([]);
       }
     } catch (e: any) {
-      setError(e.message || 'Could not load this record.');
+      setError(e.message || t('subject_loading_detail.load_error', 'Could not load this record.'));
     } finally {
       setFetching(false);
     }
-  }, [loadingId]);
+  }, [loadingId, t]);
 
   useEffect(() => {
     fetchAll();
@@ -80,10 +82,10 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
       setBusy(true);
       const res = await fn();
       setRecord(res.loading);
-      Alert.alert('Done', okMessage);
+      Alert.alert(t('subject_loading_detail.done', 'Done'), okMessage);
       fetchAll();
     } catch (e: any) {
-      Alert.alert('Could not complete', e.message || 'Unknown error.');
+      Alert.alert(t('subject_loading_detail.could_not_complete', 'Could not complete'), e.message || t('subject_loading_detail.unknown_error', 'Unknown error.'));
     } finally {
       setBusy(false);
     }
@@ -91,7 +93,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
 
   const submitReason = () => {
     if (reason.trim().length < 5) {
-      Alert.alert('Reason required', 'Give a short reason. It is stored in the audit trail.');
+      Alert.alert(t('subject_loading_detail.reason_required_title', 'Reason required'), t('subject_loading_detail.reason_required_message', 'Give a short reason. It is stored in the audit trail.'));
       return;
     }
     const kind = reasonOpen;
@@ -102,12 +104,12 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
     if (kind === 'reject') {
       run(
         () => subjectLoadingService.reject(loadingId, text),
-        'Returned to the adviser for correction.',
+        t('subject_loading_detail.returned_message', 'Returned to the adviser for correction.'),
       );
     } else {
       run(
         () => subjectLoadingService.cancel(loadingId, text),
-        'Subject load cancelled and seats released.',
+        t('subject_loading_detail.cancelled_message', 'Subject load cancelled and seats released.'),
       );
     }
   };
@@ -123,7 +125,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
   if (error || !record) {
     return (
       <SafeAreaView style={s.center}>
-        <Text style={s.errorTitle}>Not available</Text>
+        <Text style={s.errorTitle}>{t('subject_loading_detail.not_available', 'Not available')}</Text>
         <Text style={s.muted}>{error}</Text>
       </SafeAreaView>
     );
@@ -137,13 +139,13 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
       <ScrollView contentContainerStyle={{paddingBottom: 40}}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={s.back}>Back</Text>
+            <Text style={s.back}>{t('common.back', 'Back')}</Text>
           </TouchableOpacity>
           <Text style={s.title}>
-            {student?.name || 'Student #' + record.student_id}
+            {student?.name || `${t('subject_loading_detail.student_hash', 'Student #')}${record.student_id}`}
           </Text>
           <Text style={s.subtitle}>
-            {record.load_number || 'No load number yet'} ·{' '}
+            {record.load_number || t('subject_loading_detail.no_load_number', 'No load number yet')} ·{' '}
             {record.status.toUpperCase()}
           </Text>
         </View>
@@ -152,39 +154,39 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
           <View style={s.statRow}>
             <View style={s.stat}>
               <Text style={s.statValue}>{record.total_subjects}</Text>
-              <Text style={s.statLabel}>subjects</Text>
+              <Text style={s.statLabel}>{t('subject_loading_detail.subjects', 'subjects')}</Text>
             </View>
             <View style={s.stat}>
               <Text style={s.statValue}>{record.total_units}</Text>
-              <Text style={s.statLabel}>units</Text>
+              <Text style={s.statLabel}>{t('subject_loading_detail.units', 'units')}</Text>
             </View>
             <View style={s.stat}>
-              <Text style={s.statValue}>{record.has_override ? 'Yes' : 'No'}</Text>
-              <Text style={s.statLabel}>overrides</Text>
+              <Text style={s.statValue}>{record.has_override ? t('common.yes', 'Yes') : t('common.no', 'No')}</Text>
+              <Text style={s.statLabel}>{t('subject_loading_detail.overrides', 'overrides')}</Text>
             </View>
           </View>
         </View>
 
         {record.rejection_reason ? (
           <View style={s.warnCard}>
-            <Text style={s.warnTitle}>Returned</Text>
+            <Text style={s.warnTitle}>{t('subject_loading_detail.returned', 'Returned')}</Text>
             <Text style={s.warnBody}>{record.rejection_reason}</Text>
           </View>
         ) : null}
 
-        <Text style={s.sectionTitle}>Loaded subjects</Text>
+        <Text style={s.sectionTitle}>{t('subject_loading_detail.loaded_subjects', 'Loaded subjects')}</Text>
         {record.items.map(item => (
           <View key={item.id} style={s.card}>
             <Text style={s.itemTitle}>
               {item.subject_code ? item.subject_code + ' - ' : ''}
-              {item.subject_name || 'Subject #' + item.subject_id}
+              {item.subject_name || `${t('subject_loading_detail.subject_hash', 'Subject #')}${item.subject_id}`}
             </Text>
             <Text style={s.itemMeta}>
-              {item.units} units · {item.load_type} · {item.status}
+              {item.units} {t('subject_loading_detail.units', 'units')} · {item.load_type} · {item.status}
             </Text>
             {item.is_override ? (
               <View style={s.overrideBox}>
-                <Text style={s.overrideTitle}>Override authorised</Text>
+                <Text style={s.overrideTitle}>{t('subject_loading_detail.override_authorised', 'Override authorised')}</Text>
                 <Text style={s.overrideBody}>{item.override_reason}</Text>
                 {(item.violated_rules || []).map((v, i) => (
                   <Text key={i} style={s.overrideRule}>
@@ -198,33 +200,33 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
                 style={s.dropBtn}
                 onPress={() =>
                   Alert.prompt
-                    ? Alert.prompt('Drop subject', 'Reason', (text: string) =>
+                    ? Alert.prompt(t('subject_loading_detail.drop_subject_title', 'Drop subject'), t('subject_loading_detail.reason', 'Reason'), (text: string) =>
                         run(
-                          () => subjectLoadingService.dropItem(item.id, text || 'Dropped'),
-                          'Subject dropped.',
+                          () => subjectLoadingService.dropItem(item.id, text || t('subject_loading_detail.dropped', 'Dropped')),
+                          t('subject_loading_detail.dropped_message', 'Subject dropped.'),
                         ),
                       )
                     : run(
                         () =>
-                          subjectLoadingService.dropItem(item.id, 'Dropped by registrar'),
-                        'Subject dropped.',
+                          subjectLoadingService.dropItem(item.id, t('subject_loading_detail.dropped_by_registrar', 'Dropped by registrar')),
+                        t('subject_loading_detail.dropped_message', 'Subject dropped.'),
                       )
                 }>
-                <Text style={s.dropBtnText}>Drop this subject</Text>
+                <Text style={s.dropBtnText}>{t('subject_loading_detail.drop_this_subject', 'Drop this subject')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
         ))}
 
-        <Text style={s.sectionTitle}>Audit trail</Text>
+        <Text style={s.sectionTitle}>{t('subject_loading_detail.audit_trail', 'Audit trail')}</Text>
         {audits.length === 0 ? (
-          <Text style={s.mutedPad}>No audit entries.</Text>
+          <Text style={s.mutedPad}>{t('subject_loading_detail.no_audit_entries', 'No audit entries.')}</Text>
         ) : (
           audits.map(a => (
             <View key={a.id} style={s.auditRow}>
               <Text style={s.auditAction}>{a.action}</Text>
               <Text style={s.auditMeta}>
-                {a.actor_name || 'System'} · {a.created_at}
+                {a.actor_name || t('subject_loading_detail.system', 'System')} · {a.created_at}
               </Text>
               {a.remarks ? <Text style={s.auditRemark}>{a.remarks}</Text> : null}
             </View>
@@ -241,7 +243,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
               setReason('');
               setReasonOpen('cancel');
             }}>
-            <Text style={s.secondaryBtnText}>Cancel load</Text>
+            <Text style={s.secondaryBtnText}>{t('subject_loading_detail.cancel_load', 'Cancel load')}</Text>
           </TouchableOpacity>
         ) : null}
         {canApprove ? (
@@ -252,7 +254,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
               setReason('');
               setReasonOpen('reject');
             }}>
-            <Text style={s.secondaryBtnText}>Return</Text>
+            <Text style={s.secondaryBtnText}>{t('subject_loading_detail.return', 'Return')}</Text>
           </TouchableOpacity>
         ) : null}
         {canApprove ? (
@@ -262,11 +264,11 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
             onPress={() =>
               run(
                 () => subjectLoadingService.approve(loadingId),
-                'Subject load approved and locked.',
+                t('subject_loading_detail.approved_message', 'Subject load approved and locked.'),
               )
             }>
             <Text style={s.primaryBtnText}>
-              {busy ? 'Working...' : 'Approve'}
+              {busy ? t('subject_loading_detail.working', 'Working...') : t('subject_loading_detail.approve', 'Approve')}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -276,11 +278,11 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
         <View style={s.modalWrap}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>
-              {reasonOpen === 'reject' ? 'Return for correction' : 'Cancel this load'}
+              {reasonOpen === 'reject' ? t('subject_loading_detail.return_for_correction', 'Return for correction') : t('subject_loading_detail.cancel_this_load', 'Cancel this load')}
             </Text>
             <TextInput
               style={s.modalInput}
-              placeholder={'Reason'}
+              placeholder={t('subject_loading_detail.reason', 'Reason')}
               placeholderTextColor={C.muted}
               multiline
               value={reason}
@@ -290,12 +292,12 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
               <TouchableOpacity
                 style={s.secondaryBtn}
                 onPress={() => setReasonOpen(null)}>
-                <Text style={s.secondaryBtnText}>Close</Text>
+                <Text style={s.secondaryBtnText}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.primaryBtn, {flex: 1}]}
                 onPress={submitReason}>
-                <Text style={s.primaryBtnText}>Confirm</Text>
+                <Text style={s.primaryBtnText}>{t('subject_loading_detail.confirm', 'Confirm')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 import {
   fetchAdminAssessmentReview,
@@ -23,10 +24,10 @@ const RED = '#B3261E';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const STATUS_FILTERS: { key: 'all' | AssessmentStatus; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'draft', label: 'Draft' },
-  { key: 'published', label: 'Published' },
+const STATUS_FILTERS: { key: 'all' | AssessmentStatus; labelKey: string; label: string }[] = [
+  { key: 'all', labelKey: 'all', label: 'All' },
+  { key: 'draft', labelKey: 'draft', label: 'Draft' },
+  { key: 'published', labelKey: 'published', label: 'Published' },
 ];
 
 function IconChevronLeft({ color }: { color: string }) {
@@ -50,6 +51,7 @@ function Picker<T extends { id: number; name: string }>({
   onSelect: (id: number) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.pickerBlock}>
       <Text style={styles.pickerLabel}>{label}</Text>
@@ -64,7 +66,7 @@ function Picker<T extends { id: number; name: string }>({
             <Text style={[styles.chipText, selectedId === opt.id ? styles.chipTextActive : null]}>{opt.name}</Text>
           </TouchableOpacity>
         ))}
-        {options.length === 0 ? <Text style={styles.emptyPickerText}>Nothing available yet.</Text> : null}
+        {options.length === 0 ? <Text style={styles.emptyPickerText}>{t('admin_assessment_review.nothing_available', 'Nothing available yet.')}</Text> : null}
       </View>
     </View>
   );
@@ -79,6 +81,7 @@ export default function AdminAssessmentReviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -101,9 +104,9 @@ export default function AdminAssessmentReviewScreen() {
     setIsLoadingFilters(true);
     fetchClasses(token)
       .then(setClasses)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load classes.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_review.classes_error', 'Could not load classes.')))
       .finally(() => setIsLoadingFilters(false));
-  }, [token]);
+  }, [token, t]);
 
   const onSelectClass = useCallback(
     (id: number) => {
@@ -114,10 +117,10 @@ export default function AdminAssessmentReviewScreen() {
       setIsLoadingSections(true);
       fetchSections(token, String(id))
         .then(setSections)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_review.sections_error', 'Could not load sections.')))
         .finally(() => setIsLoadingSections(false));
     },
-    [token]
+    [token, t]
   );
 
   const loadReview = useCallback(() => {
@@ -129,9 +132,9 @@ export default function AdminAssessmentReviewScreen() {
       status: statusFilter === 'all' ? undefined : statusFilter,
     })
       .then(setAssessments)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load assessments.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_review.assessments_error', 'Could not load assessments.')))
       .finally(() => setIsLoadingReview(false));
-  }, [token, sectionId, statusFilter]);
+  }, [token, sectionId, statusFilter, t]);
 
   useEffect(() => {
     loadReview();
@@ -159,7 +162,7 @@ export default function AdminAssessmentReviewScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assessments Review</Text>
+        <Text style={styles.headerTitle}>{t('admin_assessment_review.title', 'Assessments Review')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -178,16 +181,16 @@ export default function AdminAssessmentReviewScreen() {
               <Skeleton width="100%" height={80} borderRadius={12} />
             ) : (
               <>
-                <Picker label="Class" options={classes} selectedId={classId} onSelect={onSelectClass} />
+                <Picker label={t('admin_assessment_review.class', 'Class')} options={classes} selectedId={classId} onSelect={onSelectClass} />
                 {classId ? (
                   isLoadingSections ? (
                     <Skeleton width="100%" height={40} borderRadius={12} style={{ marginTop: 8 }} />
                   ) : (
-                    <Picker label="Section" options={sections} selectedId={sectionId} onSelect={setSectionId} />
+                    <Picker label={t('admin_assessment_review.section', 'Section')} options={sections} selectedId={sectionId} onSelect={setSectionId} />
                   )
                 ) : null}
                 <View style={styles.pickerBlock}>
-                  <Text style={styles.pickerLabel}>Status</Text>
+                  <Text style={styles.pickerLabel}>{t('admin_assessment_review.status', 'Status')}</Text>
                   <View style={styles.chipWrap}>
                     {STATUS_FILTERS.map((f) => (
                       <TouchableOpacity
@@ -195,7 +198,7 @@ export default function AdminAssessmentReviewScreen() {
                         style={[styles.chip, statusFilter === f.key && styles.chipActive]}
                         onPress={() => setStatusFilter(f.key)}
                       >
-                        <Text style={[styles.chipText, statusFilter === f.key && styles.chipTextActive]}>{f.label}</Text>
+                        <Text style={[styles.chipText, statusFilter === f.key && styles.chipTextActive]}>{t(`admin_assessment_review.filter_${f.labelKey}`, f.label)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -209,8 +212,8 @@ export default function AdminAssessmentReviewScreen() {
             ) : null}
             {!isLoadingReview && sectionId && assessments.length === 0 && !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>Nothing here yet</Text>
-                <Text style={styles.emptyDesc}>No assessments match this section/status.</Text>
+                <Text style={styles.emptyTitle}>{t('admin_assessment_review.empty_title', 'Nothing here yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('admin_assessment_review.empty_desc', 'No assessments match this section/status.')}</Text>
               </View>
             ) : null}
           </>
@@ -230,11 +233,11 @@ export default function AdminAssessmentReviewScreen() {
             <Text style={styles.cardMeta}>
               {item.teacher_name} · {item.subject_name} · {item.type}
               {item.exam_category_name ? ` · ${item.exam_category_name}${item.exam_category_weight != null ? ` (${item.exam_category_weight}%)` : ''}` : ''}
-              {item.due_at ? ` · due ${item.due_at.slice(0, 10)}` : ''}
+              {item.due_at ? ` · ${t('admin_assessment_review.due', 'due')} ${item.due_at.slice(0, 10)}` : ''}
             </Text>
             {item.status === 'published' ? (
               <Text style={styles.cardStats}>
-                {item.submission_count ?? 0} submitted · {item.graded_count ?? 0} graded
+                {item.submission_count ?? 0} {t('admin_assessment_review.submitted', 'submitted')} · {item.graded_count ?? 0} {t('admin_assessment_review.graded', 'graded')}
               </Text>
             ) : null}
           </TouchableOpacity>
@@ -257,21 +260,21 @@ export default function AdminAssessmentReviewScreen() {
                 data={detailSubmissions}
                 keyExtractor={(s) => String(s.id)}
                 style={{ maxHeight: 320, marginTop: 12 }}
-                ListEmptyComponent={<Text style={styles.emptyDesc}>No submissions yet.</Text>}
+                ListEmptyComponent={<Text style={styles.emptyDesc}>{t('admin_assessment_review.no_submissions', 'No submissions yet.')}</Text>}
                 renderItem={({ item }) => (
                   <View style={styles.subRow}>
                     <Text style={styles.subName} numberOfLines={1}>
                       {item.student_name}
                     </Text>
                     <Text style={styles.subStatus}>
-                      {item.status === 'graded' ? `${item.score ?? '—'} pts` : item.status}
+                      {item.status === 'graded' ? `${item.score ?? '—'} ${t('admin_assessment_review.pts', 'pts')}` : item.status}
                     </Text>
                   </View>
                 )}
               />
             )}
             <TouchableOpacity style={{ alignSelf: 'center', marginTop: 14 }} onPress={() => setDetail(null)}>
-              <Text style={{ color: SUBTLE, fontSize: 13 }}>Close</Text>
+              <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   DeviceSession,
@@ -44,6 +45,7 @@ export default function SecuritySettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +74,11 @@ export default function SecuritySettingsScreen() {
       setStatus(s);
       setSessions(d);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load security settings.');
+      setError(e?.message ?? t('security_settings.load_error', 'Could not load security settings.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -91,7 +93,7 @@ export default function SecuritySettingsScreen() {
       setSetupUrl(setup.otpauth_url);
       setConfirmCode('');
     } catch (e: any) {
-      Alert.alert('Could not start setup', e?.message ?? 'Please try again.');
+      Alert.alert(t('security_settings.start_error', 'Could not start setup'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setStartingSetup(false);
     }
@@ -108,7 +110,7 @@ export default function SecuritySettingsScreen() {
       setConfirmCode('');
       await load();
     } catch (e: any) {
-      Alert.alert('Could not confirm', e?.message ?? 'Check the code and try again.');
+      Alert.alert(t('security_settings.confirm_error', 'Could not confirm'), e?.message ?? t('security_settings.check_code', 'Check the code and try again.'));
     } finally {
       setConfirming(false);
     }
@@ -123,7 +125,7 @@ export default function SecuritySettingsScreen() {
       setDisablePassword('');
       await load();
     } catch (e: any) {
-      Alert.alert('Could not disable', e?.message ?? 'Please try again.');
+      Alert.alert(t('security_settings.disable_error', 'Could not disable'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setDisabling(false);
     }
@@ -131,14 +133,14 @@ export default function SecuritySettingsScreen() {
 
   const confirmRevoke = (s: DeviceSession) => {
     Alert.alert(
-      s.is_current ? 'Sign out this device?' : 'Revoke this session?',
+      s.is_current ? t('security_settings.sign_out_title', 'Sign out this device?') : t('security_settings.revoke_title', 'Revoke this session?'),
       s.is_current
-        ? 'This is the device you are using right now. You will be signed out immediately.'
-        : `"${s.device_name}" will need to sign in again.`,
+        ? t('security_settings.sign_out_message', 'This is the device you are using right now. You will be signed out immediately.')
+        : t('security_settings.revoke_message', '"{device}" will need to sign in again.').replace('{device}', s.device_name),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: s.is_current ? 'Sign out' : 'Revoke',
+          text: s.is_current ? t('security_settings.sign_out', 'Sign out') : t('security_settings.revoke', 'Revoke'),
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
@@ -146,7 +148,7 @@ export default function SecuritySettingsScreen() {
               await revokeDeviceSession(token, s.id);
               setSessions((prev) => prev.filter((x) => x.id !== s.id));
             } catch (e: any) {
-              Alert.alert('Could not revoke', e?.message ?? 'Please try again.');
+              Alert.alert(t('security_settings.revoke_error', 'Could not revoke'), e?.message ?? t('common.try_again_full', 'Please try again.'));
             }
           },
         },
@@ -158,7 +160,7 @@ export default function SecuritySettingsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading security settings…</Text>
+        <Text style={styles.centerText}>{t('security_settings.loading', 'Loading security settings…')}</Text>
       </View>
     );
   }
@@ -166,10 +168,10 @@ export default function SecuritySettingsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('security_settings.error_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -182,19 +184,19 @@ export default function SecuritySettingsScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Security</Text>
-          <Text style={styles.headerSub}>Two-factor authentication and device sessions</Text>
+          <Text style={styles.headerTitle}>{t('security_settings.title', 'Security')}</Text>
+          <Text style={styles.headerSub}>{t('security_settings.subtitle', 'Two-factor authentication and device sessions')}</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Two-factor authentication</Text>
+        <Text style={styles.sectionTitle}>{t('security_settings.two_factor', 'Two-factor authentication')}</Text>
 
         {recoveryCodes ? (
           <View style={styles.card}>
-            <Text style={styles.rowTitle}>Save these recovery codes</Text>
+            <Text style={styles.rowTitle}>{t('security_settings.save_codes_title', 'Save these recovery codes')}</Text>
             <Text style={styles.rowSub}>
-              Each code works once, if you ever lose access to your authenticator app. They will not be shown again.
+              {t('security_settings.save_codes_desc', 'Each code works once, if you ever lose access to your authenticator app. They will not be shown again.')}
             </Text>
             {recoveryCodes.map((code) => (
               <Text key={code} style={styles.recoveryCode}>
@@ -202,31 +204,31 @@ export default function SecuritySettingsScreen() {
               </Text>
             ))}
             <TouchableOpacity style={styles.doneBtn} onPress={() => setRecoveryCodes(null)}>
-              <Text style={styles.doneBtnText}>I've saved these</Text>
+              <Text style={styles.doneBtnText}>{t('security_settings.saved_these', "I've saved these")}</Text>
             </TouchableOpacity>
           </View>
         ) : status?.enabled ? (
           <View style={styles.card}>
             <View style={styles.rowBetween}>
               <View style={styles.flexCol}>
-                <Text style={styles.rowTitle}>Enabled</Text>
-                <Text style={styles.rowSub}>Your account requires a code from your authenticator app at login.</Text>
+                <Text style={styles.rowTitle}>{t('security_settings.enabled', 'Enabled')}</Text>
+                <Text style={styles.rowSub}>{t('security_settings.enabled_desc', 'Your account requires a code from your authenticator app at login.')}</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.dangerLinkBtn} onPress={() => setDisableVisible(true)}>
-              <Text style={styles.dangerLinkText}>Disable two-factor authentication</Text>
+              <Text style={styles.dangerLinkText}>{t('security_settings.disable_two_factor', 'Disable two-factor authentication')}</Text>
             </TouchableOpacity>
           </View>
         ) : setupSecret ? (
           <View style={styles.card}>
-            <Text style={styles.rowTitle}>Add this account to your authenticator app</Text>
+            <Text style={styles.rowTitle}>{t('security_settings.add_to_app_title', 'Add this account to your authenticator app')}</Text>
             <Text style={styles.rowSub}>
-              Enter this key manually in Google Authenticator, Authy, 1Password, or a similar app:
+              {t('security_settings.add_to_app_desc', 'Enter this key manually in Google Authenticator, Authy, 1Password, or a similar app:')}
             </Text>
             <Text selectable style={styles.secretText}>
               {setupSecret}
             </Text>
-            <Text style={styles.label}>Then enter the 6-digit code it shows</Text>
+            <Text style={styles.label}>{t('security_settings.enter_code_label', 'Then enter the 6-digit code it shows')}</Text>
             <TextInput
               style={styles.input}
               placeholder="123456"
@@ -237,29 +239,29 @@ export default function SecuritySettingsScreen() {
               maxLength={6}
             />
             <TouchableOpacity style={styles.saveBtnInline} onPress={onConfirm} disabled={confirming}>
-              {confirming ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Confirm & enable</Text>}
+              {confirming ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>{t('security_settings.confirm_enable', 'Confirm & enable')}</Text>}
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.rowTitle}>Not enabled</Text>
+            <Text style={styles.rowTitle}>{t('security_settings.not_enabled', 'Not enabled')}</Text>
             <Text style={styles.rowSub}>
-              Add an extra step at login using an authenticator app on your phone.
+              {t('security_settings.not_enabled_desc', 'Add an extra step at login using an authenticator app on your phone.')}
             </Text>
             <TouchableOpacity style={styles.saveBtnInline} onPress={onStartSetup} disabled={startingSetup}>
               {startingSetup ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.saveBtnText}>Set up two-factor authentication</Text>
+                <Text style={styles.saveBtnText}>{t('security_settings.set_up_two_factor', 'Set up two-factor authentication')}</Text>
               )}
             </TouchableOpacity>
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>Signed-in devices</Text>
+        <Text style={styles.sectionTitle}>{t('security_settings.signed_in_devices', 'Signed-in devices')}</Text>
         {sessions.length === 0 ? (
           <View style={styles.card}>
-            <Text style={styles.rowSub}>No active sessions.</Text>
+            <Text style={styles.rowSub}>{t('security_settings.no_active_sessions', 'No active sessions.')}</Text>
           </View>
         ) : (
           sessions.map((s) => (
@@ -268,14 +270,14 @@ export default function SecuritySettingsScreen() {
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>
                     {s.device_name}
-                    {s.is_current ? ' (this device)' : ''}
+                    {s.is_current ? ` ${t('security_settings.this_device', '(this device)')}` : ''}
                   </Text>
                   <Text style={styles.rowSub}>
-                    {s.last_used_at ? `Last used ${new Date(s.last_used_at).toLocaleString()}` : 'Never used'}
+                    {s.last_used_at ? `${t('security_settings.last_used', 'Last used')} ${new Date(s.last_used_at).toLocaleString()}` : t('security_settings.never_used', 'Never used')}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => confirmRevoke(s)}>
-                  <Text style={styles.dangerLinkText}>{s.is_current ? 'Sign out' : 'Revoke'}</Text>
+                  <Text style={styles.dangerLinkText}>{s.is_current ? t('security_settings.sign_out', 'Sign out') : t('security_settings.revoke', 'Revoke')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -286,11 +288,11 @@ export default function SecuritySettingsScreen() {
       <Modal visible={disableVisible} animationType="slide" transparent onRequestClose={() => setDisableVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Disable two-factor authentication</Text>
-            <Text style={styles.label}>Confirm your password</Text>
+            <Text style={styles.modalTitle}>{t('security_settings.disable_two_factor', 'Disable two-factor authentication')}</Text>
+            <Text style={styles.label}>{t('security_settings.confirm_password', 'Confirm your password')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={t('security_settings.password_placeholder', 'Password')}
               placeholderTextColor={SUBTLE}
               secureTextEntry
               value={disablePassword}
@@ -305,10 +307,10 @@ export default function SecuritySettingsScreen() {
                 }}
                 disabled={disabling}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalDanger} onPress={onDisable} disabled={disabling}>
-                {disabling ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalDangerText}>Disable</Text>}
+                {disabling ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalDangerText}>{t('security_settings.disable', 'Disable')}</Text>}
               </TouchableOpacity>
             </View>
           </View>

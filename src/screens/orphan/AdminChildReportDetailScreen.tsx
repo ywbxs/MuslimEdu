@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { MonthlyReport } from '../../services/orphanService';
 import {
   fetchChildReports,
@@ -32,7 +33,7 @@ const SUBTLE = '#7A8078';
 const DANGER = '#E0637A';
 const CANVAS = '#F3F5F2';
 
-function RatingSelector({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number) => void }) {
+function RatingSelector({ label, value, onChange }: { label: string; value: number | null; onChange: (n: number) => void }) {
   return (
     <View style={{ marginBottom: 16 }}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -57,6 +58,7 @@ export default function AdminChildReportDetailScreen() {
   const route = useRoute();
   const { studentId, studentName } = (route.params as { studentId: number; studentName: string }) ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,9 +84,9 @@ export default function AdminChildReportDetailScreen() {
       const data = await fetchChildReports(token, studentId);
       setReports(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports.');
+      setError(err instanceof Error ? err.message : t('admin_child_report_detail.load_error', 'Failed to load reports.'));
     }
-  }, [token, studentId]);
+  }, [token, studentId, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -93,7 +95,7 @@ export default function AdminChildReportDetailScreen() {
 
   const handleCreate = async () => {
     if (!token || !academicRating || !wellbeingRating) {
-      Alert.alert('Almost done', 'Please select both ratings.');
+      Alert.alert(t('admin_child_report_detail.almost_done', 'Almost done'), t('admin_child_report_detail.select_both_ratings', 'Please select both ratings.'));
       return;
     }
     setIsSubmitting(true);
@@ -103,24 +105,24 @@ export default function AdminChildReportDetailScreen() {
         studentId,
         { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
       );
-      Alert.alert('Report added', `A report was added for ${studentName}.`);
+      Alert.alert(t('admin_child_report_detail.report_added', 'Report added'), t('admin_child_report_detail.report_added_message', 'A report was added for {name}.').replace('{name}', studentName));
       setShowForm(false);
       setNote('');
       setAcademicRating(null);
       setWellbeingRating(null);
       await load();
     } catch (err) {
-      Alert.alert('Something went wrong', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('admin_child_report_detail.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = (reportId: number) => {
-    Alert.alert('Delete report', 'This cannot be undone. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin_child_report_detail.delete_title', 'Delete report'), t('admin_child_report_detail.delete_message', 'This cannot be undone. Continue?'), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('admin_child_report_detail.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -128,7 +130,7 @@ export default function AdminChildReportDetailScreen() {
             await deleteChildReport(token, reportId);
             await load();
           } catch (err) {
-            Alert.alert('Could not delete', err instanceof Error ? err.message : 'Please try again.');
+            Alert.alert(t('admin_child_report_detail.delete_error', 'Could not delete'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -145,7 +147,7 @@ export default function AdminChildReportDetailScreen() {
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{studentName}</Text>
         <View style={{ width: 40 }} />
@@ -167,34 +169,34 @@ export default function AdminChildReportDetailScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {!showForm && (
             <TouchableOpacity style={styles.addButton} onPress={() => setShowForm(true)}>
-              <Text style={styles.addButtonText}>+ Add Report on Their Behalf</Text>
+              <Text style={styles.addButtonText}>+ {t('admin_child_report_detail.add_report', 'Add Report on Their Behalf')}</Text>
             </TouchableOpacity>
           )}
 
           {showForm && (
             <View style={styles.formCard}>
-              <Text style={styles.formTitle}>New Report</Text>
+              <Text style={styles.formTitle}>{t('admin_child_report_detail.new_report', 'New Report')}</Text>
               <TextInput
                 style={styles.noteInput}
-                placeholder="Write a short note..."
+                placeholder={t('admin_child_report_detail.note_placeholder', 'Write a short note...')}
                 placeholderTextColor={SUBTLE}
                 multiline
                 value={note}
                 onChangeText={setNote}
               />
-              <RatingSelector label="Academic Rating" value={academicRating} onChange={setAcademicRating} />
-              <RatingSelector label="Wellbeing Rating" value={wellbeingRating} onChange={setWellbeingRating} />
+              <RatingSelector label={t('admin_child_report_detail.academic_rating', 'Academic Rating')} value={academicRating} onChange={setAcademicRating} />
+              <RatingSelector label={t('admin_child_report_detail.wellbeing_rating', 'Wellbeing Rating')} value={wellbeingRating} onChange={setWellbeingRating} />
 
               <View style={styles.formButtonRow}>
                 <TouchableOpacity style={styles.cancelButton} onPress={() => setShowForm(false)}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
@@ -204,29 +206,29 @@ export default function AdminChildReportDetailScreen() {
                   {isSubmitting ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Save Report</Text>
+                    <Text style={styles.submitButtonText}>{t('admin_child_report_detail.save_report', 'Save Report')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          <Text style={styles.sectionLabel}>History</Text>
+          <Text style={styles.sectionLabel}>{t('admin_child_report_detail.history', 'History')}</Text>
           {reports.length === 0 ? (
-            <Text style={styles.emptyText}>No reports submitted yet.</Text>
+            <Text style={styles.emptyText}>{t('admin_child_report_detail.empty', 'No reports submitted yet.')}</Text>
           ) : (
             reports.map((report) => (
               <View key={report.id} style={styles.reportCard}>
                 <View style={styles.reportCardHeader}>
                   <Text style={styles.reportMonth}>{report.report_month}</Text>
                   <TouchableOpacity onPress={() => handleDelete(report.id)} hitSlop={8}>
-                    <Text style={styles.deleteText}>Delete</Text>
+                    <Text style={styles.deleteText}>{t('admin_child_report_detail.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.gaugeRow}>
-                  <RatingGauge label="Academic" value={report.academic_rating} color={EMERALD} />
-                  <RatingGauge label="Wellbeing" value={report.wellbeing_rating} color={GOLD} />
+                  <RatingGauge label={t('admin_child_report_detail.academic', 'Academic')} value={report.academic_rating} color={EMERALD} />
+                  <RatingGauge label={t('admin_child_report_detail.wellbeing', 'Wellbeing')} value={report.wellbeing_rating} color={GOLD} />
                 </View>
 
                 {report.note ? (
@@ -235,7 +237,7 @@ export default function AdminChildReportDetailScreen() {
                   </View>
                 ) : null}
 
-                <Text style={styles.reportSubmittedBy}>Submitted by {report.submitted_by ?? 'unknown'}</Text>
+                <Text style={styles.reportSubmittedBy}>{t('admin_child_report_detail.submitted_by', 'Submitted by')} {report.submitted_by ?? t('admin_child_report_detail.unknown', 'unknown')}</Text>
 
                 {report.photos.length > 0 && (
                   <View style={styles.photoGrid}>

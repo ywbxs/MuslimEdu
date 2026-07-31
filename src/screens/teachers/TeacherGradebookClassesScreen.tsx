@@ -10,6 +10,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchGradebookClasses,
   GradebookClassOption,
@@ -72,6 +73,7 @@ export default function TeacherGradebookClassesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
   const [classes, setClasses] = useState<GradebookClassOption[]>([]);
   const [examCategories, setExamCategories] = useState<ExamCategoryOption[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -89,13 +91,13 @@ export default function TeacherGradebookClassesScreen() {
         setClasses(data.classes);
         setExamCategories(data.examCategories);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load your gradebook classes.');
+        setError(err instanceof Error ? err.message : t('teacher_gradebook_classes.load_error', 'Could not load your gradebook classes.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -115,7 +117,7 @@ export default function TeacherGradebookClassesScreen() {
       subjectId: item.subject_id,
       examCategoryId: examCategory.id,
       classLabel: `${item.class_name ?? ''} - ${item.section_name}`.trim(),
-      subjectLabel: item.subject_name ?? 'Subject',
+      subjectLabel: item.subject_name ?? t('teacher_gradebook_classes.subject', 'Subject'),
       examCategoryLabel: examCategory.name,
     });
   };
@@ -127,7 +129,7 @@ export default function TeacherGradebookClassesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Enter Grades</Text>
+        <Text style={styles.headerTitle}>{t('teacher_gradebook_classes.title', 'Enter Grades')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -146,9 +148,9 @@ export default function TeacherGradebookClassesScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>Nothing to grade yet</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_gradebook_classes.empty_title', 'Nothing to grade yet')}</Text>
                 <Text style={styles.emptyDesc}>
-                  You'll see a card here once you're assigned to teach a subject period.
+                  {t('teacher_gradebook_classes.empty_desc', "You'll see a card here once you're assigned to teach a subject period.")}
                 </Text>
               </View>
             ) : null
@@ -163,7 +165,7 @@ export default function TeacherGradebookClassesScreen() {
               {!error && examCategories.length === 0 ? (
                 <View style={styles.errorBanner}>
                   <Text style={styles.errorText}>
-                    No exam categories are set up for this session yet. Ask an admin to add one before entering grades.
+                    {t('teacher_gradebook_classes.no_exam_categories', 'No exam categories are set up for this session yet. Ask an admin to add one before entering grades.')}
                   </Text>
                 </View>
               ) : null}
@@ -184,17 +186,17 @@ export default function TeacherGradebookClassesScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>
-                      {item.class_name ?? 'Class'} - {item.section_name}
+                      {item.class_name ?? t('teacher_gradebook_classes.class_fallback', 'Class')} - {item.section_name}
                     </Text>
                     <View style={styles.pill}>
-                      <Text style={styles.pillText}>{item.subject_name ?? 'Subject'}</Text>
+                      <Text style={styles.pillText}>{item.subject_name ?? t('teacher_gradebook_classes.subject', 'Subject')}</Text>
                     </View>
                   </View>
                   <IconChevronRight color={SUBTLE} />
                 </TouchableOpacity>
                 {isExpanded ? (
                   <View style={styles.examRow}>
-                    <Text style={styles.examLabel}>Choose an exam:</Text>
+                    <Text style={styles.examLabel}>{t('teacher_gradebook_classes.choose_exam', 'Choose an exam:')}</Text>
                     <View style={styles.examChipWrap}>
                       {examCategories.map((cat) => (
                         <TouchableOpacity

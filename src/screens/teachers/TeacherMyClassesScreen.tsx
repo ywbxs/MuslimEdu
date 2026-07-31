@@ -10,6 +10,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchMyClasses, ClassSection } from '../../services/teacherClassService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -72,6 +73,7 @@ export default function TeacherMyClassesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
   const [classes, setClasses] = useState<ClassSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -86,13 +88,13 @@ export default function TeacherMyClassesScreen() {
         const data = await fetchMyClasses(token);
         setClasses(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load your classes.');
+        setError(err instanceof Error ? err.message : t('teacher_my_classes.load_error', 'Could not load your classes.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -113,7 +115,7 @@ export default function TeacherMyClassesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Classes</Text>
+        <Text style={styles.headerTitle}>{t('teacher_my_classes.title', 'My Classes')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -132,9 +134,9 @@ export default function TeacherMyClassesScreen() {
           ListEmptyComponent={
             !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No classes assigned yet</Text>
+                <Text style={styles.emptyTitle}>{t('teacher_my_classes.empty_title', 'No classes assigned yet')}</Text>
                 <Text style={styles.emptyDesc}>
-                  You'll see a class here once an admin makes you the class teacher for a section.
+                  {t('teacher_my_classes.empty_desc', "You'll see a class here once an admin makes you the class teacher for a section.")}
                 </Text>
               </View>
             ) : null
@@ -162,12 +164,12 @@ export default function TeacherMyClassesScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>
-                  {item.class_name ?? 'Class'} - {item.section_name}
+                  {item.class_name ?? t('teacher_my_classes.class_fallback', 'Class')} - {item.section_name}
                 </Text>
                 <View style={styles.cardMetaRow}>
                   <IconPeople color={SUBTLE} />
                   <Text style={styles.cardMeta}>
-                    {item.student_count ?? 0} student{item.student_count === 1 ? '' : 's'}
+                    {item.student_count ?? 0} {item.student_count === 1 ? t('teacher_my_classes.student', 'student') : t('teacher_my_classes.students', 'students')}
                   </Text>
                 </View>
               </View>

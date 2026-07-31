@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -45,6 +46,7 @@ export default function EnrollmentStageFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const stageId: number | undefined = route.params?.stageId;
   const isEditing = !!stageId;
@@ -66,7 +68,7 @@ export default function EnrollmentStageFormScreen() {
         const stages = await fetchEnrollmentStages(token);
         const stage = stages.find((s) => s.id === stageId);
         if (!stage) {
-          setError('Stage not found.');
+          setError(t('enrollment_stage_form.not_found', 'Stage not found.'));
           return;
         }
         setName(stage.name);
@@ -74,22 +76,22 @@ export default function EnrollmentStageFormScreen() {
         setIsTerminal(stage.is_terminal);
         setIsActive(stage.status === 'active');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load stage.');
+        setError(err instanceof Error ? err.message : t('enrollment_stage_form.load_error', 'Failed to load stage.'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [isEditing, stageId, token]);
+  }, [isEditing, stageId, token, t]);
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('enrollment_stage_form.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Stage name is required.');
+      Alert.alert(t('common.error', 'Error'), t('enrollment_stage_form.name_required', 'Stage name is required.'));
       return;
     }
 
@@ -108,7 +110,7 @@ export default function EnrollmentStageFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the stage.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_stage_form.save_error', 'Could not save the stage.'));
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +124,7 @@ export default function EnrollmentStageFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? 'Edit Stage' : 'Add Stage'}
+            {isEditing ? t('enrollment_stage_form.edit_title', 'Edit Stage') : t('enrollment_stage_form.add_title', 'Add Stage')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -149,30 +151,30 @@ export default function EnrollmentStageFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Stage Name</Text>
+        <Text style={styles.label}>{t('enrollment_stage_form.name_label', 'Stage Name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Admission, Cashier, Registrar"
+          placeholder={t('enrollment_stage_form.name_placeholder', 'e.g. Admission, Cashier, Registrar')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Code (optional)</Text>
+        <Text style={styles.label}>{t('enrollment_stage_form.code_label', 'Code (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={code}
           onChangeText={setCode}
-          placeholder="e.g. ADMISSION"
+          placeholder={t('enrollment_stage_form.code_placeholder', 'e.g. ADMISSION')}
           placeholderTextColor={theme.textMuted}
           autoCapitalize="characters"
         />
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Final stage</Text>
+            <Text style={styles.switchLabel}>{t('enrollment_stage_form.final_stage', 'Final stage')}</Text>
             <Text style={styles.switchHelp}>
-              Reaching this stage marks the student's enrollment as complete.
+              {t('enrollment_stage_form.final_stage_help', "Reaching this stage marks the student's enrollment as complete.")}
             </Text>
           </View>
           <Switch
@@ -184,9 +186,9 @@ export default function EnrollmentStageFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Active</Text>
+            <Text style={styles.switchLabel}>{t('enrollment_stage_form.active', 'Active')}</Text>
             <Text style={styles.switchHelp}>
-              Inactive stages are hidden from new students but kept for history.
+              {t('enrollment_stage_form.active_help', 'Inactive stages are hidden from new students but kept for history.')}
             </Text>
           </View>
           <Switch
@@ -204,7 +206,7 @@ export default function EnrollmentStageFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Stage'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('enrollment_stage_form.save_changes', 'Save Changes') : t('enrollment_stage_form.add_title', 'Add Stage')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, M
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAssessmentSubmissions,
   gradeSubmission,
@@ -55,8 +56,8 @@ function rowStatusColor(status: AssessmentSubmission['status']) {
   if (status === 'resubmission_requested') return AMBER;
   return SUBTLE;
 }
-function rowStatusLabel(status: AssessmentSubmission['status']) {
-  if (status === 'resubmission_requested') return 'Resubmit requested';
+function rowStatusLabel(t: (key: string, fallback?: string) => string, status: AssessmentSubmission['status']) {
+  if (status === 'resubmission_requested') return t('teacher_assessment_grading.resubmit_requested', 'Resubmit requested');
   return status;
 }
 
@@ -83,6 +84,7 @@ export default function TeacherAssessmentGradingScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { token } = useAuth();
+  const { t } = useLocale();
   const assessmentId: number = route.params?.assessmentId;
 
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -106,13 +108,13 @@ export default function TeacherAssessmentGradingScreen() {
         setAssessment(data.assessment);
         setSubmissions(data.submissions);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load submissions.');
+        setError(e?.message ?? t('teacher_assessment_grading.load_error', 'Could not load submissions.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token, assessmentId]
+    [token, assessmentId, t]
   );
 
   useFocusEffect(
@@ -141,7 +143,7 @@ export default function TeacherAssessmentGradingScreen() {
       setActive(null);
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_assessment_grading.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSaving(false);
     }
@@ -154,7 +156,7 @@ export default function TeacherAssessmentGradingScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {assessment?.title ?? 'Grading'}
+          {assessment?.title ?? t('teacher_assessment_grading.title', 'Grading')}
         </Text>
         <View style={{ width: 36 }} />
       </View>
@@ -162,7 +164,7 @@ export default function TeacherAssessmentGradingScreen() {
       {assessment ? (
         <Text style={styles.subHeader}>
           {assessment.section_name} · {assessment.subject_name}
-          {assessment.max_score != null ? ` · out of ${assessment.max_score}` : ''}
+          {assessment.max_score != null ? ` · ${t('teacher_assessment_grading.out_of', 'out of')} ${assessment.max_score}` : ''}
         </Text>
       ) : null}
 
@@ -188,7 +190,7 @@ export default function TeacherAssessmentGradingScreen() {
             load({ silent: true });
           }}
           refreshing={isRefreshing}
-          ListEmptyComponent={<Text style={styles.emptyText}>No submissions yet.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('teacher_assessment_grading.empty', 'No submissions yet.')}</Text>}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.row} onPress={() => openGrade(item)} activeOpacity={0.85}>
               <UserAvatar name={item.student_name ?? '?'} size={40} />
@@ -197,15 +199,15 @@ export default function TeacherAssessmentGradingScreen() {
                   {item.student_name}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
-                  Attempt {item.attempt_number}
-                  {item.attachment_name ? ` · has attachment` : ''}
-                  {item.score != null ? ` · ${item.score} pts` : ''}
+                  {t('teacher_assessment_grading.attempt', 'Attempt')} {item.attempt_number}
+                  {item.attachment_name ? ` · ${t('teacher_assessment_grading.has_attachment', 'has attachment')}` : ''}
+                  {item.score != null ? ` · ${item.score} ${t('teacher_assessment_grading.pts', 'pts')}` : ''}
                 </Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: rowStatusColor(item.status) + '22' }]}>
                 {item.status === 'graded' ? <IconCheckCircle color={EMERALD} size={13} /> : null}
                 <Text style={[styles.statusBadgeText, { color: rowStatusColor(item.status) }]}>
-                  {rowStatusLabel(item.status)}
+                  {rowStatusLabel(t, item.status)}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -218,11 +220,11 @@ export default function TeacherAssessmentGradingScreen() {
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
               <Text style={styles.modalTitle}>{active?.student_name}</Text>
-              <Text style={styles.modalSub}>Attempt {active?.attempt_number}</Text>
+              <Text style={styles.modalSub}>{t('teacher_assessment_grading.attempt', 'Attempt')} {active?.attempt_number}</Text>
 
               {active?.text_response ? (
                 <>
-                  <Text style={styles.fieldLabel}>Response</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_assessment_grading.response', 'Response')}</Text>
                   <Text style={styles.responseText}>{active.text_response}</Text>
                 </>
               ) : null}
@@ -236,7 +238,7 @@ export default function TeacherAssessmentGradingScreen() {
                 </View>
               ) : null}
 
-              <Text style={styles.fieldLabel}>Score{assessment?.max_score != null ? ` (out of ${assessment.max_score})` : ''}</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_assessment_grading.score', 'Score')}{assessment?.max_score != null ? ` (${t('teacher_assessment_grading.out_of', 'out of')} ${assessment.max_score})` : ''}</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
@@ -246,11 +248,11 @@ export default function TeacherAssessmentGradingScreen() {
                 onChangeText={setScore}
               />
 
-              <Text style={styles.fieldLabel}>Feedback</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_assessment_grading.feedback', 'Feedback')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
-                placeholder="Notes for the student"
+                placeholder={t('teacher_assessment_grading.feedback_placeholder', 'Notes for the student')}
                 placeholderTextColor={SUBTLE}
                 value={feedback}
                 onChangeText={setFeedback}
@@ -262,18 +264,18 @@ export default function TeacherAssessmentGradingScreen() {
                   onPress={() => submitGrade(true)}
                   disabled={isSaving}
                 >
-                  <Text style={styles.modalBtnGhostText}>Ask to resubmit</Text>
+                  <Text style={styles.modalBtnGhostText}>{t('teacher_assessment_grading.ask_resubmit', 'Ask to resubmit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.modalBtnPrimary]}
                   onPress={() => submitGrade(false)}
                   disabled={isSaving}
                 >
-                  <Text style={styles.modalBtnPrimaryText}>Save grade</Text>
+                  <Text style={styles.modalBtnPrimaryText}>{t('teacher_assessment_grading.save_grade', 'Save grade')}</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setActive(null)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Cancel</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

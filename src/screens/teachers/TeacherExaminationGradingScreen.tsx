@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import examService, { ExamRosterRow, Examination } from '../../services/teacherExaminationService';
 import { C } from '../nextPhaseTheme';
+import { useLocale } from '../../context/LocaleContext';
 
 type Props = { navigation: any; route: { params: { examinationId: number } } };
 
 export default function TeacherExaminationGradingScreen({ navigation, route }: Props) {
+  const { t } = useLocale();
   const { examinationId } = route.params;
 
   const [exam, setExam] = useState<Examination | null>(null);
@@ -34,11 +36,11 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
       setRows(res.roster);
       setDirty(false);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load the roster.');
+      setError(e?.message ?? t('teacher_examination_grading.load_error', 'Could not load the roster.'));
     } finally {
       setLoading(false);
     }
-  }, [examinationId]);
+  }, [examinationId, t]);
 
   useEffect(() => {
     load();
@@ -68,7 +70,7 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
     const over = rows.find(r => r.marks_obtained !== null && r.marks_obtained > total);
 
     if (over) {
-      Alert.alert('Mark too high', over.name + ' has ' + over.marks_obtained + ' out of ' + total + '.');
+      Alert.alert(t('teacher_examination_grading.mark_too_high_title', 'Mark too high'), over.name + ' ' + t('teacher_examination_grading.has', 'has') + ' ' + over.marks_obtained + ' ' + t('teacher_examination_grading.out_of', 'out of') + ' ' + total + '.');
       return;
     }
 
@@ -86,12 +88,12 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
       );
       setDirty(false);
       Alert.alert(
-        release ? 'Released' : 'Saved',
-        release ? 'Students can now see their results.' : 'Marks saved. Students cannot see them yet.',
+        release ? t('teacher_examination_grading.released', 'Released') : t('teacher_examination_grading.saved', 'Saved'),
+        release ? t('teacher_examination_grading.released_message', 'Students can now see their results.') : t('teacher_examination_grading.saved_message', 'Marks saved. Students cannot see them yet.'),
       );
       load();
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_examination_grading.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -101,13 +103,13 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
     const missing = rows.filter(r => r.marks_obtained === null && !r.is_absent).length;
 
     Alert.alert(
-      'Release results',
+      t('teacher_examination_grading.release_title', 'Release results'),
       missing > 0
-        ? missing + ' student(s) have no mark yet. Release anyway?'
-        : 'Every student will be notified that results are available.',
+        ? missing + ' ' + t('teacher_examination_grading.missing_marks', 'student(s) have no mark yet. Release anyway?')
+        : t('teacher_examination_grading.release_confirm', 'Every student will be notified that results are available.'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Release', onPress: () => save(true) },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('teacher_examination_grading.release', 'Release'), onPress: () => save(true) },
       ],
     );
   };
@@ -125,7 +127,7 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
       <SafeAreaView style={s.center}>
         <Text style={s.error}>{error}</Text>
         <TouchableOpacity style={s.retry} onPress={load}>
-          <Text style={s.retryText}>Try again</Text>
+          <Text style={s.retryText}>{t('common.try_again', 'Try again')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -141,17 +143,17 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
         contentContainerStyle={{ paddingBottom: 130 }}
         ListHeaderComponent={
           <View>
-            <Text style={s.title}>{exam?.title ?? 'Marks'}</Text>
+            <Text style={s.title}>{exam?.title ?? t('teacher_examination_grading.marks', 'Marks')}</Text>
             <Text style={s.sub}>
-              {graded} of {rows.length} entered · out of {exam?.total_marks ?? 100}
+              {graded} {t('teacher_examination_grading.of', 'of')} {rows.length} {t('teacher_examination_grading.entered', 'entered')} · {t('teacher_examination_grading.out_of', 'out of')} {exam?.total_marks ?? 100}
               {exam?.scheduled_date ? ' · ' + exam.scheduled_date : ''}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={s.empty}>
-            <Text style={s.emptyTitle}>No students in this section</Text>
-            <Text style={s.emptyBody}>Add students to the section before entering marks.</Text>
+            <Text style={s.emptyTitle}>{t('teacher_examination_grading.empty_title', 'No students in this section')}</Text>
+            <Text style={s.emptyBody}>{t('teacher_examination_grading.empty_body', 'Add students to the section before entering marks.')}</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -166,8 +168,8 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
                   trackColor={{ true: '#FDECEA', false: C.line }}
                   thumbColor={item.is_absent ? C.red : '#F4F4F4'}
                 />
-                <Text style={s.absentLabel}>Absent</Text>
-                {item.released ? <Text style={s.released}>released</Text> : null}
+                <Text style={s.absentLabel}>{t('teacher_examination_grading.absent', 'Absent')}</Text>
+                {item.released ? <Text style={s.released}>{t('teacher_examination_grading.released_tag', 'released')}</Text> : null}
               </View>
             </View>
 
@@ -191,10 +193,10 @@ export default function TeacherExaminationGradingScreen({ navigation, route }: P
           disabled={!dirty || saving}
           onPress={() => save(false)}
         >
-          <Text style={s.secondaryText}>Save draft</Text>
+          <Text style={s.secondaryText}>{t('teacher_examination_grading.save_draft', 'Save draft')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.primary, saving && s.disabled]} disabled={saving} onPress={confirmRelease}>
-          {saving ? <ActivityIndicator color='#FFFFFF' /> : <Text style={s.primaryText}>Save and release</Text>}
+          {saving ? <ActivityIndicator color='#FFFFFF' /> : <Text style={s.primaryText}>{t('teacher_examination_grading.save_and_release', 'Save and release')}</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

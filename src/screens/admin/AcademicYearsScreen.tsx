@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -45,6 +46,7 @@ export default function AcademicYearsScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,11 +60,11 @@ export default function AcademicYearsScreen() {
       const data = await fetchAcademicYears(token);
       setYears(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load academic years.');
+      setError(err instanceof Error ? err.message : t('academic_years.load_error', 'Failed to load academic years.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -77,7 +79,7 @@ export default function AcademicYearsScreen() {
       await setCurrentAcademicYear(token, year.id);
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not set current academic year.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_years.set_current_error', 'Could not set current academic year.'));
     } finally {
       setBusyId(null);
     }
@@ -85,12 +87,12 @@ export default function AcademicYearsScreen() {
 
   const handleDelete = (year: AcademicYear) => {
     Alert.alert(
-      'Delete Academic Year',
-      `Delete "${year.session_title}"? This can't be undone.`,
+      t('academic_years.delete_title', 'Delete Academic Year'),
+      `${t('academic_years.delete_confirm', 'Delete')} "${year.session_title}"? ${t('academic_years.delete_irreversible', "This can't be undone.")}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('academic_years.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
@@ -102,7 +104,7 @@ export default function AcademicYearsScreen() {
               // year (or on the current year outright) - surface that
               // message as-is rather than a generic error, same convention
               // as EnrollmentStagesScreen's delete-in-use message.
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete academic year.');
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_years.delete_error', 'Failed to delete academic year.'));
             }
           },
         },
@@ -123,7 +125,7 @@ export default function AcademicYearsScreen() {
             <Text style={styles.name}>{item.session_title}</Text>
             {isCurrent ? (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>Current</Text>
+                <Text style={styles.currentBadgeText}>{t('academic_years.current', 'Current')}</Text>
               </View>
             ) : null}
           </View>
@@ -139,7 +141,7 @@ export default function AcademicYearsScreen() {
               })
             }
           >
-            <Text style={styles.termsButtonText}>Terms</Text>
+            <Text style={styles.termsButtonText}>{t('academic_years.terms', 'Terms')}</Text>
           </TouchableOpacity>
 
           <View style={styles.cardFooterRight}>
@@ -149,12 +151,12 @@ export default function AcademicYearsScreen() {
                 disabled={busy}
                 onPress={() => handleSetCurrent(item)}
               >
-                <Text style={styles.setCurrentButtonText}>{busy ? 'Setting...' : 'Set Current'}</Text>
+                <Text style={styles.setCurrentButtonText}>{busy ? t('academic_years.setting', 'Setting...') : t('academic_years.set_current', 'Set Current')}</Text>
               </TouchableOpacity>
             ) : null}
 
             <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-              <Text style={styles.deleteButtonText}>Delete</Text>
+              <Text style={styles.deleteButtonText}>{t('academic_years.delete', 'Delete')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -176,7 +178,7 @@ export default function AcademicYearsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Academic Years</Text>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('academic_years.title', 'Academic Years')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
@@ -197,13 +199,13 @@ export default function AcademicYearsScreen() {
           style={styles.profileButton}
           onPress={() => (navigation as any).navigate('InstitutionProfile')}
         >
-          <Text style={styles.profileButtonText}>Profile</Text>
+          <Text style={styles.profileButtonText}>{t('academic_years.profile', 'Profile')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => (navigation as any).navigate('AcademicYearForm')}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -211,13 +213,13 @@ export default function AcademicYearsScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
       <Text style={styles.helperText}>
-        Manage every academic year for this school. "Terms" opens each year's semesters/quarters.
+        {t('academic_years.helper', 'Manage every academic year for this school. "Terms" opens each year\'s semesters/quarters.')}
       </Text>
 
       <FlatList
@@ -229,9 +231,9 @@ export default function AcademicYearsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="🗓️"
-            title="No academic years yet"
-            subtitle="Add an academic year (e.g. 2026-2027) to get started."
-            actionLabel="Add Academic Year"
+            title={t('academic_years.empty_title', 'No academic years yet')}
+            subtitle={t('academic_years.empty_subtitle', 'Add an academic year (e.g. 2026-2027) to get started.')}
+            actionLabel={t('academic_years.add_year', 'Add Academic Year')}
             onAction={() => (navigation as any).navigate('AcademicYearForm')}
             colors={theme}
           />

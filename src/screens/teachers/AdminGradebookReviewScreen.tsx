@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator }
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 import {
   fetchAdminGradebookExamCategories,
@@ -44,6 +45,7 @@ function Picker<T extends { id: number; name: string }>({
   onSelect: (id: number) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.pickerBlock}>
       <Text style={styles.pickerLabel}>{label}</Text>
@@ -58,7 +60,7 @@ function Picker<T extends { id: number; name: string }>({
             <Text style={[styles.chipText, selectedId === opt.id ? styles.chipTextActive : null]}>{opt.name}</Text>
           </TouchableOpacity>
         ))}
-        {options.length === 0 ? <Text style={styles.emptyPickerText}>Nothing available yet.</Text> : null}
+        {options.length === 0 ? <Text style={styles.emptyPickerText}>{t('admin_gradebook_review.nothing_available', 'Nothing available yet.')}</Text> : null}
       </View>
     </View>
   );
@@ -71,6 +73,7 @@ export default function AdminGradebookReviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -94,9 +97,9 @@ export default function AdminGradebookReviewScreen() {
         setClasses(classList);
         setExamCategories(examList);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load filters.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_gradebook_review.filters_error', 'Could not load filters.')))
       .finally(() => setIsLoadingFilters(false));
-  }, [token]);
+  }, [token, t]);
 
   const onSelectClass = useCallback(
     (id: number) => {
@@ -107,10 +110,10 @@ export default function AdminGradebookReviewScreen() {
       setIsLoadingSections(true);
       fetchSections(token, String(id))
         .then(setSections)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_gradebook_review.sections_error', 'Could not load sections.')))
         .finally(() => setIsLoadingSections(false));
     },
-    [token]
+    [token, t]
   );
 
   const loadReview = useCallback(() => {
@@ -119,9 +122,9 @@ export default function AdminGradebookReviewScreen() {
     setError(null);
     fetchAdminGradebookReview(token, classId, sectionId, examCategoryId)
       .then((data) => setStudents(data.students))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load grades.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_gradebook_review.grades_error', 'Could not load grades.')))
       .finally(() => setIsLoadingReview(false));
-  }, [token, classId, sectionId, examCategoryId]);
+  }, [token, classId, sectionId, examCategoryId, t]);
 
   useEffect(() => {
     loadReview();
@@ -134,7 +137,7 @@ export default function AdminGradebookReviewScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gradebook Review</Text>
+        <Text style={styles.headerTitle}>{t('admin_gradebook_review.title', 'Gradebook Review')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -153,16 +156,16 @@ export default function AdminGradebookReviewScreen() {
               <Skeleton width="100%" height={80} borderRadius={12} />
             ) : (
               <>
-                <Picker label="Class" options={classes} selectedId={classId} onSelect={onSelectClass} />
+                <Picker label={t('admin_gradebook_review.class', 'Class')} options={classes} selectedId={classId} onSelect={onSelectClass} />
                 {classId ? (
                   isLoadingSections ? (
                     <Skeleton width="100%" height={40} borderRadius={12} style={{ marginTop: 8 }} />
                   ) : (
-                    <Picker label="Section" options={sections} selectedId={sectionId} onSelect={setSectionId} />
+                    <Picker label={t('admin_gradebook_review.section', 'Section')} options={sections} selectedId={sectionId} onSelect={setSectionId} />
                   )
                 ) : null}
                 <Picker
-                  label="Exam"
+                  label={t('admin_gradebook_review.exam', 'Exam')}
                   options={examCategories}
                   selectedId={examCategoryId}
                   onSelect={setExamCategoryId}
@@ -176,8 +179,8 @@ export default function AdminGradebookReviewScreen() {
             ) : null}
             {!isLoadingReview && classId && sectionId && examCategoryId && students.length === 0 && !error ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>No grades entered yet</Text>
-                <Text style={styles.emptyDesc}>Nothing has been submitted for this class/section/exam so far.</Text>
+                <Text style={styles.emptyTitle}>{t('admin_gradebook_review.empty_title', 'No grades entered yet')}</Text>
+                <Text style={styles.emptyDesc}>{t('admin_gradebook_review.empty_desc', 'Nothing has been submitted for this class/section/exam so far.')}</Text>
               </View>
             ) : null}
           </>
@@ -190,7 +193,7 @@ export default function AdminGradebookReviewScreen() {
               <View key={subj.subject_id} style={styles.subjectRow}>
                 <Text style={styles.subjectName}>{subj.subject_name}</Text>
                 <Text style={[styles.subjectMark, subj.mark === null ? styles.subjectMarkEmpty : null]}>
-                  {subj.mark === null ? 'Not entered' : `${subj.mark}${subj.total_marks ? ` / ${subj.total_marks}` : ''}`}
+                  {subj.mark === null ? t('admin_gradebook_review.not_entered', 'Not entered') : `${subj.mark}${subj.total_marks ? ` / ${subj.total_marks}` : ''}`}
                 </Text>
               </View>
             ))}

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView }
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAssessmentTargets,
   fetchTeacherAssessmentGrades,
@@ -68,6 +69,7 @@ export default function TeacherAssessmentGradesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [targets, setTargets] = useState<AssessmentTarget[]>([]);
   const [targetKey, setTargetKey] = useState<string | null>(null);
@@ -79,20 +81,20 @@ export default function TeacherAssessmentGradesScreen() {
 
   const [detail, setDetail] = useState<AssessmentStudentGradeRow | null>(null);
 
-  const keyOf = (t: AssessmentTarget) => `${t.section_id}:${t.subject_id}`;
-  const selected = targets.find((t) => keyOf(t) === targetKey) ?? null;
+  const keyOf = (target: AssessmentTarget) => `${target.section_id}:${target.subject_id}`;
+  const selected = targets.find((target) => keyOf(target) === targetKey) ?? null;
 
   useEffect(() => {
     if (!token) return;
     setIsLoadingTargets(true);
     fetchAssessmentTargets(token)
-      .then(({ targets: t }) => {
-        setTargets(t);
-        if (t[0]) setTargetKey(keyOf(t[0]));
+      .then(({ targets: fetched }) => {
+        setTargets(fetched);
+        if (fetched[0]) setTargetKey(keyOf(fetched[0]));
       })
-      .catch((e: any) => setError(e?.message ?? 'Could not load your classes.'))
+      .catch((e: any) => setError(e?.message ?? t('teacher_assessment_grades.classes_error', 'Could not load your classes.')))
       .finally(() => setIsLoadingTargets(false));
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (!token || !selected) return;
@@ -100,9 +102,9 @@ export default function TeacherAssessmentGradesScreen() {
     setError(null);
     fetchTeacherAssessmentGrades(token, selected.section_id, selected.subject_id)
       .then(setRows)
-      .catch((e: any) => setError(e?.message ?? 'Could not load grades.'))
+      .catch((e: any) => setError(e?.message ?? t('teacher_assessment_grades.grades_error', 'Could not load grades.')))
       .finally(() => setIsLoadingRows(false));
-  }, [token, selected?.section_id, selected?.subject_id]);
+  }, [token, selected?.section_id, selected?.subject_id, t]);
 
   return (
     <GlassBackground style={{ flex: 1, backgroundColor: CANVAS }}>
@@ -110,7 +112,7 @@ export default function TeacherAssessmentGradesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Grades</Text>
+        <Text style={styles.headerTitle}>{t('teacher_assessment_grades.title', 'Grades')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -122,7 +124,7 @@ export default function TeacherAssessmentGradesScreen() {
         <FlatList
           horizontal
           data={targets}
-          keyExtractor={(t) => keyOf(t)}
+          keyExtractor={(target) => keyOf(target)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
           renderItem={({ item }) => {
@@ -138,7 +140,7 @@ export default function TeacherAssessmentGradesScreen() {
               </TouchableOpacity>
             );
           }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No classes assigned yet.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('teacher_assessment_grades.empty_classes', 'No classes assigned yet.')}</Text>}
         />
       )}
 
@@ -160,7 +162,7 @@ export default function TeacherAssessmentGradesScreen() {
           keyExtractor={(r) => String(r.student_id)}
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
           ListEmptyComponent={
-            selected ? <Text style={styles.emptyText}>No students enrolled in this section yet.</Text> : null
+            selected ? <Text style={styles.emptyText}>{t('teacher_assessment_grades.empty_students', 'No students enrolled in this section yet.')}</Text> : null
           }
           renderItem={({ item }) => {
             const pct = item.grade?.weighted_percentage ?? null;
@@ -176,7 +178,7 @@ export default function TeacherAssessmentGradesScreen() {
                     {item.student_name}
                   </Text>
                   <Text style={styles.rowMeta}>
-                    {item.grade ? `${item.grade.graded_count} of ${item.grade.total_published} graded` : 'No assessments yet'}
+                    {item.grade ? `${item.grade.graded_count} ${t('teacher_assessment_grades.of', 'of')} ${item.grade.total_published} ${t('teacher_assessment_grades.graded', 'graded')}` : t('teacher_assessment_grades.no_assessments', 'No assessments yet')}
                   </Text>
                 </View>
                 <View style={[styles.pctBadge, { backgroundColor: bandSoft(pct) }]}>
@@ -195,22 +197,22 @@ export default function TeacherAssessmentGradesScreen() {
               <Text style={styles.modalTitle}>{detail?.student_name}</Text>
               <Text style={styles.modalSubtitle}>
                 {detail?.grade?.calculation_method === 'flat'
-                  ? 'Flat average — no weighted category has graded work yet'
+                  ? t('teacher_assessment_grades.flat_average', 'Flat average — no weighted category has graded work yet')
                   : detail?.grade?.calculation_method === 'weighted'
-                  ? 'Weighted by exam category'
+                  ? t('teacher_assessment_grades.weighted_by_category', 'Weighted by exam category')
                   : ''}
               </Text>
               {(detail?.grade?.categories ?? []).map((c) => (
                 <View key={c.exam_category_id ?? 'uncat'} style={styles.categoryRow}>
                   <Text style={styles.categoryName} numberOfLines={1}>
                     {c.exam_category_name}
-                    {c.weight !== null ? ` (${c.weight}%)` : ''} · {c.graded_count} graded
+                    {c.weight !== null ? ` (${c.weight}%)` : ''} · {c.graded_count} {t('teacher_assessment_grades.graded', 'graded')}
                   </Text>
                   <Text style={styles.categoryPct}>{c.percentage !== null ? `${c.percentage}%` : '—'}</Text>
                 </View>
               ))}
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 16 }} onPress={() => setDetail(null)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Close</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

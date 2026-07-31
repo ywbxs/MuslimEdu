@@ -15,12 +15,14 @@ import {
 import examService, { Examination } from '../../services/teacherExaminationService';
 import teacherClassService from '../../services/teacherClassService';
 import { C } from '../nextPhaseTheme';
+import { useLocale } from '../../context/LocaleContext';
 
 const EXAM_TYPES = ['written', 'oral', 'practical', 'memorisation', 'project', 'quiz'];
 
 type Props = { navigation: any; route: { params?: { examination?: Examination } } };
 
 export default function TeacherExaminationFormScreen({ navigation, route }: Props) {
+  const { t } = useLocale();
   const existing = route.params?.examination;
   const editing = Boolean(existing);
 
@@ -66,11 +68,11 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
 
   const submit = async () => {
     if (!title.trim()) {
-      Alert.alert('Title required', 'Give the examination a name students will recognise.');
+      Alert.alert(t('teacher_examination_form.title_required', 'Title required'), t('teacher_examination_form.title_required_message', 'Give the examination a name students will recognise.'));
       return;
     }
     if (!sectionId.trim()) {
-      Alert.alert('Section required', 'Pick the section this examination belongs to.');
+      Alert.alert(t('teacher_examination_form.section_required', 'Section required'), t('teacher_examination_form.section_required_message', 'Pick the section this examination belongs to.'));
       return;
     }
 
@@ -101,7 +103,7 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
       }
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_examination_form.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -111,28 +113,28 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps='handled'>
-          <Text style={s.title}>{editing ? 'Edit examination' : 'New examination'}</Text>
-          <Text style={s.sub}>Saved as a draft. Students see nothing until you publish it.</Text>
+          <Text style={s.title}>{editing ? t('teacher_examination_form.edit_title', 'Edit examination') : t('teacher_examination_form.new_title', 'New examination')}</Text>
+          <Text style={s.sub}>{t('teacher_examination_form.draft_note', 'Saved as a draft. Students see nothing until you publish it.')}</Text>
 
-          <Field label='Title' value={title} onChange={setTitle} placeholder='Mid-term Tajweed assessment' />
-          <Field label='Title (Arabic)' value={titleAr} onChange={setTitleAr} placeholder='optional' />
+          <Field label={t('teacher_examination_form.title_label', 'Title')} value={title} onChange={setTitle} placeholder={t('teacher_examination_form.title_placeholder', 'Mid-term Tajweed assessment')} />
+          <Field label={t('teacher_examination_form.title_ar_label', 'Title (Arabic)')} value={titleAr} onChange={setTitleAr} placeholder={t('teacher_examination_form.optional', 'optional')} />
 
-          <Text style={s.label}>Type</Text>
+          <Text style={s.label}>{t('teacher_examination_form.type_label', 'Type')}</Text>
           <View style={s.chipRow}>
-            {EXAM_TYPES.map(t => (
+            {EXAM_TYPES.map(examTypeOption => (
               <TouchableOpacity
-                key={t}
-                style={[s.chip, examType === t && s.chipActive]}
-                onPress={() => setExamType(t)}
+                key={examTypeOption}
+                style={[s.chip, examType === examTypeOption && s.chipActive]}
+                onPress={() => setExamType(examTypeOption)}
               >
-                <Text style={[s.chipText, examType === t && s.chipTextActive]}>{t}</Text>
+                <Text style={[s.chipText, examType === examTypeOption && s.chipTextActive]}>{t(`teacher_examination_form.exam_type_${examTypeOption}`, examTypeOption)}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {sections.length > 0 ? (
             <>
-              <Text style={s.label}>Section</Text>
+              <Text style={s.label}>{t('teacher_examination_form.section_label', 'Section')}</Text>
               <View style={s.chipRow}>
                 {sections.map(sec => (
                   <TouchableOpacity
@@ -148,37 +150,37 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
           ) : null}
 
           <View style={s.row}>
-            <Field label='Section id' value={sectionId} onChange={setSectionId} keyboard='number-pad' half />
-            <Field label='Subject id' value={subjectId} onChange={setSubjectId} keyboard='number-pad' half />
+            <Field label={t('teacher_examination_form.section_id', 'Section id')} value={sectionId} onChange={setSectionId} keyboard='number-pad' half />
+            <Field label={t('teacher_examination_form.subject_id', 'Subject id')} value={subjectId} onChange={setSubjectId} keyboard='number-pad' half />
           </View>
 
-          <Field label='Date (YYYY-MM-DD)' value={scheduledDate} onChange={setScheduledDate} placeholder='2026-08-14' />
+          <Field label={t('teacher_examination_form.date_label', 'Date (YYYY-MM-DD)')} value={scheduledDate} onChange={setScheduledDate} placeholder='2026-08-14' />
 
           <View style={s.row}>
-            <Field label='Start (HH:MM)' value={startTime} onChange={setStartTime} placeholder='09:00' half />
-            <Field label='End (HH:MM)' value={endTime} onChange={setEndTime} placeholder='10:30' half />
-          </View>
-
-          <View style={s.row}>
-            <Field label='Duration (min)' value={duration} onChange={setDuration} keyboard='number-pad' half />
-            <Field label='Room' value={room} onChange={setRoom} half />
+            <Field label={t('teacher_examination_form.start_label', 'Start (HH:MM)')} value={startTime} onChange={setStartTime} placeholder='09:00' half />
+            <Field label={t('teacher_examination_form.end_label', 'End (HH:MM)')} value={endTime} onChange={setEndTime} placeholder='10:30' half />
           </View>
 
           <View style={s.row}>
-            <Field label='Total marks' value={totalMarks} onChange={setTotalMarks} keyboard='decimal-pad' half />
-            <Field label='Pass mark' value={passingMarks} onChange={setPassingMarks} keyboard='decimal-pad' half />
+            <Field label={t('teacher_examination_form.duration_label', 'Duration (min)')} value={duration} onChange={setDuration} keyboard='number-pad' half />
+            <Field label={t('teacher_examination_form.room_label', 'Room')} value={room} onChange={setRoom} half />
+          </View>
+
+          <View style={s.row}>
+            <Field label={t('teacher_examination_form.total_marks_label', 'Total marks')} value={totalMarks} onChange={setTotalMarks} keyboard='decimal-pad' half />
+            <Field label={t('teacher_examination_form.pass_mark_label', 'Pass mark')} value={passingMarks} onChange={setPassingMarks} keyboard='decimal-pad' half />
           </View>
 
           <Field
-            label='Weight (%)'
+            label={t('teacher_examination_form.weight_label', 'Weight (%)')}
             value={weight}
             onChange={setWeight}
             keyboard='decimal-pad'
-            hint='Weight toward the final grade, if your grading system uses weighted components.'
+            hint={t('teacher_examination_form.weight_hint', 'Weight toward the final grade, if your grading system uses weighted components.')}
           />
 
-          <Field label='Description' value={description} onChange={setDescription} multiline />
-          <Field label='Instructions for students' value={instructions} onChange={setInstructions} multiline />
+          <Field label={t('teacher_examination_form.description_label', 'Description')} value={description} onChange={setDescription} multiline />
+          <Field label={t('teacher_examination_form.instructions_label', 'Instructions for students')} value={instructions} onChange={setInstructions} multiline />
         </ScrollView>
 
         <View style={s.footer}>
@@ -186,7 +188,7 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
             {saving ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
-              <Text style={s.saveText}>{editing ? 'Save changes' : 'Create draft'}</Text>
+              <Text style={s.saveText}>{editing ? t('teacher_examination_form.save_changes', 'Save changes') : t('teacher_examination_form.create_draft', 'Create draft')}</Text>
             )}
           </TouchableOpacity>
         </View>

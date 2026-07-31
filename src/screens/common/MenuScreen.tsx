@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { getDashboardForRole } from '../../navigation/roleScreens';
 import { GlassButton } from '../../components/glass/GlassKit';
 import { RADIUS } from '../../theme/glass';
@@ -17,13 +18,14 @@ import { RADIUS } from '../../theme/glass';
  */
 export default function MenuScreen() {
   const { user, logout } = useAuth();
+  const { t } = useLocale();
 
   if (!user) return null;
 
   const footer = (
     <View style={styles.footerWrap}>
       <GlassButton
-        label="Log Out"
+        label={t('menu.log_out', 'Log Out')}
         variant="danger"
         onPress={logout}
         radius={RADIUS.lg}

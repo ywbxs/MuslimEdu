@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherProfile, updateTeacherProfile, TeacherProfile, TeacherBasicProfileFields } from '../../services/adminTeacherService';
 import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
@@ -107,6 +108,7 @@ export default function AdminTeacherProfileScreen() {
   const route = useRoute();
   const { teacherId, teacherName, isAdmin = true } = (route.params as { teacherId: number; teacherName: string; isAdmin?: boolean }) ?? {};
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [profile, setProfile] = useState<TeacherProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,9 +134,9 @@ export default function AdminTeacherProfileScreen() {
         password: '',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile.');
+      setError(err instanceof Error ? err.message : t('admin_teacher_profile.load_error', 'Failed to load profile.'));
     }
-  }, [token, teacherId]);
+  }, [token, teacherId, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -144,7 +146,7 @@ export default function AdminTeacherProfileScreen() {
   const handleSave = async () => {
     if (!token) return;
     if (!fields.name.trim() || !fields.email.trim()) {
-      Alert.alert('Missing info', 'Name and email are required.');
+      Alert.alert(t('admin_teacher_profile.missing_info_title', 'Missing info'), t('admin_teacher_profile.missing_info_message', 'Name and email are required.'));
       return;
     }
     setIsSaving(true);
@@ -163,10 +165,10 @@ export default function AdminTeacherProfileScreen() {
       await updateTeacherProfile(token, teacherId, updateFields);
       setFields((p) => ({ ...p, password: '' }));
       setIsEditing(false);
-      Alert.alert('Saved', "The teacher's profile has been updated.");
+      Alert.alert(t('admin_teacher_profile.saved_title', 'Saved'), t('admin_teacher_profile.saved_message', "The teacher's profile has been updated."));
       load();
     } catch (err) {
-      Alert.alert('Could not save', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('admin_teacher_profile.save_error', 'Could not save'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSaving(false);
     }
@@ -192,13 +194,13 @@ export default function AdminTeacherProfileScreen() {
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{teacherName ?? 'Profile'}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{teacherName ?? t('admin_teacher_profile.title', 'Profile')}</Text>
         {isAdmin && !isLoading && profile && !isEditing ? (
           <TouchableOpacity onPress={() => setIsEditing(true)} hitSlop={10} style={styles.editBtn}>
             <IconPencil color={EMERALD} />
-            <Text style={styles.editBtnText}>Edit</Text>
+            <Text style={styles.editBtnText}>{t('common.edit', 'Edit')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 40 }} />
@@ -222,7 +224,7 @@ export default function AdminTeacherProfileScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : profile ? (
@@ -235,42 +237,42 @@ export default function AdminTeacherProfileScreen() {
 
           {isEditing ? (
             <>
-              <EditField label="Name" value={fields.name} onChangeText={(v) => setFields((p) => ({ ...p, name: v }))} />
-              <EditField label="Email" value={fields.email} onChangeText={(v) => setFields((p) => ({ ...p, email: v }))} keyboardType="email-address" autoCapitalize="none" />
-              <EditField label="Phone" value={fields.phone} onChangeText={(v) => setFields((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" />
-              <EditField label="Address" value={fields.address} onChangeText={(v) => setFields((p) => ({ ...p, address: v }))} />
-              <EditField label="Gender" value={fields.gender} onChangeText={(v) => setFields((p) => ({ ...p, gender: v }))} placeholder="male / female" autoCapitalize="none" />
-              <EditField label="Birthday" value={fields.birthday} onChangeText={(v) => setFields((p) => ({ ...p, birthday: v }))} placeholder="YYYY-MM-DD" />
-              <EditField label="New Password" value={fields.password} onChangeText={(v) => setFields((p) => ({ ...p, password: v }))} placeholder="Leave blank to keep current password" secureTextEntry autoCapitalize="none" />
+              <EditField label={t('admin_teacher_profile.name', 'Name')} value={fields.name} onChangeText={(v) => setFields((p) => ({ ...p, name: v }))} />
+              <EditField label={t('admin_teacher_profile.email', 'Email')} value={fields.email} onChangeText={(v) => setFields((p) => ({ ...p, email: v }))} keyboardType="email-address" autoCapitalize="none" />
+              <EditField label={t('admin_teacher_profile.phone', 'Phone')} value={fields.phone} onChangeText={(v) => setFields((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" />
+              <EditField label={t('admin_teacher_profile.address', 'Address')} value={fields.address} onChangeText={(v) => setFields((p) => ({ ...p, address: v }))} />
+              <EditField label={t('admin_teacher_profile.gender', 'Gender')} value={fields.gender} onChangeText={(v) => setFields((p) => ({ ...p, gender: v }))} placeholder={t('admin_teacher_profile.gender_placeholder', 'male / female')} autoCapitalize="none" />
+              <EditField label={t('admin_teacher_profile.birthday', 'Birthday')} value={fields.birthday} onChangeText={(v) => setFields((p) => ({ ...p, birthday: v }))} placeholder="YYYY-MM-DD" />
+              <EditField label={t('admin_teacher_profile.new_password', 'New Password')} value={fields.password} onChangeText={(v) => setFields((p) => ({ ...p, password: v }))} placeholder={t('admin_teacher_profile.password_placeholder', 'Leave blank to keep current password')} secureTextEntry autoCapitalize="none" />
 
               <View style={styles.editActionsRow}>
                 <TouchableOpacity style={[styles.editActionBtn, styles.editActionBtnGhost]} onPress={handleCancel} disabled={isSaving}>
-                  <Text style={styles.editActionBtnGhostText}>Cancel</Text>
+                  <Text style={styles.editActionBtnGhostText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.editActionBtn, styles.editActionBtnPrimary]} onPress={handleSave} disabled={isSaving}>
-                  {isSaving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.editActionBtnPrimaryText}>Save</Text>}
+                  {isSaving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.editActionBtnPrimaryText}>{t('admin_teacher_profile.save', 'Save')}</Text>}
                 </TouchableOpacity>
               </View>
             </>
           ) : (
             <>
               <View style={styles.infoCard}>
-                <InfoRow label="Email" value={profile.email} />
+                <InfoRow label={t('admin_teacher_profile.email', 'Email')} value={profile.email} />
               </View>
               <View style={styles.infoCard}>
-                <InfoRow label="Phone" value={profile.phone} />
+                <InfoRow label={t('admin_teacher_profile.phone', 'Phone')} value={profile.phone} />
               </View>
               <View style={styles.infoCard}>
-                <InfoRow label="Address" value={profile.address} />
+                <InfoRow label={t('admin_teacher_profile.address', 'Address')} value={profile.address} />
               </View>
               <View style={styles.infoCard}>
-                <InfoRow label="Gender" value={profile.gender} />
+                <InfoRow label={t('admin_teacher_profile.gender', 'Gender')} value={profile.gender} />
               </View>
               <View style={styles.infoCard}>
-                <InfoRow label="Birthday" value={profile.birthday} />
+                <InfoRow label={t('admin_teacher_profile.birthday', 'Birthday')} value={profile.birthday} />
               </View>
               <View style={styles.infoCard}>
-                <InfoRow label="Staff Code" value={profile.code} />
+                <InfoRow label={t('admin_teacher_profile.staff_code', 'Staff Code')} value={profile.code} />
               </View>
             </>
           )}
