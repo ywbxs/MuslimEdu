@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -71,6 +72,7 @@ export default function SubjectFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const subjectId: number | undefined = route.params?.subjectId;
   const isEditing = !!subjectId;
@@ -124,7 +126,7 @@ export default function SubjectFormScreen() {
         if (isEditing) {
           const subject = subjects.find((s) => s.id === subjectId);
           if (!subject) {
-            setError('Subject not found.');
+            setError(t('subject_form.not_found', 'Subject not found.'));
             return;
           }
           setName(subject.name);
@@ -149,7 +151,7 @@ export default function SubjectFormScreen() {
           setCorequisiteIds((subject.corequisites ?? []).map((c) => c.id));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load the subject.');
+        setError(err instanceof Error ? err.message : t('subject_form.load_error', 'Failed to load the subject.'));
       } finally {
         setLoading(false);
       }
@@ -168,11 +170,11 @@ export default function SubjectFormScreen() {
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('subject_form.error_session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Subject name is required.');
+      Alert.alert(t('common.error', 'Error'), t('subject_form.error_name_required', 'Subject name is required.'));
       return;
     }
 
@@ -207,7 +209,7 @@ export default function SubjectFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the subject.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('subject_form.save_error', 'Could not save the subject.'));
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +223,7 @@ export default function SubjectFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? 'Edit Subject' : 'Add Subject'}
+            {isEditing ? t('subject_form.edit_title', 'Edit Subject') : t('subject_form.add_title', 'Add Subject')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -248,51 +250,51 @@ export default function SubjectFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Name</Text>
+        <Text style={styles.label}>{t('subject_form.name_label', 'Name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Tajweed"
+          placeholder={t('subject_form.name_placeholder', 'e.g. Tajweed')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Arabic Name (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.name_ar_label', 'Arabic Name (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={nameAr}
           onChangeText={setNameAr}
-          placeholder="الاسم بالعربية"
+          placeholder={t('subject_form.name_ar_placeholder', 'الاسم بالعربية')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Short Name / Code (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.short_name_code_label', 'Short Name / Code (optional)')}</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.rowInput]}
             value={shortName}
             onChangeText={setShortName}
-            placeholder="Short name"
+            placeholder={t('subject_form.short_name_placeholder', 'Short name')}
             placeholderTextColor={theme.textMuted}
           />
           <TextInput
             style={[styles.input, styles.rowInput]}
             value={code}
             onChangeText={setCode}
-            placeholder="Code"
+            placeholder={t('subject_form.code_placeholder', 'Code')}
             placeholderTextColor={theme.textMuted}
             autoCapitalize="characters"
           />
         </View>
 
-        <Text style={styles.label}>Department (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.department_label', 'Department (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, departmentId === null && styles.typeOptionSelected]}
             onPress={() => setDepartmentId(null)}
           >
             <Text style={[styles.typeOptionText, departmentId === null && styles.typeOptionTextSelected]}>
-              None
+              {t('common.none', 'None')}
             </Text>
           </TouchableOpacity>
           {departments.map((d) => {
@@ -309,14 +311,14 @@ export default function SubjectFormScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>Program (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.program_label', 'Program (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, programId === null && styles.typeOptionSelected]}
             onPress={() => setProgramId(null)}
           >
             <Text style={[styles.typeOptionText, programId === null && styles.typeOptionTextSelected]}>
-              None
+              {t('common.none', 'None')}
             </Text>
           </TouchableOpacity>
           {programs.map((p) => {
@@ -333,14 +335,14 @@ export default function SubjectFormScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>Curriculum (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.curriculum_label', 'Curriculum (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, curriculumId === null && styles.typeOptionSelected]}
             onPress={() => setCurriculumId(null)}
           >
             <Text style={[styles.typeOptionText, curriculumId === null && styles.typeOptionTextSelected]}>
-              None
+              {t('common.none', 'None')}
             </Text>
           </TouchableOpacity>
           {curricula.map((c) => {
@@ -357,13 +359,13 @@ export default function SubjectFormScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>Units / Weekly Hours / Passing Score (all optional)</Text>
+        <Text style={styles.label}>{t('subject_form.units_hours_score_label', 'Units / Weekly Hours / Passing Score (all optional)')}</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.rowInputThird]}
             value={units}
             onChangeText={setUnits}
-            placeholder="Units"
+            placeholder={t('subject_form.units_placeholder', 'Units')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
@@ -371,7 +373,7 @@ export default function SubjectFormScreen() {
             style={[styles.input, styles.rowInputThird]}
             value={weeklyHours}
             onChangeText={setWeeklyHours}
-            placeholder="Wkly hrs"
+            placeholder={t('subject_form.weekly_hours_placeholder', 'Wkly hrs')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
@@ -379,19 +381,19 @@ export default function SubjectFormScreen() {
             style={[styles.input, styles.rowInputThird]}
             value={passingScore}
             onChangeText={setPassingScore}
-            placeholder="Passing %"
+            placeholder={t('subject_form.passing_score_placeholder', 'Passing %')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
         </View>
 
-        <Text style={styles.label}>Contact / Lecture / Lab / Practical Hours (all optional)</Text>
+        <Text style={styles.label}>{t('subject_form.hours_label', 'Contact / Lecture / Lab / Practical Hours (all optional)')}</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.rowInputThird]}
             value={contactHours}
             onChangeText={setContactHours}
-            placeholder="Contact"
+            placeholder={t('subject_form.contact_hours_placeholder', 'Contact')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
@@ -399,7 +401,7 @@ export default function SubjectFormScreen() {
             style={[styles.input, styles.rowInputThird]}
             value={lectureHours}
             onChangeText={setLectureHours}
-            placeholder="Lecture"
+            placeholder={t('subject_form.lecture_hours_placeholder', 'Lecture')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
@@ -409,7 +411,7 @@ export default function SubjectFormScreen() {
             style={[styles.input, styles.rowInputThird]}
             value={laboratoryHours}
             onChangeText={setLaboratoryHours}
-            placeholder="Laboratory"
+            placeholder={t('subject_form.laboratory_hours_placeholder', 'Laboratory')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
@@ -417,29 +419,29 @@ export default function SubjectFormScreen() {
             style={[styles.input, styles.rowInputThird]}
             value={practicalHours}
             onChangeText={setPracticalHours}
-            placeholder="Practical"
+            placeholder={t('subject_form.practical_hours_placeholder', 'Practical')}
             placeholderTextColor={theme.textMuted}
             keyboardType="decimal-pad"
           />
         </View>
 
-        <Text style={styles.label}>Display Order (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.display_order_label', 'Display Order (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={displayOrder}
           onChangeText={setDisplayOrder}
-          placeholder="e.g. 1 - lower shows first"
+          placeholder={t('subject_form.display_order_placeholder', 'e.g. 1 - lower shows first')}
           placeholderTextColor={theme.textMuted}
           keyboardType="number-pad"
         />
 
-        <Text style={styles.label}>Color (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.color_label', 'Color (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, color === null && styles.typeOptionSelected]}
             onPress={() => setColor(null)}
           >
-            <Text style={[styles.typeOptionText, color === null && styles.typeOptionTextSelected]}>None</Text>
+            <Text style={[styles.typeOptionText, color === null && styles.typeOptionTextSelected]}>{t('common.none', 'None')}</Text>
           </TouchableOpacity>
           {COLOR_PRESETS.map((c) => {
             const selected = color === c;
@@ -459,7 +461,7 @@ export default function SubjectFormScreen() {
 
         {allSubjects.length > 0 ? (
           <>
-            <Text style={styles.label}>Prerequisites (optional)</Text>
+            <Text style={styles.label}>{t('subject_form.prerequisites_label', 'Prerequisites (optional)')}</Text>
             <View style={styles.typeGrid}>
               {allSubjects.map((s) => {
                 const selected = prerequisiteIds.includes(s.id);
@@ -477,8 +479,8 @@ export default function SubjectFormScreen() {
               })}
             </View>
 
-            <Text style={styles.label}>Corequisites (optional)</Text>
-            <Text style={styles.switchHelp}>Subjects that must be taken alongside this one.</Text>
+            <Text style={styles.label}>{t('subject_form.corequisites_label', 'Corequisites (optional)')}</Text>
+            <Text style={styles.switchHelp}>{t('subject_form.corequisites_help', 'Subjects that must be taken alongside this one.')}</Text>
             <View style={[styles.typeGrid, { marginTop: 8 }]}>
               {allSubjects.map((s) => {
                 const selected = corequisiteIds.includes(s.id);
@@ -498,12 +500,12 @@ export default function SubjectFormScreen() {
           </>
         ) : null}
 
-        <Text style={styles.label}>Description (optional)</Text>
+        <Text style={styles.label}>{t('subject_form.description_label', 'Description (optional)')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder="Notes about this subject"
+          placeholder={t('subject_form.description_placeholder', 'Notes about this subject')}
           placeholderTextColor={theme.textMuted}
           multiline
           numberOfLines={3}
@@ -511,9 +513,9 @@ export default function SubjectFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Active</Text>
+            <Text style={styles.switchLabel}>{t('common.active', 'Active')}</Text>
             <Text style={styles.switchHelp}>
-              Inactive subjects are hidden from new assignments but kept for history.
+              {t('subject_form.active_help', 'Inactive subjects are hidden from new assignments but kept for history.')}
             </Text>
           </View>
           <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: theme.accent }} />
@@ -527,7 +529,7 @@ export default function SubjectFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Subject'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('common.save_changes', 'Save Changes') : t('subject_form.add_title', 'Add Subject')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
