@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -43,9 +44,10 @@ export default function AcademicTermsScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const sessionId: number = route.params?.sessionId;
-  const sessionTitle: string = route.params?.sessionTitle ?? 'Academic Year';
+  const sessionTitle: string = route.params?.sessionTitle ?? t('academic_terms.academic_year', 'Academic Year');
 
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,11 +61,11 @@ export default function AcademicTermsScreen() {
       const data = await fetchAcademicTerms(token, sessionId);
       setTerms(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load terms.');
+      setError(err instanceof Error ? err.message : t('academic_terms.load_error', 'Failed to load terms.'));
     } finally {
       setLoading(false);
     }
-  }, [token, sessionId]);
+  }, [token, sessionId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,7 +80,7 @@ export default function AcademicTermsScreen() {
       await setCurrentAcademicTerm(token, term.id);
       load();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not set current term.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_terms.set_current_error', 'Could not set current term.'));
     } finally {
       setBusyId(null);
     }
@@ -86,12 +88,12 @@ export default function AcademicTermsScreen() {
 
   const handleDelete = (term: AcademicTerm) => {
     Alert.alert(
-      'Delete Term',
-      `Delete "${term.name}"? This can't be undone.`,
+      t('academic_terms.delete_title', 'Delete Term'),
+      `${t('academic_terms.delete_confirm', 'Delete')} "${term.name}"? ${t('academic_terms.delete_irreversible', "This can't be undone.")}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('academic_terms.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
@@ -102,7 +104,7 @@ export default function AcademicTermsScreen() {
               // Backend blocks deletion while classes are still assigned to
               // this term - surface that message as-is, same convention as
               // enrollment stage delete-in-use.
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete term.');
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_terms.delete_error', 'Failed to delete term.'));
             }
           },
         },
@@ -123,7 +125,7 @@ export default function AcademicTermsScreen() {
             <Text style={styles.name}>{item.name}</Text>
             {item.is_current ? (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>Current</Text>
+                <Text style={styles.currentBadgeText}>{t('academic_terms.current', 'Current')}</Text>
               </View>
             ) : null}
           </View>
@@ -134,13 +136,13 @@ export default function AcademicTermsScreen() {
         <View style={styles.cardFooter}>
           {!item.is_current ? (
             <TouchableOpacity style={styles.setCurrentButton} disabled={busy} onPress={() => handleSetCurrent(item)}>
-              <Text style={styles.setCurrentButtonText}>{busy ? 'Setting...' : 'Set Current'}</Text>
+              <Text style={styles.setCurrentButtonText}>{busy ? t('academic_terms.setting', 'Setting...') : t('academic_terms.set_current', 'Set Current')}</Text>
             </TouchableOpacity>
           ) : (
             <View />
           )}
           <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Text style={styles.deleteButtonText}>{t('academic_terms.delete', 'Delete')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -162,7 +164,7 @@ export default function AcademicTermsScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]} numberOfLines={1}>
-            {sessionTitle} Terms
+            {sessionTitle} {t('academic_terms.terms_suffix', 'Terms')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -186,7 +188,7 @@ export default function AcademicTermsScreen() {
           style={styles.addButton}
           onPress={() => (navigation as any).navigate('AcademicTermForm', { sessionId })}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -194,7 +196,7 @@ export default function AcademicTermsScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
           <TouchableOpacity onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -208,9 +210,9 @@ export default function AcademicTermsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="📚"
-            title="No terms yet"
-            subtitle="Add a semester, trimester, or quarter to this academic year."
-            actionLabel="Add Term"
+            title={t('academic_terms.empty_title', 'No terms yet')}
+            subtitle={t('academic_terms.empty_subtitle', 'Add a semester, trimester, or quarter to this academic year.')}
+            actionLabel={t('academic_terms.add_term', 'Add Term')}
             onAction={() => (navigation as any).navigate('AcademicTermForm', { sessionId })}
             colors={theme}
           />
