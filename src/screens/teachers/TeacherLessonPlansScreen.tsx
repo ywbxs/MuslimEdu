@@ -16,6 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchLessonPlanTargets,
   fetchTeacherLessonPlans,
@@ -42,13 +43,14 @@ const RED_SOFT = '#FDECEC';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const STATUS_FILTERS: { key: 'all' | LessonPlanStatus; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'draft', label: 'Draft' },
-  { key: 'submitted', label: 'Submitted' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
-];
+const STATUS_FILTER_KEYS: ('all' | LessonPlanStatus)[] = ['all', 'draft', 'submitted', 'approved', 'rejected'];
+const STATUS_FILTER_FALLBACKS: Record<'all' | LessonPlanStatus, string> = {
+  all: 'All',
+  draft: 'Draft',
+  submitted: 'Submitted',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
 
 function statusColor(status: LessonPlanStatus) {
   switch (status) {
@@ -151,6 +153,9 @@ export default function TeacherLessonPlansScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
+  const statusFilterLabel = (key: 'all' | LessonPlanStatus) =>
+    t(`teacher_lesson_plans.status_filter_${key}`, STATUS_FILTER_FALLBACKS[key]);
 
   const [plans, setPlans] = useState<LessonPlan[]>([]);
   const [targets, setTargets] = useState<LessonPlanTarget[]>([]);
@@ -163,8 +168,8 @@ export default function TeacherLessonPlansScreen() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const targetKey = (t: LessonPlanTarget) => `${t.section_id}:${t.subject_id}`;
-  const selectedTarget = targets.find((t) => targetKey(t) === form.targetKey) ?? null;
+  const targetKey = (target: LessonPlanTarget) => `${target.section_id}:${target.subject_id}`;
+  const selectedTarget = targets.find((target) => targetKey(target) === form.targetKey) ?? null;
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -179,7 +184,7 @@ export default function TeacherLessonPlansScreen() {
         setPlans(planList);
         if (!targets.length) setTargets(targetList);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load lesson plans.');
+        setError(e?.message ?? t('teacher_lesson_plans.load_error', 'Could not load lesson plans.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -232,7 +237,7 @@ export default function TeacherLessonPlansScreen() {
   const save = async (submit: boolean) => {
     if (!token) return;
     if (!form.title.trim()) {
-      Alert.alert('Missing title', 'Give this lesson plan a title.');
+      Alert.alert(t('teacher_lesson_plans.missing_title_title', 'Missing title'), t('teacher_lesson_plans.missing_title_message', 'Give this lesson plan a title.'));
       return;
     }
     setIsSubmitting(true);
@@ -254,7 +259,7 @@ export default function TeacherLessonPlansScreen() {
         });
       } else {
         if (!selectedTarget) {
-          Alert.alert('Pick a class', 'Choose which section/subject this plan is for.');
+          Alert.alert(t('teacher_lesson_plans.pick_class_title', 'Pick a class'), t('teacher_lesson_plans.pick_class_message', 'Choose which section/subject this plan is for.'));
           setIsSubmitting(false);
           return;
         }
@@ -277,7 +282,7 @@ export default function TeacherLessonPlansScreen() {
       setIsModalVisible(false);
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_lesson_plans.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -285,21 +290,25 @@ export default function TeacherLessonPlansScreen() {
 
   const handleDelete = (plan: LessonPlan) => {
     if (!token) return;
-    Alert.alert('Delete draft?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteLessonPlan(token, plan.id);
-            setPlans((prev) => prev.filter((p) => p.id !== plan.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('teacher_lesson_plans.delete_confirm_title', 'Delete draft?'),
+      t('teacher_lesson_plans.delete_confirm_message', 'This cannot be undone.'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteLessonPlan(token, plan.id);
+              setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+            } catch (e: any) {
+              Alert.alert(t('teacher_lesson_plans.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const visiblePlans = useMemo(() => plans, [plans]);
@@ -310,7 +319,7 @@ export default function TeacherLessonPlansScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lesson Plans</Text>
+        <Text style={styles.headerTitle}>{t('teacher_lesson_plans.header_title', 'Lesson Plans')}</Text>
         <TouchableOpacity onPress={openNew} hitSlop={12} style={styles.newButton}>
           <IconPlus color={EMERALD} />
         </TouchableOpacity>
@@ -318,18 +327,18 @@ export default function TeacherLessonPlansScreen() {
 
       <FlatList
         horizontal
-        data={STATUS_FILTERS}
-        keyExtractor={(f) => f.key}
+        data={STATUS_FILTER_KEYS}
+        keyExtractor={(f) => f}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
         renderItem={({ item }) => {
-          const active = item.key === statusFilter;
+          const active = item === statusFilter;
           return (
             <TouchableOpacity
-              onPress={() => setStatusFilter(item.key)}
+              onPress={() => setStatusFilter(item)}
               style={[styles.filterChip, active && styles.filterChipActive]}
             >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{item.label}</Text>
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{statusFilterLabel(item)}</Text>
             </TouchableOpacity>
           );
         }}
@@ -357,7 +366,7 @@ export default function TeacherLessonPlansScreen() {
           }}
           refreshing={isRefreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No lesson plans yet. Tap + to draft your first one.</Text>
+            <Text style={styles.emptyText}>{t('teacher_lesson_plans.empty', 'No lesson plans yet. Tap + to draft your first one.')}</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.card} onPress={() => openEdit(item)} activeOpacity={0.85}>
@@ -366,7 +375,7 @@ export default function TeacherLessonPlansScreen() {
                   {item.title}
                 </Text>
                 <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) + '22' }]}>
-                  <Text style={[styles.statusBadgeText, { color: statusColor(item.status) }]}>{item.status}</Text>
+                  <Text style={[styles.statusBadgeText, { color: statusColor(item.status) }]}>{statusFilterLabel(item.status)}</Text>
                 </View>
                 {item.status === 'draft' ? (
                   <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={10} style={{ marginLeft: 6 }}>
@@ -381,7 +390,7 @@ export default function TeacherLessonPlansScreen() {
               </Text>
               {item.status === 'rejected' && item.admin_comment ? (
                 <Text style={styles.rejectionNote} numberOfLines={2}>
-                  Admin: {item.admin_comment}
+                  {t('teacher_lesson_plans.admin_comment', 'Admin: {comment}').replace('{comment}', item.admin_comment)}
                 </Text>
               ) : null}
             </TouchableOpacity>
@@ -393,15 +402,15 @@ export default function TeacherLessonPlansScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
-              <Text style={styles.modalTitle}>{form.planId ? 'Edit lesson plan' : 'New lesson plan'}</Text>
+              <Text style={styles.modalTitle}>{form.planId ? t('teacher_lesson_plans.edit_title', 'Edit lesson plan') : t('teacher_lesson_plans.new_title', 'New lesson plan')}</Text>
 
               {!form.planId ? (
                 <>
-                  <Text style={styles.fieldLabel}>Class</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.class_label', 'Class')}</Text>
                   <FlatList
                     horizontal
                     data={targets}
-                    keyExtractor={(t) => targetKey(t)}
+                    keyExtractor={(target) => targetKey(target)}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 4 }}
                     renderItem={({ item }) => {
@@ -427,10 +436,10 @@ export default function TeacherLessonPlansScreen() {
                 </Text>
               )}
 
-              <Text style={styles.fieldLabel}>Title</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.title_label', 'Title')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Surah Al-Fatiha — Tajweed rules"
+                placeholder={t('teacher_lesson_plans.title_placeholder', 'e.g. Surah Al-Fatiha — Tajweed rules')}
                 placeholderTextColor={SUBTLE}
                 value={form.title}
                 onChangeText={(v) => setForm((f) => ({ ...f, title: v }))}
@@ -438,17 +447,17 @@ export default function TeacherLessonPlansScreen() {
 
               <View style={styles.row2}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Week</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.week_label', 'Week')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Week 5"
+                    placeholder={t('teacher_lesson_plans.week_placeholder', 'Week 5')}
                     placeholderTextColor={SUBTLE}
                     value={form.weekLabel}
                     onChangeText={(v) => setForm((f) => ({ ...f, weekLabel: v }))}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Date</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.date_label', 'Date')}</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="YYYY-MM-DD"
@@ -459,17 +468,17 @@ export default function TeacherLessonPlansScreen() {
                 </View>
               </View>
 
-              <Text style={styles.fieldLabel}>Objectives</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.objectives_label', 'Objectives')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
-                placeholder="What students should be able to do by the end"
+                placeholder={t('teacher_lesson_plans.objectives_placeholder', 'What students should be able to do by the end')}
                 placeholderTextColor={SUBTLE}
                 value={form.objectives}
                 onChangeText={(v) => setForm((f) => ({ ...f, objectives: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Competencies</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.competencies_label', 'Competencies')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
@@ -478,7 +487,7 @@ export default function TeacherLessonPlansScreen() {
                 onChangeText={(v) => setForm((f) => ({ ...f, competencies: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Activities</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.activities_label', 'Activities')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
@@ -487,7 +496,7 @@ export default function TeacherLessonPlansScreen() {
                 onChangeText={(v) => setForm((f) => ({ ...f, activities: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Strategies</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.strategies_label', 'Strategies')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
@@ -496,17 +505,17 @@ export default function TeacherLessonPlansScreen() {
                 onChangeText={(v) => setForm((f) => ({ ...f, strategies: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Materials</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.materials_label', 'Materials')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
-                placeholder="What you'll bring/use in class"
+                placeholder={t('teacher_lesson_plans.materials_placeholder', "What you'll bring/use in class")}
                 placeholderTextColor={SUBTLE}
                 value={form.materialsNotes}
                 onChangeText={(v) => setForm((f) => ({ ...f, materialsNotes: v }))}
               />
 
-              <Text style={styles.fieldLabel}>Homework</Text>
+              <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.homework_label', 'Homework')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 multiline
@@ -517,11 +526,11 @@ export default function TeacherLessonPlansScreen() {
 
               {form.planId ? (
                 <>
-                  <Text style={styles.fieldLabel}>Reflections (after teaching)</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.reflections_label', 'Reflections (after teaching)')}</Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     multiline
-                    placeholder="How did it go? What would you change?"
+                    placeholder={t('teacher_lesson_plans.reflections_placeholder', 'How did it go? What would you change?')}
                     placeholderTextColor={SUBTLE}
                     value={form.reflections}
                     onChangeText={(v) => setForm((f) => ({ ...f, reflections: v }))}
@@ -529,7 +538,7 @@ export default function TeacherLessonPlansScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.fieldLabel}>Attachment</Text>
+                  <Text style={styles.fieldLabel}>{t('teacher_lesson_plans.attachment_label', 'Attachment')}</Text>
                   {form.attachment ? (
                     <View style={styles.attachmentPicked}>
                       <IconPaperclip color={EMERALD} />
@@ -543,7 +552,7 @@ export default function TeacherLessonPlansScreen() {
                   ) : (
                     <TouchableOpacity onPress={pickAttachment} style={styles.attachButton}>
                       <IconPaperclip color={EMERALD} />
-                      <Text style={styles.attachButtonText}>Attach a photo (worksheet, slide, etc.)</Text>
+                      <Text style={styles.attachButtonText}>{t('teacher_lesson_plans.attach_photo', 'Attach a photo (worksheet, slide, etc.)')}</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -555,14 +564,14 @@ export default function TeacherLessonPlansScreen() {
                   onPress={() => setIsModalVisible(false)}
                   disabled={isSubmitting}
                 >
-                  <Text style={styles.modalBtnGhostText}>Cancel</Text>
+                  <Text style={styles.modalBtnGhostText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.modalBtnGhost]}
                   onPress={() => save(false)}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? <ActivityIndicator color={INK} size="small" /> : <Text style={styles.modalBtnGhostText}>Save draft</Text>}
+                  {isSubmitting ? <ActivityIndicator color={INK} size="small" /> : <Text style={styles.modalBtnGhostText}>{t('teacher_lesson_plans.save_draft', 'Save draft')}</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.modalBtnPrimary]}
@@ -572,7 +581,7 @@ export default function TeacherLessonPlansScreen() {
                   {isSubmitting ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
-                    <Text style={styles.modalBtnPrimaryText}>Submit</Text>
+                    <Text style={styles.modalBtnPrimaryText}>{t('teacher_lesson_plans.submit', 'Submit')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
