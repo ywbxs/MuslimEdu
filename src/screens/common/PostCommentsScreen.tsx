@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import RoleTag from '../../components/RoleTag';
 import UserProfileModal from '../../components/UserProfileModal';
@@ -111,6 +112,7 @@ export default function PostCommentsScreen() {
   const { user, token } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
+  const { t } = useLocale();
   const postId = (route.params as any)?.postId as number;
 
   const [comments, setComments] = useState<PostComment[]>([]);
@@ -126,11 +128,11 @@ export default function PostCommentsScreen() {
       const res = await fetchComments(token, postId);
       setComments(res);
     } catch (err: any) {
-      Alert.alert('Couldn\u2019t load comments', err?.message ?? 'Please try again.');
+      Alert.alert(t('post_comments.load_error_title', 'Couldn\u2019t load comments'), err?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setLoading(false);
     }
-  }, [token, postId]);
+  }, [token, postId, t]);
 
   useEffect(() => {
     load();
@@ -155,7 +157,7 @@ export default function PostCommentsScreen() {
       setText('');
       setReplyTo(null);
     } catch (err: any) {
-      Alert.alert('Couldn\u2019t comment', err?.message ?? 'Please try again.');
+      Alert.alert(t('post_comments.comment_error_title', 'Couldn\u2019t comment'), err?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSending(false);
     }
@@ -187,10 +189,10 @@ export default function PostCommentsScreen() {
 
   const handleLongPress = (comment: PostComment) => {
     if (comment.author?.id !== user?.id || !token) return;
-    Alert.alert('Delete comment?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('post_comments.delete_title', 'Delete comment?'), undefined, [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('post_comments.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           setComments((prev) => removeCommentFromTree(prev, comment.id));
@@ -219,7 +221,7 @@ export default function PostCommentsScreen() {
             style={styles.commentNameRow}
             onPress={() => item.author?.id && setProfileUserId(item.author.id)}
           >
-            <Text style={styles.commentName}>{item.author?.name ?? 'Unknown'}</Text>
+            <Text style={styles.commentName}>{item.author?.name ?? t('post_comments.unknown', 'Unknown')}</Text>
             <RoleTag role={item.author?.role} />
           </TouchableOpacity>
           <Text style={styles.commentTime}>{timeAgo(item.created_at)}</Text>
@@ -254,7 +256,7 @@ export default function PostCommentsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Comments</Text>
+        <Text style={styles.headerTitle}>{t('post_comments.title', 'Comments')}</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -270,7 +272,7 @@ export default function PostCommentsScreen() {
           renderItem={({ item }) => renderComment(item, false)}
           ListEmptyComponent={
             <View style={styles.centerFill}>
-              <Text style={styles.emptyText}>No comments yet. Say something!</Text>
+              <Text style={styles.emptyText}>{t('post_comments.empty', 'No comments yet. Say something!')}</Text>
             </View>
           }
         />
@@ -279,10 +281,10 @@ export default function PostCommentsScreen() {
       {replyTo && (
         <View style={styles.replyBanner}>
           <Text style={styles.replyBannerText} numberOfLines={1}>
-            Replying to {replyTo.author?.name ?? 'comment'}
+            {t('post_comments.replying_to', 'Replying to')} {replyTo.author?.name ?? t('post_comments.comment', 'comment')}
           </Text>
           <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={8}>
-            <Text style={styles.replyBannerCancel}>Cancel</Text>
+            <Text style={styles.replyBannerCancel}>{t('common.cancel', 'Cancel')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -290,7 +292,7 @@ export default function PostCommentsScreen() {
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
-          placeholder={replyTo ? `Reply to ${replyTo.author?.name ?? ''}...` : 'Write a comment...'}
+          placeholder={replyTo ? `${t('post_comments.reply_to', 'Reply to')} ${replyTo.author?.name ?? ''}...` : t('post_comments.write_comment', 'Write a comment...')}
           placeholderTextColor={SUBTLE}
           value={text}
           onChangeText={setText}
