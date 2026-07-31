@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
@@ -13,7 +14,14 @@ import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportSc
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
+import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
+import { fetchStudentEnrollmentWorkflowStatus } from '../services/enrollmentWorkflowService';
 import { COLORS, BRAND } from '../theme/glass';
+
+// Per-user cache of the last known enrollment gate verdict, so a student who
+// opens the app offline sees the same gate decision as their last online
+// check rather than being treated as "unknown" - see EnrollmentGate below.
+const ENROLLMENT_GATE_CACHE_KEY = '@enrollment_gate_completed_v1';
 
 // Docked bar, no floating/pill styling - matches BottomNavBar.tsx (same
 // icons/labels/order/colors) so there's one source of truth for "what does
@@ -172,9 +180,72 @@ function ReportsRouter() {
   return <ChildReportWizardScreen />;
 }
 
+// A logged-in student whose enrollment workflow isn't `completed` yet must
+// see EnrollmentStatusScreen instead of the rest of the app - reuses the
+// existing student-facing status fetch/screen as-is, no new backend or UI.
+// Orphan-school students have no enrollment pipeline (confirmed elsewhere in
+// this codebase, e.g. ReportsRouter above) and are never gated.
+function useEnrollmentGate(userId: number | null, token: string | null): boolean | null {
+  const [completed, setCompleted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!userId || !token) {
+      setCompleted(true);
+      return;
+    }
+    let cancelled = false;
+    const cacheKey = `${ENROLLMENT_GATE_CACHE_KEY}:${userId}`;
+    // Reset before checking this user - avoids carrying over a previous
+    // user's verdict if this component instance persists across a
+    // logout/login switch (e.g. user A gated, then user B logs in).
+    setCompleted(null);
+
+    (async () => {
+      let hasCachedVerdict = false;
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached !== null) {
+          hasCachedVerdict = true;
+          if (!cancelled) setCompleted(cached === '1');
+        }
+      } catch {
+        // Best-effort cache read - fall through to the live fetch.
+      }
+
+      try {
+        const status = await fetchStudentEnrollmentWorkflowStatus(token);
+        const isCompleted = status.record?.status === 'completed';
+        if (!cancelled) setCompleted(isCompleted);
+        await AsyncStorage.setItem(cacheKey, isCompleted ? '1' : '0');
+      } catch {
+        // Fetch failed (offline, etc). Keep the cached verdict if there was
+        // one; otherwise fail open rather than locking a student out with
+        // no data to show them.
+        if (!cancelled && !hasCachedVerdict) setCompleted(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, token]);
+
+  return completed;
+}
+
 export default function MainTabs() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const isGatedStudent = !!user && user.role === 'student' && !user.is_orphan;
+  const gateCompleted = useEnrollmentGate(isGatedStudent ? user!.id : null, token);
+
   if (!user) return null;
+
+  if (isGatedStudent && gateCompleted !== true) {
+    // gateCompleted === false (workflow not completed) or null (still
+    // determining) both show the status screen rather than flashing tabs -
+    // it already renders its own loading skeleton while null.
+    return <EnrollmentStatusScreen />;
+  }
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
 
