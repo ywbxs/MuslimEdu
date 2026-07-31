@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView }
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 import {
   fetchAdminAssessmentReview,
@@ -61,6 +62,7 @@ function Picker<T extends { id: number; name: string }>({
   onSelect: (id: number) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <View style={styles.pickerBlock}>
       <Text style={styles.pickerLabel}>{label}</Text>
@@ -75,7 +77,7 @@ function Picker<T extends { id: number; name: string }>({
             <Text style={[styles.chipText, selectedId === opt.id ? styles.chipTextActive : null]}>{opt.name}</Text>
           </TouchableOpacity>
         ))}
-        {options.length === 0 ? <Text style={styles.emptyPickerText}>Nothing available yet.</Text> : null}
+        {options.length === 0 ? <Text style={styles.emptyPickerText}>{t('admin_assessment_grades.nothing_available', 'Nothing available yet.')}</Text> : null}
       </View>
     </View>
   );
@@ -91,6 +93,7 @@ export default function AdminAssessmentGradesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -113,9 +116,9 @@ export default function AdminAssessmentGradesScreen() {
     setIsLoadingFilters(true);
     fetchClasses(token)
       .then(setClasses)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load classes.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_grades.classes_error', 'Could not load classes.')))
       .finally(() => setIsLoadingFilters(false));
-  }, [token]);
+  }, [token, t]);
 
   const onSelectClass = useCallback(
     (id: number) => {
@@ -128,10 +131,10 @@ export default function AdminAssessmentGradesScreen() {
       setIsLoadingSections(true);
       fetchSections(token, String(id))
         .then(setSections)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load sections.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_grades.sections_error', 'Could not load sections.')))
         .finally(() => setIsLoadingSections(false));
     },
-    [token]
+    [token, t]
   );
 
   const onSelectSection = useCallback(
@@ -147,15 +150,15 @@ export default function AdminAssessmentGradesScreen() {
           const seen = new Map<number, string>();
           assessments.forEach((a) => {
             if (a.subject_id != null && !seen.has(a.subject_id)) {
-              seen.set(a.subject_id, a.subject_name ?? `Subject ${a.subject_id}`);
+              seen.set(a.subject_id, a.subject_name ?? `${t('admin_assessment_grades.subject', 'Subject')} ${a.subject_id}`);
             }
           });
           setSubjects(Array.from(seen.entries()).map(([id, name]) => ({ id, name })));
         })
-        .catch((err) => setError(err instanceof Error ? err.message : 'Could not load subjects.'))
+        .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_grades.subjects_error', 'Could not load subjects.')))
         .finally(() => setIsLoadingSubjects(false));
     },
-    [token]
+    [token, t]
   );
 
   useEffect(() => {
@@ -164,9 +167,9 @@ export default function AdminAssessmentGradesScreen() {
     setError(null);
     fetchAdminAssessmentGrades(token, sectionId, subjectId)
       .then(setRows)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load grades.'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('admin_assessment_grades.grades_error', 'Could not load grades.')))
       .finally(() => setIsLoadingRows(false));
-  }, [token, sectionId, subjectId]);
+  }, [token, sectionId, subjectId, t]);
 
   return (
     <GlassBackground style={{ flex: 1, backgroundColor: CANVAS }}>
@@ -174,7 +177,7 @@ export default function AdminAssessmentGradesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Grades</Text>
+        <Text style={styles.headerTitle}>{t('admin_assessment_grades.title', 'Grades')}</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -190,7 +193,7 @@ export default function AdminAssessmentGradesScreen() {
             <Skeleton width="70%" height={30} borderRadius={20} />
           </View>
         ) : (
-          <Picker label="Class" options={classes} selectedId={classId} onSelect={onSelectClass} />
+          <Picker label={t('admin_assessment_grades.class', 'Class')} options={classes} selectedId={classId} onSelect={onSelectClass} />
         )}
 
         {classId ? (
@@ -199,7 +202,7 @@ export default function AdminAssessmentGradesScreen() {
               <Skeleton width="60%" height={30} borderRadius={20} />
             </View>
           ) : (
-            <Picker label="Section" options={sections} selectedId={sectionId} onSelect={onSelectSection} />
+            <Picker label={t('admin_assessment_grades.section', 'Section')} options={sections} selectedId={sectionId} onSelect={onSelectSection} />
           )
         ) : null}
 
@@ -209,7 +212,7 @@ export default function AdminAssessmentGradesScreen() {
               <Skeleton width="60%" height={30} borderRadius={20} />
             </View>
           ) : (
-            <Picker label="Subject" options={subjects} selectedId={subjectId} onSelect={setSubjectId} />
+            <Picker label={t('admin_assessment_grades.subject', 'Subject')} options={subjects} selectedId={subjectId} onSelect={setSubjectId} />
           )
         ) : null}
       </ScrollView>
@@ -224,7 +227,7 @@ export default function AdminAssessmentGradesScreen() {
           keyExtractor={(r) => String(r.student_id)}
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
           ListEmptyComponent={
-            subjectId ? <Text style={styles.emptyText}>No students enrolled in this section yet.</Text> : null
+            subjectId ? <Text style={styles.emptyText}>{t('admin_assessment_grades.empty_students', 'No students enrolled in this section yet.')}</Text> : null
           }
           renderItem={({ item }) => {
             const pct = item.grade?.weighted_percentage ?? null;
@@ -240,7 +243,7 @@ export default function AdminAssessmentGradesScreen() {
                     {item.student_name}
                   </Text>
                   <Text style={styles.rowMeta}>
-                    {item.grade ? `${item.grade.graded_count} of ${item.grade.total_published} graded` : 'No assessments yet'}
+                    {item.grade ? `${item.grade.graded_count} ${t('admin_assessment_grades.of', 'of')} ${item.grade.total_published} ${t('admin_assessment_grades.graded', 'graded')}` : t('admin_assessment_grades.no_assessments', 'No assessments yet')}
                   </Text>
                 </View>
                 <View style={[styles.pctBadge, { backgroundColor: bandSoft(pct) }]}>
@@ -259,22 +262,22 @@ export default function AdminAssessmentGradesScreen() {
               <Text style={styles.modalTitle}>{detail?.student_name}</Text>
               <Text style={styles.modalSubtitle}>
                 {detail?.grade?.calculation_method === 'flat'
-                  ? 'Flat average — no weighted category has graded work yet'
+                  ? t('admin_assessment_grades.flat_average', 'Flat average — no weighted category has graded work yet')
                   : detail?.grade?.calculation_method === 'weighted'
-                  ? 'Weighted by exam category'
+                  ? t('admin_assessment_grades.weighted_by_category', 'Weighted by exam category')
                   : ''}
               </Text>
               {(detail?.grade?.categories ?? []).map((c) => (
                 <View key={c.exam_category_id ?? 'uncat'} style={styles.categoryRow}>
                   <Text style={styles.categoryName} numberOfLines={1}>
                     {c.exam_category_name}
-                    {c.weight !== null ? ` (${c.weight}%)` : ''} · {c.graded_count} graded
+                    {c.weight !== null ? ` (${c.weight}%)` : ''} · {c.graded_count} {t('admin_assessment_grades.graded', 'graded')}
                   </Text>
                   <Text style={styles.categoryPct}>{c.percentage !== null ? `${c.percentage}%` : '—'}</Text>
                 </View>
               ))}
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 16 }} onPress={() => setDetail(null)}>
-                <Text style={{ color: SUBTLE, fontSize: 13 }}>Close</Text>
+                <Text style={{ color: SUBTLE, fontSize: 13 }}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
