@@ -17,6 +17,7 @@ import axios from 'axios';
 import Svg, { Polyline } from 'react-native-svg';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { Skeleton } from '../../components/Skeleton';
@@ -39,6 +40,7 @@ const ClassDetailScreen = () => {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
 
   const [classData, setClassData] = useState(null);
@@ -74,7 +76,7 @@ const ClassDetailScreen = () => {
       setClassData(response.data.class);
     } catch (error) {
       console.error('Error fetching class detail:', error);
-      Alert.alert('Error', 'Failed to load class details');
+      Alert.alert(t('common.error', 'Error'), t('class_detail.load_error', 'Failed to load class details'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,12 +90,12 @@ const ClassDetailScreen = () => {
 
   const handleArchiveClass = async () => {
     Alert.alert(
-      'Archive Class',
-      'Are you sure you want to archive this class?',
+      t('class_detail.archive_confirm_title', 'Archive Class'),
+      t('class_detail.archive_confirm_message', 'Are you sure you want to archive this class?'),
       [
-        { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), onPress: () => {}, style: 'cancel' },
         {
-          text: 'Archive',
+          text: t('class_detail.archive', 'Archive'),
           onPress: async () => {
             try {
               setActionLoading(true);
@@ -109,11 +111,11 @@ const ClassDetailScreen = () => {
                 }
               );
 
-              Alert.alert('Success', 'Class archived successfully');
+              Alert.alert(t('common.success', 'Success'), t('class_detail.archive_success', 'Class archived successfully'));
               navigation.goBack();
             } catch (error) {
               console.error('Error archiving class:', error);
-              Alert.alert('Error', 'Failed to archive class');
+              Alert.alert(t('common.error', 'Error'), t('class_detail.archive_error', 'Failed to archive class'));
             } finally {
               setActionLoading(false);
             }
@@ -126,12 +128,12 @@ const ClassDetailScreen = () => {
 
   const handleDeleteClass = async () => {
     Alert.alert(
-      'Delete Class',
-      'Are you sure you want to delete this class?',
+      t('class_detail.delete_confirm_title', 'Delete Class'),
+      t('class_detail.delete_confirm_message', 'Are you sure you want to delete this class?'),
       [
-        { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), onPress: () => {}, style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete', 'Delete'),
           onPress: async () => {
             try {
               setActionLoading(true);
@@ -147,11 +149,11 @@ const ClassDetailScreen = () => {
                 }
               );
 
-              Alert.alert('Success', 'Class deleted successfully');
+              Alert.alert(t('common.success', 'Success'), t('class_detail.delete_success', 'Class deleted successfully'));
               navigation.goBack();
             } catch (error) {
               console.error('Error deleting class:', error);
-              Alert.alert('Error', 'Failed to delete class');
+              Alert.alert(t('common.error', 'Error'), t('class_detail.delete_error', 'Failed to delete class'));
             } finally {
               setActionLoading(false);
             }
@@ -177,11 +179,11 @@ const ClassDetailScreen = () => {
         }
       );
 
-      Alert.alert('Success', 'Class restored successfully');
+      Alert.alert(t('common.success', 'Success'), t('class_detail.restore_success', 'Class restored successfully'));
       fetchClassDetail();
     } catch (error) {
       console.error('Error restoring class:', error);
-      Alert.alert('Error', 'Failed to restore class');
+      Alert.alert(t('common.error', 'Error'), t('class_detail.restore_error', 'Failed to restore class'));
     } finally {
       setActionLoading(false);
     }
@@ -195,7 +197,7 @@ const ClassDetailScreen = () => {
 
   const handleDuplicateClass = async () => {
     if (!newClassCode.trim() || !newClassName.trim()) {
-      Alert.alert('Missing info', 'Please enter both a class code and a name for the copy.');
+      Alert.alert(t('class_detail.missing_info_title', 'Missing info'), t('class_detail.missing_info_message', 'Please enter both a class code and a name for the copy.'));
       return;
     }
 
@@ -219,17 +221,17 @@ const ClassDetailScreen = () => {
 
       setDuplicateModalVisible(false);
       const newClass = response.data.class;
-      Alert.alert('Success', 'Class duplicated successfully', [
+      Alert.alert(t('common.success', 'Success'), t('class_detail.duplicate_success', 'Class duplicated successfully'), [
         {
-          text: 'View Copy',
+          text: t('class_detail.view_copy', 'View Copy'),
           onPress: () => newClass?.id && navigation.push('ClassDetail', { classId: newClass.id }),
         },
-        { text: 'OK', style: 'cancel' },
+        { text: t('common.ok', 'OK'), style: 'cancel' },
       ]);
     } catch (error) {
       console.error('Error duplicating class:', error);
-      const message = error?.response?.data?.errors?.new_class_code?.[0] || 'Failed to duplicate class';
-      Alert.alert('Error', message);
+      const message = error?.response?.data?.errors?.new_class_code?.[0] || t('class_detail.duplicate_error', 'Failed to duplicate class');
+      Alert.alert(t('common.error', 'Error'), message);
     } finally {
       setActionLoading(false);
     }
@@ -242,7 +244,7 @@ const ClassDetailScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.navHeaderTitle}>Class Details</Text>
+          <Text style={styles.navHeaderTitle}>{t('class_detail.header_title', 'Class Details')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.container}>
@@ -271,14 +273,14 @@ const ClassDetailScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.navHeaderTitle}>Class Details</Text>
+          <Text style={styles.navHeaderTitle}>{t('class_detail.header_title', 'Class Details')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.container}>
           <EmptyState
             icon="🔍"
-            title="Class not found"
-            subtitle="It may have been removed, or the link is out of date."
+            title={t('class_detail.not_found_title', 'Class not found')}
+            subtitle={t('class_detail.not_found_subtitle', 'It may have been removed, or the link is out of date.')}
             colors={theme}
           />
         </View>
@@ -326,7 +328,7 @@ const ClassDetailScreen = () => {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: badge.backgroundColor }]}>
             <Text style={[styles.statusText, { color: badge.color }]}>
-              {classData.status}
+              {t(`class_detail.status_${classData.status}`, classData.status)}
             </Text>
           </View>
         </View>
@@ -338,22 +340,22 @@ const ClassDetailScreen = () => {
 
       {/* Enrollment Card */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Enrollment</Text>
+        <Text style={styles.sectionTitle}>{t('class_detail.enrollment_title', 'Enrollment')}</Text>
         <View style={styles.enrollmentCard}>
           <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>Current</Text>
+            <Text style={styles.statLabel}>{t('class_detail.current', 'Current')}</Text>
             <Text style={styles.statValue}>{classData.current_enrollment}</Text>
           </View>
           <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>Capacity</Text>
+            <Text style={styles.statLabel}>{t('class_detail.capacity', 'Capacity')}</Text>
             <Text style={styles.statValue}>{classData.max_capacity}</Text>
           </View>
           <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>Available</Text>
+            <Text style={styles.statLabel}>{t('class_detail.available', 'Available')}</Text>
             <Text style={styles.statValue}>{classData.available_slots || 0}</Text>
           </View>
           <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>Occupancy</Text>
+            <Text style={styles.statLabel}>{t('class_detail.occupancy', 'Occupancy')}</Text>
             <Text style={[styles.statValue, { color: occupancyColor }]}>
               {classData.enrollment_percentage || 0}%
             </Text>
@@ -375,40 +377,40 @@ const ClassDetailScreen = () => {
 
       {/* Basic Information */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Basic Information</Text>
+        <Text style={styles.sectionTitle}>{t('class_detail.basic_info_title', 'Basic Information')}</Text>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Grade Level:</Text>
+          <Text style={styles.infoLabel}>{t('class_detail.grade_level', 'Grade Level:')}</Text>
           <Text style={styles.infoValue}>{classData.grade_level}</Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Class Type:</Text>
+          <Text style={styles.infoLabel}>{t('class_detail.class_type', 'Class Type:')}</Text>
           <Text style={styles.infoValue}>{classData.class_type}</Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Shift:</Text>
+          <Text style={styles.infoLabel}>{t('class_detail.shift', 'Shift:')}</Text>
           <Text style={styles.infoValue}>{classData.shift}</Text>
         </View>
 
         {classData.department && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Department:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.department', 'Department:')}</Text>
             <Text style={styles.infoValue}>{classData.department}</Text>
           </View>
         )}
 
         {classData.curriculum && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Curriculum:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.curriculum', 'Curriculum:')}</Text>
             <Text style={styles.infoValue}>{classData.curriculum}</Text>
           </View>
         )}
 
         {classData.section && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Section:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.section', 'Section:')}</Text>
             <Text style={styles.infoValue}>{classData.section}</Text>
           </View>
         )}
@@ -416,25 +418,25 @@ const ClassDetailScreen = () => {
 
       {/* Location Information */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Location</Text>
+        <Text style={styles.sectionTitle}>{t('class_detail.location_title', 'Location')}</Text>
 
         {classData.room_number && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Room Number:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.room_number', 'Room Number:')}</Text>
             <Text style={styles.infoValue}>{classData.room_number}</Text>
           </View>
         )}
 
         {classData.building && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Building:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.building', 'Building:')}</Text>
             <Text style={styles.infoValue}>{classData.building}</Text>
           </View>
         )}
 
         {classData.floor && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Floor:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.floor', 'Floor:')}</Text>
             <Text style={styles.infoValue}>{classData.floor}</Text>
           </View>
         )}
@@ -442,29 +444,29 @@ const ClassDetailScreen = () => {
 
       {/* Academic Information */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Academic Information</Text>
+        <Text style={styles.sectionTitle}>{t('class_detail.academic_info_title', 'Academic Information')}</Text>
 
         {classData.school_year && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>School Year:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.school_year', 'School Year:')}</Text>
             <Text style={styles.infoValue}>{classData.school_year}</Text>
           </View>
         )}
 
         {classData.semester_term && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Semester/Term:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.semester_term', 'Semester/Term:')}</Text>
             <Text style={styles.infoValue}>{classData.semester_term}</Text>
           </View>
         )}
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Start Date:</Text>
+          <Text style={styles.infoLabel}>{t('class_detail.start_date', 'Start Date:')}</Text>
           <Text style={styles.infoValue}>{classData.start_date}</Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>End Date:</Text>
+          <Text style={styles.infoLabel}>{t('class_detail.end_date', 'End Date:')}</Text>
           <Text style={styles.infoValue}>{classData.end_date}</Text>
         </View>
       </View>
@@ -472,14 +474,14 @@ const ClassDetailScreen = () => {
       {/* Admin Actions */}
       {isAdminRole && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions</Text>
+          <Text style={styles.sectionTitle}>{t('class_detail.actions_title', 'Actions')}</Text>
 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('EditClass', { classId })}
             disabled={actionLoading}
           >
-            <Text style={styles.actionButtonText}>Edit Class</Text>
+            <Text style={styles.actionButtonText}>{t('class_detail.edit_class', 'Edit Class')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -487,7 +489,7 @@ const ClassDetailScreen = () => {
             onPress={() => navigation.navigate('SectionList', { classId })}
             disabled={actionLoading}
           >
-            <Text style={styles.actionButtonText}>Manage Students</Text>
+            <Text style={styles.actionButtonText}>{t('class_detail.manage_students', 'Manage Students')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -495,7 +497,7 @@ const ClassDetailScreen = () => {
             onPress={openDuplicateModal}
             disabled={actionLoading}
           >
-            <Text style={styles.actionButtonText}>Duplicate Class</Text>
+            <Text style={styles.actionButtonText}>{t('class_detail.duplicate_class', 'Duplicate Class')}</Text>
           </TouchableOpacity>
 
           {classData.status === 'archived' ? (
@@ -504,7 +506,7 @@ const ClassDetailScreen = () => {
               onPress={handleRestoreClass}
               disabled={actionLoading}
             >
-              <Text style={styles.actionButtonText}>Restore Class</Text>
+              <Text style={styles.actionButtonText}>{t('class_detail.restore_class', 'Restore Class')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -512,7 +514,7 @@ const ClassDetailScreen = () => {
               onPress={handleArchiveClass}
               disabled={actionLoading}
             >
-              <Text style={styles.actionButtonText}>Archive Class</Text>
+              <Text style={styles.actionButtonText}>{t('class_detail.archive_class', 'Archive Class')}</Text>
             </TouchableOpacity>
           )}
 
@@ -521,39 +523,39 @@ const ClassDetailScreen = () => {
             onPress={handleDeleteClass}
             disabled={actionLoading}
           >
-            <Text style={styles.actionButtonText}>Delete Class</Text>
+            <Text style={styles.actionButtonText}>{t('class_detail.delete_class', 'Delete Class')}</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* Metadata */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Metadata</Text>
+        <Text style={styles.sectionTitle}>{t('class_detail.metadata_title', 'Metadata')}</Text>
 
         {classData.created_by && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Created By:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.created_by', 'Created By:')}</Text>
             <Text style={styles.infoValue}>{classData.created_by}</Text>
           </View>
         )}
 
         {classData.created_at && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Created At:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.created_at', 'Created At:')}</Text>
             <Text style={styles.infoValue}>{classData.created_at}</Text>
           </View>
         )}
 
         {classData.updated_by && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Updated By:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.updated_by', 'Updated By:')}</Text>
             <Text style={styles.infoValue}>{classData.updated_by}</Text>
           </View>
         )}
 
         {classData.updated_at && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Updated At:</Text>
+            <Text style={styles.infoLabel}>{t('class_detail.updated_at', 'Updated At:')}</Text>
             <Text style={styles.infoValue}>{classData.updated_at}</Text>
           </View>
         )}
@@ -566,22 +568,22 @@ const ClassDetailScreen = () => {
       <Modal visible={duplicateModalVisible} transparent animationType="fade" onRequestClose={() => setDuplicateModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Duplicate Class</Text>
-            <Text style={styles.modalLabel}>New Class Code</Text>
+            <Text style={styles.modalTitle}>{t('class_detail.duplicate_modal_title', 'Duplicate Class')}</Text>
+            <Text style={styles.modalLabel}>{t('class_detail.new_class_code_label', 'New Class Code')}</Text>
             <TextInput
               style={styles.modalInput}
               value={newClassCode}
               onChangeText={setNewClassCode}
-              placeholder="e.g. G7-A-2027"
+              placeholder={t('class_detail.new_class_code_placeholder', 'e.g. G7-A-2027')}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="characters"
             />
-            <Text style={styles.modalLabel}>New Name</Text>
+            <Text style={styles.modalLabel}>{t('class_detail.new_name_label', 'New Name')}</Text>
             <TextInput
               style={styles.modalInput}
               value={newClassName}
               onChangeText={setNewClassName}
-              placeholder="e.g. Grade 7 - Section A"
+              placeholder={t('class_detail.new_name_placeholder', 'e.g. Grade 7 - Section A')}
               placeholderTextColor={theme.textMuted}
             />
             <View style={styles.modalActions}>
@@ -590,7 +592,7 @@ const ClassDetailScreen = () => {
                 onPress={() => setDuplicateModalVisible(false)}
                 disabled={actionLoading}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalConfirmButton]}
@@ -600,7 +602,7 @@ const ClassDetailScreen = () => {
                 {actionLoading ? (
                   <ActivityIndicator color={theme.onAccent} size="small" />
                 ) : (
-                  <Text style={styles.modalConfirmText}>Duplicate</Text>
+                  <Text style={styles.modalConfirmText}>{t('class_detail.duplicate', 'Duplicate')}</Text>
                 )}
               </TouchableOpacity>
             </View>
