@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -28,6 +29,8 @@ const CampusFormScreen = () => {
   const route = useRoute();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { t } = useLocale();
+  const statusLabel = (status: string) => t(`campus_form.status_${status}`, labelize(status));
   const campusId = route.params?.campusId;
   const isEditing = !!campusId;
 
@@ -79,12 +82,12 @@ const CampusFormScreen = () => {
           status: campus.status || 'active',
         });
       } else {
-        Alert.alert('Error', 'Campus not found');
+        Alert.alert(t('common.error', 'Error'), t('campus_form.not_found', 'Campus not found'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching campus:', error);
-      Alert.alert('Error', 'Failed to load campus');
+      Alert.alert(t('common.error', 'Error'), t('campus_form.load_error', 'Failed to load campus'));
     } finally {
       setLoading(false);
     }
@@ -101,7 +104,7 @@ const CampusFormScreen = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Campus name is required');
+      Alert.alert(t('common.error', 'Error'), t('campus_form.name_required', 'Campus name is required'));
       return false;
     }
     return true;
@@ -136,8 +139,8 @@ const CampusFormScreen = () => {
             },
           }
         );
-        Alert.alert('Success', 'Campus updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('campus_form.success', 'Success'), t('campus_form.updated_message', 'Campus updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await axios.post(`${API_BASE_URL}/admin_campuses_create`, payload, {
@@ -146,16 +149,16 @@ const CampusFormScreen = () => {
             'Content-Type': 'application/json',
           },
         });
-        Alert.alert('Success', 'Campus created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('campus_form.success', 'Success'), t('campus_form.created_message', 'Campus created successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
       console.error('Error saving campus:', error);
       const errorMsg = error.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join('\n')
-        : error.response?.data?.message || 'Failed to save campus';
-      Alert.alert('Error', errorMsg);
+        : error.response?.data?.message || t('campus_form.save_error', 'Failed to save campus');
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -164,9 +167,9 @@ const CampusFormScreen = () => {
   const getDisplayValue = (field) => {
     switch (field) {
       case 'status':
-        return labelize(formData.status);
+        return statusLabel(formData.status);
       default:
-        return formData[field] || 'Select...';
+        return formData[field] || t('campus_form.select_placeholder', 'Select...');
     }
   };
 
@@ -184,16 +187,16 @@ const CampusFormScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {isEditing ? 'Edit Campus' : 'Create Campus'}
+            {isEditing ? t('campus_form.edit_title', 'Edit Campus') : t('campus_form.create_title', 'Create Campus')}
           </Text>
         </View>
 
         <View style={styles.formContainer}>
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Campus Name *</Text>
+            <Text style={styles.label}>{t('campus_form.name_label', 'Campus Name *')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Main Campus"
+              placeholder={t('campus_form.name_placeholder', 'e.g., Main Campus')}
               value={formData.name}
               onChangeText={(text) => updateField('name', text)}
               placeholderTextColor={theme.textMuted}
@@ -201,7 +204,7 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Arabic Name</Text>
+            <Text style={styles.label}>{t('campus_form.arabic_name_label', 'Arabic Name')}</Text>
             <TextInput
               style={styles.input}
               placeholder="الاسم بالعربية"
@@ -212,7 +215,7 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Code</Text>
+            <Text style={styles.label}>{t('campus_form.code_label', 'Code')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g., MAIN"
@@ -223,10 +226,10 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Address</Text>
+            <Text style={styles.label}>{t('campus_form.address_label', 'Address')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Optional address"
+              placeholder={t('campus_form.address_placeholder', 'Optional address')}
               value={formData.address}
               onChangeText={(text) => updateField('address', text)}
               multiline
@@ -235,10 +238,10 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.label}>{t('campus_form.phone_label', 'Phone')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Optional phone"
+              placeholder={t('campus_form.phone_placeholder', 'Optional phone')}
               value={formData.phone}
               onChangeText={(text) => updateField('phone', text)}
               keyboardType="phone-pad"
@@ -247,10 +250,10 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t('campus_form.email_label', 'Email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Optional email"
+              placeholder={t('campus_form.email_placeholder', 'Optional email')}
               value={formData.email}
               onChangeText={(text) => updateField('email', text)}
               keyboardType="email-address"
@@ -261,8 +264,8 @@ const CampusFormScreen = () => {
 
           <View style={[styles.formGroup, styles.switchRow]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Main Campus</Text>
-              <Text style={styles.helperText}>Only one campus per school can be marked main.</Text>
+              <Text style={styles.label}>{t('campus_form.main_campus_label', 'Main Campus')}</Text>
+              <Text style={styles.helperText}>{t('campus_form.main_campus_hint', 'Only one campus per school can be marked main.')}</Text>
             </View>
             <Switch
               value={formData.is_main}
@@ -273,7 +276,7 @@ const CampusFormScreen = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Status</Text>
+            <Text style={styles.label}>{t('campus_form.status_label', 'Status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setActiveModal('status')}
@@ -291,7 +294,7 @@ const CampusFormScreen = () => {
               <ActivityIndicator size="small" color={theme.onAccent} />
             ) : (
               <Text style={styles.submitButtonText}>
-                {isEditing ? 'Save Changes' : 'Create Campus'}
+                {isEditing ? t('campus_form.save_changes', 'Save Changes') : t('campus_form.create_title', 'Create Campus')}
               </Text>
             )}
           </TouchableOpacity>
@@ -300,7 +303,7 @@ const CampusFormScreen = () => {
             style={styles.cancelButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -313,21 +316,21 @@ const CampusFormScreen = () => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Status</Text>
+              <Text style={styles.modalTitle}>{t('campus_form.select_status', 'Select Status')}</Text>
               {STATUSES.map((status) => (
                 <TouchableOpacity
                   key={status}
                   style={styles.modalItem}
                   onPress={() => handleSelectOption('status', status)}
                 >
-                  <Text style={styles.modalItemText}>{labelize(status)}</Text>
+                  <Text style={styles.modalItemText}>{statusLabel(status)}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setActiveModal(null)}
               >
-                <Text style={styles.modalCloseText}>Close</Text>
+                <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
               </TouchableOpacity>
             </View>
           </View>
