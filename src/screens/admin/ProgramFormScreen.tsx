@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -47,6 +48,7 @@ export default function ProgramFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const programId: number | undefined = route.params?.programId;
   const isEditing = !!programId;
@@ -76,7 +78,7 @@ export default function ProgramFormScreen() {
           const programs = await fetchPrograms(token);
           const program = programs.find((p) => p.id === programId);
           if (!program) {
-            setError('Program not found.');
+            setError(t('program_form.not_found', 'Program not found.'));
             return;
           }
           setName(program.name);
@@ -88,22 +90,22 @@ export default function ProgramFormScreen() {
           setIsActive(program.status === 'active');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load the program.');
+        setError(err instanceof Error ? err.message : t('program_form.load_error', 'Failed to load the program.'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [isEditing, programId, token]);
+  }, [isEditing, programId, token, t]);
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('program_form.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Error', 'Program name is required.');
+      Alert.alert(t('common.error', 'Error'), t('program_form.name_required', 'Program name is required.'));
       return;
     }
 
@@ -125,7 +127,7 @@ export default function ProgramFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the program.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('program_form.save_error', 'Could not save the program.'));
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +141,7 @@ export default function ProgramFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? 'Edit Program' : 'Add Program'}
+            {isEditing ? t('program_form.edit_title', 'Edit Program') : t('program_form.add_title', 'Add Program')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -166,16 +168,16 @@ export default function ProgramFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Name</Text>
+        <Text style={styles.label}>{t('program_form.name_label', 'Name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Hifz Program"
+          placeholder={t('program_form.name_placeholder', 'e.g. Hifz Program')}
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Arabic Name (optional)</Text>
+        <Text style={styles.label}>{t('program_form.name_ar_label', 'Arabic Name (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={nameAr}
@@ -184,24 +186,24 @@ export default function ProgramFormScreen() {
           placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.label}>Code (optional)</Text>
+        <Text style={styles.label}>{t('program_form.code_label', 'Code (optional)')}</Text>
         <TextInput
           style={styles.input}
           value={code}
           onChangeText={setCode}
-          placeholder="e.g. HIFZ"
+          placeholder={t('program_form.code_placeholder', 'e.g. HIFZ')}
           placeholderTextColor={theme.textMuted}
           autoCapitalize="characters"
         />
 
-        <Text style={styles.label}>Department (optional)</Text>
+        <Text style={styles.label}>{t('program_form.department_label', 'Department (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, departmentId === null && styles.typeOptionSelected]}
             onPress={() => setDepartmentId(null)}
           >
             <Text style={[styles.typeOptionText, departmentId === null && styles.typeOptionTextSelected]}>
-              None
+              {t('program_form.none', 'None')}
             </Text>
           </TouchableOpacity>
           {departments.map((d) => {
@@ -218,7 +220,7 @@ export default function ProgramFormScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>Duration (terms, optional)</Text>
+        <Text style={styles.label}>{t('program_form.duration_label', 'Duration (terms, optional)')}</Text>
         <TextInput
           style={styles.input}
           value={durationTerms}
@@ -228,12 +230,12 @@ export default function ProgramFormScreen() {
           keyboardType="number-pad"
         />
 
-        <Text style={styles.label}>Description (optional)</Text>
+        <Text style={styles.label}>{t('program_form.description_label', 'Description (optional)')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder="Notes about this program"
+          placeholder={t('program_form.description_placeholder', 'Notes about this program')}
           placeholderTextColor={theme.textMuted}
           multiline
           numberOfLines={3}
@@ -241,9 +243,9 @@ export default function ProgramFormScreen() {
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchLabel}>Active</Text>
+            <Text style={styles.switchLabel}>{t('program_form.active', 'Active')}</Text>
             <Text style={styles.switchHelp}>
-              Inactive programs are hidden from new assignments but kept for history.
+              {t('program_form.active_help', 'Inactive programs are hidden from new assignments but kept for history.')}
             </Text>
           </View>
           <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: theme.accent }} />
@@ -257,7 +259,7 @@ export default function ProgramFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Program'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('program_form.save_changes', 'Save Changes') : t('program_form.add_title', 'Add Program')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
