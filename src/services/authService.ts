@@ -48,6 +48,10 @@ export interface AuthUser {
   // complete by AdminDashboard, same fail-open default the backend uses.
   academic_setup_completed?: boolean;
   institution_type?: 'mahad' | 'madrasa' | 'markaz' | 'regular_school' | 'orphanage' | null;
+  // Admin's own contact phone (distinct from the school's phone in
+  // SchoolProfile) - set via the "Your Info" onboarding wizard step or
+  // userProfileService.updateOwnProfile.
+  phone?: string | null;
 }
 
 export interface LoginResponse {

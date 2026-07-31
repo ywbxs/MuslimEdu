@@ -214,7 +214,12 @@ function useEnrollmentGate(userId: number | null, token: string | null): boolean
 
       try {
         const status = await fetchStudentEnrollmentWorkflowStatus(token);
-        const isCompleted = status.record?.status === 'completed';
+        // A student with no workflow record at all (`started === false`) is
+        // not yet in the tracked pipeline - e.g. enrolled before this feature
+        // existed, or the admin hasn't started their workflow yet. Only an
+        // actually-started, not-yet-completed record should gate them;
+        // "never started" must stay open, not be treated as "incomplete".
+        const isCompleted = !status.started || status.record?.status === 'completed';
         if (!cancelled) setCompleted(isCompleted);
         await AsyncStorage.setItem(cacheKey, isCompleted ? '1' : '0');
       } catch {

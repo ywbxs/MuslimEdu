@@ -60,7 +60,8 @@ jobs:
             "@bam.tech/react-native-image-resizer" \
             axios \
             "@react-native-async-storage/async-storage" \
-            "@react-native-community/datetimepicker"
+            "@react-native-community/datetimepicker" \
+            "@react-native-community/netinfo@^11.4.1"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu

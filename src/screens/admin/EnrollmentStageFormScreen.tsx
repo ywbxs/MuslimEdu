@@ -57,6 +57,7 @@ export default function EnrollmentStageFormScreen() {
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [studentInstructions, setStudentInstructions] = useState('');
   const [isTerminal, setIsTerminal] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
@@ -73,6 +74,7 @@ export default function EnrollmentStageFormScreen() {
         }
         setName(stage.name);
         setCode(stage.code ?? '');
+        setStudentInstructions(stage.student_instructions ?? '');
         setIsTerminal(stage.is_terminal);
         setIsActive(stage.status === 'active');
       } catch (err) {
@@ -100,6 +102,7 @@ export default function EnrollmentStageFormScreen() {
       const input = {
         name: name.trim(),
         code: code.trim() || null,
+        student_instructions: studentInstructions.trim() || null,
         is_terminal: isTerminal,
         status: (isActive ? 'active' : 'inactive') as 'active' | 'inactive',
       };
@@ -169,6 +172,20 @@ export default function EnrollmentStageFormScreen() {
           placeholderTextColor={theme.textMuted}
           autoCapitalize="characters"
         />
+
+        <Text style={styles.label}>{t('enrollment_stage_form.instructions_label', 'What should the student do at this stage? (optional)')}</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={studentInstructions}
+          onChangeText={setStudentInstructions}
+          placeholder={t('enrollment_stage_form.instructions_placeholder', 'e.g. "Pay the enrollment fee at the Cashier\'s office"')}
+          placeholderTextColor={theme.textMuted}
+          multiline
+          numberOfLines={3}
+        />
+        <Text style={styles.switchHelp}>
+          {t('enrollment_stage_form.instructions_help', "Shown to the student while they're on this stage. Leave blank to show nothing extra.")}
+        </Text>
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
@@ -246,6 +263,7 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       backgroundColor: theme.surface,
       color: theme.textPrimary,
     },
+    textArea: { height: 84, paddingTop: 12, textAlignVertical: 'top' },
 
     switchRow: {
       flexDirection: 'row',

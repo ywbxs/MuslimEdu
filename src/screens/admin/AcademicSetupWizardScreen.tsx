@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +25,13 @@ import {
   InstitutionType,
   SetupStatus,
 } from '../../services/academicSetupService';
+import { updateOwnProfile } from '../../services/userProfileService';
+import {
+  GRADING_SYSTEM_TYPES,
+  GradingSystemType,
+  createGradingSystem,
+} from '../../services/adminAcademicCatalogService';
+import { createEnrollmentStage } from '../../services/enrollmentWorkflowService';
 
 const EMERALD = BRAND.emerald;
 const EMERALD_SOFT = 'rgba(34,197,94,0.14)';
@@ -31,11 +39,32 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const ERROR = '#BA1A1A';
 
-const STEP_LABELS = [
-  { key: 'institution', label: 'Institution' },
-  { key: 'profile', label: 'Profile' },
-  { key: 'academic_year', label: 'Academic Year' },
-];
+const GRADING_TYPE_QUICK_PICKS: GradingSystemType[] = GRADING_SYSTEM_TYPES.filter((gt) =>
+  ['percentage', 'letter', 'gpa', 'pass_fail'].includes(gt),
+);
+const GRADING_TYPE_LABELS: Partial<Record<GradingSystemType, string>> = {
+  percentage: 'Percentage',
+  letter: 'Letter Grade',
+  gpa: 'GPA',
+  pass_fail: 'Pass / Fail',
+};
+
+// Orphan schools have no academic subsystem or enrollment pipeline (confirmed
+// throughout this codebase - dashboards already hide all academic tiles and
+// the enrollment gate already excludes orphan students), so the grading and
+// enrollment onboarding steps are skipped entirely for them, not just hidden.
+function buildStepLabels(institutionType: InstitutionType | null) {
+  const base = [
+    { key: 'institution', label: 'Institution' },
+    { key: 'profile', label: 'Profile' },
+    { key: 'admin_info', label: 'Your Info' },
+    { key: 'academic_year', label: 'Academic Year' },
+  ];
+  if (institutionType !== 'orphanage') {
+    base.push({ key: 'grading', label: 'Grading' }, { key: 'enrollment', label: 'Enrollment' });
+  }
+  return base;
+}
 
 const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
   mahad: 'Mahad',
@@ -73,7 +102,7 @@ function BuildingIcon() {
  * migration) so this never appears for them.
  */
 export default function AcademicSetupWizardScreen() {
-  const { token, updateUser } = useAuth();
+  const { token, user, updateUser } = useAuth();
   const { t } = useLocale();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SetupStatus | null>(null);
@@ -81,15 +110,30 @@ export default function AcademicSetupWizardScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1
+  // Step: institution
   const [institutionType, setInstitutionType] = useState<InstitutionType | null>(null);
-  // Step 2
+  // Step: profile
   const [name, setName] = useState('');
   const [nameAr, setNameAr] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
-  // Step 3
+  // Step: admin_info
+  const [adminName, setAdminName] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  // Step: academic_year
   const [yearTitle, setYearTitle] = useState('');
+  // Step: grading (skipped for orphanage)
+  const [gradingName, setGradingName] = useState('');
+  const [gradingType, setGradingType] = useState<GradingSystemType>('percentage');
+  // Step: enrollment (skipped for orphanage)
+  const [stageName, setStageName] = useState('');
+  const [stageCode, setStageCode] = useState('');
+  const [stageInstructions, setStageInstructions] = useState('');
+  const [stageIsTerminal, setStageIsTerminal] = useState(true);
+
+  const STEP_LABELS = useMemo(() => buildStepLabels(institutionType), [institutionType]);
+  const isLastStep = step === STEP_LABELS.length - 1;
+  const stepKey = STEP_LABELS[step]?.key;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -102,22 +146,40 @@ export default function AcademicSetupWizardScreen() {
       setNameAr(data.school.name_ar ?? '');
       setAddress(data.school.address ?? '');
       setPhone(data.school.phone ?? '');
+      setAdminName(user?.name ?? '');
+      setAdminPhone(user?.phone ?? '');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('academic_setup_wizard.load_error', 'Could not load setup status.'));
     } finally {
       setLoading(false);
     }
-  }, [token, t]);
+  }, [token, t, user]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const finishUp = async () => {
+    const school = await completeSetup(token!);
+    updateUser({
+      academic_setup_completed: true,
+      institution_type: school.institution_type ?? undefined,
+    });
+  };
+
+  const advance = async () => {
+    if (isLastStep) {
+      await finishUp();
+    } else {
+      setStep((s) => s + 1);
+    }
+  };
+
   const goNext = async () => {
     if (!token) return;
     setError(null);
 
-    if (step === 0) {
+    if (stepKey === 'institution') {
       if (!institutionType) {
         setError(t('academic_setup_wizard.choose_institution_type', 'Choose an institution type to continue.'));
         return;
@@ -125,7 +187,7 @@ export default function AcademicSetupWizardScreen() {
       setSubmitting(true);
       try {
         await saveInstitutionProfile(token, { institution_type: institutionType });
-        setStep(1);
+        await advance();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_type_error', 'Could not save institution type.'));
       } finally {
@@ -134,7 +196,7 @@ export default function AcademicSetupWizardScreen() {
       return;
     }
 
-    if (step === 1) {
+    if (stepKey === 'profile') {
       if (!name.trim()) {
         setError(t('academic_setup_wizard.name_required', 'Institution name is required.'));
         return;
@@ -147,7 +209,7 @@ export default function AcademicSetupWizardScreen() {
           address: address.trim() || undefined,
           phone: phone.trim() || undefined,
         });
-        setStep(2);
+        await advance();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_profile_error', 'Could not save institution profile.'));
       } finally {
@@ -156,7 +218,28 @@ export default function AcademicSetupWizardScreen() {
       return;
     }
 
-    if (step === 2) {
+    if (stepKey === 'admin_info') {
+      if (!adminName.trim()) {
+        setError(t('academic_setup_wizard.admin_name_required', 'Your name is required.'));
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const updated = await updateOwnProfile(token, {
+          name: adminName.trim(),
+          phone: adminPhone.trim() || null,
+        });
+        updateUser({ name: updated.name, phone: updated.phone });
+        await advance();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_admin_info_error', 'Could not save your info.'));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (stepKey === 'academic_year') {
       if (!yearTitle.trim()) {
         setError(t('academic_setup_wizard.year_title_required', 'Enter a title for your first academic year (e.g. "2026-2027").'));
         return;
@@ -164,13 +247,53 @@ export default function AcademicSetupWizardScreen() {
       setSubmitting(true);
       try {
         await createAcademicYear(token, yearTitle.trim(), true);
-        const school = await completeSetup(token);
-        updateUser({
-          academic_setup_completed: true,
-          institution_type: school.institution_type ?? undefined,
-        });
+        await advance();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('academic_setup_wizard.finish_error', 'Could not finish setup.'));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (stepKey === 'grading') {
+      if (!gradingName.trim()) {
+        setError(t('academic_setup_wizard.grading_name_required', 'Name your grading system to continue.'));
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await createGradingSystem(token, {
+          name: gradingName.trim(),
+          type: gradingType,
+          status: 'active',
+        });
+        await advance();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.grading_error', 'Could not save the grading system.'));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (stepKey === 'enrollment') {
+      if (!stageName.trim()) {
+        setError(t('academic_setup_wizard.stage_name_required', 'Name your first enrollment stage to continue.'));
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await createEnrollmentStage(token, {
+          name: stageName.trim(),
+          code: stageCode.trim() || null,
+          student_instructions: stageInstructions.trim() || null,
+          is_terminal: stageIsTerminal,
+          status: 'active',
+        });
+        await advance();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.stage_error', 'Could not save the enrollment stage.'));
       } finally {
         setSubmitting(false);
       }
@@ -218,7 +341,7 @@ export default function AcademicSetupWizardScreen() {
           </View>
 
           <GlassCard surface="light" radius={RADIUS.lg} style={styles.stepCard}>
-            {step === 0 && (
+            {stepKey === 'institution' && (
               <View>
                 <Text style={styles.stepHeading}>{t('academic_setup_wizard.institution_type_heading', 'What type of institution is this?')}</Text>
                 <Text style={styles.stepHint}>
@@ -240,7 +363,7 @@ export default function AcademicSetupWizardScreen() {
               </View>
             )}
 
-            {step === 1 && (
+            {stepKey === 'profile' && (
               <View>
                 <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
                 <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
@@ -254,7 +377,22 @@ export default function AcademicSetupWizardScreen() {
               </View>
             )}
 
-            {step === 2 && (
+            {stepKey === 'admin_info' && (
+              <View>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.admin_info_heading', 'Your info')}</Text>
+                <Text style={styles.stepHint}>
+                  {t('academic_setup_wizard.admin_info_hint', 'A quick confirmation of your own contact details as the school admin.')}
+                </Text>
+                <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
+                <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.admin_email_label', 'Email')}</Text>
+                <GlassInput value={user?.email ?? ''} editable={false} style={[styles.input, styles.inputDisabled]} />
+                <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
+                <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
+              </View>
+            )}
+
+            {stepKey === 'academic_year' && (
               <View>
                 <Text style={styles.stepHeading}>{t('academic_setup_wizard.year_heading', 'Your first academic year')}</Text>
                 <Text style={styles.stepHint}>
@@ -269,6 +407,62 @@ export default function AcademicSetupWizardScreen() {
                 />
               </View>
             )}
+
+            {stepKey === 'grading' && (
+              <View>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.grading_heading', 'Your first grading system')}</Text>
+                <Text style={styles.stepHint}>
+                  {t('academic_setup_wizard.grading_hint', 'You can add more grading systems and build out grade scales later from Academic Setup.')}
+                </Text>
+                <Text style={styles.label}>{t('academic_setup_wizard.grading_name_label', 'Name')}</Text>
+                <GlassInput value={gradingName} onChangeText={setGradingName} placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')} style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.grading_type_label', 'Type')}</Text>
+                {GRADING_TYPE_QUICK_PICKS.map((gt) => (
+                  <TouchableOpacity
+                    key={gt}
+                    style={[styles.optionRow, gradingType === gt && styles.optionRowSelected]}
+                    onPress={() => setGradingType(gt)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.radio, gradingType === gt && styles.radioSelected]}>
+                      {gradingType === gt ? <View style={styles.radioDot} /> : null}
+                    </View>
+                    <Text style={styles.optionLabel}>{t(`academic_setup_wizard.grading_type_${gt}`, GRADING_TYPE_LABELS[gt] ?? gt)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {stepKey === 'enrollment' && (
+              <View>
+                <Text style={styles.stepHeading}>{t('academic_setup_wizard.enrollment_heading', 'Your first enrollment stage')}</Text>
+                <Text style={styles.stepHint}>
+                  {t('academic_setup_wizard.enrollment_hint', 'You can build out a full multi-stage pipeline later from Enrollment in the admin menu.')}
+                </Text>
+                <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
+                <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
+                <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
+                <Text style={styles.label}>{t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}</Text>
+                <GlassInput
+                  value={stageInstructions}
+                  onChangeText={setStageInstructions}
+                  placeholder={t('academic_setup_wizard.stage_instructions_placeholder', 'Shown to the student at this stage')}
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                  numberOfLines={3}
+                />
+                <View style={styles.switchRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.switchLabel}>{t('academic_setup_wizard.stage_final_label', 'Final stage')}</Text>
+                    <Text style={styles.stepHint}>
+                      {t('academic_setup_wizard.stage_final_hint', "Reaching this stage marks the student's enrollment as complete. A new school usually starts with just one.")}
+                    </Text>
+                  </View>
+                  <Switch value={stageIsTerminal} onValueChange={setStageIsTerminal} trackColor={{ true: EMERALD }} />
+                </View>
+              </View>
+            )}
           </GlassCard>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -278,7 +472,7 @@ export default function AcademicSetupWizardScreen() {
               <GlassButton label={t('common.back', 'Back')} variant="ghost" onPress={goBack} disabled={submitting} style={styles.backButton} />
             ) : null}
             <GlassButton
-              label={step === 2 ? t('academic_setup_wizard.finish_setup', 'Finish Setup') : t('academic_setup_wizard.continue', 'Continue')}
+              label={isLastStep ? t('academic_setup_wizard.finish_setup', 'Finish Setup') : t('academic_setup_wizard.continue', 'Continue')}
               onPress={goNext}
               loading={submitting}
               style={styles.nextButton}
@@ -354,6 +548,11 @@ const styles = StyleSheet.create({
 
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 6, marginTop: 12 },
   input: {},
+  inputDisabled: { opacity: 0.6 },
+  textArea: { minHeight: 84, paddingTop: 12 },
+
+  switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, paddingVertical: 4, gap: 12 },
+  switchLabel: { fontSize: 14.5, fontWeight: '600', color: INK, marginBottom: 3 },
 
   errorText: { color: ERROR, fontSize: 13.5, marginBottom: 14, textAlign: 'center' },
 

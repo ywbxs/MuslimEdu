@@ -21,6 +21,10 @@ export interface WorkflowStage {
   order: number;
   is_terminal: boolean;
   status: 'active' | 'inactive';
+  // Shown to the student on EnrollmentStatusScreen while they're on this
+  // stage (e.g. "Pay the enrollment fee at the Cashier's office"). Null/
+  // empty means no extra instruction is shown for this stage.
+  student_instructions: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -31,6 +35,7 @@ export interface WorkflowStageInput {
   order?: number;
   is_terminal?: boolean;
   status?: 'active' | 'inactive';
+  student_instructions?: string | null;
 }
 
 export interface WorkflowStudentSummary {
@@ -234,6 +239,7 @@ export interface StudentWorkflowStage {
   name: string;
   order: number;
   is_terminal: boolean;
+  student_instructions?: string | null;
 }
 
 export interface StudentWorkflowRecord {

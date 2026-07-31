@@ -155,6 +155,20 @@ export default function EnrollmentStatusScreen() {
               </View>
             ) : null}
 
+            {record?.status === 'in_progress' && record.currentStage ? (
+              <View style={styles.actionCard}>
+                <View style={[styles.actionPill, { backgroundColor: EMERALD_SOFT }]}>
+                  <Text style={[styles.actionPillText, { color: EMERALD }]}>{record.currentStage.name}</Text>
+                </View>
+                <Text style={styles.actionHeading}>{t('enrollment_status.what_to_do_now', 'What to do now')}</Text>
+                <Text style={styles.actionBody}>
+                  {record.currentStage.student_instructions?.trim()
+                    ? record.currentStage.student_instructions
+                    : t('enrollment_status.no_instructions', 'Please contact the school office for next steps.')}
+                </Text>
+              </View>
+            ) : null}
+
             <Text style={styles.sectionTitle}>{t('enrollment_status.stages', 'Stages')}</Text>
             <View style={styles.stagesCard}>
               {(data.stages ?? []).map((stage, idx) => {
@@ -239,6 +253,18 @@ const styles = StyleSheet.create({
 
   statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   statusPillText: { fontSize: 12.5, fontWeight: '700' },
+
+  actionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    marginTop: 16,
+    ...SHADOW.level1,
+  },
+  actionPill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 10 },
+  actionPillText: { fontSize: 11.5, fontWeight: '700' },
+  actionHeading: { fontSize: 14.5, fontWeight: '700', color: INK, marginBottom: 6 },
+  actionBody: { fontSize: 13.5, color: INK, lineHeight: 19 },
 
   stagesCard: {
     backgroundColor: '#FFFFFF',
