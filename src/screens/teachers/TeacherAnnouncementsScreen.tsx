@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle, Line } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchAnnouncementTargets,
   fetchTeacherAnnouncements,
@@ -100,6 +101,7 @@ export default function TeacherAnnouncementsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [targets, setTargets] = useState<AnnouncementTarget[]>([]);
@@ -131,7 +133,7 @@ export default function TeacherAnnouncementsScreen() {
           setSelectedTargetKey(targetKey(targetList[0]));
         }
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load announcements.');
+        setError(e?.message ?? t('teacher_announcements.load_error', 'Could not load announcements.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -146,8 +148,8 @@ export default function TeacherAnnouncementsScreen() {
     }, [load])
   );
 
-  const targetKey = (t: AnnouncementTarget) => `${t.section_id}:${t.subject_id ?? 'class'}`;
-  const selectedTarget = targets.find((t) => targetKey(t) === selectedTargetKey) ?? null;
+  const targetKey = (target: AnnouncementTarget) => `${target.section_id}:${target.subject_id ?? 'class'}`;
+  const selectedTarget = targets.find((target) => targetKey(target) === selectedTargetKey) ?? null;
 
   const resetCompose = () => {
     setTitle('');
@@ -171,7 +173,10 @@ export default function TeacherAnnouncementsScreen() {
   const handlePost = async () => {
     if (!token || !selectedTarget) return;
     if (!title.trim() || !body.trim()) {
-      Alert.alert('Missing info', 'Please add a title and a message.');
+      Alert.alert(
+        t('teacher_announcements.missing_info_title', 'Missing info'),
+        t('teacher_announcements.missing_info_message', 'Please add a title and a message.'),
+      );
       return;
     }
     setIsSubmitting(true);
@@ -187,7 +192,7 @@ export default function TeacherAnnouncementsScreen() {
       resetCompose();
       load({ silent: true });
     } catch (e: any) {
-      Alert.alert('Could not post', e?.message ?? 'Please try again.');
+      Alert.alert(t('teacher_announcements.post_error_title', 'Could not post'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -195,21 +200,25 @@ export default function TeacherAnnouncementsScreen() {
 
   const handleDelete = (item: Announcement) => {
     if (!token) return;
-    Alert.alert('Delete announcement?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAnnouncement(token, item.id);
-            setAnnouncements((prev) => prev.filter((a) => a.id !== item.id));
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('teacher_announcements.delete_confirm_title', 'Delete announcement?'),
+      t('teacher_announcements.delete_confirm_message', 'This cannot be undone.'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAnnouncement(token, item.id);
+              setAnnouncements((prev) => prev.filter((a) => a.id !== item.id));
+            } catch (e: any) {
+              Alert.alert(t('teacher_announcements.delete_error_title', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -223,7 +232,7 @@ export default function TeacherAnnouncementsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
             <IconChevronLeft color={INK} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Announcements</Text>
+          <Text style={styles.headerTitle}>{t('teacher_announcements.header_title', 'Announcements')}</Text>
           <TouchableOpacity
             onPress={() => setIsComposing((v) => !v)}
             hitSlop={12}
@@ -235,11 +244,11 @@ export default function TeacherAnnouncementsScreen() {
 
         {isComposing ? (
           <View style={styles.composeCard}>
-            <Text style={styles.composeLabel}>Post to</Text>
+            <Text style={styles.composeLabel}>{t('teacher_announcements.post_to', 'Post to')}</Text>
             <FlatList
               horizontal
               data={targets}
-              keyExtractor={(t) => targetKey(t)}
+              keyExtractor={(target) => targetKey(target)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 4 }}
               renderItem={({ item }) => {
@@ -252,7 +261,7 @@ export default function TeacherAnnouncementsScreen() {
                   >
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
                       {item.section_name}
-                      {item.subject_name ? ` · ${item.subject_name}` : ' · Whole class'}
+                      {item.subject_name ? ` · ${item.subject_name}` : ` · ${t('teacher_announcements.whole_class', 'Whole class')}`}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -260,14 +269,14 @@ export default function TeacherAnnouncementsScreen() {
             />
 
             <TextInput
-              placeholder="Title"
+              placeholder={t('teacher_announcements.title_placeholder', 'Title')}
               placeholderTextColor={SUBTLE}
               value={title}
               onChangeText={setTitle}
               style={styles.input}
             />
             <TextInput
-              placeholder="Write your announcement…"
+              placeholder={t('teacher_announcements.body_placeholder', 'Write your announcement…')}
               placeholderTextColor={SUBTLE}
               value={body}
               onChangeText={setBody}
@@ -277,7 +286,7 @@ export default function TeacherAnnouncementsScreen() {
 
             <View style={styles.pinRow}>
               <IconPin color={SUBTLE} />
-              <Text style={styles.pinLabel}>Pin to top</Text>
+              <Text style={styles.pinLabel}>{t('teacher_announcements.pin_to_top', 'Pin to top')}</Text>
               <Switch
                 value={isPinned}
                 onValueChange={setIsPinned}
@@ -299,20 +308,20 @@ export default function TeacherAnnouncementsScreen() {
             ) : (
               <TouchableOpacity onPress={pickAttachment} style={styles.attachButton}>
                 <IconPaperclip color={EMERALD} />
-                <Text style={styles.attachButtonText}>Attach a photo</Text>
+                <Text style={styles.attachButtonText}>{t('teacher_announcements.attach_photo', 'Attach a photo')}</Text>
               </TouchableOpacity>
             )}
 
             <View style={styles.composeActions}>
               <TouchableOpacity onPress={resetCompose} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handlePost}
                 disabled={isSubmitting || !selectedTarget}
                 style={[styles.postButton, (isSubmitting || !selectedTarget) && { opacity: 0.6 }]}
               >
-                <Text style={styles.postButtonText}>{isSubmitting ? 'Posting…' : 'Post'}</Text>
+                <Text style={styles.postButtonText}>{isSubmitting ? t('teacher_announcements.posting', 'Posting…') : t('teacher_announcements.post', 'Post')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -341,7 +350,7 @@ export default function TeacherAnnouncementsScreen() {
             refreshing={isRefreshing}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                No announcements yet. Tap + to post your first one.
+                {t('teacher_announcements.empty', 'No announcements yet. Tap + to post your first one.')}
               </Text>
             }
             renderItem={({ item }) => (
@@ -360,7 +369,7 @@ export default function TeacherAnnouncementsScreen() {
                 </Text>
                 <Text style={styles.cardMeta}>
                   {item.section_name}
-                  {item.subject_name ? ` · ${item.subject_name}` : ' · Whole class'} · {item.posted_at}
+                  {item.subject_name ? ` · ${item.subject_name}` : ` · ${t('teacher_announcements.whole_class', 'Whole class')}`} · {item.posted_at}
                 </Text>
               </View>
             )}
