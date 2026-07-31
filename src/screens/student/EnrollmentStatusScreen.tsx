@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchStudentEnrollmentWorkflowStatus,
   StudentEnrollmentWorkflowStatus,
@@ -22,6 +23,11 @@ const STATUS_META: Record<string, { label: string; color: string; soft: string }
   in_progress: { label: 'In progress', color: '#B8860B', soft: '#FBF2DE' },
   completed: { label: 'Officially enrolled', color: EMERALD, soft: EMERALD_SOFT },
   withdrawn: { label: 'Withdrawn', color: '#E5484D', soft: '#FCEDED' },
+};
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  in_progress: 'in_progress',
+  completed: 'completed',
+  withdrawn: 'withdrawn',
 };
 
 function IconChevronLeft({ color }: { color: string }) {
@@ -74,6 +80,7 @@ export default function EnrollmentStatusScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [data, setData] = useState<StudentEnrollmentWorkflowStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,11 +94,11 @@ export default function EnrollmentStatusScreen() {
       const result = await fetchStudentEnrollmentWorkflowStatus(token);
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your enrollment status.');
+      setError(err instanceof Error ? err.message : t('enrollment_status.load_error', 'Could not load your enrollment status.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -109,8 +116,8 @@ export default function EnrollmentStatusScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Enrollment Progress</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>Where you are in the admission process</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{t('enrollment_status.title', 'Enrollment Progress')}</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>{t('enrollment_status.subtitle', 'Where you are in the admission process')}</Text>
         </View>
         <View style={{ width: 32 }} />
       </View>
@@ -130,25 +137,25 @@ export default function EnrollmentStatusScreen() {
           <View style={styles.errorBanner}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={load}>
-              <Text style={styles.retryButtonText}>Try again</Text>
+              <Text style={styles.retryButtonText}>{t('common.try_again', 'Try again')}</Text>
             </TouchableOpacity>
           </View>
         ) : !data?.started ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyTitle}>Not started yet</Text>
+            <Text style={styles.emptyTitle}>{t('enrollment_status.not_started', 'Not started yet')}</Text>
             <Text style={styles.emptyDesc}>
-              {data?.message ?? 'Your enrollment workflow has not been started yet. Please contact the school office.'}
+              {data?.message ?? t('enrollment_status.not_started_desc', 'Your enrollment workflow has not been started yet. Please contact the school office.')}
             </Text>
           </View>
         ) : (
           <>
             {statusMeta ? (
               <View style={[styles.statusPill, { backgroundColor: statusMeta.soft, alignSelf: 'flex-start' }]}>
-                <Text style={[styles.statusPillText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+                <Text style={[styles.statusPillText, { color: statusMeta.color }]}>{record ? t(`enrollment_status.status_${STATUS_LABEL_KEYS[record.status] ?? 'in_progress'}`, statusMeta.label) : statusMeta.label}</Text>
               </View>
             ) : null}
 
-            <Text style={styles.sectionTitle}>Stages</Text>
+            <Text style={styles.sectionTitle}>{t('enrollment_status.stages', 'Stages')}</Text>
             <View style={styles.stagesCard}>
               {(data.stages ?? []).map((stage, idx) => {
                 const isDone = isFullyCompleted || stage.order < currentOrder;
@@ -178,7 +185,7 @@ export default function EnrollmentStatusScreen() {
                       >
                         {stage.name}
                       </Text>
-                      {isCurrent ? <Text style={styles.stepCurrentTag}>You are here</Text> : null}
+                      {isCurrent ? <Text style={styles.stepCurrentTag}>{t('enrollment_status.you_are_here', 'You are here')}</Text> : null}
                     </View>
                   </View>
                 );
@@ -187,14 +194,14 @@ export default function EnrollmentStatusScreen() {
 
             {data.history && data.history.length > 0 ? (
               <>
-                <Text style={styles.sectionTitle}>History</Text>
+                <Text style={styles.sectionTitle}>{t('enrollment_status.history', 'History')}</Text>
                 <View style={styles.historyCard}>
                   {data.history.map((h, idx) => (
                     <View key={idx} style={[styles.historyRow, idx > 0 && styles.historyRowBorder]}>
                       <ClockIcon />
                       <View style={{ flex: 1, marginLeft: 10 }}>
                         <Text style={styles.historyText}>
-                          {h.from_stage ? `${h.from_stage} → ${h.to_stage}` : `Started at ${h.to_stage}`}
+                          {h.from_stage ? `${h.from_stage} → ${h.to_stage}` : `${t('enrollment_status.started_at', 'Started at')} ${h.to_stage}`}
                         </Text>
                         <Text style={styles.historyDate}>{formatDate(h.changed_at)}</Text>
                       </View>
