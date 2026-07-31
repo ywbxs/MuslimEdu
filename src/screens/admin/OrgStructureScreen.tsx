@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   Faculty,
@@ -48,7 +49,7 @@ const DANGER = '#BA1A1A';
 
 type Tab = 'faculties' | 'streams';
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_FALLBACKS: Record<string, string> = {
   faculty: 'Faculty',
   college: 'College',
   institute: 'Institute',
@@ -58,6 +59,8 @@ export default function OrgStructureScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
+  const typeLabel = (type: string) => t(`org_structure.type_${type}`, TYPE_FALLBACKS[type] ?? type);
 
   const [tab, setTab] = useState<Tab>('faculties');
   const [loading, setLoading] = useState(true);
@@ -100,19 +103,19 @@ export default function OrgStructureScreen() {
       setDepartments(d);
       setPrograms(p);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load org structure.');
+      setError(e?.message ?? t('org_structure.load_error', 'Could not load org structure.'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const departmentName = useCallback(
-    (id: number) => departments.find((d) => d.id === id)?.name ?? `Department ${id}`,
-    [departments]
+    (id: number) => departments.find((d) => d.id === id)?.name ?? t('org_structure.department_fallback', 'Department {id}').replace('{id}', String(id)),
+    [departments, t]
   );
 
   // --- Faculty form ---
@@ -136,7 +139,7 @@ export default function OrgStructureScreen() {
   const onSaveFaculty = async () => {
     if (!token) return;
     if (!fName.trim()) {
-      Alert.alert('Name required', 'Give this a name first.');
+      Alert.alert(t('org_structure.name_required', 'Name required'), t('org_structure.name_required_message', 'Give this a name first.'));
       return;
     }
     setSaving(true);
@@ -154,17 +157,17 @@ export default function OrgStructureScreen() {
       });
       setFacultyFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('org_structure.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeleteFaculty = (f: Faculty) => {
-    Alert.alert('Delete this?', `"${f.name}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('org_structure.delete_title', 'Delete this?'), t('org_structure.delete_message', '"{name}" will be removed.').replace('{name}', f.name), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('org_structure.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -172,7 +175,7 @@ export default function OrgStructureScreen() {
             await deleteFaculty(token, f.id);
             setFaculties((prev) => prev.filter((x) => x.id !== f.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('org_structure.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -203,11 +206,11 @@ export default function OrgStructureScreen() {
 
   const onSaveStream = async () => {
     if (!token || !sDepartmentId) {
-      Alert.alert('Missing info', 'Choose a department first.');
+      Alert.alert(t('org_structure.missing_info', 'Missing info'), t('org_structure.choose_department', 'Choose a department first.'));
       return;
     }
     if (!sName.trim()) {
-      Alert.alert('Name required', 'Give this a name first.');
+      Alert.alert(t('org_structure.name_required', 'Name required'), t('org_structure.name_required_message', 'Give this a name first.'));
       return;
     }
     setSaving(true);
@@ -227,17 +230,17 @@ export default function OrgStructureScreen() {
       });
       setStreamFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('org_structure.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeleteStream = (s: Stream) => {
-    Alert.alert('Delete this?', `"${s.name}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('org_structure.delete_title', 'Delete this?'), t('org_structure.delete_message', '"{name}" will be removed.').replace('{name}', s.name), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('org_structure.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -245,7 +248,7 @@ export default function OrgStructureScreen() {
             await deleteStream(token, s.id);
             setStreams((prev) => prev.filter((x) => x.id !== s.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('org_structure.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -256,7 +259,7 @@ export default function OrgStructureScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>Loading org structure…</Text>
+        <Text style={styles.centerText}>{t('org_structure.loading', 'Loading org structure…')}</Text>
       </View>
     );
   }
@@ -264,10 +267,10 @@ export default function OrgStructureScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn't load this</Text>
+        <Text style={styles.errorTitle}>{t('org_structure.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -280,8 +283,8 @@ export default function OrgStructureScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Org Structure</Text>
-          <Text style={styles.headerSub}>Faculties, colleges, institutes, streams</Text>
+          <Text style={styles.headerTitle}>{t('org_structure.title', 'Org Structure')}</Text>
+          <Text style={styles.headerSub}>{t('org_structure.subtitle', 'Faculties, colleges, institutes, streams')}</Text>
         </View>
       </View>
 
@@ -291,7 +294,7 @@ export default function OrgStructureScreen() {
           onPress={() => setTab('faculties')}
         >
           <Text style={[styles.tabText, tab === 'faculties' && styles.tabTextActive]}>
-            Faculties / Colleges
+            {t('org_structure.tab_faculties', 'Faculties / Colleges')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -299,7 +302,7 @@ export default function OrgStructureScreen() {
           onPress={() => setTab('streams')}
         >
           <Text style={[styles.tabText, tab === 'streams' && styles.tabTextActive]}>
-            Streams / Specializations
+            {t('org_structure.tab_streams', 'Streams / Specializations')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -309,8 +312,10 @@ export default function OrgStructureScreen() {
           faculties.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyText}>
-                No faculties, colleges, or institutes yet. Add one, then assign departments to it
-                from the department editor.
+                {t(
+                  'org_structure.empty_faculties',
+                  'No faculties, colleges, or institutes yet. Add one, then assign departments to it from the department editor.',
+                )}
               </Text>
             </View>
           ) : (
@@ -320,19 +325,21 @@ export default function OrgStructureScreen() {
                   <View style={styles.flexCol}>
                     <Text style={styles.rowTitle}>{f.name}</Text>
                     <Text style={styles.rowSub}>
-                      {TYPE_LABELS[f.type]}
-                      {f.code ? ` · ${f.code}` : ''} · {f.departments_count ?? 0} department
-                      {f.departments_count === 1 ? '' : 's'}
-                      {f.status !== 'active' ? ' · inactive' : ''}
+                      {typeLabel(f.type)}
+                      {f.code ? ` · ${f.code}` : ''} ·{' '}
+                      {f.departments_count === 1
+                        ? t('org_structure.one_department', '1 department')
+                        : t('org_structure.n_departments', '{n} departments').replace('{n}', String(f.departments_count ?? 0))}
+                      {f.status !== 'active' ? ` · ${t('org_structure.inactive', 'inactive')}` : ''}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.actionsRow}>
                   <TouchableOpacity onPress={() => openEditFaculty(f)}>
-                    <Text style={styles.actionLink}>Edit</Text>
+                    <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => confirmDeleteFaculty(f)}>
-                    <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                    <Text style={[styles.actionLink, styles.deleteLink]}>{t('org_structure.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -341,8 +348,7 @@ export default function OrgStructureScreen() {
         ) : streams.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              No streams or specializations yet. Add one under a department, optionally tied to a
-              program.
+              {t('org_structure.empty_streams', 'No streams or specializations yet. Add one under a department, optionally tied to a program.')}
             </Text>
           </View>
         ) : (
@@ -352,19 +358,19 @@ export default function OrgStructureScreen() {
                 <View style={styles.flexCol}>
                   <Text style={styles.rowTitle}>{s.name}</Text>
                   <Text style={styles.rowSub}>
-                    {s.kind === 'specialization' ? 'Specialization' : 'Stream'} ·{' '}
+                    {s.kind === 'specialization' ? t('org_structure.specialization', 'Specialization') : t('org_structure.stream', 'Stream')} ·{' '}
                     {s.department?.name ?? departmentName(s.department_id)}
                     {s.program?.name ? ` · ${s.program.name}` : ''}
-                    {s.status !== 'active' ? ' · inactive' : ''}
+                    {s.status !== 'active' ? ` · ${t('org_structure.inactive', 'inactive')}` : ''}
                   </Text>
                 </View>
               </View>
               <View style={styles.actionsRow}>
                 <TouchableOpacity onPress={() => openEditStream(s)}>
-                  <Text style={styles.actionLink}>Edit</Text>
+                  <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => confirmDeleteStream(s)}>
-                  <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
+                  <Text style={[styles.actionLink, styles.deleteLink]}>{t('org_structure.delete', 'Delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -375,7 +381,7 @@ export default function OrgStructureScreen() {
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={tab === 'faculties' ? openNewFaculty : openNewStream}>
           <Text style={styles.addBtnText}>
-            {tab === 'faculties' ? '+ Add Faculty / College' : '+ Add Stream / Specialization'}
+            {tab === 'faculties' ? t('org_structure.add_faculty', '+ Add Faculty / College') : t('org_structure.add_stream', '+ Add Stream / Specialization')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -384,33 +390,33 @@ export default function OrgStructureScreen() {
       <Modal visible={facultyFormVisible} animationType="slide" transparent onRequestClose={() => setFacultyFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingFaculty ? 'Edit' : 'New Faculty / College / Institute'}</Text>
+            <Text style={styles.modalTitle}>{editingFaculty ? t('common.edit', 'Edit') : t('org_structure.new_faculty', 'New Faculty / College / Institute')}</Text>
 
-            <Text style={styles.label}>Type</Text>
+            <Text style={styles.label}>{t('org_structure.type_label', 'Type')}</Text>
             <View style={styles.chipRow}>
-              {(['faculty', 'college', 'institute'] as const).map((t) => (
+              {(['faculty', 'college', 'institute'] as const).map((facultyType) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.chip, fType === t && styles.chipActive]}
-                  onPress={() => setFType(t)}
+                  key={facultyType}
+                  style={[styles.chip, fType === facultyType && styles.chipActive]}
+                  onPress={() => setFType(facultyType)}
                 >
-                  <Text style={[styles.chipText, fType === t && styles.chipTextActive]}>{TYPE_LABELS[t]}</Text>
+                  <Text style={[styles.chipText, fType === facultyType && styles.chipTextActive]}>{typeLabel(facultyType)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>Name</Text>
-            <TextInput style={styles.input} value={fName} onChangeText={setFName} placeholder="e.g. College of Engineering" />
+            <Text style={styles.label}>{t('org_structure.name_label', 'Name')}</Text>
+            <TextInput style={styles.input} value={fName} onChangeText={setFName} placeholder={t('org_structure.faculty_name_placeholder', 'e.g. College of Engineering')} />
 
-            <Text style={styles.label}>Code (optional)</Text>
+            <Text style={styles.label}>{t('org_structure.code_label', 'Code (optional)')}</Text>
             <TextInput style={styles.input} value={fCode} onChangeText={setFCode} placeholder="e.g. ENG" autoCapitalize="characters" />
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setFacultyFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveFaculty} disabled={saving}>
-                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -421,9 +427,9 @@ export default function OrgStructureScreen() {
       <Modal visible={streamFormVisible} animationType="slide" transparent onRequestClose={() => setStreamFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingStream ? 'Edit' : 'New Stream / Specialization'}</Text>
+            <Text style={styles.modalTitle}>{editingStream ? t('common.edit', 'Edit') : t('org_structure.new_stream', 'New Stream / Specialization')}</Text>
 
-            <Text style={styles.label}>Kind</Text>
+            <Text style={styles.label}>{t('org_structure.kind_label', 'Kind')}</Text>
             <View style={styles.chipRow}>
               {(['stream', 'specialization'] as const).map((k) => (
                 <TouchableOpacity
@@ -432,13 +438,13 @@ export default function OrgStructureScreen() {
                   onPress={() => setSKind(k)}
                 >
                   <Text style={[styles.chipText, sKind === k && styles.chipTextActive]}>
-                    {k === 'stream' ? 'Stream' : 'Specialization'}
+                    {k === 'stream' ? t('org_structure.stream', 'Stream') : t('org_structure.specialization', 'Specialization')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>Department</Text>
+            <Text style={styles.label}>{t('org_structure.department_label', 'Department')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {departments.map((d) => (
                 <TouchableOpacity
@@ -451,13 +457,13 @@ export default function OrgStructureScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>Program (optional)</Text>
+            <Text style={styles.label}>{t('org_structure.program_label', 'Program (optional)')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               <TouchableOpacity
                 style={[styles.chip, sProgramId === null && styles.chipActive]}
                 onPress={() => setSProgramId(null)}
               >
-                <Text style={[styles.chipText, sProgramId === null && styles.chipTextActive]}>None</Text>
+                <Text style={[styles.chipText, sProgramId === null && styles.chipTextActive]}>{t('common.none', 'None')}</Text>
               </TouchableOpacity>
               {programs.map((p) => (
                 <TouchableOpacity
@@ -470,18 +476,18 @@ export default function OrgStructureScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>Name</Text>
-            <TextInput style={styles.input} value={sName} onChangeText={setSName} placeholder="e.g. Science Stream" />
+            <Text style={styles.label}>{t('org_structure.name_label', 'Name')}</Text>
+            <TextInput style={styles.input} value={sName} onChangeText={setSName} placeholder={t('org_structure.stream_name_placeholder', 'e.g. Science Stream')} />
 
-            <Text style={styles.label}>Code (optional)</Text>
+            <Text style={styles.label}>{t('org_structure.code_label', 'Code (optional)')}</Text>
             <TextInput style={styles.input} value={sCode} onChangeText={setSCode} placeholder="e.g. SCI" autoCapitalize="characters" />
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setStreamFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveStream} disabled={saving}>
-                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
