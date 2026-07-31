@@ -14,6 +14,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -55,7 +56,7 @@ function IconChevronLeft({ color }: { color: string }) {
 
 type Tab = 'versions' | 'competencies';
 
-const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_FALLBACKS: Record<string, string> = {
   academic: 'Academic',
   islamic_studies: 'Islamic Studies',
   arabic: 'Arabic',
@@ -69,9 +70,11 @@ export default function CurriculumVersionsScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
+  const categoryLabel = (cat: string) => t(`curriculum_versions.category_${cat}`, CATEGORY_FALLBACKS[cat] ?? cat);
 
   const curriculumId: number = route.params?.curriculumId;
-  const curriculumName: string = route.params?.curriculumName ?? 'Curriculum';
+  const curriculumName: string = route.params?.curriculumName ?? t('curriculum_versions.curriculum_fallback', 'Curriculum');
 
   const [tab, setTab] = useState<Tab>('versions');
   const [loading, setLoading] = useState(true);
@@ -108,11 +111,11 @@ export default function CurriculumVersionsScreen() {
       const active = v.find((x) => x.status === 'active') ?? v[0] ?? null;
       setSelectedVersion(active);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load curriculum versions.');
+      setError(e?.message ?? t('curriculum_versions.load_error', 'Could not load curriculum versions.'));
     } finally {
       setLoading(false);
     }
-  }, [token, curriculumId]);
+  }, [token, curriculumId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -128,12 +131,12 @@ export default function CurriculumVersionsScreen() {
         const c = await fetchCurriculumCompetencies(token, versionId);
         setCompetencies(c);
       } catch (e: any) {
-        Alert.alert("Couldn't load competencies", e?.message ?? 'Please try again.');
+        Alert.alert(t('curriculum_versions.load_competencies_error', "Couldn't load competencies"), e?.message ?? t('common.try_again_full', 'Please try again.'));
       } finally {
         setCompetenciesLoading(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   const onSelectVersion = (v: CurriculumVersion) => {
@@ -167,7 +170,7 @@ export default function CurriculumVersionsScreen() {
   const onSaveVersion = async () => {
     if (!token) return;
     if (!fLabel.trim() || !fEffectiveDate.trim()) {
-      Alert.alert('Missing info', 'A label and an effective date (YYYY-MM-DD) are required.');
+      Alert.alert(t('curriculum_versions.missing_info', 'Missing info'), t('curriculum_versions.missing_label_date', 'A label and an effective date (YYYY-MM-DD) are required.'));
       return;
     }
     setSaving(true);
@@ -190,7 +193,7 @@ export default function CurriculumVersionsScreen() {
       });
       setVersionFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('curriculum_versions.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -198,12 +201,15 @@ export default function CurriculumVersionsScreen() {
 
   const onActivateVersion = (v: CurriculumVersion) => {
     Alert.alert(
-      'Make this the active version?',
-      `Any other active version of "${curriculumName}" will move to retired. Students already pinned to another version are unaffected.`,
+      t('curriculum_versions.activate_title', 'Make this the active version?'),
+      t(
+        'curriculum_versions.activate_message',
+        'Any other active version of "{name}" will move to retired. Students already pinned to another version are unaffected.',
+      ).replace('{name}', curriculumName),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Activate',
+          text: t('curriculum_versions.activate', 'Activate'),
           onPress: async () => {
             if (!token) return;
             try {
@@ -215,7 +221,7 @@ export default function CurriculumVersionsScreen() {
               });
               loadVersions();
             } catch (e: any) {
-              Alert.alert('Could not activate', e?.message ?? 'Please try again.');
+              Alert.alert(t('curriculum_versions.activate_error', 'Could not activate'), e?.message ?? t('common.try_again_full', 'Please try again.'));
             }
           },
         },
@@ -224,23 +230,27 @@ export default function CurriculumVersionsScreen() {
   };
 
   const confirmDeleteVersion = (v: CurriculumVersion) => {
-    Alert.alert('Delete this version?', `"${v.version_label}" will be removed if no students are pinned to it.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deleteCurriculumVersion(token, v.id);
-            setVersions((prev) => prev.filter((x) => x.id !== v.id));
-            if (selectedVersion?.id === v.id) setSelectedVersion(null);
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
-          }
+    Alert.alert(
+      t('curriculum_versions.delete_title', 'Delete this version?'),
+      t('curriculum_versions.delete_message', '"{label}" will be removed if no students are pinned to it.').replace('{label}', v.version_label),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('curriculum_versions.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await deleteCurriculumVersion(token, v.id);
+              setVersions((prev) => prev.filter((x) => x.id !== v.id));
+              if (selectedVersion?.id === v.id) setSelectedVersion(null);
+            } catch (e: any) {
+              Alert.alert(t('curriculum_versions.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // --- Competency form ---
@@ -266,7 +276,7 @@ export default function CurriculumVersionsScreen() {
   const onSaveCompetency = async () => {
     if (!token || !selectedVersion) return;
     if (!cTitle.trim()) {
-      Alert.alert('Title required', 'Give this competency a title first.');
+      Alert.alert(t('curriculum_versions.title_required', 'Title required'), t('curriculum_versions.title_required_message', 'Give this competency a title first.'));
       return;
     }
     setSaving(true);
@@ -286,17 +296,17 @@ export default function CurriculumVersionsScreen() {
       });
       setCompetencyFormVisible(false);
     } catch (e: any) {
-      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      Alert.alert(t('curriculum_versions.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeleteCompetency = (c: CurriculumCompetency) => {
-    Alert.alert('Delete competency?', `"${c.title}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('curriculum_versions.delete_competency_title', 'Delete competency?'), t('curriculum_versions.delete_competency_message', '"{title}" will be removed.').replace('{title}', c.title), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('curriculum_versions.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -304,7 +314,7 @@ export default function CurriculumVersionsScreen() {
             await deleteCurriculumCompetency(token, c.id);
             setCompetencies((prev) => prev.filter((x) => x.id !== c.id));
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('curriculum_versions.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -349,7 +359,7 @@ export default function CurriculumVersionsScreen() {
         <View style={styles.centerFill}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadVersions}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
         <BottomNavBar />
@@ -373,7 +383,7 @@ export default function CurriculumVersionsScreen() {
           style={[styles.filterButton, tab === 'versions' && styles.filterButtonActive]}
           onPress={() => setTab('versions')}
         >
-          <Text style={[styles.filterButtonText, tab === 'versions' && styles.filterButtonTextActive]}>Versions</Text>
+          <Text style={[styles.filterButtonText, tab === 'versions' && styles.filterButtonTextActive]}>{t('curriculum_versions.tab_versions', 'Versions')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, tab === 'competencies' && styles.filterButtonActive]}
@@ -381,7 +391,7 @@ export default function CurriculumVersionsScreen() {
           disabled={!selectedVersion}
         >
           <Text style={[styles.filterButtonText, tab === 'competencies' && styles.filterButtonTextActive]}>
-            Competencies{selectedVersion ? ` (${selectedVersion.version_label})` : ''}
+            {t('curriculum_versions.tab_competencies', 'Competencies')}{selectedVersion ? ` (${selectedVersion.version_label})` : ''}
           </Text>
         </TouchableOpacity>
       </View>
@@ -391,8 +401,8 @@ export default function CurriculumVersionsScreen() {
           {versions.length === 0 ? (
             <EmptyState
               icon="🗂️"
-              title="No versions yet"
-              subtitle="Add the first version to set credit requirements and competencies."
+              title={t('curriculum_versions.empty_versions_title', 'No versions yet')}
+              subtitle={t('curriculum_versions.empty_versions_subtitle', 'Add the first version to set credit requirements and competencies.')}
               colors={theme}
             />
           ) : (
@@ -416,36 +426,36 @@ export default function CurriculumVersionsScreen() {
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.label}>Effective:</Text>
+                  <Text style={styles.label}>{t('curriculum_versions.effective_label', 'Effective:')}</Text>
                   <Text style={styles.value}>{v.effective_date?.slice(0, 10)}</Text>
                 </View>
                 {v.end_date && (
                   <View style={styles.infoRow}>
-                    <Text style={styles.label}>Ends:</Text>
+                    <Text style={styles.label}>{t('curriculum_versions.ends_label', 'Ends:')}</Text>
                     <Text style={styles.value}>{v.end_date.slice(0, 10)}</Text>
                   </View>
                 )}
                 {v.credit_requirements?.total_credits != null && (
                   <View style={styles.infoRow}>
-                    <Text style={styles.label}>Total credits:</Text>
+                    <Text style={styles.label}>{t('curriculum_versions.total_credits_label', 'Total credits:')}</Text>
                     <Text style={styles.value}>{v.credit_requirements.total_credits}</Text>
                   </View>
                 )}
 
                 <View style={styles.cardFooter}>
                   <TouchableOpacity style={styles.actionButtonGhost} onPress={() => onSelectVersion(v)}>
-                    <Text style={styles.actionButtonGhostText}>Competencies</Text>
+                    <Text style={styles.actionButtonGhostText}>{t('curriculum_versions.tab_competencies', 'Competencies')}</Text>
                   </TouchableOpacity>
                   {v.status !== 'active' && (
                     <TouchableOpacity style={styles.actionButtonGhost} onPress={() => onActivateVersion(v)}>
-                      <Text style={styles.actionButtonGhostText}>Activate</Text>
+                      <Text style={styles.actionButtonGhostText}>{t('curriculum_versions.activate', 'Activate')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity style={styles.actionButton} onPress={() => openEditVersion(v)}>
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDeleteVersion(v)}>
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>{t('curriculum_versions.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -461,8 +471,8 @@ export default function CurriculumVersionsScreen() {
           {competencies.length === 0 ? (
             <EmptyState
               icon="🎯"
-              title="No competencies yet"
-              subtitle={`Add what students must demonstrate under ${selectedVersion?.version_label}.`}
+              title={t('curriculum_versions.empty_competencies_title', 'No competencies yet')}
+              subtitle={t('curriculum_versions.empty_competencies_subtitle', 'Add what students must demonstrate under {version}.').replace('{version}', selectedVersion?.version_label ?? '')}
               colors={theme}
             />
           ) : (
@@ -473,17 +483,17 @@ export default function CurriculumVersionsScreen() {
                     <Text style={styles.codeText}>{c.code}</Text>
                   </View>
                   <Text style={[styles.statusBadgeText, { color: theme.accentSoftText, backgroundColor: theme.accentSoft }]}>
-                    {CATEGORY_LABELS[c.category] ?? c.category}
+                    {categoryLabel(c.category)}
                   </Text>
                 </View>
                 <Text style={styles.name}>{c.title}</Text>
                 {!!c.description && <Text style={styles.value}>{c.description}</Text>}
                 <View style={styles.cardFooter}>
                   <TouchableOpacity style={styles.actionButton} onPress={() => openEditCompetency(c)}>
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>{t('common.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDeleteCompetency(c)}>
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>{t('curriculum_versions.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -494,7 +504,7 @@ export default function CurriculumVersionsScreen() {
 
       <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity style={styles.addBtn} onPress={tab === 'versions' ? openNewVersion : openNewCompetency}>
-          <Text style={styles.addBtnText}>{tab === 'versions' ? '+ Add Version' : '+ Add Competency'}</Text>
+          <Text style={styles.addBtnText}>{tab === 'versions' ? t('curriculum_versions.add_version', '+ Add Version') : t('curriculum_versions.add_competency', '+ Add Competency')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -502,29 +512,29 @@ export default function CurriculumVersionsScreen() {
       <Modal visible={versionFormVisible} animationType="slide" transparent onRequestClose={() => setVersionFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingVersion ? 'Edit Version' : 'New Version'}</Text>
+            <Text style={styles.modalTitle}>{editingVersion ? t('curriculum_versions.edit_version', 'Edit Version') : t('curriculum_versions.new_version', 'New Version')}</Text>
 
-            <Text style={styles.formLabel}>Version label</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.version_label_field', 'Version label')}</Text>
             <TextInput style={styles.input} value={fLabel} onChangeText={setFLabel} placeholder="e.g. 2026-2027" />
 
-            <Text style={styles.formLabel}>Effective date (YYYY-MM-DD)</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.effective_date_field', 'Effective date (YYYY-MM-DD)')}</Text>
             <TextInput style={styles.input} value={fEffectiveDate} onChangeText={setFEffectiveDate} placeholder="2026-09-01" />
 
-            <Text style={styles.formLabel}>End date (optional)</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.end_date_field', 'End date (optional)')}</Text>
             <TextInput style={styles.input} value={fEndDate} onChangeText={setFEndDate} placeholder="YYYY-MM-DD" />
 
-            <Text style={styles.formLabel}>Total credits (optional)</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.total_credits_field', 'Total credits (optional)')}</Text>
             <TextInput style={styles.input} value={fTotalCredits} onChangeText={setFTotalCredits} placeholder="e.g. 120" keyboardType="numeric" />
 
-            <Text style={styles.formLabel}>Notes (optional)</Text>
-            <TextInput style={[styles.input, styles.inputMultiline]} value={fNotes} onChangeText={setFNotes} multiline placeholder="What changed in this version" />
+            <Text style={styles.formLabel}>{t('curriculum_versions.notes_field', 'Notes (optional)')}</Text>
+            <TextInput style={[styles.input, styles.inputMultiline]} value={fNotes} onChangeText={setFNotes} multiline placeholder={t('curriculum_versions.notes_placeholder', 'What changed in this version')} />
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setVersionFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveVersion} disabled={saving}>
-                {saving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -535,19 +545,19 @@ export default function CurriculumVersionsScreen() {
       <Modal visible={competencyFormVisible} animationType="slide" transparent onRequestClose={() => setCompetencyFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingCompetency ? 'Edit Competency' : 'New Competency'}</Text>
+            <Text style={styles.modalTitle}>{editingCompetency ? t('curriculum_versions.edit_competency', 'Edit Competency') : t('curriculum_versions.new_competency', 'New Competency')}</Text>
 
             {!editingCompetency && (
               <>
-                <Text style={styles.formLabel}>Code</Text>
+                <Text style={styles.formLabel}>{t('curriculum_versions.code_field', 'Code')}</Text>
                 <TextInput style={styles.input} value={cCode} onChangeText={setCCode} placeholder="e.g. QURAN_MEMO_JUZ1" autoCapitalize="characters" />
               </>
             )}
 
-            <Text style={styles.formLabel}>Title</Text>
-            <TextInput style={styles.input} value={cTitle} onChangeText={setCTitle} placeholder="Display name" />
+            <Text style={styles.formLabel}>{t('curriculum_versions.title_field', 'Title')}</Text>
+            <TextInput style={styles.input} value={cTitle} onChangeText={setCTitle} placeholder={t('curriculum_versions.title_placeholder', 'Display name')} />
 
-            <Text style={styles.formLabel}>Category</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.category_field', 'Category')}</Text>
             <View style={styles.chipRow}>
               {(['academic', 'islamic_studies', 'arabic', 'other'] as const).map((cat) => (
                 <TouchableOpacity
@@ -556,21 +566,21 @@ export default function CurriculumVersionsScreen() {
                   onPress={() => setCCategory(cat)}
                 >
                   <Text style={[styles.chipText, cCategory === cat && styles.chipTextActive]}>
-                    {CATEGORY_LABELS[cat]}
+                    {categoryLabel(cat)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.formLabel}>Description (optional)</Text>
+            <Text style={styles.formLabel}>{t('curriculum_versions.description_field', 'Description (optional)')}</Text>
             <TextInput style={[styles.input, styles.inputMultiline]} value={cDescription} onChangeText={setCDescription} multiline />
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setCompetencyFormVisible(false)} disabled={saving}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveCompetency} disabled={saving}>
-                {saving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>Save</Text>}
+                {saving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
