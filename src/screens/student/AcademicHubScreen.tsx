@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Polyline, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchStudentSchedule,
   fetchStudentSubjects,
@@ -33,13 +34,14 @@ const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
 
 type TabKey = 'schedule' | 'subjects' | 'attendance' | 'grades' | 'progress';
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'schedule', label: 'Schedule' },
-  { key: 'subjects', label: 'Subjects' },
-  { key: 'attendance', label: 'Attendance' },
-  { key: 'grades', label: 'Grades' },
-  { key: 'progress', label: 'Progress' },
-];
+const TAB_KEYS: TabKey[] = ['schedule', 'subjects', 'attendance', 'grades', 'progress'];
+const TAB_FALLBACKS: Record<TabKey, string> = {
+  schedule: 'Schedule',
+  subjects: 'Subjects',
+  attendance: 'Attendance',
+  grades: 'Grades',
+  progress: 'Progress',
+};
 
 function IconChevronLeft({ color }: { color: string }) {
   return (
@@ -55,6 +57,12 @@ const ATTENDANCE_COLOR: Record<string, { color: string; soft: string }> = {
   excused: { color: '#3B82F6', soft: '#EAF1FE' },
   absent: { color: '#E5484D', soft: '#FCEDED' },
 };
+const ATTENDANCE_STATUS_FALLBACKS: Record<string, string> = {
+  present: 'Present',
+  late: 'Late',
+  excused: 'Excused',
+  absent: 'Absent',
+};
 
 function LoadingRows() {
   return (
@@ -67,11 +75,12 @@ function LoadingRows() {
 }
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = useLocale();
   return (
     <View style={styles.errorBanner}>
       <Text style={styles.errorText}>{message}</Text>
       <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-        <Text style={styles.retryButtonText}>Try again</Text>
+        <Text style={styles.retryButtonText}>{t('common.try_again', 'Try again')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -87,8 +96,18 @@ function EmptyState({ title, desc }: { title: string; desc: string }) {
 }
 
 const DAY_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_FALLBACKS: Record<string, string> = {
+  sunday: 'Sunday',
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+};
 
 function ScheduleTab({ token }: { token: string }) {
+  const { t } = useLocale();
   const [data, setData] = useState<ScheduleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +118,7 @@ function ScheduleTab({ token }: { token: string }) {
     try {
       setData(await fetchStudentSchedule(token));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your schedule.');
+      setError(err instanceof Error ? err.message : t('academic_hub.schedule_load_error', 'Could not load your schedule.'));
     } finally {
       setIsLoading(false);
     }
@@ -126,14 +145,14 @@ function ScheduleTab({ token }: { token: string }) {
   if (isLoading) return <LoadingRows />;
   if (error) return <ErrorBanner message={error} onRetry={load} />;
   if (grouped.length === 0) {
-    return <EmptyState title="No schedule yet" desc="Your class routine hasn't been published yet. Check back soon." />;
+    return <EmptyState title={t('academic_hub.no_schedule_title', 'No schedule yet')} desc={t('academic_hub.no_schedule_desc', "Your class routine hasn't been published yet. Check back soon.")} />;
   }
 
   return (
     <>
       {grouped.map((group) => (
         <View key={group.day} style={{ marginBottom: 18 }}>
-          <Text style={styles.dayHeading}>{group.day[0].toUpperCase() + group.day.slice(1)}</Text>
+          <Text style={styles.dayHeading}>{t(`common.day_${group.day}`, DAY_FALLBACKS[group.day] ?? group.day)}</Text>
           {group.entries.map((entry) => (
             <View key={entry.id} style={styles.rowCard}>
               <View style={styles.timeCol}>
@@ -144,7 +163,7 @@ function ScheduleTab({ token }: { token: string }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{entry.subject_name}</Text>
                 <Text style={styles.rowSubtitle}>
-                  {entry.teacher_name}{entry.room_name ? ` · Room ${entry.room_name}` : ''}
+                  {entry.teacher_name}{entry.room_name ? ` · ${t('academic_hub.room', 'Room {name}').replace('{name}', entry.room_name)}` : ''}
                 </Text>
               </View>
             </View>
@@ -156,6 +175,7 @@ function ScheduleTab({ token }: { token: string }) {
 }
 
 function SubjectsTab({ token }: { token: string }) {
+  const { t } = useLocale();
   const [data, setData] = useState<SubjectsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +186,7 @@ function SubjectsTab({ token }: { token: string }) {
     try {
       setData(await fetchStudentSubjects(token));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your subjects.');
+      setError(err instanceof Error ? err.message : t('academic_hub.subjects_load_error', 'Could not load your subjects.'));
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +199,7 @@ function SubjectsTab({ token }: { token: string }) {
   if (isLoading) return <LoadingRows />;
   if (error) return <ErrorBanner message={error} onRetry={load} />;
   if (!data || data.subjects.length === 0) {
-    return <EmptyState title="No subjects yet" desc="Subjects for your class haven't been set up yet." />;
+    return <EmptyState title={t('academic_hub.no_subjects_title', 'No subjects yet')} desc={t('academic_hub.no_subjects_desc', "Subjects for your class haven't been set up yet.")} />;
   }
 
   return (
@@ -195,6 +215,7 @@ function SubjectsTab({ token }: { token: string }) {
 }
 
 function AttendanceTab({ token }: { token: string }) {
+  const { t } = useLocale();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -208,7 +229,7 @@ function AttendanceTab({ token }: { token: string }) {
     try {
       setData(await fetchStudentAttendance(token, month, year));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your attendance.');
+      setError(err instanceof Error ? err.message : t('academic_hub.attendance_load_error', 'Could not load your attendance.'));
     } finally {
       setIsLoading(false);
     }
@@ -247,19 +268,22 @@ function AttendanceTab({ token }: { token: string }) {
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
       ) : entries.length === 0 ? (
-        <EmptyState title="No records" desc="No attendance has been recorded for this month yet." />
+        <EmptyState title={t('academic_hub.no_records_title', 'No records')} desc={t('academic_hub.no_attendance_desc', 'No attendance has been recorded for this month yet.')} />
       ) : (
         entries.map((e) => {
-          const meta = ATTENDANCE_COLOR[(e.status || '').toLowerCase()] ?? ATTENDANCE_COLOR.present;
+          const statusKey = (e.status || '').toLowerCase();
+          const meta = ATTENDANCE_COLOR[statusKey] ?? ATTENDANCE_COLOR.present;
           return (
             <View key={e.id} style={styles.rowCard}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{e.date}</Text>
-                {e.is_homeroom ? <Text style={styles.rowSubtitle}>Homeroom</Text> : null}
+                {e.is_homeroom ? <Text style={styles.rowSubtitle}>{t('academic_hub.homeroom', 'Homeroom')}</Text> : null}
               </View>
               <View style={[styles.statusPill, { backgroundColor: meta.soft }]}>
                 <Text style={[styles.statusPillText, { color: meta.color }]}>
-                  {e.status ? e.status[0].toUpperCase() + e.status.slice(1) : '—'}
+                  {e.status
+                    ? t(`academic_hub.attendance_status_${statusKey}`, ATTENDANCE_STATUS_FALLBACKS[statusKey] ?? e.status[0].toUpperCase() + e.status.slice(1))
+                    : '—'}
                 </Text>
               </View>
             </View>
@@ -271,6 +295,7 @@ function AttendanceTab({ token }: { token: string }) {
 }
 
 function GradesTab({ token }: { token: string }) {
+  const { t } = useLocale();
   const [data, setData] = useState<GradesResponse | null>(null);
   const [bands, setBands] = useState<SubjectGradeBand[]>([]);
   const [termsAvailable, setTermsAvailable] = useState<GpaTermOption[]>([]);
@@ -310,7 +335,7 @@ function GradesTab({ token }: { token: string }) {
       setTermsAvailable(bandsResult.termsAvailable);
       setSelectedTermId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your grades.');
+      setError(err instanceof Error ? err.message : t('academic_hub.grades_load_error', 'Could not load your grades.'));
     } finally {
       setIsLoading(false);
     }
@@ -328,7 +353,7 @@ function GradesTab({ token }: { token: string }) {
   if (isLoading) return <LoadingRows />;
   if (error) return <ErrorBanner message={error} onRetry={load} />;
   if (!data || data.exam_marks.length === 0) {
-    return <EmptyState title="No released grades" desc="Results will appear here once your school releases them." />;
+    return <EmptyState title={t('academic_hub.no_released_grades_title', 'No released grades')} desc={t('academic_hub.no_released_grades_desc', 'Results will appear here once your school releases them.')} />;
   }
 
   const bandFor = (examCategoryId: number, subjectId: number) =>
@@ -343,18 +368,18 @@ function GradesTab({ token }: { token: string }) {
             onPress={() => onSelectTerm(null)}
           >
             <Text style={[styles.termChipText, selectedTermId === null && styles.termChipTextSelected]}>
-              All terms
+              {t('academic_hub.all_terms', 'All terms')}
             </Text>
           </TouchableOpacity>
-          {termsAvailable.map((t) => {
-            const selected = selectedTermId === t.id;
+          {termsAvailable.map((term) => {
+            const selected = selectedTermId === term.id;
             return (
               <TouchableOpacity
-                key={t.id}
+                key={term.id}
                 style={[styles.termChip, selected && styles.termChipSelected]}
-                onPress={() => onSelectTerm(t.id)}
+                onPress={() => onSelectTerm(term.id)}
               >
-                <Text style={[styles.termChipText, selected && styles.termChipTextSelected]}>{t.name}</Text>
+                <Text style={[styles.termChipText, selected && styles.termChipTextSelected]}>{term.name}</Text>
               </TouchableOpacity>
             );
           })}
@@ -438,6 +463,7 @@ function AttendanceBarChart({ points }: { points: MonthlyAttendancePoint[] }) {
 }
 
 function ProgressTab({ token }: { token: string }) {
+  const { t } = useLocale();
   const [attendance, setAttendance] = useState<MonthlyAttendancePoint[] | null>(null);
   const [subjectAverages, setSubjectAverages] = useState<SubjectAverage[] | null>(null);
   const [gpa, setGpa] = useState<GpaSummaryResponse | null>(null);
@@ -475,7 +501,7 @@ function ProgressTab({ token }: { token: string }) {
       setGpa(gpaSummary);
       setSelectedTermId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load your progress.');
+      setError(err instanceof Error ? err.message : t('academic_hub.progress_load_error', 'Could not load your progress.'));
     } finally {
       setIsLoading(false);
     }
@@ -505,18 +531,18 @@ function ProgressTab({ token }: { token: string }) {
             onPress={() => onSelectTerm(null)}
           >
             <Text style={[styles.termChipText, selectedTermId === null && styles.termChipTextSelected]}>
-              Whole session
+              {t('academic_hub.whole_session', 'Whole session')}
             </Text>
           </TouchableOpacity>
-          {gpa.terms_available.map((t) => {
-            const selected = selectedTermId === t.id;
+          {gpa.terms_available.map((term) => {
+            const selected = selectedTermId === term.id;
             return (
               <TouchableOpacity
-                key={t.id}
+                key={term.id}
                 style={[styles.termChip, selected && styles.termChipSelected]}
-                onPress={() => onSelectTerm(t.id)}
+                onPress={() => onSelectTerm(term.id)}
               >
-                <Text style={[styles.termChipText, selected && styles.termChipTextSelected]}>{t.name}</Text>
+                <Text style={[styles.termChipText, selected && styles.termChipTextSelected]}>{term.name}</Text>
               </TouchableOpacity>
             );
           })}
@@ -531,12 +557,13 @@ function ProgressTab({ token }: { token: string }) {
         <View style={styles.gpaCard}>
           <Text style={styles.gpaValue}>{gpa.gpa.toFixed(2)}</Text>
           <Text style={styles.gpaLabel}>
-            GPA · based on {gpa.subjects_with_grade} of {gpa.subjects_total} subjects
+            {t('academic_hub.gpa_based_on', 'GPA · based on {with} of {total} subjects')
+              .replace('{with}', String(gpa.subjects_with_grade))
+              .replace('{total}', String(gpa.subjects_total))}
           </Text>
           {gpa.subjects_with_grade < gpa.subjects_total ? (
             <Text style={styles.progressDisclaimer}>
-              The rest don't have a grading scale configured for this subject
-              yet, so they're left out rather than guessed at.
+              {t('academic_hub.gpa_partial_disclaimer', "The rest don't have a grading scale configured for this subject yet, so they're left out rather than guessed at.")}
             </Text>
           ) : null}
         </View>
@@ -544,15 +571,15 @@ function ProgressTab({ token }: { token: string }) {
         <View style={styles.gpaCard}>
           <Text style={styles.progressDisclaimer}>
             {selectedTermId !== null
-              ? "No GPA yet for this term — none of your subjects have a grading scale configured, or no marks fall inside this term's dates yet."
-              : `No GPA yet — none of your ${gpa.subjects_total} subjects have a grading scale configured. Once your school sets one up, it'll appear here.`}
+              ? t('academic_hub.no_gpa_term', "No GPA yet for this term — none of your subjects have a grading scale configured, or no marks fall inside this term's dates yet.")
+              : t('academic_hub.no_gpa_overall', "No GPA yet — none of your {total} subjects have a grading scale configured. Once your school sets one up, it'll appear here.").replace('{total}', String(gpa.subjects_total))}
           </Text>
         </View>
       ) : null}
 
-      <Text style={styles.sectionTitle}>Attendance rate — last 6 months</Text>
+      <Text style={styles.sectionTitle}>{t('academic_hub.attendance_rate_title', 'Attendance rate — last 6 months')}</Text>
       {!hasAnyAttendance ? (
-        <EmptyState title="No attendance yet" desc="Nothing recorded in the last 6 months." />
+        <EmptyState title={t('academic_hub.no_attendance_yet_title', 'No attendance yet')} desc={t('academic_hub.no_attendance_yet_desc', 'Nothing recorded in the last 6 months.')} />
       ) : (
         <View style={styles.chartCard}>
           <AttendanceBarChart points={attendance!} />
@@ -566,13 +593,12 @@ function ProgressTab({ token }: { token: string }) {
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>Subject averages (raw marks)</Text>
+      <Text style={styles.sectionTitle}>{t('academic_hub.subject_averages_title', 'Subject averages (raw marks)')}</Text>
       <Text style={styles.progressDisclaimer}>
-        These are plain averages of your recorded scores — not your GPA.
-        See the Grades tab for the letter grade behind each mark.
+        {t('academic_hub.subject_averages_disclaimer', 'These are plain averages of your recorded scores — not your GPA. See the Grades tab for the letter grade behind each mark.')}
       </Text>
       {!hasAnyGrades ? (
-        <EmptyState title="No numeric marks yet" desc="Once results are released, subject averages appear here." />
+        <EmptyState title={t('academic_hub.no_marks_title', 'No numeric marks yet')} desc={t('academic_hub.no_marks_desc', 'Once results are released, subject averages appear here.')} />
       ) : (
         (subjectAverages ?? [])
           .filter((s) => s.sampleCount > 0)
@@ -592,6 +618,7 @@ export default function AcademicHubScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { token } = useAuth();
+  const { t } = useLocale();
   const [tab, setTab] = useState<TabKey>((route.params?.initialTab as TabKey) || 'schedule');
 
   return (
@@ -601,20 +628,22 @@ export default function AcademicHubScreen() {
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Academic</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>Your schedule, subjects, attendance & grades</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{t('academic_hub.header_title', 'Academic')}</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>{t('academic_hub.header_subtitle', 'Your schedule, subjects, attendance & grades')}</Text>
         </View>
         <View style={{ width: 32 }} />
       </View>
 
       <View style={styles.tabBar}>
-        {TABS.map((t) => (
+        {TAB_KEYS.map((tabKey) => (
           <TouchableOpacity
-            key={t.key}
-            style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}
-            onPress={() => setTab(t.key)}
+            key={tabKey}
+            style={[styles.tabButton, tab === tabKey && styles.tabButtonActive]}
+            onPress={() => setTab(tabKey)}
           >
-            <Text style={[styles.tabButtonText, tab === t.key && styles.tabButtonTextActive]}>{t.label}</Text>
+            <Text style={[styles.tabButtonText, tab === tabKey && styles.tabButtonTextActive]}>
+              {t(`academic_hub.tab_${tabKey}`, TAB_FALLBACKS[tabKey])}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
