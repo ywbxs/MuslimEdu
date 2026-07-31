@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import examService, { Examination, ExamStatus } from '../../services/teacherExaminationService';
 import { C, tintFor } from '../nextPhaseTheme';
+import { useLocale } from '../../context/LocaleContext';
 
 const FILTERS: Array<{ key: ExamStatus | 'all'; label: string }> = [
   { key: 'all', label: 'All' },
@@ -25,6 +26,7 @@ const FILTERS: Array<{ key: ExamStatus | 'all'; label: string }> = [
 type Props = { navigation: any };
 
 export default function TeacherExaminationsScreen({ navigation }: Props) {
+  const { t } = useLocale();
   const [exams, setExams] = useState<Examination[]>([]);
   const [summary, setSummary] = useState({ total: 0, draft: 0, published: 0, upcoming: 0 });
   const [filter, setFilter] = useState<ExamStatus | 'all'>('all');
@@ -39,12 +41,12 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
       setExams(res.examinations);
       setSummary(res.summary);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load examinations.');
+      setError(e?.message ?? t('teacher_examinations.load_error', 'Could not load examinations.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter]);
+  }, [filter, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -57,20 +59,20 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
     const next: ExamStatus = exam.status === 'published' ? 'draft' : 'published';
 
     Alert.alert(
-      next === 'published' ? 'Publish examination' : 'Move back to draft',
+      next === 'published' ? t('teacher_examinations.publish_title', 'Publish examination') : t('teacher_examinations.unpublish_title', 'Move back to draft'),
       next === 'published'
-        ? 'Students in this section will be notified immediately.'
-        : 'Students will no longer see this examination.',
+        ? t('teacher_examinations.publish_message', 'Students in this section will be notified immediately.')
+        : t('teacher_examinations.unpublish_message', 'Students will no longer see this examination.'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: next === 'published' ? 'Publish' : 'Unpublish',
+          text: next === 'published' ? t('teacher_examinations.publish', 'Publish') : t('teacher_examinations.unpublish', 'Unpublish'),
           onPress: async () => {
             try {
               await examService.setStatus(exam.id, next);
               load();
             } catch (e: any) {
-              Alert.alert('Could not update', e?.message ?? 'Please try again.');
+              Alert.alert(t('teacher_examinations.update_error', 'Could not update'), e?.message ?? t('common.try_again_full', 'Please try again.'));
             }
           },
         },
@@ -79,17 +81,17 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
   };
 
   const remove = (exam: Examination) => {
-    Alert.alert('Delete examination', exam.title, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('teacher_examinations.delete_title', 'Delete examination'), exam.title, [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('teacher_examinations.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await examService.remove(exam.id);
             load();
           } catch (e: any) {
-            Alert.alert('Could not delete', e?.message ?? 'Please try again.');
+            Alert.alert(t('teacher_examinations.delete_error', 'Could not delete'), e?.message ?? t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -122,14 +124,14 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
         contentContainerStyle={exams.length === 0 ? { flexGrow: 1 } : { paddingBottom: 96 }}
         ListHeaderComponent={
           <View>
-            <Text style={s.title}>Examinations</Text>
-            <Text style={s.sub}>Schedule, publish and mark your own examinations.</Text>
+            <Text style={s.title}>{t('teacher_examinations.title', 'Examinations')}</Text>
+            <Text style={s.sub}>{t('teacher_examinations.subtitle', 'Schedule, publish and mark your own examinations.')}</Text>
 
             <View style={s.stats}>
-              <Stat label='Total' value={summary.total} />
-              <Stat label='Drafts' value={summary.draft} />
-              <Stat label='Published' value={summary.published} tint={C.green} />
-              <Stat label='Upcoming' value={summary.upcoming} tint={C.blue} />
+              <Stat label={t('teacher_examinations.total', 'Total')} value={summary.total} />
+              <Stat label={t('teacher_examinations.drafts', 'Drafts')} value={summary.draft} />
+              <Stat label={t('teacher_examinations.published', 'Published')} value={summary.published} tint={C.green} />
+              <Stat label={t('teacher_examinations.upcoming', 'Upcoming')} value={summary.upcoming} tint={C.blue} />
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
@@ -139,7 +141,7 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
                   style={[s.chip, filter === f.key && s.chipActive]}
                   onPress={() => setFilter(f.key)}
                 >
-                  <Text style={[s.chipText, filter === f.key && s.chipTextActive]}>{f.label}</Text>
+                  <Text style={[s.chipText, filter === f.key && s.chipTextActive]}>{t(`teacher_examinations.filter_${f.key}`, f.label)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -147,9 +149,9 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
         }
         ListEmptyComponent={
           <View style={s.empty}>
-            <Text style={s.emptyTitle}>{error ? 'Something went wrong' : 'No examinations yet'}</Text>
+            <Text style={s.emptyTitle}>{error ? t('teacher_examinations.error_title', 'Something went wrong') : t('teacher_examinations.empty_title', 'No examinations yet')}</Text>
             <Text style={s.emptyBody}>
-              {error ?? 'Create one and it stays a draft until you publish it to the section.'}
+              {error ?? t('teacher_examinations.empty_body', 'Create one and it stays a draft until you publish it to the section.')}
             </Text>
           </View>
         }
@@ -168,14 +170,14 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
               </View>
 
               <Text style={s.cardMeta}>
-                {item.exam_type} · {item.total_marks} marks
-                {item.scheduled_date ? ' · ' + item.scheduled_date : ' · no date set'}
+                {item.exam_type} · {item.total_marks} {t('teacher_examinations.marks', 'marks')}
+                {item.scheduled_date ? ' · ' + item.scheduled_date : ' · ' + t('teacher_examinations.no_date_set', 'no date set')}
                 {item.start_time ? ' · ' + item.start_time : ''}
                 {item.room ? ' · ' + item.room : ''}
               </Text>
 
               {item.graded_count !== null ? (
-                <Text style={s.cardMeta}>{item.graded_count} marked</Text>
+                <Text style={s.cardMeta}>{item.graded_count} {t('teacher_examinations.marked', 'marked')}</Text>
               ) : null}
 
               <View style={s.actions}>
@@ -183,21 +185,21 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
                   style={s.action}
                   onPress={() => navigation.navigate('TeacherExaminationGrading', { examinationId: item.id })}
                 >
-                  <Text style={s.actionText}>Marks</Text>
+                  <Text style={s.actionText}>{t('teacher_examinations.marks_action', 'Marks')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={s.action}
                   onPress={() => navigation.navigate('TeacherExaminationForm', { examination: item })}
                 >
-                  <Text style={s.actionText}>Edit</Text>
+                  <Text style={s.actionText}>{t('common.edit', 'Edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.action} onPress={() => publish(item)}>
                   <Text style={[s.actionText, { color: C.green }]}>
-                    {item.status === 'published' ? 'Unpublish' : 'Publish'}
+                    {item.status === 'published' ? t('teacher_examinations.unpublish', 'Unpublish') : t('teacher_examinations.publish', 'Publish')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.action} onPress={() => remove(item)}>
-                  <Text style={[s.actionText, { color: C.red }]}>Delete</Text>
+                  <Text style={[s.actionText, { color: C.red }]}>{t('teacher_examinations.delete', 'Delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -206,7 +208,7 @@ export default function TeacherExaminationsScreen({ navigation }: Props) {
       />
 
       <TouchableOpacity style={s.fab} onPress={() => navigation.navigate('TeacherExaminationForm', {})}>
-        <Text style={s.fabText}>New examination</Text>
+        <Text style={s.fabText}>{t('teacher_examinations.new_examination', 'New examination')}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

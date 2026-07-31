@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   fetchUserDocuments,
   uploadUserDocument,
@@ -49,6 +50,7 @@ export default function AdminUserDocumentsScreen() {
   const route = useRoute();
   const { userId, userName } = (route.params as RouteParams) ?? {};
   const { token, user } = useAuth();
+  const { t } = useLocale();
   // This screen is reachable from both the admin Children/Teachers lists
   // (upload + delete allowed) and the teacher's read-only Children overview
   // (view only) - the same distinction the profile sheet makes for editing.
@@ -70,9 +72,9 @@ export default function AdminUserDocumentsScreen() {
       const data = await fetchUserDocuments(token, userId);
       setDocuments(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load documents.');
+      setError(err instanceof Error ? err.message : t('admin_user_documents.load_error', 'Failed to load documents.'));
     }
-  }, [token, userId]);
+  }, [token, userId, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -91,7 +93,7 @@ export default function AdminUserDocumentsScreen() {
   const confirmUpload = async () => {
     if (!token || !pickedFile) return;
     if (!title.trim()) {
-      Alert.alert('Name it', 'Give this document a short title (e.g. "National ID", "Certificate").');
+      Alert.alert(t('admin_user_documents.name_it_title', 'Name it'), t('admin_user_documents.name_it_message', 'Give this document a short title (e.g. "National ID", "Certificate").'));
       return;
     }
     setIsUploading(true);
@@ -101,17 +103,17 @@ export default function AdminUserDocumentsScreen() {
       setTitleModalVisible(false);
       setPickedFile(null);
     } catch (err) {
-      Alert.alert('Upload failed', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(t('admin_user_documents.upload_failed', 'Upload failed'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsUploading(false);
     }
   };
 
   const onDelete = (doc: UserDocument) => {
-    Alert.alert('Delete document', `Remove "${doc.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin_user_documents.delete_title', 'Delete document'), `${t('admin_user_documents.remove_confirm', 'Remove')} "${doc.title}"?`, [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('admin_user_documents.delete', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (!token) return;
@@ -121,7 +123,7 @@ export default function AdminUserDocumentsScreen() {
             await deleteUserDocument(token, doc.id);
           } catch (err) {
             setDocuments(prev);
-            Alert.alert('Delete failed', err instanceof Error ? err.message : 'Please try again.');
+            Alert.alert(t('admin_user_documents.delete_failed', 'Delete failed'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
           }
         },
       },
@@ -133,9 +135,9 @@ export default function AdminUserDocumentsScreen() {
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{userName ?? 'Documents'}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{userName ?? t('admin_user_documents.title', 'Documents')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -152,7 +154,7 @@ export default function AdminUserDocumentsScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -162,8 +164,8 @@ export default function AdminUserDocumentsScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyTitle}>No documents yet</Text>
-              <Text style={styles.emptyBody}>ID, certificates, and other files will show up here.</Text>
+              <Text style={styles.emptyTitle}>{t('admin_user_documents.empty_title', 'No documents yet')}</Text>
+              <Text style={styles.emptyBody}>{t('admin_user_documents.empty_desc', 'ID, certificates, and other files will show up here.')}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -174,7 +176,7 @@ export default function AdminUserDocumentsScreen() {
               </View>
               {canManage ? (
                 <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10} style={styles.deleteBtn}>
-                  <Text style={styles.deleteText}>Remove</Text>
+                  <Text style={styles.deleteText}>{t('admin_user_documents.remove', 'Remove')}</Text>
                 </TouchableOpacity>
               ) : null}
             </TouchableOpacity>
@@ -184,17 +186,17 @@ export default function AdminUserDocumentsScreen() {
 
       {canManage ? (
         <TouchableOpacity style={styles.uploadButton} onPress={pickFile} activeOpacity={0.85}>
-          <Text style={styles.uploadButtonText}>+ Upload Document</Text>
+          <Text style={styles.uploadButtonText}>+ {t('admin_user_documents.upload_document', 'Upload Document')}</Text>
         </TouchableOpacity>
       ) : null}
 
       <Modal visible={titleModalVisible} transparent animationType="fade" onRequestClose={() => setTitleModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Name this document</Text>
+            <Text style={styles.modalTitle}>{t('admin_user_documents.name_this_document', 'Name this document')}</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="e.g. National ID, Certificate"
+              placeholder={t('admin_user_documents.title_placeholder', 'e.g. National ID, Certificate')}
               placeholderTextColor={SUBTLE}
               value={title}
               onChangeText={setTitle}
@@ -209,7 +211,7 @@ export default function AdminUserDocumentsScreen() {
                 }}
                 disabled={isUploading}
               >
-                <Text style={styles.modalBtnGhostText}>Cancel</Text>
+                <Text style={styles.modalBtnGhostText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnPrimary]}
@@ -219,7 +221,7 @@ export default function AdminUserDocumentsScreen() {
                 {isUploading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.modalBtnPrimaryText}>Upload</Text>
+                  <Text style={styles.modalBtnPrimaryText}>{t('admin_user_documents.upload', 'Upload')}</Text>
                 )}
               </TouchableOpacity>
             </View>
