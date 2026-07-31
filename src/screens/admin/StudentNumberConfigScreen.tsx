@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   AvailabilityResult,
@@ -56,12 +57,12 @@ const WARN_FG = '#7A5A00';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
-const SEPARATORS: { value: string; label: string }[] = [
-  { value: '', label: 'None' },
-  { value: '-', label: 'Dash  -' },
-  { value: '/', label: 'Slash  /' },
-  { value: '.', label: 'Dot  .' },
-  { value: '_', label: 'Under  _' },
+const SEPARATOR_KEYS: { value: string; key: string; fallback: string }[] = [
+  { value: '', key: 'none', fallback: 'None' },
+  { value: '-', key: 'dash', fallback: 'Dash  -' },
+  { value: '/', key: 'slash', fallback: 'Slash  /' },
+  { value: '.', key: 'dot', fallback: 'Dot  .' },
+  { value: '_', key: 'under', fallback: 'Under  _' },
 ];
 
 const DIGIT_MIN = 1;
@@ -72,6 +73,7 @@ export default function StudentNumberConfigScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -119,11 +121,11 @@ export default function StudentNumberConfigScreen() {
       setIssuedCount(data.issued_count ?? 0);
       setDirty(false);
     } catch (e: any) {
-      if (mounted.current) setLoadError(e?.message ?? 'Could not load the student number format.');
+      if (mounted.current) setLoadError(e?.message ?? t('student_number_config.load_error', 'Could not load the student number format.'));
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -145,7 +147,7 @@ export default function StudentNumberConfigScreen() {
       } catch (e: any) {
         // Keep the last good preview on screen rather than blanking it - a
         // dropped request shouldn't make the format look broken.
-        if (mounted.current) setPreviewError(e?.message ?? 'Preview unavailable.');
+        if (mounted.current) setPreviewError(e?.message ?? t('student_number_config.preview_unavailable', 'Preview unavailable.'));
       } finally {
         if (mounted.current) setPreviewing(false);
       }
@@ -210,37 +212,41 @@ export default function StudentNumberConfigScreen() {
       setPreview(result.preview);
       setIsConfigured(true);
       setDirty(false);
-      Alert.alert('Saved', 'New students will be numbered using this format.');
+      Alert.alert(t('student_number_config.saved', 'Saved'), t('student_number_config.saved_message', 'New students will be numbered using this format.'));
     } catch (e: any) {
-      if (mounted.current) Alert.alert('Could not save', e?.message ?? 'Please try again.');
+      if (mounted.current) Alert.alert(t('student_number_config.save_error', 'Could not save'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       if (mounted.current) setSaving(false);
     }
-  }, [token, draft]);
+  }, [token, draft, t]);
 
   const onSave = useCallback(() => {
     if (!draft) return;
 
     if (preview && preview.sample.trim() === '') {
-      Alert.alert('Empty format', 'This format produces an empty number. Add a prefix or another segment first.');
+      Alert.alert(t('student_number_config.empty_format_title', 'Empty format'), t('student_number_config.empty_format_message', 'This format produces an empty number. Add a prefix or another segment first.'));
       return;
     }
 
     if (issuedCount > 0) {
       Alert.alert(
-        'Change the format?',
-        `${issuedCount} student number${issuedCount === 1 ? ' has' : 's have'} already been issued. ` +
-          'Those stay exactly as they are - only students admitted from now on use the new format.',
+        t('student_number_config.change_format_title', 'Change the format?'),
+        (issuedCount === 1
+          ? t('student_number_config.issued_count_one', '{n} student number has already been issued.')
+          : t('student_number_config.issued_count_many', '{n} student numbers have already been issued.')
+        ).replace('{n}', String(issuedCount)) +
+          ' ' +
+          t('student_number_config.issued_count_note', 'Those stay exactly as they are - only students admitted from now on use the new format.'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Save format', style: 'destructive', onPress: commit },
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          { text: t('student_number_config.save_format', 'Save format'), style: 'destructive', onPress: commit },
         ],
       );
       return;
     }
 
     commit();
-  }, [draft, preview, issuedCount, commit]);
+  }, [draft, preview, issuedCount, commit, t]);
 
   // --- Availability lookup ------------------------------------------------
 
@@ -254,11 +260,11 @@ export default function StudentNumberConfigScreen() {
       const result = await checkStudentNumber(token, value);
       if (mounted.current) setLookupResult(result);
     } catch (e: any) {
-      if (mounted.current) Alert.alert('Check failed', e?.message ?? 'Please try again.');
+      if (mounted.current) Alert.alert(t('student_number_config.check_failed', 'Check failed'), e?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       if (mounted.current) setLookupBusy(false);
     }
-  }, [token, lookup]);
+  }, [token, lookup, t]);
 
   // --- States -------------------------------------------------------------
 
@@ -266,7 +272,7 @@ export default function StudentNumberConfigScreen() {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={EMERALD} />
-        <Text style={styles.centerText}>Loading student number format…</Text>
+        <Text style={styles.centerText}>{t('student_number_config.loading', 'Loading student number format…')}</Text>
       </View>
     );
   }
@@ -274,13 +280,13 @@ export default function StudentNumberConfigScreen() {
   if (loadError || !draft) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <Text style={styles.errorTitle}>Couldn't load this screen</Text>
-        <Text style={styles.centerText}>{loadError ?? 'No configuration was returned.'}</Text>
+        <Text style={styles.errorTitle}>{t('student_number_config.load_failed_title', "Couldn't load this screen")}</Text>
+        <Text style={styles.centerText}>{loadError ?? t('student_number_config.no_config_returned', 'No configuration was returned.')}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load} activeOpacity={0.85}>
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={styles.retryText}>{t('student_number_config.try_again', 'Try again')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <Text style={styles.linkText}>Go back</Text>
+          <Text style={styles.linkText}>{t('student_number_config.go_back', 'Go back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -296,9 +302,11 @@ export default function StudentNumberConfigScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Student Numbers</Text>
+          <Text style={styles.headerTitle}>{t('student_number_config.title', 'Student Numbers')}</Text>
           <Text style={styles.headerSub}>
-            {isConfigured ? 'Configured for this school' : 'Not configured yet — showing defaults'}
+            {isConfigured
+              ? t('student_number_config.configured', 'Configured for this school')
+              : t('student_number_config.not_configured', 'Not configured yet — showing defaults')}
           </Text>
         </View>
       </View>
@@ -312,7 +320,7 @@ export default function StudentNumberConfigScreen() {
         {/* --- Live preview --- */}
         <View style={styles.previewCard}>
           <View style={styles.previewTopRow}>
-            <Text style={styles.previewLabel}>NEXT STUDENT NUMBER</Text>
+            <Text style={styles.previewLabel}>{t('student_number_config.next_number', 'NEXT STUDENT NUMBER')}</Text>
             {previewing ? <ActivityIndicator size="small" color={EMERALD} /> : null}
           </View>
 
@@ -320,23 +328,23 @@ export default function StudentNumberConfigScreen() {
             {sample || '—'}
           </Text>
 
-          <Text style={styles.previewPattern}>{preview?.pattern || 'No segments selected'}</Text>
+          <Text style={styles.previewPattern}>{preview?.pattern || t('student_number_config.no_segments', 'No segments selected')}</Text>
 
           {preview && preview.samples.length > 1 ? (
             <Text style={styles.previewThen}>
-              then {preview.samples.slice(1).join(', ')}
+              {t('student_number_config.then', 'then')} {preview.samples.slice(1).join(', ')}
             </Text>
           ) : null}
 
           <View style={styles.previewMetaRow}>
-            <Text style={styles.previewMeta}>Counter at #{preview?.next_number ?? '—'}</Text>
+            <Text style={styles.previewMeta}>{t('student_number_config.counter_at', 'Counter at #{n}').replace('{n}', String(preview?.next_number ?? '—'))}</Text>
             <Text style={styles.previewMeta}>
-              {draft.reset_mode === 'yearly' ? 'Resets each year' : 'Continuous'}
+              {draft.reset_mode === 'yearly' ? t('student_number_config.resets_yearly', 'Resets each year') : t('student_number_config.continuous', 'Continuous')}
             </Text>
           </View>
 
           {previewError ? (
-            <Text style={styles.previewStale}>Showing last known preview — {previewError}</Text>
+            <Text style={styles.previewStale}>{t('student_number_config.showing_last_preview', 'Showing last known preview — {error}').replace('{error}', previewError)}</Text>
           ) : null}
         </View>
 
@@ -349,18 +357,21 @@ export default function StudentNumberConfigScreen() {
         {issuedCount > 0 ? (
           <View style={styles.noteRow}>
             <Text style={styles.noteText}>
-              {issuedCount} number{issuedCount === 1 ? '' : 's'} already issued. Editing this format
-              never renumbers existing students.
+              {(issuedCount === 1
+                ? t('student_number_config.issued_note_one', '{n} number already issued.')
+                : t('student_number_config.issued_note_many', '{n} numbers already issued.')
+              ).replace('{n}', String(issuedCount))}{' '}
+              {t('student_number_config.issued_note_rest', 'Editing this format never renumbers existing students.')}
             </Text>
           </View>
         ) : null}
 
         {/* --- Fixed text --- */}
-        <SectionTitle>Fixed text</SectionTitle>
+        <SectionTitle>{t('student_number_config.fixed_text', 'Fixed text')}</SectionTitle>
         <View style={styles.card}>
           <Field
-            label="Prefix"
-            hint="Letters or digits at the front. Leave blank to skip."
+            label={t('student_number_config.prefix', 'Prefix')}
+            hint={t('student_number_config.prefix_hint', 'Letters or digits at the front. Leave blank to skip.')}
             value={draft.prefix}
             placeholder="e.g. MLP"
             maxLength={12}
@@ -368,8 +379,8 @@ export default function StudentNumberConfigScreen() {
           />
           <View style={styles.divider} />
           <Field
-            label="Suffix"
-            hint="Letters or digits at the end. Leave blank to skip."
+            label={t('student_number_config.suffix', 'Suffix')}
+            hint={t('student_number_config.suffix_hint', 'Letters or digits at the end. Leave blank to skip.')}
             value={draft.suffix}
             placeholder="e.g. S"
             maxLength={12}
@@ -378,14 +389,14 @@ export default function StudentNumberConfigScreen() {
         </View>
 
         {/* --- Separator --- */}
-        <SectionTitle>Separator</SectionTitle>
+        <SectionTitle>{t('student_number_config.separator', 'Separator')}</SectionTitle>
         <View style={styles.card}>
-          <Text style={styles.hint}>Placed between every segment.</Text>
+          <Text style={styles.hint}>{t('student_number_config.separator_hint', 'Placed between every segment.')}</Text>
           <View style={styles.chipWrap}>
-            {SEPARATORS.map((option) => (
+            {SEPARATOR_KEYS.map((option) => (
               <Chip
-                key={option.label}
-                label={option.label}
+                key={option.key}
+                label={t(`student_number_config.separator_${option.key}`, option.fallback)}
                 active={draft.separator === option.value}
                 onPress={() => patch({ separator: option.value })}
               />
@@ -394,11 +405,10 @@ export default function StudentNumberConfigScreen() {
         </View>
 
         {/* --- Segments --- */}
-        <SectionTitle>Segments</SectionTitle>
+        <SectionTitle>{t('student_number_config.segments', 'Segments')}</SectionTitle>
         <View style={styles.card}>
           <Text style={styles.hint}>
-            Turn segments on or off, and reorder them. The order here is the order they appear in the
-            number.
+            {t('student_number_config.segments_hint', 'Turn segments on or off, and reorder them. The order here is the order they appear in the number.')}
           </Text>
 
           {orderedSegments.map((meta, index) => {
@@ -438,13 +448,17 @@ export default function StudentNumberConfigScreen() {
                 <View style={styles.segmentTextCol}>
                   <Text style={[styles.segmentLabel, !on && styles.segmentLabelOff]}>{meta.label}</Text>
                   <Text style={styles.segmentDesc}>{meta.description}</Text>
-                  {meta.toggle_field ? renderSourceHint(meta.key, context) : null}
+                  {meta.toggle_field ? renderSourceHint(meta.key, context, t) : null}
                 </View>
 
                 {fixed ? (
                   <View style={[styles.statePill, on ? styles.statePillOn : styles.statePillOff]}>
                     <Text style={[styles.statePillText, on ? styles.statePillTextOn : null]}>
-                      {meta.key === 'running_number' ? 'Always' : on ? 'On' : 'Off'}
+                      {meta.key === 'running_number'
+                        ? t('student_number_config.always', 'Always')
+                        : on
+                        ? t('student_number_config.on', 'On')
+                        : t('student_number_config.off', 'Off')}
                     </Text>
                   </View>
                 ) : (
@@ -461,14 +475,17 @@ export default function StudentNumberConfigScreen() {
         </View>
 
         {/* --- Running number --- */}
-        <SectionTitle>Running number</SectionTitle>
+        <SectionTitle>{t('student_number_config.running_number', 'Running number')}</SectionTitle>
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <View style={styles.flexCol}>
-              <Text style={styles.label}>Digits</Text>
+              <Text style={styles.label}>{t('student_number_config.digits', 'Digits')}</Text>
               <Text style={styles.hint}>
-                {draft.digit_length} digit{draft.digit_length === 1 ? '' : 's'} →{' '}
-                {'1'.padStart(draft.digit_length, '0')}
+                {(draft.digit_length === 1
+                  ? t('student_number_config.digit_count_one', '{n} digit')
+                  : t('student_number_config.digit_count_many', '{n} digits')
+                ).replace('{n}', String(draft.digit_length))}{' '}
+                → {'1'.padStart(draft.digit_length, '0')}
               </Text>
             </View>
             <View style={styles.stepper}>
@@ -493,8 +510,8 @@ export default function StudentNumberConfigScreen() {
           <View style={styles.divider} />
 
           <Field
-            label="Start at"
-            hint="Where the counter begins. Ignored once numbers have been issued."
+            label={t('student_number_config.start_at', 'Start at')}
+            hint={t('student_number_config.start_at_hint', 'Where the counter begins. Ignored once numbers have been issued.')}
             value={String(draft.start_number)}
             keyboardType="number-pad"
             placeholder="1"
@@ -507,18 +524,18 @@ export default function StudentNumberConfigScreen() {
 
           <View style={styles.divider} />
 
-          <Text style={styles.label}>Numbering</Text>
+          <Text style={styles.label}>{t('student_number_config.numbering', 'Numbering')}</Text>
           <Text style={styles.hint}>
-            Yearly reset restarts the counter each year, so the year segment keeps numbers unique.
+            {t('student_number_config.numbering_hint', 'Yearly reset restarts the counter each year, so the year segment keeps numbers unique.')}
           </Text>
           <View style={styles.chipWrap}>
             <Chip
-              label="Continuous"
+              label={t('student_number_config.continuous', 'Continuous')}
               active={draft.reset_mode === 'never'}
               onPress={() => patch({ reset_mode: 'never' })}
             />
             <Chip
-              label="Reset yearly"
+              label={t('student_number_config.reset_yearly', 'Reset yearly')}
               active={draft.reset_mode === 'yearly'}
               onPress={() => patch({ reset_mode: 'yearly' })}
             />
@@ -526,17 +543,17 @@ export default function StudentNumberConfigScreen() {
         </View>
 
         {/* --- Formatting --- */}
-        <SectionTitle>Formatting</SectionTitle>
+        <SectionTitle>{t('student_number_config.formatting', 'Formatting')}</SectionTitle>
         <View style={styles.card}>
-          <Text style={styles.label}>Year format</Text>
+          <Text style={styles.label}>{t('student_number_config.year_format', 'Year format')}</Text>
           <View style={styles.chipWrap}>
             <Chip
-              label="Full  2026"
+              label={t('student_number_config.year_full', 'Full  2026')}
               active={draft.year_format === 'full'}
               onPress={() => patch({ year_format: 'full' })}
             />
             <Chip
-              label="Short  26"
+              label={t('student_number_config.year_short', 'Short  26')}
               active={draft.year_format === 'short'}
               onPress={() => patch({ year_format: 'short' })}
             />
@@ -546,8 +563,8 @@ export default function StudentNumberConfigScreen() {
 
           <View style={styles.rowBetween}>
             <View style={styles.flexCol}>
-              <Text style={styles.label}>Uppercase</Text>
-              <Text style={styles.hint}>Force the whole number to capitals.</Text>
+              <Text style={styles.label}>{t('student_number_config.uppercase', 'Uppercase')}</Text>
+              <Text style={styles.hint}>{t('student_number_config.uppercase_hint', 'Force the whole number to capitals.')}</Text>
             </View>
             <Switch
               value={draft.uppercase}
@@ -561,9 +578,9 @@ export default function StudentNumberConfigScreen() {
 
           <View style={styles.rowBetween}>
             <View style={styles.flexCol}>
-              <Text style={styles.label}>Auto-generate on admission</Text>
+              <Text style={styles.label}>{t('student_number_config.auto_generate', 'Auto-generate on admission')}</Text>
               <Text style={styles.hint}>
-                When off, admission keeps whatever code is typed in manually.
+                {t('student_number_config.auto_generate_hint', 'When off, admission keeps whatever code is typed in manually.')}
               </Text>
             </View>
             <Switch
@@ -576,10 +593,10 @@ export default function StudentNumberConfigScreen() {
         </View>
 
         {/* --- Availability check --- */}
-        <SectionTitle>Check a number</SectionTitle>
+        <SectionTitle>{t('student_number_config.check_a_number', 'Check a number')}</SectionTitle>
         <View style={styles.card}>
           <Text style={styles.hint}>
-            Look up whether a specific student number is already taken anywhere in the system.
+            {t('student_number_config.check_hint', 'Look up whether a specific student number is already taken anywhere in the system.')}
           </Text>
           <View style={styles.lookupRow}>
             <TextInput
@@ -605,7 +622,7 @@ export default function StudentNumberConfigScreen() {
               {lookupBusy ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.lookupBtnText}>Check</Text>
+                <Text style={styles.lookupBtnText}>{t('student_number_config.check', 'Check')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -618,8 +635,10 @@ export default function StudentNumberConfigScreen() {
               ]}
             >
               {lookupResult.available
-                ? `${lookupResult.student_number} is available.`
-                : `${lookupResult.student_number} is already in use (${lookupResult.taken_in}).`}
+                ? t('student_number_config.available', '{number} is available.').replace('{number}', lookupResult.student_number)
+                : t('student_number_config.taken', '{number} is already in use ({where}).')
+                    .replace('{number}', lookupResult.student_number)
+                    .replace('{where}', lookupResult.taken_in)}
             </Text>
           ) : null}
         </View>
@@ -636,7 +655,7 @@ export default function StudentNumberConfigScreen() {
           {saving ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.saveBtnText}>{dirty ? 'Save format' : 'Saved'}</Text>
+            <Text style={styles.saveBtnText}>{dirty ? t('student_number_config.save_format', 'Save format') : t('student_number_config.saved_label', 'Saved')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -653,7 +672,7 @@ function sanitize(text: string): string {
   return text.replace(/[^A-Za-z0-9]/g, '');
 }
 
-function renderSourceHint(key: SegmentKey, context: PreviewContext | null) {
+function renderSourceHint(key: SegmentKey, context: PreviewContext | null, t: (key: string, fallback?: string) => string) {
   if (!context) return null;
 
   const value =
@@ -671,7 +690,7 @@ function renderSourceHint(key: SegmentKey, context: PreviewContext | null) {
 
   if (value == null) return null;
 
-  return <Text style={styles.segmentSource}>Sample value: {String(value)}</Text>;
+  return <Text style={styles.segmentSource}>{t('student_number_config.sample_value', 'Sample value: {value}').replace('{value}', String(value))}</Text>;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
