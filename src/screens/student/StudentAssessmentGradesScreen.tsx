@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchStudentAssessmentGrades, AssessmentSubjectGrade } from '../../services/assessmentService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -64,6 +65,7 @@ export default function StudentAssessmentGradesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [subjects, setSubjects] = useState<AssessmentSubjectGrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,13 +81,13 @@ export default function StudentAssessmentGradesScreen() {
         const data = await fetchStudentAssessmentGrades(token);
         setSubjects(data);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load your grades.');
+        setError(e?.message ?? t('student_assessment_grades.load_error', 'Could not load your grades.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -100,7 +102,7 @@ export default function StudentAssessmentGradesScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Grades</Text>
+        <Text style={styles.headerTitle}>{t('student_assessment_grades.title', 'My Grades')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -127,14 +129,14 @@ export default function StudentAssessmentGradesScreen() {
           refreshing={isRefreshing}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              Nothing graded yet — grades appear here once a teacher grades your assessments.
+              {t('student_assessment_grades.empty', 'Nothing graded yet — grades appear here once a teacher grades your assessments.')}
             </Text>
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.cardTopRow}>
                 <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.subject_name ?? 'Subject'}
+                  {item.subject_name ?? t('student_assessment_grades.subject', 'Subject')}
                 </Text>
                 <View style={[styles.pctBadge, { backgroundColor: bandSoft(item.weighted_percentage) }]}>
                   <Text style={[styles.pctBadgeText, { color: bandColor(item.weighted_percentage) }]}>
@@ -144,11 +146,11 @@ export default function StudentAssessmentGradesScreen() {
               </View>
 
               <Text style={styles.cardMeta}>
-                {item.graded_count} of {item.total_published} graded
+                {item.graded_count} {t('student_assessment_grades.of', 'of')} {item.total_published} {t('student_assessment_grades.graded', 'graded')}
                 {item.calculation_method === 'flat'
-                  ? ' · flat average (no weighted categories graded yet)'
+                  ? ` · ${t('student_assessment_grades.flat_average', 'flat average (no weighted categories graded yet)')}`
                   : item.calculation_method === 'weighted'
-                  ? ' · weighted by exam category'
+                  ? ` · ${t('student_assessment_grades.weighted_by_category', 'weighted by exam category')}`
                   : ''}
               </Text>
 

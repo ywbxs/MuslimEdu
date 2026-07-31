@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'rea
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { fetchStudentMaterials, Material } from '../../services/materialService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -18,6 +19,15 @@ const CANVAS = '#F6F7F9';
 const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
+const CATEGORY_KEYS: Record<string, string> = {
+  lecture_notes: 'notes',
+  presentation: 'slides',
+  video: 'video',
+  audio: 'audio',
+  worksheet: 'worksheet',
+  reading: 'reading',
+  other: 'resource',
+};
 const CATEGORY_LABELS: Record<string, string> = {
   lecture_notes: 'Notes',
   presentation: 'Slides',
@@ -61,6 +71,7 @@ export default function StudentMaterialsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,13 +87,13 @@ export default function StudentMaterialsScreen() {
         const list = await fetchStudentMaterials(token);
         setMaterials(list);
       } catch (e: any) {
-        setError(e?.message ?? 'Could not load materials.');
+        setError(e?.message ?? t('student_materials.load_error', 'Could not load materials.'));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   useFocusEffect(
@@ -97,7 +108,7 @@ export default function StudentMaterialsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Materials</Text>
+        <Text style={styles.headerTitle}>{t('student_materials.title', 'Materials')}</Text>
       </View>
 
       {error ? (
@@ -123,7 +134,7 @@ export default function StudentMaterialsScreen() {
           }}
           refreshing={isRefreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No materials shared for your classes yet.</Text>
+            <Text style={styles.emptyText}>{t('student_materials.empty', 'No materials shared for your classes yet.')}</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -137,7 +148,7 @@ export default function StudentMaterialsScreen() {
                 </Text>
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryBadgeText}>
-                    {CATEGORY_LABELS[item.category] ?? 'Resource'}
+                    {t(`student_materials.category_${CATEGORY_KEYS[item.category] ?? 'resource'}`, CATEGORY_LABELS[item.category] ?? 'Resource')}
                   </Text>
                 </View>
               </View>
