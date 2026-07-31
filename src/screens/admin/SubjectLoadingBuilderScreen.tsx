@@ -27,6 +27,7 @@ import subjectLoadingService, {
   OfferedSubject,
   SubjectLoading,
 } from '../../services/subjectLoadingService';
+import {useLocale} from '../../context/LocaleContext';
 
 const C = {
   bg: '#F5F7F6',
@@ -47,6 +48,7 @@ const NEWLINE = String.fromCharCode(10);
 type Props = {navigation: any; route: any};
 
 export default function SubjectLoadingBuilderScreen({navigation, route}: Props) {
+  const {t} = useLocale();
   const studentId: number = route?.params?.studentId;
   const studentNameParam: string = route?.params?.studentName || '';
 
@@ -70,7 +72,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
 
   const load = useCallback(async () => {
     if (!studentId) {
-      setError('No student was passed to this screen.');
+      setError(t('subject_loading.no_student', 'No student was passed to this screen.'));
       setLoading(false);
       return;
     }
@@ -82,7 +84,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
       setSkipped(res.checks_skipped || []);
       setCurrent(res.current_load || null);
       setStudentName(res.context?.student_name || studentNameParam);
-      setPolicyName(res.policy?.name || 'System default');
+      setPolicyName(res.policy?.name || t('subject_loading.system_default', 'System default'));
       setAllowOverride(!!res.policy?.allow_override);
 
       const seeded: BasketEntry[] = (res.current_load?.items || []).map(item => ({
@@ -95,7 +97,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
       }));
       setBasket(seeded);
     } catch (e: any) {
-      setError(e.message || 'Could not load the subject loading workspace.');
+      setError(e.message || t('subject_loading.load_error', 'Could not load the subject loading workspace.'));
     } finally {
       setLoading(false);
     }
@@ -156,15 +158,15 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
     const reasons = subject.violations.map(v => v.message).join(NEWLINE + NEWLINE);
 
     if (subject.hard_blocked) {
-      Alert.alert('Cannot load this subject', reasons);
+      Alert.alert(t('subject_loading.cannot_load_title', 'Cannot load this subject'), reasons);
       return;
     }
 
     if (!subject.eligible) {
       if (!allowOverride) {
         Alert.alert(
-          'Blocked by policy',
-          reasons + NEWLINE + NEWLINE + 'Overrides are disabled for this load policy.',
+          t('subject_loading.blocked_by_policy_title', 'Blocked by policy'),
+          reasons + NEWLINE + NEWLINE + t('subject_loading.overrides_disabled', 'Overrides are disabled for this load policy.'),
         );
         return;
       }
@@ -194,8 +196,8 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
     }
     if (overrideReason.trim().length < 10) {
       Alert.alert(
-        'Reason required',
-        'Write at least 10 characters explaining the exception. It is stored in the audit trail.',
+        t('subject_loading.reason_required_title', 'Reason required'),
+        t('subject_loading.reason_required_message', 'Write at least 10 characters explaining the exception. It is stored in the audit trail.'),
       );
       return;
     }
@@ -226,13 +228,13 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
 
       setCurrent(latest);
       Alert.alert(
-        'Saved',
+        t('subject_loading.saved_title', 'Saved'),
         thenSubmit
-          ? 'Subject load submitted for approval.'
-          : 'Draft subject load saved.',
+          ? t('subject_loading.saved_submitted', 'Subject load submitted for approval.')
+          : t('subject_loading.saved_draft', 'Draft subject load saved.'),
       );
     } catch (e: any) {
-      Alert.alert('Could not save', e.message || 'Unknown error.');
+      Alert.alert(t('subject_loading.save_error_title', 'Could not save'), e.message || t('subject_loading.unknown_error', 'Unknown error.'));
     } finally {
       setSaving(false);
     }
@@ -242,7 +244,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
     return (
       <SafeAreaView style={s.center}>
         <ActivityIndicator size={'large'} color={C.green} />
-        <Text style={s.muted}>Loading curriculum and rules...</Text>
+        <Text style={s.muted}>{t('subject_loading.loading', 'Loading curriculum and rules...')}</Text>
       </SafeAreaView>
     );
   }
@@ -250,10 +252,10 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
   if (error) {
     return (
       <SafeAreaView style={s.center}>
-        <Text style={s.errorTitle}>Something went wrong</Text>
+        <Text style={s.errorTitle}>{t('subject_loading.error_title', 'Something went wrong')}</Text>
         <Text style={s.muted}>{error}</Text>
         <TouchableOpacity style={s.primaryBtn} onPress={load}>
-          <Text style={s.primaryBtnText}>Try again</Text>
+          <Text style={s.primaryBtnText}>{t('common.try_again', 'Try again')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -266,25 +268,25 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
     <SafeAreaView style={s.screen}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={s.back}>Back</Text>
+          <Text style={s.back}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={s.title}>Subject Loading</Text>
-        <Text style={s.subtitle}>{studentName || 'Student #' + studentId}</Text>
-        <Text style={s.policy}>Policy: {policyName}</Text>
+        <Text style={s.title}>{t('subject_loading.title', 'Subject Loading')}</Text>
+        <Text style={s.subtitle}>{studentName || t('subject_loading.student_fallback', 'Student #{id}').replace('{id}', String(studentId))}</Text>
+        <Text style={s.policy}>{t('subject_loading.policy', 'Policy: {name}').replace('{name}', policyName)}</Text>
       </View>
 
       <View style={s.summary}>
         <View style={s.summaryCell}>
           <Text style={s.summaryValue}>{basket.length}</Text>
-          <Text style={s.summaryLabel}>subjects</Text>
+          <Text style={s.summaryLabel}>{t('subject_loading.subjects', 'subjects')}</Text>
         </View>
         <View style={s.summaryCell}>
           <Text style={s.summaryValue}>{totals ? totals.units : 0}</Text>
-          <Text style={s.summaryLabel}>units</Text>
+          <Text style={s.summaryLabel}>{t('subject_loading.units', 'units')}</Text>
         </View>
         <View style={s.summaryCell}>
           <Text style={s.summaryValue}>{totals ? totals.max_units : '-'}</Text>
-          <Text style={s.summaryLabel}>max</Text>
+          <Text style={s.summaryLabel}>{t('subject_loading.max', 'max')}</Text>
         </View>
         <View style={s.summaryCell}>
           {checking ? (
@@ -295,17 +297,19 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
                 s.summaryValue,
                 {color: blocked ? C.red : C.green, fontSize: 14},
               ]}>
-              {blocked ? 'BLOCKED' : 'OK'}
+              {blocked ? t('subject_loading.blocked', 'BLOCKED') : t('subject_loading.ok', 'OK')}
             </Text>
           )}
-          <Text style={s.summaryLabel}>status</Text>
+          <Text style={s.summaryLabel}>{t('subject_loading.status', 'status')}</Text>
         </View>
       </View>
 
       {current ? (
         <View style={s.statusStrip}>
           <Text style={s.statusStripText}>
-            Existing load #{current.id} is {current.status.toUpperCase()}
+            {t('subject_loading.existing_load', 'Existing load #{id} is {status}')
+              .replace('{id}', String(current.id))
+              .replace('{status}', current.status.toUpperCase())}
             {current.load_number ? ' (' + current.load_number + ')' : ''}
           </Text>
         </View>
@@ -328,7 +332,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
           style={s.skipRow}>
           {skipped.map(sk => (
             <View key={sk.code} style={s.skipChip}>
-              <Text style={s.skipChipText}>Not enforced: {sk.code}</Text>
+              <Text style={s.skipChipText}>{t('subject_loading.not_enforced', 'Not enforced: {code}').replace('{code}', sk.code)}</Text>
             </View>
           ))}
         </ScrollView>
@@ -336,7 +340,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
 
       <TextInput
         style={s.search}
-        placeholder={'Search subjects'}
+        placeholder={t('subject_loading.search_placeholder', 'Search subjects')}
         placeholderTextColor={C.muted}
         value={query}
         onChangeText={setQuery}
@@ -364,11 +368,11 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
               <View style={{flex: 1}}>
                 <Text style={s.rowTitle}>
                   {item.subject_code ? item.subject_code + ' - ' : ''}
-                  {item.subject_name || 'Subject #' + item.subject_id}
+                  {item.subject_name || t('subject_loading.subject_fallback', 'Subject #{id}').replace('{id}', String(item.subject_id))}
                 </Text>
                 <Text style={s.rowMeta}>
-                  {item.units} units
-                  {entry && entry.is_override ? '   OVERRIDDEN' : ''}
+                  {item.units} {t('subject_loading.units', 'units')}
+                  {entry && entry.is_override ? '   ' + t('subject_loading.overridden', 'OVERRIDDEN') : ''}
                 </Text>
                 {item.violations.map((v, i) => (
                   <Text
@@ -382,7 +386,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
                 ))}
               </View>
               <Text style={[s.check, {color: selected ? C.green : C.muted}]}>
-                {selected ? 'REMOVE' : 'ADD'}
+                {selected ? t('subject_loading.remove', 'REMOVE') : t('subject_loading.add', 'ADD')}
               </Text>
             </TouchableOpacity>
           );
@@ -390,7 +394,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
         ListEmptyComponent={
           <View style={s.center}>
             <Text style={s.muted}>
-              No subjects are offered for this curriculum and term.
+              {t('subject_loading.empty', 'No subjects are offered for this curriculum and term.')}
             </Text>
           </View>
         }
@@ -401,14 +405,14 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
           style={[s.secondaryBtn, saving ? s.disabled : null]}
           disabled={saving}
           onPress={() => save(false)}>
-          <Text style={s.secondaryBtnText}>Save draft</Text>
+          <Text style={s.secondaryBtnText}>{t('subject_loading.save_draft', 'Save draft')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[s.primaryBtn, {flex: 1}, saving || blocked ? s.disabled : null]}
           disabled={saving || blocked}
           onPress={() => save(true)}>
           <Text style={s.primaryBtnText}>
-            {saving ? 'Working...' : 'Save and submit'}
+            {saving ? t('subject_loading.working', 'Working...') : t('subject_loading.save_and_submit', 'Save and submit')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -416,7 +420,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
       <Modal visible={!!overrideTarget} transparent animationType={'fade'}>
         <View style={s.modalWrap}>
           <View style={s.modal}>
-            <Text style={s.modalTitle}>Authorise an exception</Text>
+            <Text style={s.modalTitle}>{t('subject_loading.override_modal_title', 'Authorise an exception')}</Text>
             <Text style={s.modalBody}>{overrideTarget?.subject_name}</Text>
             {(overrideTarget?.violations || []).map((v, i) => (
               <Text key={i} style={s.modalRule}>
@@ -425,7 +429,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
             ))}
             <TextInput
               style={s.modalInput}
-              placeholder={'Reason for the override (stored in the audit trail)'}
+              placeholder={t('subject_loading.override_reason_placeholder', 'Reason for the override (stored in the audit trail)')}
               placeholderTextColor={C.muted}
               multiline
               value={overrideReason}
@@ -435,12 +439,12 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
               <TouchableOpacity
                 style={s.secondaryBtn}
                 onPress={() => setOverrideTarget(null)}>
-                <Text style={s.secondaryBtnText}>Cancel</Text>
+                <Text style={s.secondaryBtnText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.primaryBtn, {flex: 1}]}
                 onPress={confirmOverride}>
-                <Text style={s.primaryBtnText}>Override and add</Text>
+                <Text style={s.primaryBtnText}>{t('subject_loading.override_and_add', 'Override and add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
