@@ -14,6 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import {
   Post,
   PostPrivacy,
@@ -88,6 +89,7 @@ function PollIcon({ color = EMERALD, size = 20 }: { color?: string; size?: numbe
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
+  const { t } = useLocale();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -115,7 +117,10 @@ export default function FeedScreen() {
       setHasMore(res.hasMore);
       setNextBeforeId(res.nextBeforeId);
     } catch (err: any) {
-      Alert.alert('Couldn\u2019t load feed', err?.message ?? 'Please try again.');
+      Alert.alert(
+        t('feed.load_error_title', 'Couldn\u2019t load feed'),
+        err?.message ?? t('common.try_again_full', 'Please try again.'),
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -178,39 +183,45 @@ export default function FeedScreen() {
 
   const handleRepost = (post: Post) => {
     if (!canPost) {
-      Alert.alert('Repost', 'Repost this to your feed?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('feed.repost_title', 'Repost'), t('feed.repost_confirm', 'Repost this to your feed?'), [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Repost',
+          text: t('feed.repost_action', 'Repost'),
           onPress: async () => {
             if (!token) return;
             try {
               const created = await repost(token, post.id);
               setPosts((prev) => [created, ...prev]);
             } catch (err: any) {
-              Alert.alert('Couldn\u2019t repost', err?.message ?? 'Please try again.');
+              Alert.alert(
+                t('feed.repost_error_title', 'Couldn\u2019t repost'),
+                err?.message ?? t('common.try_again_full', 'Please try again.'),
+              );
             }
           },
         },
       ]);
       return;
     }
-    Alert.alert('Repost', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('feed.repost_title', 'Repost'), undefined, [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Repost',
+        text: t('feed.repost_action', 'Repost'),
         onPress: async () => {
           if (!token) return;
           try {
             const created = await repost(token, post.id);
             setPosts((prev) => [created, ...prev]);
           } catch (err: any) {
-            Alert.alert('Couldn\u2019t repost', err?.message ?? 'Please try again.');
+            Alert.alert(
+              t('feed.repost_error_title', 'Couldn\u2019t repost'),
+              err?.message ?? t('common.try_again_full', 'Please try again.'),
+            );
           }
         },
       },
       {
-        text: 'Repost with comment',
+        text: t('feed.repost_with_comment', 'Repost with comment'),
         onPress: () => (navigation as any).navigate('CreatePost', { repostOfId: post.id }),
       },
     ]);
@@ -222,7 +233,10 @@ export default function FeedScreen() {
     try {
       await deletePost(token, post.id);
     } catch (err: any) {
-      Alert.alert('Couldn\u2019t delete', err?.message ?? 'Please try again.');
+      Alert.alert(
+        t('feed.delete_error_title', 'Couldn\u2019t delete'),
+        err?.message ?? t('common.try_again_full', 'Please try again.'),
+      );
       load();
     }
   };
@@ -241,7 +255,10 @@ export default function FeedScreen() {
       setPosts((prev) =>
         prev.map((p) => (p.id === post.id ? { ...p, privacy: previousPrivacy } : p)),
       );
-      Alert.alert('Couldn\u2019t update privacy', err?.message ?? 'Please try again.');
+      Alert.alert(
+        t('feed.privacy_error_title', 'Couldn\u2019t update privacy'),
+        err?.message ?? t('common.try_again_full', 'Please try again.'),
+      );
     }
   };
 
@@ -271,23 +288,23 @@ export default function FeedScreen() {
         >
           <View style={styles.composerTop}>
             <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={52} />
-            <Text style={styles.composerPlaceholder}>What's on your mind?</Text>
+            <Text style={styles.composerPlaceholder}>{t('feed.composer_placeholder', "What's on your mind?")}</Text>
           </View>
           <View style={styles.composerDivider} />
           <View style={styles.composerActions}>
             <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
               <PhotoIcon />
-              <Text style={styles.composerActionText}>Photo</Text>
+              <Text style={styles.composerActionText}>{t('feed.composer_photo', 'Photo')}</Text>
             </TouchableOpacity>
             <View style={styles.composerSep} />
             <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
               <TextIcon />
-              <Text style={styles.composerActionText}>Text</Text>
+              <Text style={styles.composerActionText}>{t('feed.composer_text', 'Text')}</Text>
             </TouchableOpacity>
             <View style={styles.composerSep} />
             <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
               <PollIcon />
-              <Text style={styles.composerActionText}>Poll</Text>
+              <Text style={styles.composerActionText}>{t('feed.composer_poll', 'Poll')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -304,8 +321,8 @@ export default function FeedScreen() {
         pointerEvents="box-none"
       >
         <View style={styles.headerTextCol}>
-          <Text style={styles.headerTitle}>Home</Text>
-          <Text style={styles.headerGreeting}>Assalamu Alaykum,</Text>
+          <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
+          <Text style={styles.headerGreeting}>{t('feed.header_greeting', 'Assalamu Alaykum,')}</Text>
           <View style={styles.headerNameRow}>
             <Text style={styles.headerName}>{user?.name ?? ''}</Text>
             <View style={{ marginLeft: 6 }}>
@@ -360,7 +377,7 @@ export default function FeedScreen() {
           }
           ListEmptyComponent={
             <View style={styles.centerFill}>
-              <Text style={styles.emptyText}>No posts yet. Be the first to share something!</Text>
+              <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 130 }}
