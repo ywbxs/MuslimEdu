@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -35,6 +36,7 @@ export default function AcademicYearFormScreen() {
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
+  const { t } = useLocale();
 
   const sessionId: number | undefined = route.params?.sessionId;
   const isEditing = !!sessionId;
@@ -54,27 +56,27 @@ export default function AcademicYearFormScreen() {
         const years = await fetchAcademicYears(token);
         const year = years.find((y) => y.id === sessionId);
         if (!year) {
-          setError('Academic year not found.');
+          setError(t('academic_year_form.not_found', 'Academic year not found.'));
           return;
         }
         setTitle(year.session_title);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load academic year.');
+        setError(err instanceof Error ? err.message : t('academic_year_form.load_error', 'Failed to load academic year.'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [isEditing, sessionId, token]);
+  }, [isEditing, sessionId, token, t]);
 
   const canSubmit = title.trim().length > 0 && !submitting;
 
   const onSave = async () => {
     if (!token) {
-      Alert.alert('Error', 'Your session expired. Please log in again.');
+      Alert.alert(t('common.error', 'Error'), t('academic_year_form.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Error', 'Academic year title is required.');
+      Alert.alert(t('common.error', 'Error'), t('academic_year_form.title_required', 'Academic year title is required.'));
       return;
     }
 
@@ -87,7 +89,7 @@ export default function AcademicYearFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save the academic year.');
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('academic_year_form.save_error', 'Could not save the academic year.'));
     } finally {
       setSubmitting(false);
     }
@@ -101,7 +103,7 @@ export default function AcademicYearFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? 'Edit Academic Year' : 'Add Academic Year'}
+            {isEditing ? t('academic_year_form.edit_title', 'Edit Academic Year') : t('academic_year_form.add_title', 'Add Academic Year')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -128,21 +130,21 @@ export default function AcademicYearFormScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Academic Year Title</Text>
+        <Text style={styles.label}>{t('academic_year_form.title_label', 'Academic Year Title')}</Text>
         <TextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
-          placeholder="e.g. 2026-2027"
+          placeholder={t('academic_year_form.title_placeholder', 'e.g. 2026-2027')}
           placeholderTextColor={theme.textMuted}
         />
 
         {!isEditing ? (
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Set as current year</Text>
+              <Text style={styles.switchLabel}>{t('academic_year_form.set_current', 'Set as current year')}</Text>
               <Text style={styles.switchHelp}>
-                Makes this the active academic year school-wide, replacing whichever year is current now.
+                {t('academic_year_form.set_current_help', 'Makes this the active academic year school-wide, replacing whichever year is current now.')}
               </Text>
             </View>
             <Switch value={setCurrent} onValueChange={setSetCurrent} trackColor={{ true: theme.accent }} />
@@ -157,7 +159,7 @@ export default function AcademicYearFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Add Academic Year'}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('academic_year_form.save_changes', 'Save Changes') : t('academic_year_form.add_title', 'Add Academic Year')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
