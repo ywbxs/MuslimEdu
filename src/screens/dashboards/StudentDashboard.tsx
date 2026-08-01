@@ -263,6 +263,14 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
   const { t } = useLocale();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
+  // The dark hero background is a separate absolutely-positioned layer
+  // behind the ScrollView, sized to cover the greeting + profile card.
+  // Those two are variable height (profile card rows are conditional on
+  // which fields the user has), so a fixed HERO_HEIGHT falls short
+  // whenever the card is taller than the default 3-field case, leaving
+  // "Quick Actions" rendered half over the dark background's rounded
+  // bottom edge. Measure the real height instead of guessing it.
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
 
   const isOrphan = isOrphanSchoolUser(user);
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
@@ -320,12 +328,12 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
 
   // --- Parallax + fade for the background layer only. ---
   const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT],
-    outputRange: [0, -HERO_HEIGHT * PARALLAX_FACTOR],
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
     extrapolate: 'clamp',
   });
   const bgOpacity = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT * 0.55, HERO_HEIGHT],
+    inputRange: [0, heroHeight * 0.55, heroHeight],
     outputRange: [1, 1, 0],
     extrapolate: 'clamp',
   });
@@ -335,7 +343,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
       <Animated.View
         style={[
           styles.bgLayer,
-          { height: HERO_HEIGHT, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
+          { height: heroHeight, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
         ]}
         pointerEvents="none"
         renderToHardwareTextureAndroid
@@ -362,59 +370,70 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
-        {/* Greeting */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greetingSmall}>{t('student_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
-            <Text style={styles.greetingName}>{user?.name}</Text>
-          </View>
-          <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-            <View style={styles.avatarRing}>
-              <View style={styles.avatarInner}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
-              </View>
-              <View style={styles.avatarDot} />
+        <View
+          onLayout={(e) => {
+            // The measured height already includes glassCard's own
+            // marginBottom (RN's column layout counts trailing margin
+            // toward the parent's auto height), so the dark layer's
+            // bottom edge lands exactly where the card's margin ends.
+            const measured = e.nativeEvent.layout.height;
+            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+          }}
+        >
+          {/* Greeting */}
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.greetingSmall}>{t('student_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
+              <Text style={styles.greetingName}>{user?.name}</Text>
             </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile - glass card over the dark hero */}
-        <View style={styles.glassCard}>
-          <View style={styles.glassHeaderRow}>
-            <View style={styles.glassHeaderLeft}>
-              <View style={styles.glassIconCircle}>
-                <PersonIcon color={PALE_GREEN} size={22} />
+            <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+              <View style={styles.avatarRing}>
+                <View style={styles.avatarInner}>
+                  <Text style={styles.avatarInitial}>{initial}</Text>
+                </View>
+                <View style={styles.avatarDot} />
               </View>
-              <View>
-                <Text style={styles.glassTitle}>{t('student_dashboard.profile_title', 'Profile')}</Text>
-                <Text style={styles.glassSubtitle}>
-                  {t('student_dashboard.profile_subtitle', 'Your personal information')}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => handlePlaceholderPress(t('student_dashboard.editing_profile', 'Editing your profile'))}
-              hitSlop={8}
-            >
-              <PencilIcon color={PALE_GREEN} size={16} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.glassDivider} />
-          <GlassRow icon={<PersonIcon />} label={t('student_dashboard.name_label', 'Name')} value={user?.name} />
-          <View style={styles.glassDivider} />
-          <GlassRow icon={<MailIcon />} label={t('student_dashboard.email_label', 'Email')} value={user?.email} />
-          {user?.code ? (
-            <>
-              <View style={styles.glassDivider} />
-              <GlassRow
-                icon={<IdCardIcon />}
-                label={t('student_dashboard.student_code_label', 'Student Code')}
-                value={user.code}
-              />
-            </>
-          ) : null}
+          {/* Profile - glass card over the dark hero */}
+          <View style={styles.glassCard}>
+            <View style={styles.glassHeaderRow}>
+              <View style={styles.glassHeaderLeft}>
+                <View style={styles.glassIconCircle}>
+                  <PersonIcon color={PALE_GREEN} size={22} />
+                </View>
+                <View>
+                  <Text style={styles.glassTitle}>{t('student_dashboard.profile_title', 'Profile')}</Text>
+                  <Text style={styles.glassSubtitle}>
+                    {t('student_dashboard.profile_subtitle', 'Your personal information')}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handlePlaceholderPress(t('student_dashboard.editing_profile', 'Editing your profile'))}
+                hitSlop={8}
+              >
+                <PencilIcon color={PALE_GREEN} size={16} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.glassDivider} />
+            <GlassRow icon={<PersonIcon />} label={t('student_dashboard.name_label', 'Name')} value={user?.name} />
+            <View style={styles.glassDivider} />
+            <GlassRow icon={<MailIcon />} label={t('student_dashboard.email_label', 'Email')} value={user?.email} />
+            {user?.code ? (
+              <>
+                <View style={styles.glassDivider} />
+                <GlassRow
+                  icon={<IdCardIcon />}
+                  label={t('student_dashboard.student_code_label', 'Student Code')}
+                  value={user.code}
+                />
+              </>
+            ) : null}
+          </View>
         </View>
 
         {/* Monthly Report hero card - orphan students only */}
@@ -749,7 +768,12 @@ const styles = StyleSheet.create({
   },
   quickBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   quickTitle: { fontSize: 14, fontWeight: '700', color: INK, marginBottom: 4 },
-  quickDescription: { fontSize: 11, color: SUBTLE, lineHeight: 15, marginBottom: 10 },
+  // minHeight reserves space for 2 lines (lineHeight 15 x 2) so a short
+  // one-line description and a wrapped two-line one don't leave cards in
+  // the same row at different heights - without this the accent bar at
+  // the bottom of each card lands at a different y depending on how long
+  // its neighbor's description happens to be.
+  quickDescription: { fontSize: 11, color: SUBTLE, lineHeight: 15, marginBottom: 10, minHeight: 30 },
   quickArrowButton: {
     width: 30,
     height: 30,
