@@ -74,12 +74,12 @@ function EmptyIcon() {
   );
 }
 
-const CashierRow = React.memo(function CashierRow({ item }: { item: CashierAccount }) {
+const CashierRow = React.memo(function CashierRow({ item, onPress }: { item: CashierAccount; onPress: () => void }) {
   const { t } = useLocale();
   const active = item.status === 1;
   return (
-    <View style={styles.row}>
-      <UserAvatar name={item.name} photo={null} size={48} ringColor={HAIRLINE} dotColor={active ? EMERALD : DANGER} />
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+      <UserAvatar name={item.name} photo={item.photo} size={48} ringColor={HAIRLINE} dotColor={active ? EMERALD : DANGER} />
       <View style={[styles.flex1, { marginLeft: 14 }]}>
         <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.rowEmail} numberOfLines={1}>{item.email}</Text>
@@ -90,7 +90,7 @@ const CashierRow = React.memo(function CashierRow({ item }: { item: CashierAccou
           {active ? t('cashier_accounts.status_active', 'Active') : t('cashier_accounts.status_inactive', 'Inactive')}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 });
 
@@ -324,7 +324,12 @@ export default function CashierAccountsScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-          renderItem={({ item }) => <CashierRow item={item} />}
+          renderItem={({ item }) => (
+            <CashierRow
+              item={item}
+              onPress={() => (navigation as any).navigate('CashierProfile', { cashierId: item.id, cashierName: item.name })}
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyIcon />
