@@ -51,6 +51,7 @@ export interface SchoolProfile {
   institution_type: InstitutionType | null;
   logo: string | null;
   seal: string | null;
+  id_card_background: string | null;
   timezone: string | null;
   default_language: string | null;
   secondary_language: string | null;
@@ -104,6 +105,7 @@ function normalizeSchool(school: SchoolProfile): SchoolProfile {
     ...school,
     logo: absoluteUrl(school.logo),
     seal: absoluteUrl(school.seal),
+    id_card_background: absoluteUrl(school.id_card_background),
   };
 }
 
@@ -132,19 +134,20 @@ export interface InstitutionProfileInput {
   academic_year_structure?: AcademicYearStructure;
   logo?: { uri: string; fileName?: string; type?: string } | null;
   seal?: { uri: string; fileName?: string; type?: string } | null;
+  id_card_background?: { uri: string; fileName?: string; type?: string } | null;
 }
 
 export async function saveInstitutionProfile(
   token: string,
   input: InstitutionProfileInput,
 ): Promise<SchoolProfile> {
-  const hasFiles = !!input.logo || !!input.seal;
+  const hasFiles = !!input.logo || !!input.seal || !!input.id_card_background;
 
   if (hasFiles) {
     const form = new FormData();
     Object.entries(input).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
-      if (key === 'logo' || key === 'seal') return;
+      if (key === 'logo' || key === 'seal' || key === 'id_card_background') return;
       if (key === 'working_days' && Array.isArray(value)) {
         value.forEach((day) => form.append('working_days[]', String(day)));
         return;
@@ -159,12 +162,43 @@ export async function saveInstitutionProfile(
       // @ts-ignore
       form.append('seal', { uri: input.seal.uri, name: input.seal.fileName ?? 'seal.jpg', type: input.seal.type ?? 'image/jpeg' });
     }
+    if (input.id_card_background) {
+      // @ts-ignore
+      form.append('id_card_background', {
+        uri: input.id_card_background.uri,
+        name: input.id_card_background.fileName ?? 'id_card_background.jpg',
+        type: input.id_card_background.type ?? 'image/jpeg',
+      });
+    }
     const data = await authedRequest('/admin_school_profile_update', token, form);
     return normalizeSchool(data.school);
   }
 
   const data = await authedRequest('/admin_school_profile_update', token, input as Record<string, any>);
   return normalizeSchool(data.school);
+}
+
+export interface SchoolBranding {
+  name: string | null;
+  logo: string | null;
+  id_card_background: string | null;
+}
+
+/**
+ * POST /my_school_branding - unlike every other function in this file,
+ * NOT admin-only: any authenticated role can call this to get their own
+ * school's name/logo/ID-card background, so a student's own ID card
+ * screen can render the same custom background an admin uploaded via
+ * saveInstitutionProfile() without needing admin access to the full
+ * setup payload.
+ */
+export async function fetchMySchoolBranding(token: string): Promise<SchoolBranding> {
+  const data = await authedRequest('/my_school_branding', token);
+  return {
+    name: data.name ?? null,
+    logo: absoluteUrl(data.logo ?? null),
+    id_card_background: absoluteUrl(data.id_card_background ?? null),
+  };
 }
 
 export async function completeSetup(token: string): Promise<SchoolProfile> {

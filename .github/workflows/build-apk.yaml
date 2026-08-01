@@ -61,7 +61,10 @@ jobs:
             axios \
             "@react-native-async-storage/async-storage" \
             "@react-native-community/datetimepicker" \
-            "@react-native-community/netinfo@^11.4.1"
+            "@react-native-community/netinfo@^11.4.1" \
+            "react-native-vision-camera@^4.7.3" \
+            "react-native-qrcode-svg@^6.3.21" \
+            "react-native-view-shot@^4.0.3"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu

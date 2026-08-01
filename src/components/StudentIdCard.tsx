@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import UserAvatar from './UserAvatar';
@@ -31,22 +31,27 @@ export interface StudentIdCardData {
   schoolName?: string | null;
 }
 
+/**
+ * `backgroundImageUrl` (a school's uploaded custom background, see
+ * IdCardTemplateScreen/my_school_branding) always wins over `theme` - the
+ * gradient presets are only the fallback for a school that hasn't
+ * uploaded one yet. A dark scrim sits between the image and the content
+ * so name/code/QR stay readable regardless of what the uploaded image
+ * looks like.
+ */
 export default function StudentIdCard({
   student,
   theme = CARD_THEMES[0],
+  backgroundImageUrl,
 }: {
   student: StudentIdCardData;
   theme?: CardTheme;
+  backgroundImageUrl?: string | null;
 }) {
   const classSection = [student.className, student.sectionName].filter(Boolean).join(' - ');
 
-  return (
-    <LinearGradient
-      colors={theme.colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
+  const content = (
+    <>
       <View style={styles.topRow}>
         <Text style={styles.schoolName} numberOfLines={1}>{student.schoolName ?? 'Student ID'}</Text>
         <Text style={styles.cardKicker}>ID CARD</Text>
@@ -64,6 +69,26 @@ export default function StudentIdCard({
           <QRCode value={buildStudentIdQrPayload(student.code)} size={84} backgroundColor="#FFFFFF" color="#111827" />
         </View>
       </View>
+    </>
+  );
+
+  if (backgroundImageUrl) {
+    return (
+      <ImageBackground source={{ uri: backgroundImageUrl }} style={styles.card} imageStyle={styles.cardImage}>
+        <View style={styles.scrim} />
+        <View style={styles.cardInner}>{content}</View>
+      </ImageBackground>
+    );
+  }
+
+  return (
+    <LinearGradient
+      colors={theme.colors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.card}
+    >
+      <View style={styles.cardInner}>{content}</View>
     </LinearGradient>
   );
 }
@@ -73,9 +98,18 @@ const styles = StyleSheet.create({
     width: 320,
     height: 190,
     borderRadius: RADIUS.lg,
-    padding: 18,
-    justifyContent: 'space-between',
+    overflow: 'hidden',
     ...SHADOW.level3,
+  },
+  cardImage: { borderRadius: RADIUS.lg },
+  cardInner: { flex: 1, padding: 18, justifyContent: 'space-between' },
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(11,13,16,0.45)',
   },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   schoolName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flexShrink: 1, marginRight: 8 },
