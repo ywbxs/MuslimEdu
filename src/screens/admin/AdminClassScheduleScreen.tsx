@@ -162,6 +162,26 @@ interface PickerData {
   rooms: Room[];
 }
 
+function findOptionName<T extends { id: number; name: string }>(options: T[], id: number | null): string | null {
+  if (id == null) return null;
+  return options.find((o) => o.id === id)?.name ?? null;
+}
+
+function SummaryRow({ label, value, styles }: { label: string; value: string; styles: any }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summaryValue}>{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * Step wizard for adding/editing one schedule slot - was a single long
+ * scrolling form (7 fields at once); broken into focused steps (class,
+ * teacher/room, day/time, review) with a progress indicator, same visual
+ * language as the report-submission wizards elsewhere in the app.
+ */
 function ScheduleEditSheet({
   visible,
   onClose,
@@ -193,6 +213,7 @@ function ScheduleEditSheet({
   theme: AcademicGlassTheme;
 }) {
   const { t } = useLocale();
+  const [stepIndex, setStepIndex] = useState(0);
   const [code, setCode] = useState(editingRow?.code ?? '');
   const [day, setDay] = useState<Day>(editingRow?.day_of_week ?? 'monday');
   const [startTime, setStartTime] = useState(editingRow?.starts_at?.slice(0, 5) ?? '08:00');
@@ -204,6 +225,7 @@ function ScheduleEditSheet({
 
   React.useEffect(() => {
     if (visible) {
+      setStepIndex(0);
       setCode(editingRow?.code ?? '');
       setDay(editingRow?.day_of_week ?? 'monday');
       setStartTime(editingRow?.starts_at?.slice(0, 5) ?? '08:00');
@@ -217,6 +239,158 @@ function ScheduleEditSheet({
 
   const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
   const canSave = !!sectionId && timeValid;
+
+  const steps = [
+    {
+      id: 'class_subject',
+      title: t('admin_class_schedule.step_class_title', 'Class & Subject'),
+      subtitle: t('admin_class_schedule.step_class_subtitle', 'Which section and subject is this slot for?'),
+      isValid: !!sectionId,
+      content: (
+        <>
+          <ChipPicker
+            label={t('admin_class_schedule.section_label', 'Class Section')}
+            options={pickers.sections}
+            value={sectionId}
+            onChange={setSectionId}
+            styles={styles}
+          />
+          <ChipPicker
+            label={t('admin_class_schedule.subject_label', 'Subject')}
+            options={pickers.subjects}
+            value={subjectId}
+            onChange={setSubjectId}
+            allowNone
+            noneLabel={t('common.none', 'None')}
+            styles={styles}
+          />
+        </>
+      ),
+    },
+    {
+      id: 'teacher_room',
+      title: t('admin_class_schedule.step_teacher_title', 'Teacher & Room'),
+      subtitle: t('admin_class_schedule.step_teacher_subtitle', 'Assign a teacher and a room - both optional, can be set later.'),
+      isValid: true,
+      content: (
+        <>
+          <ChipPicker
+            label={t('admin_class_schedule.teacher_label', 'Teacher')}
+            options={pickers.teachers}
+            value={teacherId}
+            onChange={setTeacherId}
+            allowNone
+            noneLabel={t('admin_class_schedule.unassigned', 'Unassigned')}
+            styles={styles}
+          />
+          <ChipPicker
+            label={t('admin_class_schedule.room_label', 'Room')}
+            options={pickers.rooms}
+            value={roomId}
+            onChange={setRoomId}
+            allowNone
+            noneLabel={t('common.none', 'None')}
+            styles={styles}
+          />
+        </>
+      ),
+    },
+    {
+      id: 'day_time',
+      title: t('admin_class_schedule.step_time_title', 'Day & Time'),
+      subtitle: t('admin_class_schedule.step_time_subtitle', 'When does this class meet each week?'),
+      isValid: timeValid,
+      content: (
+        <>
+          <Text style={styles.fieldLabel}>{t('admin_class_schedule.code_label', 'Label (optional)')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder={t('admin_class_schedule.code_placeholder', 'e.g. Period 1')}
+            placeholderTextColor={theme.textSecondary}
+            value={code}
+            onChangeText={setCode}
+          />
+
+          <Text style={styles.fieldLabel}>{t('admin_class_schedule.day_label', 'Day')}</Text>
+          <View style={styles.chipsWrap}>
+            {DAYS.map((d) => {
+              const active = d.key === day;
+              return (
+                <TouchableOpacity key={d.key} style={[styles.chip, active && styles.chipActive]} onPress={() => setDay(d.key)} activeOpacity={0.75}>
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{dayLabel(t, d.key)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.fieldLabel}>{t('admin_class_schedule.time_label', 'Time (24h, e.g. 09:00)')}</Text>
+          <View style={styles.timeRow}>
+            <TextInput
+              style={styles.timeInput}
+              placeholder={t('admin_class_schedule.start_placeholder', 'Start')}
+              placeholderTextColor={theme.textSecondary}
+              value={startTime}
+              onChangeText={setStartTime}
+              keyboardType="numbers-and-punctuation"
+              maxLength={5}
+            />
+            <Text style={styles.timeDash}>-</Text>
+            <TextInput
+              style={styles.timeInput}
+              placeholder={t('admin_class_schedule.end_placeholder', 'End')}
+              placeholderTextColor={theme.textSecondary}
+              value={endTime}
+              onChangeText={setEndTime}
+              keyboardType="numbers-and-punctuation"
+              maxLength={5}
+            />
+          </View>
+          {!timeValid ? <Text style={styles.timeError}>{t('admin_class_schedule.time_error', 'Use HH:MM for both start and end, e.g. 09:00 and 09:45.')}</Text> : null}
+        </>
+      ),
+    },
+    {
+      id: 'review',
+      title: t('admin_class_schedule.step_review_title', 'Review & Save'),
+      subtitle: t('admin_class_schedule.step_review_subtitle', 'Double-check the details before saving this slot.'),
+      isValid: canSave,
+      content: (
+        <View>
+          <SummaryRow label={t('admin_class_schedule.section_label', 'Class Section')} value={findOptionName(pickers.sections, sectionId) ?? '—'} styles={styles} />
+          <SummaryRow label={t('admin_class_schedule.subject_label', 'Subject')} value={findOptionName(pickers.subjects, subjectId) ?? t('common.none', 'None')} styles={styles} />
+          <SummaryRow label={t('admin_class_schedule.teacher_label', 'Teacher')} value={findOptionName(pickers.teachers, teacherId) ?? t('admin_class_schedule.unassigned', 'Unassigned')} styles={styles} />
+          <SummaryRow label={t('admin_class_schedule.room_label', 'Room')} value={findOptionName(pickers.rooms, roomId) ?? t('common.none', 'None')} styles={styles} />
+          <SummaryRow label={t('admin_class_schedule.day_label', 'Day')} value={dayLabel(t, day)} styles={styles} />
+          <SummaryRow label={t('admin_class_schedule.time_label', 'Time')} value={`${startTime} - ${endTime}`} styles={styles} />
+          {code.trim() ? <SummaryRow label={t('admin_class_schedule.code_label', 'Label (optional)')} value={code.trim()} styles={styles} /> : null}
+
+          {onDelete ? (
+            <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.75} onPress={onDelete}>
+              <IconTrash color={theme.danger} />
+              <Text style={styles.deleteBtnText}>{t('admin_class_schedule.remove_schedule', 'Remove this schedule slot')}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ),
+    },
+  ];
+
+  const isFirstStep = stepIndex === 0;
+  const isLastStep = stepIndex === steps.length - 1;
+  const step = steps[stepIndex];
+
+  const goNext = () => {
+    if (!step.isValid) return;
+    if (isLastStep) {
+      if (sectionId) onSave({ code: code.trim(), dayOfWeek: day, startTime, endTime, sectionId, teacherId, subjectId, roomId });
+    } else {
+      setStepIndex(stepIndex + 1);
+    }
+  };
+  const goBack = () => {
+    if (isFirstStep) onClose();
+    else setStepIndex(stepIndex - 1);
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -234,109 +408,48 @@ function ScheduleEditSheet({
               <ActivityIndicator color={theme.accent} />
             </View>
           ) : (
-            <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
-              <Text style={styles.fieldLabel}>{t('admin_class_schedule.code_label', 'Label (optional)')}</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder={t('admin_class_schedule.code_placeholder', 'e.g. Period 1')}
-                placeholderTextColor={theme.textSecondary}
-                value={code}
-                onChangeText={setCode}
-              />
-
-              <ChipPicker
-                label={t('admin_class_schedule.section_label', 'Class Section')}
-                options={pickers.sections}
-                value={sectionId}
-                onChange={setSectionId}
-                styles={styles}
-              />
-
-              <ChipPicker
-                label={t('admin_class_schedule.subject_label', 'Subject')}
-                options={pickers.subjects}
-                value={subjectId}
-                onChange={setSubjectId}
-                allowNone
-                noneLabel={t('common.none', 'None')}
-                styles={styles}
-              />
-
-              <ChipPicker
-                label={t('admin_class_schedule.teacher_label', 'Teacher')}
-                options={pickers.teachers}
-                value={teacherId}
-                onChange={setTeacherId}
-                allowNone
-                noneLabel={t('admin_class_schedule.unassigned', 'Unassigned')}
-                styles={styles}
-              />
-
-              <ChipPicker
-                label={t('admin_class_schedule.room_label', 'Room')}
-                options={pickers.rooms}
-                value={roomId}
-                onChange={setRoomId}
-                allowNone
-                noneLabel={t('common.none', 'None')}
-                styles={styles}
-              />
-
-              <Text style={styles.fieldLabel}>{t('admin_class_schedule.day_label', 'Day')}</Text>
-              <View style={styles.chipsWrap}>
-                {DAYS.map((d) => {
-                  const active = d.key === day;
+            <>
+              <View style={styles.progressRow}>
+                {steps.map((s, idx) => {
+                  const done = idx < stepIndex;
+                  const active = idx === stepIndex;
                   return (
-                    <TouchableOpacity key={d.key} style={[styles.chip, active && styles.chipActive]} onPress={() => setDay(d.key)} activeOpacity={0.75}>
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{dayLabel(t, d.key)}</Text>
-                    </TouchableOpacity>
+                    <React.Fragment key={s.id}>
+                      <View style={[styles.progressDot, active && styles.progressDotActive, done && styles.progressDotDone]}>
+                        <Text style={[styles.progressDotText, (active || done) && styles.progressDotTextActive]}>{idx + 1}</Text>
+                      </View>
+                      {idx < steps.length - 1 && <View style={[styles.progressLine, done && styles.progressLineDone]} />}
+                    </React.Fragment>
                   );
                 })}
               </View>
+              <Text style={styles.progressCaption}>
+                {t('admin_class_schedule.step_caption', 'Step {current} of {total}')
+                  .replace('{current}', String(stepIndex + 1))
+                  .replace('{total}', String(steps.length))}
+                {' · '}
+                {step.title}
+              </Text>
 
-              <Text style={styles.fieldLabel}>{t('admin_class_schedule.time_label', 'Time (24h, e.g. 09:00)')}</Text>
-              <View style={styles.timeRow}>
-                <TextInput
-                  style={styles.timeInput}
-                  placeholder={t('admin_class_schedule.start_placeholder', 'Start')}
-                  placeholderTextColor={theme.textSecondary}
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
-                <Text style={styles.timeDash}>-</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  placeholder={t('admin_class_schedule.end_placeholder', 'End')}
-                  placeholderTextColor={theme.textSecondary}
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
-              </View>
-              {!timeValid ? <Text style={styles.timeError}>{t('admin_class_schedule.time_error', 'Use HH:MM for both start and end, e.g. 09:00 and 09:45.')}</Text> : null}
+              <ScrollView contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+                <Text style={styles.stepSubtitle}>{step.subtitle}</Text>
+                {step.content}
 
-              <TouchableOpacity
-                style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
-                disabled={!canSave}
-                activeOpacity={0.85}
-                onPress={() =>
-                  sectionId &&
-                  onSave({ code: code.trim(), dayOfWeek: day, startTime, endTime, sectionId, teacherId, subjectId, roomId })
-                }
-              >
-                <Text style={styles.saveBtnText}>{t('common.save', 'Save')}</Text>
-              </TouchableOpacity>
-
-              {onDelete ? (
-                <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.75} onPress={onDelete}>
-                  <IconTrash color={theme.danger} />
-                  <Text style={styles.deleteBtnText}>{t('admin_class_schedule.remove_schedule', 'Remove this schedule slot')}</Text>
-                </TouchableOpacity>
-              ) : null}
-            </ScrollView>
+                <View style={styles.wizardNavRow}>
+                  <TouchableOpacity style={styles.navBackBtn} onPress={goBack} activeOpacity={0.85}>
+                    <Text style={styles.navBackText}>{isFirstStep ? t('common.cancel', 'Cancel') : t('common.back', 'Back')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.navNextBtn, !step.isValid && styles.navNextBtnDisabled]}
+                    onPress={goNext}
+                    activeOpacity={0.85}
+                    disabled={!step.isValid}
+                  >
+                    <Text style={styles.navNextText}>{isLastStep ? t('common.save', 'Save') : t('common.next', 'Next')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -675,9 +788,59 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     timeDash: { color: theme.textSecondary, fontSize: 14 },
     timeError: { color: theme.danger, fontSize: 12, marginTop: 8 },
-    saveBtn: { marginTop: 22, backgroundColor: theme.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-    saveBtnDisabled: { opacity: 0.45 },
-    saveBtnText: { color: theme.onAccent, fontSize: 14.5, fontWeight: '700' },
-    deleteBtn: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
+    deleteBtn: { marginTop: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
     deleteBtnText: { color: theme.danger, fontSize: 13.5, fontWeight: '700' },
+
+    progressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    progressDot: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: theme.background,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    progressDotActive: { borderColor: theme.accent, backgroundColor: theme.accentSoft },
+    progressDotDone: { borderColor: theme.accent, backgroundColor: theme.accent },
+    progressDotText: { fontSize: 11.5, fontWeight: '700', color: theme.textSecondary },
+    progressDotTextActive: { color: theme.onAccent },
+    progressLine: { flex: 1, height: 2, backgroundColor: theme.border, marginHorizontal: 2 },
+    progressLineDone: { backgroundColor: theme.accent },
+    progressCaption: { color: theme.textSecondary, fontSize: 12, fontWeight: '600', marginBottom: 16 },
+    stepSubtitle: { color: theme.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 4 },
+
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    summaryLabel: { fontSize: 13, color: theme.textSecondary, fontWeight: '600' },
+    summaryValue: { fontSize: 14, color: theme.textPrimary, fontWeight: '700', flexShrink: 1, textAlign: 'right', marginLeft: 12 },
+
+    wizardNavRow: { flexDirection: 'row', gap: 10, marginTop: 26 },
+    navBackBtn: {
+      flex: 1,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+    },
+    navBackText: { color: theme.textPrimary, fontWeight: '700', fontSize: 14.5 },
+    navNextBtn: {
+      flex: 2,
+      borderRadius: 14,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+    },
+    navNextBtnDisabled: { opacity: 0.45 },
+    navNextText: { color: theme.onAccent, fontWeight: '700', fontSize: 14.5 },
   });

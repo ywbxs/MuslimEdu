@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, absoluteUrl } from '../config/api';
 
 // Requests that use file uploads legitimately take longer than a plain JSON
 // POST - mirrors adminTeacherService.ts's timeout split, even though none of
@@ -115,6 +115,7 @@ export interface CashierAccount {
   id: number;
   name: string;
   email: string;
+  photo: string | null;
   phone: string | null;
   code: string | null;
   status: number;
@@ -123,7 +124,72 @@ export interface CashierAccount {
 /** POST /admin_accountant_list - admin-only: every Cashier account in the school. */
 export async function fetchCashierAccounts(token: string): Promise<CashierAccount[]> {
   const data = await authedPost('/admin_accountant_list', token);
-  return (data.accountants ?? []) as CashierAccount[];
+  const rawList: any[] = data.accountants ?? [];
+  return rawList.map((raw) => ({
+    id: raw.id,
+    name: raw.name ?? '',
+    email: raw.email ?? '',
+    photo: absoluteUrl(raw.photo ?? null),
+    phone: raw.phone ?? null,
+    code: raw.code ?? null,
+    status: raw.status,
+  }));
+}
+
+export interface CashierProfile {
+  id: number;
+  name: string;
+  email: string;
+  photo: string | null;
+  phone: string | null;
+  address: string | null;
+  gender: string | null;
+  birthday: string | null;
+  designation: string | null;
+  code: string | null;
+}
+
+// A cashier's core identity fields - name/email/phone/address/gender/birthday,
+// plus an optional password reset. `password` is only sent to the backend
+// when non-empty, so leaving it blank keeps the cashier's existing password.
+export type CashierBasicProfileFields = Partial<{
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  gender: string;
+  birthday: string; // 'YYYY-MM-DD'
+  password: string;
+}>;
+
+/** POST /admin_accountant_profile - a single cashier's basic contact/role info. */
+export async function fetchCashierProfile(token: string, cashierId: number): Promise<CashierProfile> {
+  const data = await authedPost('/admin_accountant_profile', token, { accountant_id: cashierId });
+  return {
+    id: data.id,
+    name: data.name ?? '',
+    email: data.email ?? '',
+    photo: absoluteUrl(data.photo ?? null),
+    phone: data.phone ?? null,
+    address: data.address ?? null,
+    gender: data.gender ?? null,
+    birthday: data.birthday ?? null,
+    designation: data.designation ?? null,
+    code: data.code ?? null,
+  };
+}
+
+/**
+ * POST /admin_accountant_profile_update - save a cashier's core identity
+ * fields (name/email/phone/address/gender/birthday, optional password reset).
+ */
+export async function updateCashierProfile(
+  token: string,
+  cashierId: number,
+  fields: CashierBasicProfileFields,
+): Promise<{ message: string }> {
+  const data = await authedPost('/admin_accountant_profile_update', token, { accountant_id: cashierId, ...fields });
+  return { message: data.message ?? 'Profile updated successfully.' };
 }
 
 export interface AddCashierInput {

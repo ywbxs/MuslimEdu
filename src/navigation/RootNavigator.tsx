@@ -132,6 +132,7 @@ import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
 import RecordFeePaymentScreen from '../screens/admin/RecordFeePaymentScreen';
 import CashierAccountsScreen from '../screens/admin/CashierAccountsScreen';
+import CashierProfileScreen from '../screens/admin/CashierProfileScreen';
 import RegistrarAccountsScreen from '../screens/admin/RegistrarAccountsScreen';
 import AcademicUnavailableScreen from '../screens/common/AcademicUnavailableScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
@@ -617,6 +618,7 @@ export default function RootNavigator() {
       <Stack.Screen name="AdminFeeReports" component={AdminFeeReportsScreen} />
       <Stack.Screen name="RecordFeePayment" component={RecordFeePaymentScreen} />
       <Stack.Screen name="CashierAccounts" component={CashierAccountsScreen} />
+      <Stack.Screen name="CashierProfile" component={CashierProfileScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

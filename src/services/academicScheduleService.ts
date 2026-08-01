@@ -5,7 +5,20 @@
 // integer day_of_week). These adapters translate between that and the
 // shape this app's screens use.
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
+
+// Per-account (keyed by a slice of the token, not the full token) cache of
+// the last successfully fetched "my schedule" response, so a student who
+// opens the app offline still sees their real schedule/enrollment status
+// instead of an error - see fetchMySchedule below. Not used for the admin
+// schedule builder (listSchedules/saveSchedule/deleteSchedule), which needs
+// live server state for conflict checking.
+const MY_SCHEDULE_CACHE_PREFIX = '@my_schedule_cache_v1';
+
+function myScheduleCacheKey(token: string): string {
+  return `${MY_SCHEDULE_CACHE_PREFIX}:${token.slice(-12)}`;
+}
 
 export type Day = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
 
@@ -106,9 +119,32 @@ export async function deleteSchedule(token: string, id: number): Promise<void> {
  * POST /my_schedules - the logged-in user's own published schedule.
  * Backend resolves role server-side: teachers get slots where they're the
  * assigned teacher, students get slots for their enrolled section. Used
- * by both TeacherMyScheduleScreen and StudentScheduleScreen.
+ * by both TeacherMyScheduleScreen and StudentScheduleScreen, plus the
+ * dashboard's UpcomingClassesCard/EnrollmentStatusCard.
+ *
+ * Cache-then-network: a successful fetch overwrites the on-disk cache: a
+ * failed one (offline, timeout, etc) falls back to it instead of throwing,
+ * so the schedule/enrollment-status views keep working with the last-known
+ * data while offline rather than showing an error. Only throws if there's
+ * truly nothing cached yet (e.g. first-ever load with no connection).
  */
 export async function fetchMySchedule(token: string): Promise<AcademicSchedule[]> {
-  const data = await schedulePost(token, 'my_schedules');
-  return (data.schedules || []).map(fromBackendSchedule);
+  const cacheKey = myScheduleCacheKey(token);
+  try {
+    const data = await schedulePost(token, 'my_schedules');
+    const schedules = (data.schedules || []).map(fromBackendSchedule);
+    AsyncStorage.setItem(cacheKey, JSON.stringify(schedules)).catch(() => {
+      // Best-effort cache write - losing it just means the next offline
+      // load falls back further (or throws), not that this call fails.
+    });
+    return schedules;
+  } catch (err) {
+    try {
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached) as AcademicSchedule[];
+    } catch {
+      // Fall through to rethrow the original network error.
+    }
+    throw err;
+  }
 }
