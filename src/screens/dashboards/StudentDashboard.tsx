@@ -254,7 +254,11 @@ function StatItem({
   );
 }
 
-export default function StudentDashboard() {
+interface StudentDashboardProps {
+  footer?: React.ReactNode;
+}
+
+export default function StudentDashboard({ footer }: StudentDashboardProps = {}) {
   const { user, token } = useAuth();
   const { t } = useLocale();
   const navigation = useNavigation();
@@ -571,6 +575,7 @@ export default function StudentDashboard() {
             </View>
           </View>
         ) : null}
+        {footer}
       </Animated.ScrollView>
     </View>
   );
