@@ -25,6 +25,7 @@ export const GLASS_ICON_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.08)' : '#173225
 interface DashboardShellProps {
   title: string;
   children?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 /**
@@ -36,7 +37,7 @@ interface DashboardShellProps {
  * Logout now lives in the Menu tab, not here - tapping the avatar jumps
  * there instead.
  */
-export default function DashboardShell({ title, children }: DashboardShellProps) {
+export default function DashboardShell({ title, children, footer }: DashboardShellProps) {
   const { user } = useAuth();
   const navigation = useNavigation();
   const { t } = useLocale();
@@ -73,6 +74,7 @@ export default function DashboardShell({ title, children }: DashboardShellProps)
 
       <ScrollView contentContainerStyle={styles.content}>
         {children}
+        {footer}
       </ScrollView>
     </View>
   );

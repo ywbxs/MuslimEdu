@@ -282,6 +282,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <PresentationIcon color={c} />,
     },
     {
+      key: 'cashiers',
+      title: t('admin_dashboard.cashiers_title', 'Cashiers'),
+      desc: t('admin_dashboard.cashiers_desc', 'Add and manage cashier accounts'),
+      variant: 'soft',
+      route: 'CashierAccounts',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'classes',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),
@@ -599,7 +607,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       title: t('admin_dashboard.fees_title', 'Fee Reports'),
       desc: t('admin_dashboard.fees_desc', 'View and manage fee collections'),
       variant: 'solid',
-      route: null,
+      route: 'AdminFeeReports',
       icon: (c) => <DocumentIcon color={c} />,
     },
     {

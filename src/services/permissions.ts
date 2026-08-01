@@ -9,19 +9,29 @@ export type Capability =
   | 'manage_enrollment'
   | 'teach'
   | 'submit_student_work'
-  | 'view_own_records';
+  | 'view_own_records'
+  | 'view_fees'
+  | 'record_fee_payments'
+  | 'manage_fees';
 
 const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   superadmin: [
     'view_students', 'manage_students', 'manage_academic_setup',
     'manage_academic_catalog', 'manage_grading', 'manage_enrollment',
+    'view_fees', 'record_fee_payments', 'manage_fees',
   ],
   admin: [
     'view_students', 'manage_students', 'manage_academic_setup',
     'manage_academic_catalog', 'manage_grading', 'manage_enrollment',
+    'view_fees', 'record_fee_payments', 'manage_fees',
   ],
   teacher: ['view_students', 'teach'],
-  accountant: [],
+  // Cashier. Deliberately no 'manage_fees' - deciding what a student owes
+  // (creating a new invoice) is a finance-setup decision reserved for
+  // admin/superadmin, matching admin_fee_create's requireAdmin-only guard
+  // on the backend. 'view_fees'/'record_fee_payments' match
+  // admin_fee_list/admin_fee_record_payment's shared requireAdminOrAccountant guard.
+  accountant: ['view_fees', 'record_fee_payments'],
   librarian: [],
   parent: [],
   student: ['submit_student_work', 'view_own_records'],
