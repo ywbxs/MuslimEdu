@@ -170,7 +170,7 @@ export default function TeacherAttendanceClassesScreen() {
                 style={styles.card}
                 activeOpacity={0.85}
                 onPress={() =>
-                  (navigation as any).navigate('TeacherAttendanceRoster', {
+                  (navigation as any).navigate('AttendanceMethodChooser', {
                     sectionId: item.section_id,
                     subjectId: item.subject_id,
                     classLabel: `${item.class_name ?? ''} - ${item.section_name}`.trim(),

@@ -35,9 +35,13 @@ import ClassListScreen from '../screens/teachers/ClassListScreen';
 import ClassDetailScreen from '../screens/teachers/ClassDetailScreen';
 import CreateClassScreen from '../screens/teachers/CreateClassScreen';
 import TeacherAttendanceClassesScreen from '../screens/teachers/TeacherAttendanceClassesScreen';
+import AttendanceMethodChooserScreen from '../screens/teachers/AttendanceMethodChooserScreen';
 import TeacherAttendanceRosterScreen from '../screens/teachers/TeacherAttendanceRosterScreen';
+import AttendanceScanScreen from '../screens/teachers/AttendanceScanScreen';
 import TeacherAttendanceHistoryScreen from '../screens/teachers/TeacherAttendanceHistoryScreen';
 import AdminAttendanceAnalyticsScreen from '../screens/teachers/AdminAttendanceAnalyticsScreen';
+import StudentIdCardScreen from '../screens/student/StudentIdCardScreen';
+import StudentIdCardsScreen from '../screens/admin/StudentIdCardsScreen';
 import TeacherGradebookClassesScreen from '../screens/teachers/TeacherGradebookClassesScreen';
 import TeacherGradebookRosterScreen from '../screens/teachers/TeacherGradebookRosterScreen';
 import AdminGradebookReviewScreen from '../screens/teachers/AdminGradebookReviewScreen';
@@ -435,8 +439,18 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
+                name="AttendanceMethodChooser"
+                component={AttendanceMethodChooserScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
                 name="TeacherAttendanceRoster"
                 component={TeacherAttendanceRosterScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="AttendanceScan"
+                component={AttendanceScanScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
@@ -620,6 +634,8 @@ export default function RootNavigator() {
       <Stack.Screen name="CashierAccounts" component={CashierAccountsScreen} />
       <Stack.Screen name="CashierProfile" component={CashierProfileScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
+      <Stack.Screen name="StudentIdCard" component={StudentIdCardScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="StudentIdCards" component={StudentIdCardsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       </Stack.Navigator>

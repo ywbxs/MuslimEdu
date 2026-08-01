@@ -517,6 +517,14 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               onPress={() => (navigation as any).navigate('StudentSchedule')}
             />
           )}
+          {!isOrphan && (
+            <QuickActionCard
+              icon={<IdCardIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.my_id_card_title', 'My ID Card')}
+              description={t('student_dashboard.my_id_card_desc', 'View and export your QR ID card')}
+              onPress={() => (navigation as any).navigate('StudentIdCard')}
+            />
+          )}
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('student_dashboard.notifications_title', 'Notifications')}

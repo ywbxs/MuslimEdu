@@ -6,6 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
@@ -19,7 +21,7 @@ import {
   ATTENDANCE_STATUSES,
 } from '../../services/teacherAttendanceService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
-import UserAvatar from '../../components/UserAvatar';
+import SwipeableAttendanceCard, { SwipeDirection } from '../../components/SwipeableAttendanceCard';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
@@ -103,34 +105,77 @@ function StudentRowSkeleton() {
   );
 }
 
-// Compact 5-way status control (P / L / A / E / Lv). Tapping a letter sets
-// that student's status for the date/section/subject in view; nothing hits
-// the network until "Save Attendance" is pressed, so a teacher can correct
-// mistakes freely while going down the roster.
-function StatusPicker({
-  value,
-  onChange,
+// right=Present, left=Absent, up=Excused, down=Late - the 4 quick swipe
+// directions on SwipeableAttendanceCard. Leave (and remarks) don't get a
+// swipe direction; they're set from the detail sheet opened by tapping a
+// card instead - see StudentDetailSheet below.
+const SWIPE_TO_STATUS: Record<SwipeDirection, AttendanceStatus> = {
+  right: 'present',
+  left: 'absent',
+  up: 'excused',
+  down: 'late',
+};
+
+// Opened by tapping (not swiping) a card - lets a teacher pick any of the 5
+// statuses explicitly (covers Leave, which has no swipe direction) and add
+// a remark, without needing a 5th/6th gesture.
+function StudentDetailSheet({
+  visible,
+  studentName,
+  status,
+  remarks,
+  onChangeStatus,
+  onChangeRemarks,
+  onClose,
 }: {
-  value: AttendanceStatus | null;
-  onChange: (status: AttendanceStatus) => void;
+  visible: boolean;
+  studentName: string;
+  status: AttendanceStatus | null;
+  remarks: string;
+  onChangeStatus: (status: AttendanceStatus) => void;
+  onChangeRemarks: (text: string) => void;
+  onClose: () => void;
 }) {
+  const { t } = useLocale();
   return (
-    <View style={styles.statusRow}>
-      {ATTENDANCE_STATUSES.map((status) => {
-        const meta = STATUS_META[status];
-        const active = value === status;
-        return (
-          <TouchableOpacity
-            key={status}
-            style={[styles.statusChip, active ? { backgroundColor: meta.color } : { backgroundColor: meta.soft }]}
-            activeOpacity={0.8}
-            onPress={() => onChange(status)}
-          >
-            <Text style={[styles.statusChipText, { color: active ? '#FFFFFF' : meta.color }]}>{meta.short}</Text>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
+        <View style={styles.sheet}>
+          <Text style={styles.sheetTitle} numberOfLines={1}>{studentName}</Text>
+          <View style={styles.sheetStatusRow}>
+            {ATTENDANCE_STATUSES.map((s) => {
+              const meta = STATUS_META[s];
+              const active = status === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sheetStatusChip, { backgroundColor: active ? meta.color : meta.soft }]}
+                  activeOpacity={0.8}
+                  onPress={() => onChangeStatus(s)}
+                >
+                  <Text style={[styles.sheetStatusChipText, { color: active ? '#FFFFFF' : meta.color }]}>
+                    {t(`teacher_attendance_roster.status_${s}`, meta.label)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.sheetLabel}>{t('teacher_attendance_roster.remarks_label', 'Remarks (optional)')}</Text>
+          <TextInput
+            style={styles.sheetInput}
+            value={remarks}
+            onChangeText={onChangeRemarks}
+            placeholder={t('teacher_attendance_roster.remarks_placeholder', 'e.g. reason for excuse')}
+            placeholderTextColor={SUBTLE}
+            multiline
+          />
+          <TouchableOpacity style={styles.sheetDoneBtn} onPress={onClose} activeOpacity={0.85}>
+            <Text style={styles.sheetDoneText}>{t('common.done', 'Done')}</Text>
           </TouchableOpacity>
-        );
-      })}
-    </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -146,6 +191,8 @@ export default function TeacherAttendanceRosterScreen() {
   const [date, setDate] = useState<string>(initialDate ?? toISO(new Date()));
   const [students, setStudents] = useState<RosterStudent[]>([]);
   const [statuses, setStatuses] = useState<Record<number, AttendanceStatus>>({});
+  const [remarksMap, setRemarksMap] = useState<Record<number, string>>({});
+  const [detailStudentId, setDetailStudentId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,10 +209,13 @@ export default function TeacherAttendanceRosterScreen() {
       const data = await fetchAttendanceRoster(token, sectionId, subjectId, date);
       setStudents(data.students);
       const initial: Record<number, AttendanceStatus> = {};
+      const initialRemarks: Record<number, string> = {};
       data.students.forEach((s) => {
         if (s.status) initial[s.student_id] = s.status;
+        if (s.remarks) initialRemarks[s.student_id] = s.remarks;
       });
       setStatuses(initial);
+      setRemarksMap(initialRemarks);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.load_error', 'Could not load the roster.'));
     } finally {
@@ -219,6 +269,7 @@ export default function TeacherAttendanceRosterScreen() {
       const records = students.map((s) => ({
         student_id: s.student_id,
         status: statuses[s.student_id],
+        remarks: remarksMap[s.student_id] || undefined,
       }));
       const result = await submitAttendance(token, sectionId, subjectId, date, records);
       setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
@@ -274,6 +325,17 @@ export default function TeacherAttendanceRosterScreen() {
         </View>
       ) : null}
 
+      {!isLoading && students.length > 0 ? (
+        <View style={styles.legendBar}>
+          <Text style={styles.legendText}>
+            {t(
+              'teacher_attendance_roster.swipe_legend',
+              'Swipe right: Present  ·  left: Absent  ·  up: Excused  ·  down: Late  ·  tap for Leave/remarks',
+            )}
+          </Text>
+        </View>
+      ) : null}
+
       {isLoading ? (
         <View style={styles.listContent}>
           <StudentRowSkeleton />
@@ -322,16 +384,23 @@ export default function TeacherAttendanceRosterScreen() {
               ) : null}
             </>
           }
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <UserAvatar name={item.student_name} photo={item.photo} size={40} dotColor={null} />
-              <Text style={styles.rowName} numberOfLines={1}>{item.student_name}</Text>
-              <StatusPicker
-                value={statuses[item.student_id] ?? null}
-                onChange={(status) => setStatuses((prev) => ({ ...prev, [item.student_id]: status }))}
+          renderItem={({ item }) => {
+            const currentStatus = statuses[item.student_id] ?? null;
+            const meta = currentStatus ? STATUS_META[currentStatus] : null;
+            return (
+              <SwipeableAttendanceCard
+                name={item.student_name}
+                photo={item.photo}
+                statusLabel={currentStatus ? statusLabel(currentStatus) : null}
+                statusColor={meta?.color}
+                statusSoft={meta?.soft}
+                onSwipe={(direction) =>
+                  setStatuses((prev) => ({ ...prev, [item.student_id]: SWIPE_TO_STATUS[direction] }))
+                }
+                onPress={() => setDetailStudentId(item.student_id)}
               />
-            </View>
-          )}
+            );
+          }}
         />
       )}
 
@@ -346,6 +415,22 @@ export default function TeacherAttendanceRosterScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
+
+      <StudentDetailSheet
+        visible={detailStudentId !== null}
+        studentName={students.find((s) => s.student_id === detailStudentId)?.student_name ?? ''}
+        status={detailStudentId !== null ? statuses[detailStudentId] ?? null : null}
+        remarks={detailStudentId !== null ? remarksMap[detailStudentId] ?? '' : ''}
+        onChangeStatus={(status) => {
+          if (detailStudentId === null) return;
+          setStatuses((prev) => ({ ...prev, [detailStudentId]: status }));
+        }}
+        onChangeRemarks={(text) => {
+          if (detailStudentId === null) return;
+          setRemarksMap((prev) => ({ ...prev, [detailStudentId]: text }));
+        }}
+        onClose={() => setDetailStudentId(null)}
+      />
     </View>
   );
 }
@@ -393,6 +478,9 @@ const styles = StyleSheet.create({
   quickBarBtn: { paddingVertical: 4 },
   quickBarBtnText: { fontSize: 12, fontWeight: '700' },
 
+  legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
+  legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
+
   listContent: { padding: 16, paddingBottom: 100 },
   progressText: { fontSize: 12.5, color: SUBTLE, marginBottom: 10, fontWeight: '600' },
   row: {
@@ -404,16 +492,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   ...SHADOW.level1,
   },
-  rowName: { flex: 1, fontSize: 13.5, fontWeight: '700', color: INK, marginLeft: 10, marginRight: 6 },
-  statusRow: { flexDirection: 'row', gap: 6 },
-  statusChip: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  flex1: { flex: 1 },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 32,
   },
-  statusChipText: { fontSize: 11.5, fontWeight: '800' },
+  sheetTitle: { fontSize: 17, fontWeight: '700', color: INK, marginBottom: 16, textAlign: 'center' },
+  sheetStatusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  sheetStatusChip: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
+  sheetStatusChipText: { fontSize: 13.5, fontWeight: '700' },
+  sheetLabel: { fontSize: 12.5, fontWeight: '700', color: SUBTLE, marginBottom: 8, textTransform: 'uppercase' },
+  sheetInput: {
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: INK,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  sheetDoneBtn: { backgroundColor: EMERALD, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  sheetDoneText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 
   emptyWrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: INK, marginBottom: 8 },
