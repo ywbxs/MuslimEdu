@@ -103,6 +103,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   // above, so it follows the same orphan-hidden scope.
   'StudentIdCards',
   'StudentIdCard',
+  'IdCardTemplate',
   // Grading / gradebook / exams
   'GradingSystems',
   'GradingSystemForm',

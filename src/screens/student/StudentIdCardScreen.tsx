@@ -6,6 +6,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchMySchedule } from '../../services/academicScheduleService';
+import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import { saveLocalFileToDevice } from '../../utils/downloadFile';
 import StudentIdCard, { CARD_THEMES, CardTheme } from '../../components/StudentIdCard';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -44,6 +45,8 @@ export default function StudentIdCardScreen() {
 
   const [theme, setTheme] = useState<CardTheme>(CARD_THEMES[0]);
   const [sectionName, setSectionName] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolBackground, setSchoolBackground] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -53,6 +56,14 @@ export default function StudentIdCardScreen() {
       .catch(() => {
         // Best-effort enrichment only - the card still works with just
         // name/photo/code if this fails or the student has no schedule yet.
+      });
+    fetchMySchoolBranding(token)
+      .then((branding) => {
+        setSchoolName(branding.name);
+        setSchoolBackground(branding.id_card_background);
+      })
+      .catch(() => {
+        // Best-effort - falls back to the default gradient theme below.
       });
   }, [token]);
 
@@ -98,22 +109,28 @@ export default function StudentIdCardScreen() {
               photo: user.photo ?? null,
               code: user.code ?? String(user.id),
               sectionName,
+              schoolName,
             }}
             theme={theme}
+            backgroundImageUrl={schoolBackground}
           />
         </View>
 
-        <Text style={styles.themeLabel}>{t('student_id_card.theme_label', 'Background')}</Text>
-        <View style={styles.themeRow}>
-          {CARD_THEMES.map((th) => (
-            <TouchableOpacity
-              key={th.key}
-              style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}
-              onPress={() => setTheme(th)}
-              activeOpacity={0.85}
-            />
-          ))}
-        </View>
+        {schoolBackground ? null : (
+          <>
+            <Text style={styles.themeLabel}>{t('student_id_card.theme_label', 'Background')}</Text>
+            <View style={styles.themeRow}>
+              {CARD_THEMES.map((th) => (
+                <TouchableOpacity
+                  key={th.key}
+                  style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}
+                  onPress={() => setTheme(th)}
+                  activeOpacity={0.85}
+                />
+              ))}
+            </View>
+          </>
+        )}
 
         <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.85} disabled={isExporting}>
           {isExporting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.exportBtnText}>{t('student_id_card.export', 'Save to Device')}</Text>}
