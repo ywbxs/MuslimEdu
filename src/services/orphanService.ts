@@ -89,13 +89,34 @@ export async function fetchReportStatus(token: string): Promise<ReportStatus> {
  */
 export async function submitReport(
   token: string,
-  fields: { note: string; academic_rating: number; wellbeing_rating: number },
+  fields: {
+    note: string;
+    academic_rating: number;
+    wellbeing_rating: number;
+    /**
+     * Optional target month as "YYYY-MM-01". Lets a child make up a past
+     * "Missing" month from the submission history, not just the current
+     * one - mirrors submitTeacherReport's report_month in
+     * teacherOrphanService.ts. Omit to submit for the current month
+     * (previous default behavior, unchanged).
+     * REQUIRES BACKEND SUPPORT: as of the last backend export I read,
+     * ApiController::orphan_report_submit hardcodes the current month and
+     * never reads this field - a patch mirroring teacher_report_submit's
+     * handling has been prepared separately (not yet deployed as far as I
+     * know). Until it ships, submissions land on whatever month the server
+     * defaults to (currently: the current month), regardless of this value.
+     */
+    report_month?: string;
+  },
   photos: PickedPhoto[] = [],
 ): Promise<{ message: string; report: MonthlyReport }> {
   const form = new FormData();
   form.append('note', fields.note);
   form.append('academic_rating', String(fields.academic_rating));
   form.append('wellbeing_rating', String(fields.wellbeing_rating));
+  if (fields.report_month) {
+    form.append('report_month', fields.report_month);
+  }
 
   photos.forEach((photo, index) => {
     // @ts-ignore - React Native's FormData accepts this shape for file uploads
