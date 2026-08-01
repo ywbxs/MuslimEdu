@@ -76,7 +76,20 @@ function formatDate(value: string | null | undefined) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function EnrollmentStatusScreen() {
+interface EnrollmentStatusScreenProps {
+  /**
+   * Called with a freshly-fetched status whenever this screen loads one
+   * successfully. MainTabs' enrollment gate passes its own applyStatus here
+   * when it renders this screen in place of the tab bar, so a retry from
+   * this screen (or its own initial load, if the gate's check failed first)
+   * can unlock the gate too - without this, the gate's verdict would only
+   * ever come from its own independent fetch and could get stuck showing
+   * this screen even after enrollment is genuinely completed.
+   */
+  onStatusLoaded?: (status: StudentEnrollmentWorkflowStatus) => void;
+}
+
+export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentStatusScreenProps = {}) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
@@ -93,12 +106,13 @@ export default function EnrollmentStatusScreen() {
     try {
       const result = await fetchStudentEnrollmentWorkflowStatus(token);
       setData(result);
+      onStatusLoaded?.(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('enrollment_status.load_error', 'Could not load your enrollment status.'));
     } finally {
       setIsLoading(false);
     }
-  }, [token, t]);
+  }, [token, t, onStatusLoaded]);
 
   useEffect(() => {
     load();

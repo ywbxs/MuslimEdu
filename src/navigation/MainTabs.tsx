@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
@@ -15,7 +15,10 @@ import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScre
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
-import { fetchStudentEnrollmentWorkflowStatus } from '../services/enrollmentWorkflowService';
+import {
+  fetchStudentEnrollmentWorkflowStatus,
+  StudentEnrollmentWorkflowStatus,
+} from '../services/enrollmentWorkflowService';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 import { COLORS, BRAND } from '../theme/glass';
 
@@ -181,13 +184,45 @@ function ReportsRouter() {
   return <ChildReportWizardScreen />;
 }
 
+// A student with no workflow record at all (`started === false`) is not yet
+// in the tracked pipeline - e.g. enrolled before this feature existed, or
+// the admin hasn't started their workflow yet. Only an actually-started,
+// not-yet-completed record should gate them; "never started" must stay
+// open, not be treated as "incomplete".
+function isEnrollmentCompleted(status: StudentEnrollmentWorkflowStatus): boolean {
+  return !status.started || status.record?.status === 'completed';
+}
+
 // A logged-in student whose enrollment workflow isn't `completed` yet must
 // see EnrollmentStatusScreen instead of the rest of the app - reuses the
 // existing student-facing status fetch/screen as-is, no new backend or UI.
 // Orphan-school students have no enrollment pipeline (confirmed elsewhere in
 // this codebase, e.g. ReportsRouter above) and are never gated.
-function useEnrollmentGate(userId: number | null, token: string | null): boolean | null {
+//
+// Returns [completed, applyStatus] - `applyStatus` lets EnrollmentStatusScreen
+// feed its own (independent) fetch result back into this gate. Without it, a
+// student stuck here after a failed initial check (see the fail-closed catch
+// below) would stay stuck forever: tapping "Try again" only re-runs the
+// screen's own fetch, never this hook's, so the gate's verdict would never
+// update even after enrollment is genuinely completed.
+function useEnrollmentGate(
+  userId: number | null,
+  token: string | null,
+): [boolean | null, (status: StudentEnrollmentWorkflowStatus) => void] {
   const [completed, setCompleted] = useState<boolean | null>(null);
+
+  const applyStatus = useCallback(
+    (status: StudentEnrollmentWorkflowStatus) => {
+      if (!userId) return;
+      const isCompleted = isEnrollmentCompleted(status);
+      setCompleted(isCompleted);
+      AsyncStorage.setItem(`${ENROLLMENT_GATE_CACHE_KEY}:${userId}`, isCompleted ? '1' : '0').catch(() => {
+        // Best-effort cache write - a failed write just means the next cold
+        // start re-checks live instead of trusting a stale cache, not a bug.
+      });
+    },
+    [userId],
+  );
 
   useEffect(() => {
     if (!userId || !token) {
@@ -215,42 +250,44 @@ function useEnrollmentGate(userId: number | null, token: string | null): boolean
 
       try {
         const status = await fetchStudentEnrollmentWorkflowStatus(token);
-        // A student with no workflow record at all (`started === false`) is
-        // not yet in the tracked pipeline - e.g. enrolled before this feature
-        // existed, or the admin hasn't started their workflow yet. Only an
-        // actually-started, not-yet-completed record should gate them;
-        // "never started" must stay open, not be treated as "incomplete".
-        const isCompleted = !status.started || status.record?.status === 'completed';
-        if (!cancelled) setCompleted(isCompleted);
-        await AsyncStorage.setItem(cacheKey, isCompleted ? '1' : '0');
+        if (!cancelled) applyStatus(status);
       } catch {
-        // Fetch failed (offline, etc). Keep the cached verdict if there was
-        // one; otherwise fail open rather than locking a student out with
-        // no data to show them.
-        if (!cancelled && !hasCachedVerdict) setCompleted(true);
+        // Fetch failed (offline, a backend error, etc). Keep the cached
+        // verdict if there was one. With no cache to fall back on, fail
+        // CLOSED (stay gated) rather than open - failing open here meant any
+        // transient error (or a broken backend endpoint) silently unlocked
+        // the whole app past an incomplete enrollment, which is exactly the
+        // gate this hook exists to enforce. EnrollmentStatusScreen already
+        // has its own error banner + "Try again" retry, and its result now
+        // feeds back into this gate via applyStatus, so staying gated on a
+        // failed fetch doesn't strand the student without a way forward.
+        if (!cancelled && !hasCachedVerdict) setCompleted(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId, token]);
+  }, [userId, token, applyStatus]);
 
-  return completed;
+  return [completed, applyStatus];
 }
 
 export default function MainTabs() {
   const { user, token } = useAuth();
   const isGatedStudent = !!user && user.role === 'student' && !isOrphanSchoolUser(user);
-  const gateCompleted = useEnrollmentGate(isGatedStudent ? user!.id : null, token);
+  const [gateCompleted, applyGateStatus] = useEnrollmentGate(isGatedStudent ? user!.id : null, token);
 
   if (!user) return null;
 
   if (isGatedStudent && gateCompleted !== true) {
     // gateCompleted === false (workflow not completed) or null (still
     // determining) both show the status screen rather than flashing tabs -
-    // it already renders its own loading skeleton while null.
-    return <EnrollmentStatusScreen />;
+    // it already renders its own loading skeleton while null. Passing
+    // applyGateStatus lets the screen's own fetch (e.g. on "Try again",
+    // or its initial load if the gate's own check failed) unlock the gate
+    // too, instead of the two staying out of sync.
+    return <EnrollmentStatusScreen onStatusLoaded={applyGateStatus} />;
   }
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
