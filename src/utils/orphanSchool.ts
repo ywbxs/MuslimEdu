@@ -131,6 +131,16 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'EnrollmentWorkflowList',
   'EnrollmentWorkflowDetail',
   'EnrollmentStatus',
+  // Student numbering/ID/lifecycle - built around campus/department/academic
+  // year codes and class-to-class transfers, none of which exist for an
+  // orphan school. Orphan admission already uses a completely different,
+  // separate code scheme (a locked school_code prefix + admin-typed suffix,
+  // set up via SchoolCodeSetupScreen and applied in AdmissionScreen), so
+  // these config screens don't describe how orphan child codes are actually
+  // built and would only mislead the admin.
+  'StudentNumberConfig',
+  'StudentIdConfig',
+  'StudentLifecycle',
 ]);
 
 /** Admin dashboard tile keys that map onto the academic subsystem above. */
@@ -143,5 +153,5 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'academicAnalytics', 'completionHub', 'graduation', 'promotionPolicy',
   'documentTemplates', 'gradeRelease', 'orgStructure', 'behaviorIncidents',
   'examinations', 'studentProgress', 'analyticsExtended', 'attendance',
-  'enrollment',
+  'enrollment', 'studentNumbers', 'studentIdRules', 'studentLifecycle',
 ]);
