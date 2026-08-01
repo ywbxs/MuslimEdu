@@ -346,7 +346,7 @@ export default function TeacherOrphanReportScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!token || !teachingEffectiveness || !classroomEngagement || !professionalGrowth) return;
+    if (!token || !teachingEffectiveness || !classroomEngagement || !professionalGrowth || photos.length === 0) return;
     const [y, m] = (wizardMonth?.key ?? '').split('-').map(Number);
     const reportMonthParam = y && m ? `${y}-${String(m).padStart(2, '0')}-01` : undefined;
     const fields = {
@@ -471,9 +471,11 @@ export default function TeacherOrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('teacher_orphan_report.step_photos_title', 'Add Photos'),
-        subtitle: t('teacher_orphan_report.step_photos_subtitle', 'Optional — add photos of your teaching activities, achievements, or classroom moments.'),
-        content: <PhotoPicker photos={photos} onChange={setPhotos} />,
-        isValid: true,
+        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments.'),
+        content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
+        // Photos are required to submit - the wizard's Submit button
+        // stays disabled until at least one is attached.
+        isValid: photos.length > 0,
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
