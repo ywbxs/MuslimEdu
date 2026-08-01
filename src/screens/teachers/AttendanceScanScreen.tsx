@@ -5,7 +5,15 @@ import { Camera, useCameraDevice, useCameraPermission, useCodeScanner, Code } fr
 import Svg, { Polyline, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { scanAttendance } from '../../services/teacherAttendanceService';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
+import {
+  scanAttendance,
+  fetchAttendanceRoster,
+  applyRecordsToCachedRoster,
+  RosterStudent,
+} from '../../services/teacherAttendanceService';
+import { enqueueAttendanceScan } from '../../services/offlineQueue';
+import { parseStudentIdQrPayload } from '../../services/studentIdCardService';
 import UserAvatar from '../../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW, SPACING } from '../../theme/glass';
@@ -73,6 +81,7 @@ export default function AttendanceScanScreen() {
   const { sectionId, subjectId, classLabel, subjectLabel, date } = route.params ?? {};
   const { token } = useAuth();
   const { t } = useLocale();
+  const { isOnline } = useOfflineQueue();
 
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
@@ -81,10 +90,27 @@ export default function AttendanceScanScreen() {
   const [banner, setBanner] = useState<{ text: string; isError: boolean } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const lastScans = useRef<Map<string, number>>(new Map());
+  // Kept in memory (and cached on disk by fetchAttendanceRoster itself) so a
+  // scanned code can be resolved to a student locally while offline, the
+  // same way teacher_attendance_scan resolves it server-side.
+  const rosterRef = useRef<RosterStudent[]>([]);
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
   }, [hasPermission, requestPermission]);
+
+  useEffect(() => {
+    if (!token || !sectionId) return;
+    fetchAttendanceRoster(token, sectionId, subjectId, date)
+      .then((roster) => {
+        rosterRef.current = roster.students;
+      })
+      .catch(() => {
+        // Best-effort warm-up only - if this fails (e.g. first-ever load
+        // with no connection and nothing cached yet), offline scanning just
+        // won't be able to resolve a code until a roster load succeeds once.
+      });
+  }, [token, sectionId, subjectId, date]);
 
   const handleCode = useCallback(
     async (raw: string) => {
@@ -96,6 +122,29 @@ export default function AttendanceScanScreen() {
       if (!token || !sectionId || isProcessing) return;
       setIsProcessing(true);
       try {
+        if (!isOnline) {
+          const code = parseStudentIdQrPayload(raw);
+          const student = rosterRef.current.find((s) => s.code === code);
+          if (!student) {
+            setBanner({ text: t('attendance_scan.offline_no_match', 'No matching student in the cached roster.'), isError: true });
+            return;
+          }
+          const checkInTime = new Date().toTimeString().slice(0, 5);
+          enqueueAttendanceScan(token, sectionId, subjectId, date, raw);
+          applyRecordsToCachedRoster(token, sectionId, subjectId, date, [
+            { student_id: student.student_id, status: 'present', check_in_time: checkInTime },
+          ]).catch(() => {});
+          setScanned((prev) => {
+            const withoutDup = prev.filter((p) => p.student_id !== student.student_id);
+            return [
+              { student_id: student.student_id, student_name: student.student_name, photo: student.photo, check_in_time: checkInTime },
+              ...withoutDup,
+            ];
+          });
+          setBanner({ text: t('attendance_scan.offline_checked_in', 'Checked in offline - will sync automatically.'), isError: false });
+          return;
+        }
+
         const result = await scanAttendance(token, sectionId, subjectId, date, raw);
         setScanned((prev) => {
           const withoutDup = prev.filter((p) => p.student_id !== result.student.student_id);
@@ -117,7 +166,7 @@ export default function AttendanceScanScreen() {
         setTimeout(() => setBanner(null), 2500);
       }
     },
-    [token, sectionId, subjectId, date, isProcessing, t],
+    [token, sectionId, subjectId, date, isProcessing, isOnline, t],
   );
 
   const codeScanner = useCodeScanner({

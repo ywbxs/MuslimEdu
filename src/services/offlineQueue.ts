@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoSubscription } from '@react-native-community/netinfo';
 import { PickedPhoto } from './orphanService';
+import type { AttendanceRecordInput } from './teacherAttendanceService';
 
 /**
  * Generic offline outbox: the first version of M6's "offline sync" item.
@@ -23,7 +24,11 @@ const MAX_ATTEMPTS = 8;
 const BASE_BACKOFF_MS = 15_000;
 const MAX_BACKOFF_MS = 30 * 60 * 1000;
 
-export type QueuedActionKind = 'orphan_report_submit' | 'teacher_orphan_report_submit';
+export type QueuedActionKind =
+  | 'orphan_report_submit'
+  | 'teacher_orphan_report_submit'
+  | 'attendance_submit'
+  | 'attendance_scan';
 
 interface OrphanReportSubmitPayload {
   fields: { note: string; academic_rating: number; wellbeing_rating: number; report_month?: string };
@@ -41,7 +46,25 @@ interface TeacherOrphanReportSubmitPayload {
   photos: PickedPhoto[];
 }
 
-type QueuedActionPayload = OrphanReportSubmitPayload | TeacherOrphanReportSubmitPayload;
+interface AttendanceSubmitPayload {
+  sectionId: number;
+  subjectId: number;
+  date: string;
+  records: AttendanceRecordInput[];
+}
+
+interface AttendanceScanPayload {
+  sectionId: number;
+  subjectId: number;
+  date: string;
+  code: string;
+}
+
+type QueuedActionPayload =
+  | OrphanReportSubmitPayload
+  | TeacherOrphanReportSubmitPayload
+  | AttendanceSubmitPayload
+  | AttendanceScanPayload;
 
 export interface QueuedAction {
   id: string;
@@ -122,6 +145,18 @@ async function runAction(action: QueuedAction): Promise<void> {
     const { submitTeacherReport } = await import('./teacherOrphanService');
     const payload = action.payload as TeacherOrphanReportSubmitPayload;
     await submitTeacherReport(action.token, payload.fields, payload.photos);
+    return;
+  }
+  if (action.kind === 'attendance_submit') {
+    const { submitAttendance } = await import('./teacherAttendanceService');
+    const payload = action.payload as AttendanceSubmitPayload;
+    await submitAttendance(action.token, payload.sectionId, payload.subjectId, payload.date, payload.records);
+    return;
+  }
+  if (action.kind === 'attendance_scan') {
+    const { scanAttendance } = await import('./teacherAttendanceService');
+    const payload = action.payload as AttendanceScanPayload;
+    await scanAttendance(action.token, payload.sectionId, payload.subjectId, payload.date, payload.code);
     return;
   }
   throw new Error(`No offline queue executor registered for "${action.kind}".`);
@@ -213,6 +248,26 @@ export function enqueueTeacherOrphanReportSubmit(
   photos: PickedPhoto[],
 ): QueuedAction {
   return enqueue('teacher_orphan_report_submit', token, { fields, photos });
+}
+
+export function enqueueAttendanceSubmit(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+  records: AttendanceRecordInput[],
+): QueuedAction {
+  return enqueue('attendance_submit', token, { sectionId, subjectId, date, records });
+}
+
+export function enqueueAttendanceScan(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+  code: string,
+): QueuedAction {
+  return enqueue('attendance_scan', token, { sectionId, subjectId, date, code });
 }
 
 export function getPendingCount(): number {

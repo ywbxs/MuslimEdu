@@ -1,6 +1,17 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, absoluteUrl } from '../config/api';
 import { OrphanProfile } from './authService';
 import { PickedPhoto } from './orphanService';
+
+// Per-account cache of the last successfully fetched full student list (no
+// search term only - see fetchStudents below), so the admin's bulk ID-cards
+// browser still works offline with the last-known roster - same
+// cache-then-network pattern as academicScheduleService.ts's fetchMySchedule.
+const STUDENTS_CACHE_PREFIX = '@students_cache_v1';
+
+function studentsCacheKey(token: string): string {
+  return `${STUDENTS_CACHE_PREFIX}:${token.slice(-12)}`;
+}
 
 // Matches the dot/chip states StudentListScreen renders per child. The
 // backend field this reads from isn't confirmed yet (see normalizeStudent
@@ -154,18 +165,41 @@ async function authedPost(path: string, token: string, body: FormData | Record<s
  * Photos are absolutized here so the list avatars actually load.
  */
 export async function fetchStudents(token: string, search: string = ''): Promise<StudentSummary[]> {
-  const data = await authedPost('/admin_children_list', token, { search });
-  const children: any[] = data.children ?? [];
-  return children.map((c) => ({
-    ...c,
-    photo: absoluteUrl(c.photo),
-    // The list endpoint's exact status field isn't pinned down yet, so this
-    // reads a couple of plausible keys and otherwise defaults to 'active'
-    // (every child not explicitly flagged pending/inactive shows as active,
-    // rather than the status chip rendering blank/undefined).
-    status: (c.status ?? c.admission_status ?? 'active') as ChildStatus,
-    joined_date: c.joined_date ?? c.admission_date ?? c.created_at ?? null,
-  }));
+  // Only the full (no-search) list is cached for offline fallback - it's
+  // the one the admin's bulk ID-cards browser depends on; a filtered search
+  // needs live results and simply throws like before if offline.
+  const cacheKey = !search ? studentsCacheKey(token) : null;
+  try {
+    const data = await authedPost('/admin_children_list', token, { search });
+    const children: any[] = data.children ?? [];
+    const students: StudentSummary[] = children.map((c) => ({
+      ...c,
+      photo: absoluteUrl(c.photo),
+      // The list endpoint's exact status field isn't pinned down yet, so this
+      // reads a couple of plausible keys and otherwise defaults to 'active'
+      // (every child not explicitly flagged pending/inactive shows as active,
+      // rather than the status chip rendering blank/undefined).
+      status: (c.status ?? c.admission_status ?? 'active') as ChildStatus,
+      joined_date: c.joined_date ?? c.admission_date ?? c.created_at ?? null,
+    }));
+    if (cacheKey) {
+      AsyncStorage.setItem(cacheKey, JSON.stringify(students)).catch(() => {
+        // Best-effort cache write - losing it just means a future offline
+        // load falls back further (or throws), not that this call fails.
+      });
+    }
+    return students;
+  } catch (err) {
+    if (cacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) return JSON.parse(cached) as StudentSummary[];
+      } catch {
+        // Fall through to rethrow the original network error.
+      }
+    }
+    throw err;
+  }
 }
 
 export interface OrphanProfileFull extends OrphanProfile {}

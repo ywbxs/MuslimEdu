@@ -607,6 +607,8 @@ export default function RootNavigator() {
       <Stack.Screen name="AcademicGraduation" component={AcademicGraduationScreen} />
       <Stack.Screen name="AcademicPolicy" component={AcademicPolicyScreen} />
       <Stack.Screen name="AdminSchedule" component={AdminClassScheduleScreen} />
+      <Stack.Screen name="AcademicSchedule" component={AdminClassScheduleScreen} />
+      <Stack.Screen name="AcademicFacilities" component={AcademicFacilitiesScreen} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />

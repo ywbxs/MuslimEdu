@@ -13,13 +13,16 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
 import {
   fetchAttendanceRoster,
   submitAttendance,
+  applyRecordsToCachedRoster,
   RosterStudent,
   AttendanceStatus,
   ATTENDANCE_STATUSES,
 } from '../../services/teacherAttendanceService';
+import { enqueueAttendanceSubmit } from '../../services/offlineQueue';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import SwipeableAttendanceCard, { SwipeDirection } from '../../components/SwipeableAttendanceCard';
 
@@ -186,6 +189,7 @@ export default function TeacherAttendanceRosterScreen() {
   const { sectionId, subjectId, classLabel, subjectLabel, date: initialDate } = route.params ?? {};
   const { token } = useAuth();
   const { t } = useLocale();
+  const { isOnline } = useOfflineQueue();
   const statusLabel = (status: AttendanceStatus) => t(`teacher_attendance_roster.status_${status}`, STATUS_META[status].label);
 
   const [date, setDate] = useState<string>(initialDate ?? toISO(new Date()));
@@ -271,8 +275,18 @@ export default function TeacherAttendanceRosterScreen() {
         status: statuses[s.student_id],
         remarks: remarksMap[s.student_id] || undefined,
       }));
-      const result = await submitAttendance(token, sectionId, subjectId, date, records);
-      setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
+      if (!isOnline) {
+        // Queue the batch instead of sending it - offlineQueue auto-flushes
+        // it through this same submitAttendance() the moment connectivity
+        // returns. Update the cached roster now so reopening this screen
+        // before that happens still shows what was just "saved."
+        enqueueAttendanceSubmit(token, sectionId, subjectId, date, records);
+        await applyRecordsToCachedRoster(token, sectionId, subjectId, date, records);
+        setSaveMessage(t('teacher_attendance_roster.saved_offline', 'Saved offline - will sync automatically once you’re back online.'));
+      } else {
+        const result = await submitAttendance(token, sectionId, subjectId, date, records);
+        setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.save_error', 'Could not save attendance.'));
     } finally {
