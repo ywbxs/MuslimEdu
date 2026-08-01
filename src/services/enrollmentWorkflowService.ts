@@ -1,4 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+
+// Per-account cache of the last successfully fetched enrollment status, so a
+// student stuck mid-workflow (not yet `completed`, so MainTabs' gate can't
+// rely on the "already completed" fast path) still sees their real progress
+// offline instead of just an error - see fetchStudentEnrollmentWorkflowStatus.
+const ENROLLMENT_STATUS_CACHE_PREFIX = '@student_enrollment_status_cache_v1';
+
+function enrollmentStatusCacheKey(token: string): string {
+  return `${ENROLLMENT_STATUS_CACHE_PREFIX}:${token.slice(-12)}`;
+}
 
 /**
  * Types + API wrappers for spec §4.16 "Enrollment Workflow Management".
@@ -276,12 +287,34 @@ export interface StudentEnrollmentWorkflowStatus {
   school?: StudentEnrollmentWorkflowSchoolInfo;
 }
 
+/**
+ * Cache-then-network, same reasoning as academicScheduleService's
+ * fetchMySchedule: a successful fetch refreshes the on-disk cache, a failed
+ * one (offline, timeout) falls back to it instead of throwing, so a student
+ * mid-enrollment-workflow still sees their real progress while offline.
+ * Only throws if there's truly nothing cached yet.
+ */
 export async function fetchStudentEnrollmentWorkflowStatus(
   token: string
 ): Promise<StudentEnrollmentWorkflowStatus> {
-  const data = await authedPost<StudentEnrollmentWorkflowStatus>('/student_enrollment_workflow_status', token, {});
-  return {
-    ...data,
-    school: data.school ? { ...data.school, logo: absoluteUrl(data.school.logo) } : undefined,
-  };
+  const cacheKey = enrollmentStatusCacheKey(token);
+  try {
+    const data = await authedPost<StudentEnrollmentWorkflowStatus>('/student_enrollment_workflow_status', token, {});
+    const result: StudentEnrollmentWorkflowStatus = {
+      ...data,
+      school: data.school ? { ...data.school, logo: absoluteUrl(data.school.logo) } : undefined,
+    };
+    AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => {
+      // Best-effort cache write.
+    });
+    return result;
+  } catch (err) {
+    try {
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached) as StudentEnrollmentWorkflowStatus;
+    } catch {
+      // Fall through to rethrow the original network error.
+    }
+    throw err;
+  }
 }
