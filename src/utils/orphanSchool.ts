@@ -160,6 +160,17 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AuthorizationAudit',
   'AdminStudentDocuments',
   'AdminStudentServices',
+  // Cashier (accountant) role + fee management - orphan schools have no
+  // tuition fees to collect (sponsorship payments are the separate,
+  // already-existing admin_sponsorship_payment_* flow), so there's nothing
+  // for a Cashier account or the fee screens to do there.
+  'AdminFeeReports',
+  'RecordFeePayment',
+  'CashierAccounts',
+  // Registrar role - orphan schools have no enrollment pipeline (see
+  // EnrollmentStages/EnrollmentWorkflowList above, already hidden), so a
+  // Registrar account has nothing to do there either.
+  'RegistrarAccounts',
 ]);
 
 /** Admin dashboard tile keys that map onto the routes above. */
@@ -175,7 +186,7 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'enrollment', 'studentNumbers', 'studentIdRules', 'studentLifecycle',
   'permissions', 'integrationSettings', 'localizationSettings',
   'authorizationAudit', 'fees', 'studentDocumentRequests',
-  'studentServiceRequests',
+  'studentServiceRequests', 'cashiers', 'registrars',
   // Tile only, not the shared 'Notifications' route: the admin card is
   // specifically "academic updates, grade releases and schedule changes",
   // but the same screen also serves the personal notification bell on the

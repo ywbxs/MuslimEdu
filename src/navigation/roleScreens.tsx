@@ -3,6 +3,8 @@ import { UserRole } from '../services/authService';
 import AdminDashboard from '../screens/dashboards/AdminDashboard';
 import StudentDashboard from '../screens/dashboards/StudentDashboard';
 import TeacherDashboard from '../screens/dashboards/TeacherDashboard';
+import CashierDashboard from '../screens/dashboards/CashierDashboard';
+import RegistrarDashboard from '../screens/dashboards/RegistrarDashboard';
 import PlaceholderDashboard from '../screens/dashboards/PlaceholderDashboard';
 
 /**
@@ -37,7 +39,10 @@ export function getDashboardForRole(role: UserRole, footer?: React.ReactNode): R
       return <PlaceholderDashboard roleLabel="Parent" footer={footer} />;
 
     case 'accountant':
-      return <PlaceholderDashboard roleLabel="Accountant" footer={footer} />;
+      return <CashierDashboard footer={footer} />;
+
+    case 'registrar':
+      return <RegistrarDashboard footer={footer} />;
 
     case 'librarian':
       return <PlaceholderDashboard roleLabel="Librarian" footer={footer} />;

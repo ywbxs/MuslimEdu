@@ -127,6 +127,10 @@ import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
+import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
+import RecordFeePaymentScreen from '../screens/admin/RecordFeePaymentScreen';
+import CashierAccountsScreen from '../screens/admin/CashierAccountsScreen';
+import RegistrarAccountsScreen from '../screens/admin/RegistrarAccountsScreen';
 import AcademicUnavailableScreen from '../screens/common/AcademicUnavailableScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
@@ -598,6 +602,10 @@ export default function RootNavigator() {
       <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
       <Stack.Screen name="AdminStudentDocuments" component={StudentDocumentRequestsScreen} />
       <Stack.Screen name="AdminStudentServices" component={StudentServiceRequestsScreen} />
+      <Stack.Screen name="AdminFeeReports" component={AdminFeeReportsScreen} />
+      <Stack.Screen name="RecordFeePayment" component={RecordFeePaymentScreen} />
+      <Stack.Screen name="CashierAccounts" component={CashierAccountsScreen} />
+      <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       </Stack.Navigator>
       </NavigationContainer>
