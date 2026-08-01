@@ -16,6 +16,7 @@ import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
+import EnrollmentStatusCard from '../../components/EnrollmentStatusCard';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -547,6 +548,10 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             schools have no class/schedule concept (same gating as the "My
             Schedule" Quick Action tile above). */}
         {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
+
+        {/* Enrollment status - has the school assigned this student a
+            teacher/subject/room/schedule yet? Same gating as above. */}
+        {!isOrphan && token ? <EnrollmentStatusCard token={token} /> : null}
 
         {/* This Month Overview - orphan students only (it's report-backed) */}
         {isOrphan ? (
