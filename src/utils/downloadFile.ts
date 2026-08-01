@@ -51,3 +51,27 @@ export async function downloadImageToDevice(url: string): Promise<string> {
   }
   return destPath;
 }
+
+/**
+ * Saves a file that's already local (e.g. a `react-native-view-shot`
+ * capture living in a temp cache dir) into the same public/permanent
+ * location downloadImageToDevice() uses - same permission handling, just
+ * RNFS.copyFile instead of downloading from a URL. Used by the student ID
+ * card screen's "export" action: the card is rendered and captured
+ * on-device, not fetched from a URL, so there's nothing to download.
+ *
+ * Returns the saved file's local path.
+ */
+export async function saveLocalFileToDevice(sourcePath: string, fileName: string): Promise<string> {
+  const hasPermission = await ensureAndroidWritePermission();
+  if (!hasPermission) {
+    throw new Error('Storage permission was denied, so the image could not be saved.');
+  }
+
+  const dir = Platform.OS === 'android' ? RNFS.DownloadDirectoryPath : RNFS.DocumentDirectoryPath;
+  const destPath = `${dir}/${fileName}`;
+  const cleanSource = sourcePath.startsWith('file://') ? sourcePath.slice('file://'.length) : sourcePath;
+
+  await RNFS.copyFile(cleanSource, destPath);
+  return destPath;
+}

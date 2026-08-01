@@ -315,6 +315,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'idCards',
+      title: t('admin_dashboard.id_cards_title', 'ID Cards'),
+      desc: t('admin_dashboard.id_cards_desc', 'View and export every student’s QR ID card'),
+      variant: 'soft',
+      route: 'StudentIdCards',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'classes',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),

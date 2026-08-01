@@ -94,9 +94,15 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   // Attendance
   'AttendanceConfig',
   'TeacherAttendanceClasses',
+  'AttendanceMethodChooser',
   'TeacherAttendanceRoster',
+  'AttendanceScan',
   'TeacherAttendanceHistory',
   'AdminAttendanceAnalytics',
+  // Student ID/QR cards - built to power the QR/ID-scan attendance method
+  // above, so it follows the same orphan-hidden scope.
+  'StudentIdCards',
+  'StudentIdCard',
   // Grading / gradebook / exams
   'GradingSystems',
   'GradingSystemForm',
@@ -188,7 +194,7 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'enrollment', 'studentNumbers', 'studentIdRules', 'studentLifecycle',
   'permissions', 'integrationSettings', 'localizationSettings',
   'authorizationAudit', 'fees', 'studentDocumentRequests',
-  'studentServiceRequests', 'cashiers', 'registrars',
+  'studentServiceRequests', 'cashiers', 'registrars', 'idCards',
   // Tile only, not the shared 'Notifications' route: the admin card is
   // specifically "academic updates, grade releases and schedule changes",
   // but the same screen also serves the personal notification bell on the

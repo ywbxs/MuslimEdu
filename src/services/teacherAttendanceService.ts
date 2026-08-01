@@ -146,6 +146,34 @@ export async function submitAttendance(
   });
 }
 
+// --- Teacher: one-scan check-in via a student's QR/ID code ---
+
+export interface ScanResult {
+  message: string;
+  student: RosterStudent;
+  summary: AttendanceSummary;
+}
+
+export async function scanAttendance(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+  code: string
+): Promise<ScanResult> {
+  const data = await authedPost('/teacher_attendance_scan', token, {
+    section_id: sectionId,
+    subject_id: subjectId,
+    date,
+    code,
+  });
+  return {
+    message: data.message,
+    student: { ...data.student, photo: absoluteUrl(data.student?.photo ?? null) },
+    summary: data.summary ?? {},
+  };
+}
+
 // --- Teacher: edit a single already-submitted record (blocked once the school's edit window has passed) ---
 
 export async function updateAttendanceRecord(

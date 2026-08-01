@@ -13,8 +13,11 @@ export interface StudentSummary {
   name: string;
   email: string;
   photo: string | null;
+  code?: string | null;
   class_id: number | null;
+  class_name?: string | null;
   section_id: number | null;
+  section_name?: string | null;
   orphan_id_number: string | null;
   status?: ChildStatus;
   joined_date?: string | null;
@@ -27,13 +30,10 @@ export interface StudentSummary {
 /**
  * Full profile payload for one child - what /admin_child_profile returns.
  * Extends the list-row shape (StudentSummary) with the extra detail only
- * the single-record endpoint sends: class/section names (already resolved
- * to text, not just ids), and the nested orphan-only record (guardian,
- * health, admission info) which is null for non-orphan schools.
+ * the single-record endpoint sends: the nested orphan-only record
+ * (guardian, health, admission info), null for non-orphan schools.
  */
 export interface ChildProfile extends StudentSummary {
-  class_name?: string | null;
-  section_name?: string | null;
   orphan_profile?: OrphanProfile | null;
 }
 
