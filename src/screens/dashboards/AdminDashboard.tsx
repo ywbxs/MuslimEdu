@@ -323,6 +323,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <BookIcon color={c} />,
     },
     {
+      key: 'classSchedule',
+      title: t('admin_dashboard.class_schedule_title', 'Class Schedule'),
+      desc: t('admin_dashboard.class_schedule_desc', 'Build the weekly timetable'),
+      variant: 'soft',
+      route: 'AdminSchedule',
+      icon: (c) => <CalendarIcon color={c} />,
+    },
+    {
       key: 'enrollment',
       title: t('admin_dashboard.enrollment_title', 'Enrollment'),
       desc: t('admin_dashboard.enrollment_desc', 'Configure enrollment stages'),

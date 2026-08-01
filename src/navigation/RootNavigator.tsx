@@ -15,6 +15,7 @@ import AdminTeacherReportDetailScreen from '../screens/teachers/AdminTeacherRepo
 import AdminTeacherProfileScreen from '../screens/teachers/AdminTeacherProfileScreen';
 import AdminUserDocumentsScreen from '../screens/teachers/AdminUserDocumentsScreen';
 import TeacherMyClassesScreen from '../screens/teachers/TeacherMyClassesScreen';
+import TeacherMyScheduleScreen from '../screens/teachers/TeacherMyScheduleScreen';
 import TeacherClassStudentsScreen from '../screens/teachers/TeacherClassStudentsScreen';
 import AdminClassTeacherAssignScreen from '../screens/teachers/AdminClassTeacherAssignScreen';
 import AdminClassSubjectsScreen from '../screens/teachers/AdminClassSubjectsScreen';
@@ -56,6 +57,7 @@ import AdminAssessmentGradesScreen from '../screens/teachers/AdminAssessmentGrad
 import StudentAssessmentGradesScreen from '../screens/student/StudentAssessmentGradesScreen';
 import StudentAnnouncementsScreen from '../screens/student/StudentAnnouncementsScreen';
 import StudentMaterialsScreen from '../screens/student/StudentMaterialsScreen';
+import StudentScheduleScreen from '../screens/student/StudentScheduleScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import EnrollmentStagesScreen from '../screens/admin/EnrollmentStagesScreen';
 import EnrollmentStageFormScreen from '../screens/admin/EnrollmentStageFormScreen';
@@ -75,7 +77,6 @@ import ProgramsCatalogScreen from '../screens/admin/ProgramsCatalogScreen';
 import ProgramFormScreen from '../screens/admin/ProgramFormScreen';
 import StudentIdentityScreen from '../screens/student/StudentIdentityScreen';
 import AcademicFacilitiesScreen from '../screens/teachers/AcademicFacilitiesScreen';
-import AcademicScheduleScreen from '../screens/teachers/AcademicScheduleScreen';
 import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
@@ -100,7 +101,7 @@ import StudentSubjectLoadScreen from '../screens/student/StudentSubjectLoadScree
 // rebuilding them.
 import AcademicGraduationScreen from '../screens/admin/AcademicGraduationScreen';
 import AcademicPolicyScreen from '../screens/admin/AcademicPolicyScreen';
-import AdminScheduleScreen from '../screens/admin/AdminScheduleScreen';
+import AdminClassScheduleScreen from '../screens/admin/AdminClassScheduleScreen';
 import AnalyticsDashboardScreen from '../screens/admin/AnalyticsDashboardScreen';
 import AuthorizationAuditScreen from '../screens/admin/AuthorizationAuditScreen';
 import DocumentTemplateScreen from '../screens/admin/DocumentTemplateScreen';
@@ -235,6 +236,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="TeacherMyClasses"
                 component={TeacherMyClassesScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="TeacherMySchedule"
+                component={TeacherMyScheduleScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
@@ -488,6 +494,11 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
+                name="StudentSchedule"
+                component={StudentScheduleScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
                 name="TeacherLessonPlans"
                 component={TeacherLessonPlansScreen}
                 options={{ animation: 'slide_from_right' }}
@@ -579,7 +590,7 @@ export default function RootNavigator() {
               {/* ADMIN_ADVANCED_ROUTES - previously orphaned screens, now reachable */}
       <Stack.Screen name="AcademicGraduation" component={AcademicGraduationScreen} />
       <Stack.Screen name="AcademicPolicy" component={AcademicPolicyScreen} />
-      <Stack.Screen name="AdminSchedule" component={AdminScheduleScreen} />
+      <Stack.Screen name="AdminSchedule" component={AdminClassScheduleScreen} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />

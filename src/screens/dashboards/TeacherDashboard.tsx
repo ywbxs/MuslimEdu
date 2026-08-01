@@ -561,6 +561,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
                 onPress={() => (navigation as any).navigate('TeacherMyClasses')}
               />
               <QuickActionCard
+                icon={<CalendarIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.my_schedule_title', 'My Schedule')}
+                description={t('teacher_dashboard.my_schedule_desc', 'See your weekly class timetable')}
+                onPress={() => (navigation as any).navigate('TeacherMySchedule')}
+              />
+              <QuickActionCard
                 icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
                 title={t('teacher_dashboard.take_attendance_title', 'Take Attendance')}
                 description={t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes")}

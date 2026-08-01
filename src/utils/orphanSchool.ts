@@ -88,6 +88,8 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AcademicCalendar',
   'AcademicSchedule',
   'AdminSchedule',
+  'StudentSchedule',
+  'TeacherMySchedule',
   'TimetableConflicts',
   // Attendance
   'AttendanceConfig',
@@ -175,7 +177,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
 
 /** Admin dashboard tile keys that map onto the routes above. */
 export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
-  'classes', 'academicSetup', 'gradingSystems', 'examCategories',
+  'classes', 'classSchedule', 'academicSetup', 'gradingSystems', 'examCategories',
   'gradebookReview', 'announcementReview', 'lessonPlanReview',
   'assessmentReview', 'assessmentGrades', 'materialsReview',
   'programsSubjects', 'timetableConflicts', 'attendanceConfig',

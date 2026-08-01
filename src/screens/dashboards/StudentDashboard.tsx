@@ -507,6 +507,14 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               onPress={() => (navigation as any).navigate('MyProgress')}
             />
           )}
+          {!isOrphan && (
+            <QuickActionCard
+              icon={<CalendarIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.my_schedule_title', 'My Schedule')}
+              description={t('student_dashboard.my_schedule_desc', 'See your weekly class timetable')}
+              onPress={() => (navigation as any).navigate('StudentSchedule')}
+            />
+          )}
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('student_dashboard.notifications_title', 'Notifications')}
