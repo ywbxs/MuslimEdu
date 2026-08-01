@@ -22,6 +22,7 @@ import {
   fetchEnrollmentStages,
   createEnrollmentStage,
   updateEnrollmentStage,
+  StageApproverRole,
 } from '../../services/enrollmentWorkflowService';
 
 /**
@@ -60,6 +61,7 @@ export default function EnrollmentStageFormScreen() {
   const [studentInstructions, setStudentInstructions] = useState('');
   const [isTerminal, setIsTerminal] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [approverRole, setApproverRole] = useState<StageApproverRole>(null);
 
   useEffect(() => {
     if (!isEditing || !token) return;
@@ -77,6 +79,7 @@ export default function EnrollmentStageFormScreen() {
         setStudentInstructions(stage.student_instructions ?? '');
         setIsTerminal(stage.is_terminal);
         setIsActive(stage.status === 'active');
+        setApproverRole(stage.approver_role ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : t('enrollment_stage_form.load_error', 'Failed to load stage.'));
       } finally {
@@ -105,6 +108,7 @@ export default function EnrollmentStageFormScreen() {
         student_instructions: studentInstructions.trim() || null,
         is_terminal: isTerminal,
         status: (isActive ? 'active' : 'inactive') as 'active' | 'inactive',
+        approver_role: approverRole,
       };
       if (isEditing) {
         await updateEnrollmentStage(token, stageId!, input);
@@ -187,6 +191,31 @@ export default function EnrollmentStageFormScreen() {
           {t('enrollment_stage_form.instructions_help', "Shown to the student while they're on this stage. Leave blank to show nothing extra.")}
         </Text>
 
+        <Text style={styles.label}>{t('enrollment_stage_form.approver_label', 'Who approves this stage?')}</Text>
+        <View style={styles.approverRow}>
+          {(
+            [
+              { value: null, label: t('enrollment_stage_form.approver_admin', 'Admin only') },
+              { value: 'accountant', label: t('enrollment_stage_form.approver_cashier', 'Cashier') },
+              { value: 'registrar', label: t('enrollment_stage_form.approver_registrar', 'Registrar') },
+            ] as { value: StageApproverRole; label: string }[]
+          ).map((option) => {
+            const selected = approverRole === option.value;
+            return (
+              <TouchableOpacity
+                key={option.label}
+                style={[styles.approverChip, selected && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                onPress={() => setApproverRole(option.value)}
+              >
+                <Text style={[styles.approverChipText, selected && { color: theme.onAccent }]}>{option.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.switchHelp}>
+          {t('enrollment_stage_form.approver_help', 'Whoever approves this stage can see and advance students currently sitting here. Admin can always see and advance every stage.')}
+        </Text>
+
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.switchLabel}>{t('enrollment_stage_form.final_stage', 'Final stage')}</Text>
@@ -264,6 +293,16 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       color: theme.textPrimary,
     },
     textArea: { height: 84, paddingTop: 12, textAlignVertical: 'top' },
+
+    approverRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    approverChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: RADIUS.pill ?? 20,
+      borderWidth: 1,
+      borderColor: theme.borderStrong,
+    },
+    approverChipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
 
     switchRow: {
       flexDirection: 'row',

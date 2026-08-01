@@ -72,6 +72,12 @@ function IconFlag({ color }: { color: string }) {
   );
 }
 
+function approverLabel(role: WorkflowStage['approver_role'], t: (key: string, fallback: string) => string): string | null {
+  if (role === 'accountant') return t('enrollment_stages.approver_cashier', 'Approver: Cashier');
+  if (role === 'registrar') return t('enrollment_stages.approver_registrar', 'Approver: Registrar');
+  return null;
+}
+
 export default function EnrollmentStagesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -155,6 +161,7 @@ export default function EnrollmentStagesScreen() {
   const renderStage = ({ item, index }: { item: WorkflowStage; index: number }) => {
     const isActive = item.status === 'active';
     const busy = reorderingId === item.id;
+    const approver = approverLabel(item.approver_role, t);
     return (
       <TouchableOpacity
         style={styles.card}
@@ -202,6 +209,12 @@ export default function EnrollmentStagesScreen() {
           </View>
 
           <Text style={styles.name}>{item.name}</Text>
+
+          {approver ? (
+            <View style={styles.approverBadge}>
+              <Text style={styles.approverBadgeText}>{approver}</Text>
+            </View>
+          ) : null}
 
           {item.is_terminal ? (
             <View style={styles.terminalRow}>
@@ -411,6 +424,15 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       overflow: 'hidden',
     },
     name: { fontSize: 16, fontWeight: '700', color: theme.textPrimary, marginBottom: 4 },
+    approverBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: theme.surfaceVariant,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      marginBottom: 8,
+    },
+    approverBadgeText: { fontSize: 11, fontWeight: '600', color: theme.textSecondary },
     terminalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
     terminalText: { fontSize: 11.5, color: theme.textSecondary, marginLeft: 6 },
     cardFooter: { flexDirection: 'row', justifyContent: 'flex-end' },

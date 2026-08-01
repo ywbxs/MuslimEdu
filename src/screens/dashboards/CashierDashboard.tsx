@@ -32,6 +32,16 @@ function BellIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ClipboardIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x={6} y={4} width={12} height={17} rx={2} stroke={color} strokeWidth={2} />
+      <Rect x={9} y={2} width={6} height={4} rx={1} stroke={color} strokeWidth={2} />
+      <Line x1={9} y1={12} x2={15} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={9} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 function IdCardIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -117,6 +127,12 @@ export default function CashierDashboard({ footer }: CashierDashboardProps = {})
           title={t('cashier_dashboard.record_payment_title', 'Record Payment')}
           desc={t('cashier_dashboard.record_payment_desc', 'Collect a payment against an invoice')}
           onPress={() => (navigation as any).navigate('AdminFeeReports', { initialStatusFilter: 'unpaid' })}
+        />
+        <CashierCard
+          icon={<ClipboardIcon color={EMERALD} />}
+          title={t('cashier_dashboard.enrollment_title', 'Enrollment Approvals')}
+          desc={t('cashier_dashboard.enrollment_desc', "View and advance students at a stage assigned to you")}
+          onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}
         />
         <CashierCard
           icon={<BellIcon color={EMERALD} />}

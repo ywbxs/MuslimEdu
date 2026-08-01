@@ -13,6 +13,11 @@ import { API_BASE_URL } from '../config/api';
  * duplicate this typing work.
  */
 
+// Which role can view/advance a record while it's at this stage. Null means
+// admin-only (the original behavior, still the default for every existing
+// stage). Matches EnrollmentWorkflowController's approverRoleFor() mapping.
+export type StageApproverRole = 'accountant' | 'registrar' | null;
+
 export interface WorkflowStage {
   id: number;
   school_id: number;
@@ -25,6 +30,7 @@ export interface WorkflowStage {
   // stage (e.g. "Pay the enrollment fee at the Cashier's office"). Null/
   // empty means no extra instruction is shown for this stage.
   student_instructions: string | null;
+  approver_role: StageApproverRole;
   created_at?: string;
   updated_at?: string;
 }
@@ -36,6 +42,7 @@ export interface WorkflowStageInput {
   is_terminal?: boolean;
   status?: 'active' | 'inactive';
   student_instructions?: string | null;
+  approver_role?: StageApproverRole;
 }
 
 export interface WorkflowStudentSummary {

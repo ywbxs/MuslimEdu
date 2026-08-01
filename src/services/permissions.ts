@@ -32,12 +32,19 @@ const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   // admin/superadmin, matching admin_fee_create's requireAdmin-only guard
   // on the backend. 'view_fees'/'record_fee_payments' match
   // admin_fee_list/admin_fee_record_payment's shared requireAdminOrAccountant guard.
-  accountant: ['view_fees', 'record_fee_payments'],
+  // Cashier. Also gets 'manage_enrollment_progress': an admin can assign a
+  // stage's approver_role to 'accountant', in which case this Cashier's
+  // enrollment queue (admin_enrollment_workflow_list/advance/history) is
+  // scoped server-side to just the records currently sitting on a
+  // Cashier-assigned stage - same UI, same admin-only start/withdraw/stage
+  // hiding as Registrar below.
+  accountant: ['view_fees', 'record_fee_payments', 'manage_enrollment_progress'],
   // Registrar. Can view the enrollment pipeline and advance a student to
   // the next stage (matches admin_enrollment_workflow_list/advance/history's
-  // shared requireAdminOrRegistrar guard on the backend). Deliberately no
-  // 'manage_enrollment' - stage configuration and starting/withdrawing a
-  // student's workflow stay admin-only, matching those endpoints' guards.
+  // shared requireApprover guard on the backend, scoped to registrar-
+  // assigned stages). Deliberately no 'manage_enrollment' - stage
+  // configuration and starting/withdrawing a student's workflow stay
+  // admin-only, matching those endpoints' guards.
   registrar: ['manage_enrollment_progress', 'view_students'],
   librarian: [],
   parent: [],
