@@ -27,11 +27,19 @@ export function isOrphanSchoolUser(user: Partial<AuthUser> | null | undefined): 
 }
 
 /**
- * Root-stack routes that belong to the academic subsystem - classes,
- * sections, subjects, curriculum, timetable, attendance, grading, exams,
- * assessments, lesson plans, materials, graduation/promotion and the
- * enrollment pipeline. Orphan schools have none of these concepts, so these
- * screens are replaced by a short "not available" screen there.
+ * Root-stack routes that don't apply to an orphan school - the academic
+ * subsystem (classes, sections, subjects, curriculum, timetable, attendance,
+ * grading, exams, assessments, lesson plans, materials, graduation/promotion,
+ * enrollment) plus a handful of admin-only settings screens that are either
+ * academic-flavored (student numbering/ID/lifecycle - see below) or simply
+ * don't apply where there's no fee/document/service-request pipeline built
+ * around a student body organized into classes.
+ *
+ * Deliberately excludes routes also reached by non-admin roles for reasons
+ * that have nothing to do with academics - `SecuritySettings`, `Notifications`
+ * and `AccountSettings` are personal to every user (2FA, alerts, profile) and
+ * orphan-school teachers/students still need them; gating the route would
+ * take those away along with the admin-only academic content.
  *
  * This is the backstop behind the per-dashboard hiding: tiles/cards are
  * filtered out of the menus, and anything that still reaches one of these
@@ -141,9 +149,20 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'StudentNumberConfig',
   'StudentIdConfig',
   'StudentLifecycle',
+  // Admin-only settings with nothing to configure for an orphan school - no
+  // fee-collection/document-request/service-ticket pipeline tied to a
+  // student-in-classes model, no cross-role permission matrix to speak of
+  // beyond the three fixed roles, no localization/integration surface unique
+  // to this school type.
+  'Permissions',
+  'IntegrationSettings',
+  'LocalizationSettings',
+  'AuthorizationAudit',
+  'AdminStudentDocuments',
+  'AdminStudentServices',
 ]);
 
-/** Admin dashboard tile keys that map onto the academic subsystem above. */
+/** Admin dashboard tile keys that map onto the routes above. */
 export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'classes', 'academicSetup', 'gradingSystems', 'examCategories',
   'gradebookReview', 'announcementReview', 'lessonPlanReview',
@@ -154,4 +173,12 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'documentTemplates', 'gradeRelease', 'orgStructure', 'behaviorIncidents',
   'examinations', 'studentProgress', 'analyticsExtended', 'attendance',
   'enrollment', 'studentNumbers', 'studentIdRules', 'studentLifecycle',
+  'permissions', 'integrationSettings', 'localizationSettings',
+  'authorizationAudit', 'fees', 'studentDocumentRequests',
+  'studentServiceRequests',
+  // Tile only, not the shared 'Notifications' route: the admin card is
+  // specifically "academic updates, grade releases and schedule changes",
+  // but the same screen also serves the personal notification bell on the
+  // teacher/student dashboards, which orphan-school members still need.
+  'notifications',
 ]);
