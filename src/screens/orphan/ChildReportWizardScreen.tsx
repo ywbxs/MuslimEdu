@@ -91,7 +91,7 @@ export default function ChildReportWizardScreen() {
   const monthLabel = `${t(`child_report_wizard.month_${MONTH_KEYS[now.getMonth()]}`, MONTH_NAMES[now.getMonth()])} ${now.getFullYear()}`;
 
   const handleSubmit = async () => {
-    if (!token || !academicRating || !wellbeingRating) return;
+    if (!token || !academicRating || !wellbeingRating || photos.length === 0) return;
     setIsSubmitting(true);
     try {
       await submitReport(token, { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating }, photos);
@@ -151,9 +151,11 @@ export default function ChildReportWizardScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('child_report_wizard.photos_title', 'Add Photos'),
-        subtitle: t('child_report_wizard.photos_subtitle', 'Optional — add photos from this month (up to 5).'),
-        content: <PhotoPicker photos={photos} onChange={setPhotos} />,
-        isValid: true,
+        subtitle: t('child_report_wizard.photos_subtitle_required', 'Required — add at least one photo from this month (up to 5).'),
+        content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
+        // Photos are required to submit - the wizard's Submit button
+        // stays disabled until at least one is attached.
+        isValid: photos.length > 0,
       },
     ],
     [note, academicRating, wellbeingRating, photos, t],
