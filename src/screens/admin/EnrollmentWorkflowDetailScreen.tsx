@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { can } from '../../services/permissions';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -68,8 +69,12 @@ export default function EnrollmentWorkflowDetailScreen() {
   const insets = useSafeAreaInsets();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLocale();
+  // Withdrawing a student is an admin-only decision (see
+  // admin_enrollment_workflow_withdraw's requireAdmin-only guard) - a
+  // Registrar shares this screen but can only advance, not withdraw.
+  const canWithdraw = can(user, 'manage_enrollment');
   const workflowStatusLabel = (s: string) => t(`enrollment_workflow_detail.status_${s}`, WORKFLOW_STATUS_FALLBACKS[s] ?? s.replace('_', ' '));
 
   const recordId: number = route.params?.recordId;
@@ -229,13 +234,15 @@ export default function EnrollmentWorkflowDetailScreen() {
             >
               <Text style={styles.advanceButtonText}>{t('enrollment_workflow_detail.move_to_stage', 'Move to Stage...')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.withdrawButton]}
-              onPress={onWithdraw}
-              disabled={busy}
-            >
-              <Text style={styles.withdrawButtonText}>{t('enrollment_workflow_detail.withdraw', 'Withdraw')}</Text>
-            </TouchableOpacity>
+            {canWithdraw ? (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.withdrawButton]}
+                onPress={onWithdraw}
+                disabled={busy}
+              >
+                <Text style={styles.withdrawButtonText}>{t('enrollment_workflow_detail.withdraw', 'Withdraw')}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ) : null}
 

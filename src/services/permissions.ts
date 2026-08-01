@@ -12,7 +12,8 @@ export type Capability =
   | 'view_own_records'
   | 'view_fees'
   | 'record_fee_payments'
-  | 'manage_fees';
+  | 'manage_fees'
+  | 'manage_enrollment_progress';
 
 const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   superadmin: [
@@ -32,6 +33,12 @@ const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   // on the backend. 'view_fees'/'record_fee_payments' match
   // admin_fee_list/admin_fee_record_payment's shared requireAdminOrAccountant guard.
   accountant: ['view_fees', 'record_fee_payments'],
+  // Registrar. Can view the enrollment pipeline and advance a student to
+  // the next stage (matches admin_enrollment_workflow_list/advance/history's
+  // shared requireAdminOrRegistrar guard on the backend). Deliberately no
+  // 'manage_enrollment' - stage configuration and starting/withdrawing a
+  // student's workflow stay admin-only, matching those endpoints' guards.
+  registrar: ['manage_enrollment_progress', 'view_students'],
   librarian: [],
   parent: [],
   student: ['submit_student_work', 'view_own_records'],

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { can } from '../../services/permissions';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -71,8 +72,12 @@ export default function EnrollmentWorkflowListScreen() {
   const insets = useSafeAreaInsets();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLocale();
+  // Starting a new workflow is an admin-only decision (see
+  // admin_enrollment_workflow_start's requireAdmin-only guard) - a
+  // Registrar shares this screen but can only view/advance, not start.
+  const canStart = can(user, 'manage_enrollment');
   const workflowStatusLabel = (s: string) => t(`enrollment_workflow_list.status_${s}`, WORKFLOW_STATUS_FALLBACKS[s] ?? s.replace('_', ' '));
 
   const [records, setRecords] = useState<WorkflowRecord[]>([]);
@@ -222,9 +227,13 @@ export default function EnrollmentWorkflowListScreen() {
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Records</Text>
-        <TouchableOpacity style={styles.addButton} onPress={openPicker}>
-          <Text style={styles.addButtonText}>{t('enrollment_workflow_list.start', '+ Start')}</Text>
-        </TouchableOpacity>
+        {canStart ? (
+          <TouchableOpacity style={styles.addButton} onPress={openPicker}>
+            <Text style={styles.addButtonText}>{t('enrollment_workflow_list.start', '+ Start')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       {sessionChecked && !currentSession ? (

@@ -290,6 +290,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'registrars',
+      title: t('admin_dashboard.registrars_title', 'Registrars'),
+      desc: t('admin_dashboard.registrars_desc', 'Add and manage registrar accounts'),
+      variant: 'soft',
+      route: 'RegistrarAccounts',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'classes',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),
