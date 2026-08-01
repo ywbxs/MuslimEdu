@@ -112,10 +112,8 @@ export async function submitTeacherReport(
     /**
      * Optional target month as "YYYY-MM-01". Lets a teacher make up a past
      * "Missing" month, not just the current one. Omit to submit for the
-     * current month (previous default behavior, unchanged).
-     * REQUIRES BACKEND SUPPORT: /teacher_report_submit must accept and honor
-     * this field. If the backend ignores it, submissions will still land on
-     * whatever month the server defaults to (currently: the current month).
+     * current month (previous default behavior, unchanged). Confirmed
+     * accepted and honored by /teacher_report_submit.
      */
     report_month?: string;
   },

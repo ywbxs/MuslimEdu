@@ -240,11 +240,10 @@ function TeacherReportDetailModal({
  *    submitted this month can still see (and tap into) past months, and a
  *    teacher who hasn't submitted gets a clear way in, instead of the old
  *    dead-end "You're all set" screen that hid the history entirely.
- *  - 'wizard': the existing step-by-step ReportStepWizard, only entered when
- *    starting this month's submission. Note: the backend
- *    (/teacher_report_submit) always targets the current month - there's no
- *    way to back-submit a past "Missing" month yet, so past months in the
- *    history are tap-to-view only.
+ *  - 'wizard': the existing step-by-step ReportStepWizard, entered either for
+ *    the current month or, via a tapped "Missing" month in the history, as a
+ *    make-up report for that past month - /teacher_report_submit accepts and
+ *    honors the report_month field for this (confirmed with backend).
  */
 export default function TeacherOrphanReportScreen() {
   const insets = useSafeAreaInsets();

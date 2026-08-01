@@ -98,10 +98,8 @@ export async function submitReport(
      * "Missing" month from the submission history, not just the current
      * one - mirrors submitTeacherReport's report_month in
      * teacherOrphanService.ts. Omit to submit for the current month
-     * (previous default behavior, unchanged).
-     * REQUIRES BACKEND SUPPORT: /orphan_report_submit must accept and honor
-     * this field. If the backend ignores it, submissions will still land on
-     * whatever month the server defaults to (currently: the current month).
+     * (previous default behavior, unchanged). Confirmed accepted and
+     * honored by /orphan_report_submit.
      */
     report_month?: string;
   },
