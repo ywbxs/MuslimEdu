@@ -312,6 +312,14 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
   const { t } = useLocale();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
+  // The dark hero background is a separate absolutely-positioned layer
+  // behind the ScrollView, sized to cover the greeting + profile card.
+  // Those two are variable height (profile card rows are conditional on
+  // which fields the user has, e.g. Staff Code), so a fixed HERO_HEIGHT
+  // falls short whenever the card is taller than the default case,
+  // leaving later content rendered half over the dark background's
+  // rounded bottom edge. Measure the real height instead of guessing it.
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
 
   // Either orphan-school signal is enough - requiring both meant a teacher
   // whose token carried only one of them got the full academic card set.
@@ -372,12 +380,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
 
   // --- Parallax + fade for the background layer only. ---
   const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT],
-    outputRange: [0, -HERO_HEIGHT * PARALLAX_FACTOR],
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
     extrapolate: 'clamp',
   });
   const bgOpacity = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT * 0.55, HERO_HEIGHT],
+    inputRange: [0, heroHeight * 0.55, heroHeight],
     outputRange: [1, 1, 0],
     extrapolate: 'clamp',
   });
@@ -387,7 +395,7 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
       <Animated.View
         style={[
           styles.bgLayer,
-          { height: HERO_HEIGHT, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
+          { height: heroHeight, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
         ]}
         pointerEvents="none"
         renderToHardwareTextureAndroid
@@ -414,54 +422,65 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
-        {/* Greeting */}
-        <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
-          <View>
-            <Text style={styles.greetingSmall}>{t('teacher_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
-            <Text style={styles.greetingName}>{user?.name}</Text>
-          </View>
-          <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile - glass card over the dark hero */}
-        <View style={styles.glassCard}>
-          <View style={styles.glassHeaderRow}>
-            <View style={styles.glassHeaderLeft}>
-              <View style={styles.glassIconCircle}>
-                <PersonIcon color={PALE_GREEN} size={22} />
-              </View>
-              <View>
-                <Text style={styles.glassTitle}>{t('teacher_dashboard.profile_title', 'Profile')}</Text>
-                <Text style={styles.glassSubtitle}>
-                  {t('teacher_dashboard.profile_subtitle', 'Your personal information')}
-                </Text>
-              </View>
+        <View
+          onLayout={(e) => {
+            // The measured height already includes glassCard's own
+            // marginBottom (RN's column layout counts trailing margin
+            // toward the parent's auto height), so the dark layer's
+            // bottom edge lands exactly where the card's margin ends.
+            const measured = e.nativeEvent.layout.height;
+            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+          }}
+        >
+          {/* Greeting */}
+          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+            <View>
+              <Text style={styles.greetingSmall}>{t('teacher_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
+              <Text style={styles.greetingName}>{user?.name}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => handlePlaceholderPress(t('teacher_dashboard.editing_profile', 'Editing your profile'))}
-              hitSlop={8}
-            >
-              <PencilIcon color={PALE_GREEN} size={16} />
+            <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.glassDivider} />
-          <GlassRow icon={<PersonIcon />} label={t('teacher_dashboard.name_label', 'Name')} value={user?.name} />
-          <View style={styles.glassDivider} />
-          <GlassRow icon={<MailIcon />} label={t('teacher_dashboard.email_label', 'Email')} value={user?.email} />
-          {user?.code ? (
-            <>
-              <View style={styles.glassDivider} />
-              <GlassRow
-                icon={<IdCardIcon />}
-                label={t('teacher_dashboard.staff_code_label', 'Staff Code')}
-                value={user.code}
-              />
-            </>
-          ) : null}
+          {/* Profile - glass card over the dark hero */}
+          <View style={styles.glassCard}>
+            <View style={styles.glassHeaderRow}>
+              <View style={styles.glassHeaderLeft}>
+                <View style={styles.glassIconCircle}>
+                  <PersonIcon color={PALE_GREEN} size={22} />
+                </View>
+                <View>
+                  <Text style={styles.glassTitle}>{t('teacher_dashboard.profile_title', 'Profile')}</Text>
+                  <Text style={styles.glassSubtitle}>
+                    {t('teacher_dashboard.profile_subtitle', 'Your personal information')}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handlePlaceholderPress(t('teacher_dashboard.editing_profile', 'Editing your profile'))}
+                hitSlop={8}
+              >
+                <PencilIcon color={PALE_GREEN} size={16} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.glassDivider} />
+            <GlassRow icon={<PersonIcon />} label={t('teacher_dashboard.name_label', 'Name')} value={user?.name} />
+            <View style={styles.glassDivider} />
+            <GlassRow icon={<MailIcon />} label={t('teacher_dashboard.email_label', 'Email')} value={user?.email} />
+            {user?.code ? (
+              <>
+                <View style={styles.glassDivider} />
+                <GlassRow
+                  icon={<IdCardIcon />}
+                  label={t('teacher_dashboard.staff_code_label', 'Staff Code')}
+                  value={user.code}
+                />
+              </>
+            ) : null}
+          </View>
         </View>
 
         {/* Monthly Report hero card - orphan teachers only. Note: TeacherDashboard
