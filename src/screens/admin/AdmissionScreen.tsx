@@ -138,22 +138,26 @@ export default function AdmissionScreen() {
     setStepIndex(0);
   };
 
+  const isOrphanSchool = isOrphanSchoolUser(user);
+
   // Load classes once. Sections reload whenever the chosen class changes.
+  // Orphan schools never show the Class & Section step (see `steps` below)
+  // and have no classes/sections to speak of, so skip both calls entirely.
   useEffect(() => {
-    if (!token) return;
+    if (!token || isOrphanSchool) return;
     fetchClasses(token)
       .then(setClasses)
       .catch(() => {
         /* silent - picker just stays empty, admin can still submit name-only */
       });
-  }, [token]);
+  }, [token, isOrphanSchool]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || isOrphanSchool) return;
     fetchSections(token, form.class_id)
       .then(setSections)
       .catch(() => setSections([]));
-  }, [token, form.class_id]);
+  }, [token, isOrphanSchool, form.class_id]);
 
   useEffect(() => {
     stepAnim.setValue(0);
@@ -164,7 +168,6 @@ export default function AdmissionScreen() {
     }).start();
   }, [stepIndex, stepAnim]);
 
-  const isOrphanSchool = isOrphanSchoolUser(user);
   const schoolCode = user?.school_code ?? null; // e.g. "MLP2648", locked
 
   // Whenever the admin edits the suffix, recompute the full code the
