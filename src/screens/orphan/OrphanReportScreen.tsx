@@ -16,6 +16,7 @@ import {
 } from '../../services/orphanService';
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
+import PhotoLightbox from '../../components/PhotoLightbox';
 
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#E7F5EC';
@@ -139,6 +140,7 @@ function ReportDetailModal({
 }) {
   const { t } = useLocale();
   const report = month?.report ?? null;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -191,7 +193,9 @@ function ReportDetailModal({
                   <Text style={styles.modalSectionLabel}>{t('orphan_report.photos_label', 'Photos')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {report.photos.map((uri, idx) => (
-                      <Image key={`${uri}-${idx}`} source={{ uri }} style={styles.modalPhoto} />
+                      <TouchableOpacity key={`${uri}-${idx}`} activeOpacity={0.85} onPress={() => setLightboxIndex(idx)}>
+                        <Image source={{ uri }} style={styles.modalPhoto} />
+                      </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
@@ -210,6 +214,12 @@ function ReportDetailModal({
           )}
         </View>
       </View>
+      <PhotoLightbox
+        visible={lightboxIndex !== null}
+        photos={report?.photos ?? []}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </Modal>
   );
 }

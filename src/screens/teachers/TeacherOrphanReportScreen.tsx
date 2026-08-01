@@ -25,6 +25,7 @@ import {
 import { PickedPhoto } from '../../services/orphanService';
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
+import PhotoLightbox from '../../components/PhotoLightbox';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
@@ -149,6 +150,7 @@ function TeacherReportDetailModal({
 }) {
   const { t } = useLocale();
   const report = month?.report ?? null;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -205,7 +207,9 @@ function TeacherReportDetailModal({
                   <Text style={styles.modalSectionLabel}>{t('teacher_orphan_report.photos_label', 'Photos')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {report.photos.map((uri, idx) => (
-                      <Image key={`${uri}-${idx}`} source={{ uri }} style={styles.modalPhoto} />
+                      <TouchableOpacity key={`${uri}-${idx}`} activeOpacity={0.85} onPress={() => setLightboxIndex(idx)}>
+                        <Image source={{ uri }} style={styles.modalPhoto} />
+                      </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
@@ -222,6 +226,12 @@ function TeacherReportDetailModal({
           )}
         </View>
       </View>
+      <PhotoLightbox
+        visible={lightboxIndex !== null}
+        photos={report?.photos ?? []}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </Modal>
   );
 }

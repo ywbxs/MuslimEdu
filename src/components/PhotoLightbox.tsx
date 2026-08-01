@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Image, Linking, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Image, Alert, ActivityIndicator, Platform, Dimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { downloadImageToDevice } from '../utils/downloadFile';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -36,13 +37,13 @@ interface PhotoLightboxProps {
 
 // Full-screen viewer for a report's uploaded photos - replaces the old
 // small 64x64 horizontal-scroll thumbnails with a real large view, plus a
-// download action. Saving follows the same pattern already used for
-// documents elsewhere in the app (Linking.openURL on the file's URL, which
-// hands off to the OS to open/save it) rather than adding a new
-// file-system/media-library dependency just for this screen.
+// download action. Downloads happen entirely in-app via downloadFile.ts
+// (react-native-fs) straight to device storage - no Linking.openURL
+// hand-off to a browser/OS "open with" sheet.
 export default function PhotoLightbox({ visible, photos, initialIndex, onClose }: PhotoLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
   const [downloaded, setDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -59,12 +60,20 @@ export default function PhotoLightbox({ visible, photos, initialIndex, onClose }
   };
 
   const handleDownload = async () => {
+    setIsDownloading(true);
     try {
-      await Linking.openURL(photos[index]);
+      await downloadImageToDevice(photos[index]);
       setDownloaded(true);
-    } catch {
-      // Linking failure is surfaced by the OS (e.g. "can't open URL");
-      // nothing else for this screen to do.
+      Alert.alert(
+        'Downloaded',
+        Platform.OS === 'android'
+          ? 'Saved to your Downloads folder.'
+          : 'Saved in the app - open the Files app and look under "On My iPhone/iPad" to view it.',
+      );
+    } catch (err) {
+      Alert.alert('Could not download', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -109,10 +118,15 @@ export default function PhotoLightbox({ visible, photos, initialIndex, onClose }
           <TouchableOpacity
             style={[styles.downloadBtn, downloaded && styles.downloadBtnDone]}
             onPress={handleDownload}
+            disabled={isDownloading}
           >
-            <DownloadIcon color={downloaded ? '#FFFFFF' : '#14171A'} />
+            {isDownloading ? (
+              <ActivityIndicator size="small" color={downloaded ? '#FFFFFF' : '#14171A'} />
+            ) : (
+              <DownloadIcon color={downloaded ? '#FFFFFF' : '#14171A'} />
+            )}
             <Text style={[styles.downloadText, downloaded && styles.downloadTextDone]}>
-              {downloaded ? 'Opened for download' : 'Download photo'}
+              {isDownloading ? 'Downloading…' : downloaded ? 'Downloaded' : 'Download photo'}
             </Text>
           </TouchableOpacity>
         </View>
