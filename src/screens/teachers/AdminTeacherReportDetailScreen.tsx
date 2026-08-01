@@ -6,14 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Modal,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherReports, TeacherReport } from '../../services/adminTeacherService';
 import { Skeleton } from '../../components/Skeleton';
+import PhotoLightbox from '../../components/PhotoLightbox';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
@@ -43,27 +42,6 @@ function formatMonth(monthStr: string) {
 }
 
 /** Full-screen, tap-to-dismiss viewer for a report photo. */
-function PhotoViewerModal({ uri, onClose }: { uri: string | null; onClose: () => void }) {
-  const { width, height } = Dimensions.get('window');
-  const { t } = useLocale();
-  return (
-    <Modal visible={!!uri} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.viewerBackdrop} activeOpacity={1} onPress={onClose}>
-        {uri && (
-          <Image
-            source={{ uri }}
-            style={{ width: width * 0.94, height: height * 0.75 }}
-            resizeMode="contain"
-          />
-        )}
-        <TouchableOpacity style={styles.viewerCloseBtn} onPress={onClose} hitSlop={12}>
-          <Text style={styles.viewerCloseText}>{t('common.close', 'Close')}</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  );
-}
-
 export default function AdminTeacherReportDetailScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -75,7 +53,7 @@ export default function AdminTeacherReportDetailScreen() {
   const [reports, setReports] = useState<TeacherReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -144,11 +122,11 @@ export default function AdminTeacherReportDetailScreen() {
 
                 {report.photos.length > 0 && (
                   <View style={styles.photoGrid}>
-                    {report.photos.map((url) => (
+                    {report.photos.map((url, index) => (
                       <TouchableOpacity
                         key={url}
                         activeOpacity={0.85}
-                        onPress={() => setViewerUri(url)}
+                        onPress={() => setLightbox({ photos: report.photos, index })}
                       >
                         <Image source={{ uri: url }} style={styles.photoThumb} />
                       </TouchableOpacity>
@@ -168,7 +146,12 @@ export default function AdminTeacherReportDetailScreen() {
         </ScrollView>
       )}
 
-      <PhotoViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
+      <PhotoLightbox
+        visible={!!lightbox}
+        photos={lightbox?.photos ?? []}
+        initialIndex={lightbox?.index ?? 0}
+        onClose={() => setLightbox(null)}
+      />
     </View>
   );
 }
@@ -227,22 +210,4 @@ const styles = StyleSheet.create({
   reportFooterRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   submittedByDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: EMERALD, marginRight: 8 },
   reportSubmittedBy: { fontSize: 12.5, color: SUBTLE, fontStyle: 'italic' },
-
-  // --- Full-screen photo viewer ---
-  viewerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewerCloseBtn: {
-    position: 'absolute',
-    top: 56,
-    right: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  viewerCloseText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

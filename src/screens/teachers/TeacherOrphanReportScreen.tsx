@@ -25,6 +25,7 @@ import {
 import { PickedPhoto } from '../../services/orphanService';
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
+import PhotoLightbox from '../../components/PhotoLightbox';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
@@ -149,6 +150,7 @@ function TeacherReportDetailModal({
 }) {
   const { t } = useLocale();
   const report = month?.report ?? null;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -205,7 +207,9 @@ function TeacherReportDetailModal({
                   <Text style={styles.modalSectionLabel}>{t('teacher_orphan_report.photos_label', 'Photos')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {report.photos.map((uri, idx) => (
-                      <Image key={`${uri}-${idx}`} source={{ uri }} style={styles.modalPhoto} />
+                      <TouchableOpacity key={`${uri}-${idx}`} activeOpacity={0.85} onPress={() => setLightboxIndex(idx)}>
+                        <Image source={{ uri }} style={styles.modalPhoto} />
+                      </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
@@ -222,6 +226,12 @@ function TeacherReportDetailModal({
           )}
         </View>
       </View>
+      <PhotoLightbox
+        visible={lightboxIndex !== null}
+        photos={report?.photos ?? []}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </Modal>
   );
 }
@@ -346,7 +356,7 @@ export default function TeacherOrphanReportScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!token || !teachingEffectiveness || !classroomEngagement || !professionalGrowth) return;
+    if (!token || !teachingEffectiveness || !classroomEngagement || !professionalGrowth || photos.length === 0) return;
     const [y, m] = (wizardMonth?.key ?? '').split('-').map(Number);
     const reportMonthParam = y && m ? `${y}-${String(m).padStart(2, '0')}-01` : undefined;
     const fields = {
@@ -471,9 +481,11 @@ export default function TeacherOrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('teacher_orphan_report.step_photos_title', 'Add Photos'),
-        subtitle: t('teacher_orphan_report.step_photos_subtitle', 'Optional — add photos of your teaching activities, achievements, or classroom moments.'),
-        content: <PhotoPicker photos={photos} onChange={setPhotos} />,
-        isValid: true,
+        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments.'),
+        content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
+        // Photos are required to submit - the wizard's Submit button
+        // stays disabled until at least one is attached.
+        isValid: photos.length > 0,
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

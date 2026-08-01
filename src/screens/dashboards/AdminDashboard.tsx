@@ -181,6 +181,14 @@ function IdCardIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function PencilIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2.4} strokeLinejoin="round" />
+      <Path d="M13 7l4 4" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
 function LockIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -313,6 +321,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminClassTeacherAssign',
       icon: (c) => <BookIcon color={c} />,
+    },
+    {
+      key: 'classSchedule',
+      title: t('admin_dashboard.class_schedule_title', 'Class Schedule'),
+      desc: t('admin_dashboard.class_schedule_desc', 'Build the weekly timetable'),
+      variant: 'soft',
+      route: 'AdminSchedule',
+      icon: (c) => <CalendarIcon color={c} />,
     },
     {
       key: 'enrollment',
@@ -740,8 +756,15 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
               <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
             </View>
-            <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+            <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10} style={styles.avatarWrap}>
               <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
+              <TouchableOpacity
+                style={styles.avatarEditBadge}
+                onPress={() => (navigation as any).navigate('EditProfile')}
+                hitSlop={8}
+              >
+                <PencilIcon color={EMERALD} size={11} />
+              </TouchableOpacity>
             </TouchableOpacity>
           </View>
 
@@ -834,6 +857,21 @@ const styles = StyleSheet.create({
   },
   greetingSmall: { fontSize: 15, color: PALE_GREEN },
   greetingName: { fontSize: 30, fontWeight: '800', color: '#FFFFFF', marginTop: 4 },
+
+  avatarWrap: { position: 'relative' },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   reportsCard: {
     flexDirection: 'row',

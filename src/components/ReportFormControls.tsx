@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import Svg, { Path, Rect, Circle, Line } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { PickedPhoto } from '../services/orphanService';
 import { SHADOW } from '../theme/spatial';
+import { preparePostPhoto, InvalidPhotoTypeError, formatBytes, MAX_PHOTO_BYTES } from '../utils/imagePrep';
 
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#E7F5EC';
@@ -91,23 +92,47 @@ export function PhotoPicker({
   photos,
   onChange,
   maxPhotos = 5,
+  required = false,
 }: {
   photos: PickedPhoto[];
   onChange: (photos: PickedPhoto[]) => void;
   maxPhotos?: number;
+  /** Shows a "Required" hint under the picker - the parent step's own
+   * isValid still controls whether the wizard can advance; this is
+   * display-only. */
+  required?: boolean;
 }) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const pick = async () => {
     if (photos.length >= maxPhotos) return;
     const result = await launchImageLibrary({
       mediaType: 'photo',
       selectionLimit: maxPhotos - photos.length,
-      quality: 0.7,
+      quality: 0.9,
     });
     if (result.didCancel || result.errorCode || !result.assets) return;
-    const picked: PickedPhoto[] = result.assets
-      .filter((a) => !!a.uri)
-      .map((a) => ({ uri: a.uri as string, fileName: a.fileName ?? null, type: a.type ?? null }));
-    onChange([...photos, ...picked].slice(0, maxPhotos));
+
+    setIsProcessing(true);
+    try {
+      const prepared: PickedPhoto[] = [];
+      for (const a of result.assets) {
+        if (!a.uri) continue;
+        try {
+          const compressed = await preparePostPhoto(a.uri, a.fileName ?? undefined, a.type ?? undefined, a.fileSize ?? undefined);
+          prepared.push({ uri: compressed.uri, fileName: compressed.fileName, type: compressed.type });
+        } catch (err) {
+          if (err instanceof InvalidPhotoTypeError) {
+            Alert.alert('Unsupported photo', err.message);
+          } else {
+            Alert.alert('Could not process photo', 'Please try a different image.');
+          }
+        }
+      }
+      onChange([...photos, ...prepared].slice(0, maxPhotos));
+    } finally {
+      setIsProcessing(false);
+    }
   };
   const remove = (uri: string) => onChange(photos.filter((p) => p.uri !== uri));
 
@@ -126,10 +151,16 @@ export function PhotoPicker({
         </ScrollView>
       )}
       {photos.length < maxPhotos && (
-        <TouchableOpacity style={styles.addPhotosBox} onPress={pick} activeOpacity={0.8}>
-          <IconPlusCircle />
-          <Text style={styles.addPhotosText}>Add Photos</Text>
-          <Text style={styles.addPhotosSub}>Up to {maxPhotos} images</Text>
+        <TouchableOpacity style={styles.addPhotosBox} onPress={pick} activeOpacity={0.8} disabled={isProcessing}>
+          {isProcessing ? (
+            <ActivityIndicator color={EMERALD} />
+          ) : (
+            <>
+              <IconPlusCircle />
+              <Text style={styles.addPhotosText}>Add Photos{required ? ' (Required)' : ''}</Text>
+              <Text style={styles.addPhotosSub}>Up to {maxPhotos} images - max {formatBytes(MAX_PHOTO_BYTES)} each, compressed automatically</Text>
+            </>
+          )}
         </TouchableOpacity>
       )}
     </View>

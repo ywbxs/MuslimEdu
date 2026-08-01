@@ -459,7 +459,7 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               </View>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => handlePlaceholderPress(t('teacher_dashboard.editing_profile', 'Editing your profile'))}
+                onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
                 <PencilIcon color={PALE_GREEN} size={16} />
@@ -559,6 +559,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
                 title={t('teacher_dashboard.my_classes_title', 'My Classes')}
                 description={t('teacher_dashboard.my_classes_desc', 'View and manage your assigned classes')}
                 onPress={() => (navigation as any).navigate('TeacherMyClasses')}
+              />
+              <QuickActionCard
+                icon={<CalendarIcon color={EMERALD} size={20} />}
+                title={t('teacher_dashboard.my_schedule_title', 'My Schedule')}
+                description={t('teacher_dashboard.my_schedule_desc', 'See your weekly class timetable')}
+                onPress={() => (navigation as any).navigate('TeacherMySchedule')}
               />
               <QuickActionCard
                 icon={<ClipboardCheckIcon color={EMERALD} size={20} />}

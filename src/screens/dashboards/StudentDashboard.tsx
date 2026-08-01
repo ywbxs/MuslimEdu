@@ -15,6 +15,7 @@ import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVID
 import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
+import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -412,7 +413,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               </View>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => handlePlaceholderPress(t('student_dashboard.editing_profile', 'Editing your profile'))}
+                onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
                 <PencilIcon color={PALE_GREEN} size={16} />
@@ -507,6 +508,14 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               onPress={() => (navigation as any).navigate('MyProgress')}
             />
           )}
+          {!isOrphan && (
+            <QuickActionCard
+              icon={<CalendarIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.my_schedule_title', 'My Schedule')}
+              description={t('student_dashboard.my_schedule_desc', 'See your weekly class timetable')}
+              onPress={() => (navigation as any).navigate('StudentSchedule')}
+            />
+          )}
           <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('student_dashboard.notifications_title', 'Notifications')}
@@ -533,6 +542,11 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
+
+        {/* Today's class schedule preview - regular schools only; orphan
+            schools have no class/schedule concept (same gating as the "My
+            Schedule" Quick Action tile above). */}
+        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
         {/* This Month Overview - orphan students only (it's report-backed) */}
         {isOrphan ? (

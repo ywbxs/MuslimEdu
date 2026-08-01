@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import Svg, { Path, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 
@@ -21,6 +22,15 @@ export const GLASS_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.07)' : '#0E2A1E';
 export const GLASS_BORDER = GLASS_ENABLED ? 'rgba(255,255,255,0.14)' : '#1B3B2C';
 export const GLASS_DIVIDER = GLASS_ENABLED ? 'rgba(255,255,255,0.12)' : '#1B3B2C';
 export const GLASS_ICON_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.08)' : '#173225';
+
+function PencilIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2.4} strokeLinejoin="round" />
+      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 interface DashboardShellProps {
   title: string;
@@ -69,6 +79,13 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
               <Text style={styles.avatarFallbackText}>{initial}</Text>
             </View>
           )}
+          <TouchableOpacity
+            style={styles.avatarEditBadge}
+            onPress={() => (navigation as any).navigate('EditProfile')}
+            hitSlop={8}
+          >
+            <PencilIcon color={EMERALD} size={11} />
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
 
@@ -111,6 +128,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarFallbackText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: { paddingHorizontal: 20, paddingBottom: 110, flexGrow: 1 },
 });
 
