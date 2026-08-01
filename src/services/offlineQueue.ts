@@ -26,7 +26,7 @@ const MAX_BACKOFF_MS = 30 * 60 * 1000;
 export type QueuedActionKind = 'orphan_report_submit' | 'teacher_orphan_report_submit';
 
 interface OrphanReportSubmitPayload {
-  fields: { note: string; academic_rating: number; wellbeing_rating: number; report_month?: string };
+  fields: { note: string; academic_rating: number; wellbeing_rating: number };
   photos: PickedPhoto[];
 }
 

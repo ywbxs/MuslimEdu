@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -313,11 +313,6 @@ export default function OrphanReportScreen() {
 
   const [selectedMonth, setSelectedMonth] = useState<TimelineMonth | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
-  // Set when the child taps a "Missing" month in the submission history -
-  // the form above switches to targeting that past month instead of the
-  // current one, mirroring TeacherOrphanReportScreen's make-up-report flow.
-  const [makeUpMonth, setMakeUpMonth] = useState<TimelineMonth | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -371,33 +366,13 @@ export default function OrphanReportScreen() {
 
   const removePhoto = (uri: string) => setPhotos((prev) => prev.filter((p) => p.uri !== uri));
 
-  const resetForm = () => {
-    setNote('');
-    setAcademicRating(null);
-    setWellbeingRating(null);
-    setPhotos([]);
-    setMakeUpMonth(null);
-  };
-
   const handleSubmit = async () => {
     if (!token) return;
     if (!academicRating || !wellbeingRating) {
       Alert.alert(t('orphan_report.almost_done', 'Almost done'), t('orphan_report.select_ratings', 'Please select both an academic and wellbeing rating.'));
       return;
     }
-    // Reconstruct "YYYY-MM-01" from the tapped timeline entry's key so a
-    // make-up submission targets that past month instead of whatever month
-    // the backend defaults new submissions to - same approach as
-    // TeacherOrphanReportScreen.handleSubmit.
-    const [y, m] = (makeUpMonth?.key ?? '').split('-').map(Number);
-    const reportMonthParam = y && m ? `${y}-${String(m).padStart(2, '0')}-01` : undefined;
-    const fields = {
-      note,
-      academic_rating: academicRating,
-      wellbeing_rating: wellbeingRating,
-      report_month: reportMonthParam,
-    };
-    const targetMonthLabel = makeUpMonth?.name ?? currentMonthLabel;
+    const fields = { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating };
 
     // Already known offline - don't bother attempting the request, queue it
     // straight away so it sends automatically once connectivity returns.
@@ -407,19 +382,22 @@ export default function OrphanReportScreen() {
         t('orphan_report.queued_title', "You're offline"),
         t('orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
       );
-      resetForm();
+      setNote('');
+      setAcademicRating(null);
+      setWellbeingRating(null);
+      setPhotos([]);
       return;
     }
 
     setIsSubmitting(true);
     try {
       await submitReport(token, fields, photos);
-      Alert.alert(
-        t('orphan_report.submitted_title', 'Report submitted'),
-        t('orphan_report.submitted_message', 'Your {month} report has been sent to your school admin.').replace('{month}', targetMonthLabel),
-      );
+      Alert.alert(t('orphan_report.submitted_title', 'Report submitted'), t('orphan_report.submitted_message', 'Your monthly report has been sent to your school admin.'));
       await load();
-      resetForm();
+      setNote('');
+      setAcademicRating(null);
+      setWellbeingRating(null);
+      setPhotos([]);
     } catch (err) {
       // A dropped connection mid-submit looks like a plain TypeError from
       // fetch (RN: "Network request failed") - queue it instead of losing
@@ -430,22 +408,16 @@ export default function OrphanReportScreen() {
           t('orphan_report.queued_title', "You're offline"),
           t('orphan_report.queued_message', "Your report will be submitted automatically once you're back online."),
         );
-        resetForm();
+        setNote('');
+        setAcademicRating(null);
+        setWellbeingRating(null);
+        setPhotos([]);
       } else {
         Alert.alert(t('orphan_report.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
       }
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const openMakeUp = (m: TimelineMonth) => {
-    setNote('');
-    setAcademicRating(null);
-    setWellbeingRating(null);
-    setPhotos([]);
-    setMakeUpMonth(m);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   // Normalize the status into a full 12-month timeline regardless of whether
@@ -492,14 +464,6 @@ export default function OrphanReportScreen() {
   const alreadySubmitted = status?.submitted_this_month ?? false;
   const HISTORY_PREVIEW_COUNT = 5;
   const visibleTimeline = showAllHistory ? timeline : timeline.slice(0, HISTORY_PREVIEW_COUNT);
-  // A month reached via "make up" is by definition a past Missing month, so
-  // it's never already submitted - only fall back to the current month's
-  // done/not-done state when no make-up month is active.
-  const showDoneBox = !makeUpMonth && alreadySubmitted;
-  const formTitle = makeUpMonth
-    ? t('orphan_report.make_up_prompt', 'Submit Make-Up Report')
-    : t('orphan_report.submit_prompt', 'Submit Your Monthly Report');
-  const formMonthLabel = makeUpMonth?.name ?? currentMonthLabel;
 
   return (
     <View style={styles.flex}>
@@ -536,7 +500,7 @@ export default function OrphanReportScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {pendingReportCount > 0 ? (
             <View style={styles.pendingSyncBanner}>
               <IconClock color={EMERALD} />
@@ -554,24 +518,13 @@ export default function OrphanReportScreen() {
                 <IconDoc color={EMERALD} />
               </View>
               <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>{formTitle}</Text>
-                <Text style={styles.cardMonth}>{formMonthLabel}</Text>
+                <Text style={styles.cardTitle}>{t('orphan_report.submit_prompt', 'Submit Your Monthly Report')}</Text>
+                <Text style={styles.cardMonth}>{currentMonthLabel}</Text>
               </View>
             </View>
             <View style={styles.divider} />
 
-            {makeUpMonth ? (
-              <View style={styles.makeUpBanner}>
-                <Text style={styles.makeUpBannerText}>
-                  {t('orphan_report.make_up_banner', 'Filling in a missed month - this will be recorded as {month}, not the current month.').replace('{month}', makeUpMonth.name)}
-                </Text>
-                <TouchableOpacity onPress={resetForm} hitSlop={8}>
-                  <Text style={styles.makeUpCancel}>{t('common.cancel', 'Cancel')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {showDoneBox ? (
+            {alreadySubmitted ? (
               <View style={styles.doneBox}>
                 <Text style={styles.doneTitle}>{t('orphan_report.all_set', "You're all set for {month}").replace('{month}', currentMonthLabel)}</Text>
                 <Text style={styles.doneBody}>
@@ -714,7 +667,6 @@ export default function OrphanReportScreen() {
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text style={styles.historyHint}>{t('orphan_report.history_hint', 'Tap a missing month to submit a make-up report.')}</Text>
 
             {visibleTimeline.length === 0 ? (
               <Text style={styles.emptyHistory}>{t('orphan_report.empty_history', 'No reports yet. Your first submission will show up here.')}</Text>
@@ -726,7 +678,7 @@ export default function OrphanReportScreen() {
                     key={m.key}
                     style={[styles.timelineRow, idx === visibleTimeline.length - 1 && styles.timelineRowLast]}
                     activeOpacity={0.7}
-                    onPress={() => (m.submitted ? setSelectedMonth(m) : openMakeUp(m))}
+                    onPress={() => setSelectedMonth(m)}
                   >
                     <View style={styles.timelineNodeCol}>
                       {m.submitted ? (
@@ -760,7 +712,7 @@ export default function OrphanReportScreen() {
                       </View>
                       <View style={[styles.statusBadge, m.submitted ? styles.statusBadgeOnTime : styles.statusBadgePending]}>
                         <Text style={[styles.statusBadgeText, m.submitted ? styles.statusBadgeTextOnTime : styles.statusBadgeTextPending]}>
-                          {m.submitted ? t('orphan_report.on_time', 'On time') : t('orphan_report.make_up', 'Make up')}
+                          {m.submitted ? t('orphan_report.on_time', 'On time') : t('orphan_report.pending', 'Pending')}
                         </Text>
                       </View>
                       <Text style={styles.chevron}>›</Text>
@@ -932,19 +884,6 @@ const styles = StyleSheet.create({
   doneTitle: { fontSize: 16, fontWeight: '700', color: EMERALD, marginBottom: 6 },
   doneBody: { fontSize: 14, color: SUBTLE, lineHeight: 20 },
 
-  makeUpBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: DANGER_SOFT,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 18,
-  },
-  makeUpBannerText: { flex: 1, fontSize: 12.5, color: DANGER, fontWeight: '600', lineHeight: 18 },
-  makeUpCancel: { color: DANGER, fontSize: 13, fontWeight: '700' },
-
   historyHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -952,7 +891,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   historyTitle: { fontSize: 17, fontWeight: '700', color: INK, marginLeft: 10 },
-  historyHint: { fontSize: 12.5, color: SUBTLE, marginBottom: 10, marginLeft: 44 },
   viewAll: { color: EMERALD, fontSize: 14, fontWeight: '600' },
   emptyHistory: { fontSize: 13, color: SUBTLE, paddingVertical: 14, lineHeight: 19 },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },

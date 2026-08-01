@@ -89,29 +89,13 @@ export async function fetchReportStatus(token: string): Promise<ReportStatus> {
  */
 export async function submitReport(
   token: string,
-  fields: {
-    note: string;
-    academic_rating: number;
-    wellbeing_rating: number;
-    /**
-     * Optional target month as "YYYY-MM-01". Lets a child make up a past
-     * "Missing" month from the submission history, not just the current
-     * one - mirrors submitTeacherReport's report_month in
-     * teacherOrphanService.ts. Omit to submit for the current month
-     * (previous default behavior, unchanged). Confirmed accepted and
-     * honored by /orphan_report_submit.
-     */
-    report_month?: string;
-  },
+  fields: { note: string; academic_rating: number; wellbeing_rating: number },
   photos: PickedPhoto[] = [],
 ): Promise<{ message: string; report: MonthlyReport }> {
   const form = new FormData();
   form.append('note', fields.note);
   form.append('academic_rating', String(fields.academic_rating));
   form.append('wellbeing_rating', String(fields.wellbeing_rating));
-  if (fields.report_month) {
-    form.append('report_month', fields.report_month);
-  }
 
   photos.forEach((photo, index) => {
     // @ts-ignore - React Native's FormData accepts this shape for file uploads
