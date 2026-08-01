@@ -99,12 +99,6 @@ export async function submitReport(
      * one - mirrors submitTeacherReport's report_month in
      * teacherOrphanService.ts. Omit to submit for the current month
      * (previous default behavior, unchanged).
-     * REQUIRES BACKEND SUPPORT: as of the last backend export I read,
-     * ApiController::orphan_report_submit hardcodes the current month and
-     * never reads this field - a patch mirroring teacher_report_submit's
-     * handling has been prepared separately (not yet deployed as far as I
-     * know). Until it ships, submissions land on whatever month the server
-     * defaults to (currently: the current month), regardless of this value.
      */
     report_month?: string;
   },
