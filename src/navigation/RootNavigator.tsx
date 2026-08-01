@@ -127,6 +127,8 @@ import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
+import AcademicUnavailableScreen from '../screens/common/AcademicUnavailableScreen';
+import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
 
@@ -148,11 +150,30 @@ export default function RootNavigator() {
     return <AppLaunchSkeleton />;
   }
 
+  // Orphan schools have no academic subsystem at all. The dashboards already
+  // leave those cards out of their menus, but that only covers the entry
+  // points we know about - a restored navigation state, a card added later
+  // without the check, or a screen reached from another screen would still
+  // push a class/grading/enrollment screen with nothing behind it. Guarding
+  // the routes themselves closes the whole set in one place.
+  const hideAcademic = isOrphanSchoolUser(user);
+
   return (
     <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
       <StatusBar barStyle="dark-content" />
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Navigator
+          screenOptions={{ headerShown: false, animation: 'fade' }}
+          screenLayout={({ route, navigation: screenNavigation, children }) =>
+            hideAcademic && ACADEMIC_ROUTES.has(route.name) ? (
+              <AcademicUnavailableScreen
+                onBack={screenNavigation.canGoBack() ? () => screenNavigation.goBack() : undefined}
+              />
+            ) : (
+              children
+            )
+          }
+        >
           {user ? (
             <>
               <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />

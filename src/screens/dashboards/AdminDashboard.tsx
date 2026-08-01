@@ -10,6 +10,7 @@ import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import SchoolCodeSetupScreen from '../admin/SchoolCodeSetupScreen';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
+import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
@@ -208,20 +209,6 @@ interface ManageItem {
   lockedMessage?: string;
 }
 
-// Academic-subsystem tiles hidden entirely for orphan schools (institution_type
-// === 'orphanage') - they have no classes/subjects/grading/curriculum, so these
-// tiles either lead nowhere useful or into an empty/broken flow.
-const ACADEMIC_ITEM_KEYS = new Set([
-  'classes', 'academicSetup', 'gradingSystems', 'examCategories',
-  'gradebookReview', 'announcementReview', 'lessonPlanReview',
-  'assessmentReview', 'assessmentGrades', 'materialsReview',
-  'programsSubjects', 'timetableConflicts', 'attendanceConfig',
-  'academicFacilities', 'academicSchedule', 'academicCalendar',
-  'academicAnalytics', 'completionHub', 'graduation', 'promotionPolicy',
-  'documentTemplates', 'gradeRelease', 'orgStructure', 'behaviorIncidents',
-  'examinations', 'studentProgress', 'analyticsExtended', 'attendance',
-]);
-
 interface AdminDashboardProps {
   footer?: React.ReactNode;
 }
@@ -233,16 +220,18 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   const { t } = useLocale();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const childLabel = user?.is_orphan
-    ? t('admin_dashboard.children_label', 'children')
-    : t('admin_dashboard.students_label', 'students');
-  const childTitle = user?.is_orphan
-    ? t('admin_dashboard.children_title', 'Children')
-    : t('admin_dashboard.students_title', 'Students');
   // Orphan schools have no academic-hub concept (no sections/classes to
   // assign teachers to) - only the Monthly Reports feature applies to them,
-  // shown separately below via MonthlyReportsCard.
-  const isOrphanSchool = user?.institution_type === 'orphanage';
+  // shown separately below via MonthlyReportsCard. Every academic tile is
+  // filtered out of `items` below; RootNavigator guards the routes too.
+  const isOrphanSchool = isOrphanSchoolUser(user);
+
+  const childLabel = isOrphanSchool
+    ? t('admin_dashboard.children_label', 'children')
+    : t('admin_dashboard.students_label', 'students');
+  const childTitle = isOrphanSchool
+    ? t('admin_dashboard.children_title', 'Children')
+    : t('admin_dashboard.students_title', 'Students');
 
   // Gates the "Grading Systems" card. Fail-open by design, same reasoning
   // as StudentDashboard's isAcademicLocked: a null status (still loading,
@@ -648,7 +637,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       route: 'AccountSettings',
       icon: (c) => <GearIcon color={c} />,
     },
-  ].filter((item) => !(isOrphanSchool && ACADEMIC_ITEM_KEYS.has(item.key)));
+  ].filter((item) => !(isOrphanSchool && ACADEMIC_ADMIN_TILE_KEYS.has(item.key)));
 
   // --- Parallax + fade for the background layer only. The ScrollView content
   // (greeting, reports card, grid) scrolls at normal speed on top, so it
@@ -677,7 +666,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // A fresh orphan school has no student code prefix yet. Show only the
   // one-time setup step - no Teachers/Children/Reports cards - until it's
   // saved (see SchoolCodeSetupScreen + AuthContext.updateUser).
-  if (user?.institution_type === 'orphanage' && !user?.school_code) {
+  if (isOrphanSchool && !user?.school_code) {
     return <SchoolCodeSetupScreen />;
   }
 
@@ -725,7 +714,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           </TouchableOpacity>
         </View>
 
-        {user?.institution_type === 'orphanage' && token ? (
+        {isOrphanSchool && token ? (
           // Real data via admin_orphan_report_overview, restored after a
           // later merge silently reverted this to the old static
           // placeholder card (no live counts). See MuslimEdu-Status-8.

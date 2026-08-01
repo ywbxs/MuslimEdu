@@ -14,6 +14,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
 import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -259,7 +260,7 @@ export default function StudentDashboard() {
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const isOrphan = !!user?.is_orphan;
+  const isOrphan = isOrphanSchoolUser(user);
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
 
   const [status, setStatus] = useState<ReportStatus | null>(null);

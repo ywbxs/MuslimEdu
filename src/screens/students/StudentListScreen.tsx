@@ -22,6 +22,7 @@ import { ChildActionModal, ChildProfileSheet } from '../../components/ChildProfi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
@@ -224,7 +225,9 @@ export default function StudentListScreen() {
     setIsRefreshing(false);
   };
 
-  const title = user?.is_orphan ? t('student_list.title_children', 'Children') : t('student_list.title_students', 'Students');
+  const title = isOrphanSchoolUser(user)
+    ? t('student_list.title_children', 'Children')
+    : t('student_list.title_students', 'Students');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

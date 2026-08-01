@@ -16,6 +16,7 @@ import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
 import { fetchStudentEnrollmentWorkflowStatus } from '../services/enrollmentWorkflowService';
+import { isOrphanSchoolUser } from '../utils/orphanSchool';
 import { COLORS, BRAND } from '../theme/glass';
 
 // Per-user cache of the last known enrollment gate verdict, so a student who
@@ -162,7 +163,7 @@ function ReportsRouter() {
 
   const isAdmin = user.role === 'admin' || user.role === 'superadmin';
 
-  if (!user.is_orphan) {
+  if (!isOrphanSchoolUser(user)) {
     return <ReportsPlaceholder />;
   }
 
@@ -240,7 +241,7 @@ function useEnrollmentGate(userId: number | null, token: string | null): boolean
 
 export default function MainTabs() {
   const { user, token } = useAuth();
-  const isGatedStudent = !!user && user.role === 'student' && !user.is_orphan;
+  const isGatedStudent = !!user && user.role === 'student' && !isOrphanSchoolUser(user);
   const gateCompleted = useEnrollmentGate(isGatedStudent ? user!.id : null, token);
 
   if (!user) return null;
