@@ -124,6 +124,7 @@ export default function InstitutionProfileScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [description, setDescription] = useState('');
   const [institutionType, setInstitutionType] = useState<InstitutionType | null>(null);
   const [timezone, setTimezone] = useState('');
   const [defaultLanguage, setDefaultLanguage] = useState('');
@@ -152,6 +153,7 @@ export default function InstitutionProfileScreen() {
       setEmail(s.email ?? '');
       setPhone(s.phone ?? '');
       setAddress(s.address ?? '');
+      setDescription(s.description ?? '');
       setInstitutionType(s.institution_type);
       setTimezone(s.timezone ?? '');
       setDefaultLanguage(s.default_language ?? '');
@@ -226,6 +228,7 @@ export default function InstitutionProfileScreen() {
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
+        description: description.trim() || undefined,
         institution_type: institutionType ?? undefined,
         timezone: timezone.trim() || undefined,
         default_language: defaultLanguage.trim() || undefined,
@@ -322,6 +325,7 @@ export default function InstitutionProfileScreen() {
           <Field label={t('institution_profile.email', 'Email (optional)')} value={email} onChangeText={setEmail} placeholder="school@example.com" keyboardType="email-address" theme={theme} styles={styles} />
           <Field label={t('institution_profile.phone', 'Phone (optional)')} value={phone} onChangeText={setPhone} placeholder={t('institution_profile.phone_placeholder', 'Phone number')} keyboardType="phone-pad" theme={theme} styles={styles} />
           <Field label={t('institution_profile.address', 'Address (optional)')} value={address} onChangeText={setAddress} placeholder={t('institution_profile.address_placeholder', 'Address')} multiline theme={theme} styles={styles} />
+          <Field label={t('institution_profile.description', 'Description (optional)')} value={description} onChangeText={setDescription} placeholder={t('institution_profile.description_placeholder', 'Institution description')} multiline theme={theme} styles={styles} />
 
           {/* Institution type */}
           <Text style={styles.sectionTitle}>{t('institution_profile.institution_type', 'Institution Type')}</Text>
