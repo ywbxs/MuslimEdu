@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, absoluteUrl } from '../config/api';
 
 /**
  * Types + API wrappers for spec §4.16 "Enrollment Workflow Management".
@@ -262,16 +262,26 @@ export interface StudentWorkflowHistoryEntry {
   changed_at: string;
 }
 
+export interface StudentEnrollmentWorkflowSchoolInfo {
+  name: string | null;
+  logo: string | null;
+}
+
 export interface StudentEnrollmentWorkflowStatus {
   started: boolean;
   message?: string;
   record: StudentWorkflowRecord | null;
   stages: StudentWorkflowStage[];
   history: StudentWorkflowHistoryEntry[];
+  school?: StudentEnrollmentWorkflowSchoolInfo;
 }
 
 export async function fetchStudentEnrollmentWorkflowStatus(
   token: string
 ): Promise<StudentEnrollmentWorkflowStatus> {
-  return authedPost('/student_enrollment_workflow_status', token, {});
+  const data = await authedPost<StudentEnrollmentWorkflowStatus>('/student_enrollment_workflow_status', token, {});
+  return {
+    ...data,
+    school: data.school ? { ...data.school, logo: absoluteUrl(data.school.logo) } : undefined,
+  };
 }

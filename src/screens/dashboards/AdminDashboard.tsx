@@ -219,6 +219,15 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   const { user, token } = useAuth();
   const { t } = useLocale();
   const scrollY = useRef(new Animated.Value(0)).current;
+  // The dark hero background is a separate absolutely-positioned layer
+  // meant to sit behind the greeting + (orphan-only) MonthlyReportsCard,
+  // with the white "body" panel's rounded top corner riding up over it
+  // for a smooth transition. A fixed HERO_HEIGHT can fall short of that
+  // foreground content's real height (MonthlyReportsCard's own content is
+  // dynamic), leaving a gap of plain canvas background between the hero
+  // and the body's rounded corner instead of the intended overlap.
+  // Measure the real height instead of guessing it.
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
 
   // Orphan schools have no academic-hub concept (no sections/classes to
   // assign teachers to) - only the Monthly Reports feature applies to them,
@@ -659,12 +668,12 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // (greeting, reports card, grid) scrolls at normal speed on top, so it
   // "moves over" this slower, fading dark layer. That gap is the depth.
   const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT],
-    outputRange: [0, -HERO_HEIGHT * PARALLAX_FACTOR],
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
     extrapolate: 'clamp',
   });
   const bgOpacity = scrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT * 0.6, HERO_HEIGHT],
+    inputRange: [0, heroHeight * 0.6, heroHeight],
     outputRange: [1, 1, 0],
     extrapolate: 'clamp',
   });
@@ -692,7 +701,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       <Animated.View
         style={[
           styles.bgLayer,
-          { height: HERO_HEIGHT, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
+          { height: heroHeight, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] },
         ]}
         pointerEvents="none"
         renderToHardwareTextureAndroid
@@ -719,23 +728,30 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
         })}
         scrollEventThrottle={16}
       >
-        {/* Greeting + avatar (foreground, scrolls at normal speed over the bg) */}
-        <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
-            <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
+        <View
+          onLayout={(e) => {
+            const measured = e.nativeEvent.layout.height;
+            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+          }}
+        >
+          {/* Greeting + avatar (foreground, scrolls at normal speed over the bg) */}
+          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
+              <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
+            </View>
+            <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
-          </TouchableOpacity>
-        </View>
 
-        {isOrphanSchool && token ? (
-          // Real data via admin_orphan_report_overview, restored after a
-          // later merge silently reverted this to the old static
-          // placeholder card (no live counts). See MuslimEdu-Status-8.
-          <MonthlyReportsCard token={token} />
-        ) : null}
+          {isOrphanSchool && token ? (
+            // Real data via admin_orphan_report_overview, restored after a
+            // later merge silently reverted this to the old static
+            // placeholder card (no live counts). See MuslimEdu-Status-8.
+            <MonthlyReportsCard token={token} />
+          ) : null}
+        </View>
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>

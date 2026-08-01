@@ -99,19 +99,30 @@ export default function EnrollmentWorkflowListScreen() {
     if (!token) return;
     try {
       setError(null);
-      const [sessions, list] = await Promise.all([
-        fetchAcademicSessions(token),
-        fetchEnrollmentWorkflowList(token, statusFilter === 'all' ? {} : { status: statusFilter }),
-      ]);
-      setCurrentSession(pickCurrentSession(sessions));
-      setSessionChecked(true);
+      const list = await fetchEnrollmentWorkflowList(token, statusFilter === 'all' ? {} : { status: statusFilter });
       setRecords(list);
+
+      // Academic sessions are only needed to power the "+ Start" picker,
+      // which is admin-only (admin_enrollment_workflow_start is
+      // admin-only, and admin_sessions_list itself is admin-gated too) -
+      // a Cashier/Registrar sharing this screen can't start workflows, so
+      // skip this call for them entirely rather than letting its 403
+      // fail the whole Promise.all and blank out records they CAN see.
+      if (canStart) {
+        try {
+          const sessions = await fetchAcademicSessions(token);
+          setCurrentSession(pickCurrentSession(sessions));
+        } catch {
+          setCurrentSession(null);
+        }
+        setSessionChecked(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('enrollment_workflow_list.load_error', 'Failed to load enrollment records.'));
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, t]);
+  }, [token, statusFilter, t, canStart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -236,7 +247,7 @@ export default function EnrollmentWorkflowListScreen() {
         )}
       </View>
 
-      {sessionChecked && !currentSession ? (
+      {canStart && sessionChecked && !currentSession ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>
             {t('enrollment_workflow_list.no_current_year', 'No academic year is set as current yet - set one before starting workflows.')}

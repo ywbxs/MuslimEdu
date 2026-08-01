@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import Svg, { Polyline, Circle, Path } from 'react-native-svg';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import Svg, { Polyline, Circle, Path, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -8,10 +8,9 @@ import {
   StudentEnrollmentWorkflowStatus,
 } from '../../services/enrollmentWorkflowService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
-import { GlassButton } from '../../components/glass/GlassKit';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SHADOW, RADIUS } from '../../theme/spatial';
+import { COLORS, SHADOW } from '../../theme/spatial';
 
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#E7F5EC';
@@ -59,6 +58,15 @@ function BulbIcon({ color = EMERALD, size = 22 }: { color?: string; size?: numbe
     </Svg>
   );
 }
+function LogOutIcon({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Polyline points="16 17 21 12 16 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1={21} y1={12} x2={9} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '';
@@ -84,8 +92,7 @@ interface EnrollmentStatusScreenProps {
  * This is the ONLY screen a student sees while the enrollment gate in
  * MainTabs is blocking them (no tab bar underneath, no back target to go
  * to) - so it deliberately has no back button, and a Log Out button
- * instead, matching MenuScreen's footer pattern (GlassButton, danger
- * variant, direct logout - no confirmation dialog).
+ * instead - direct logout, no confirmation dialog.
  */
 export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentStatusScreenProps = {}) {
   const insets = useSafeAreaInsets();
@@ -128,14 +135,29 @@ export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentSta
     ? Math.round(((currentIndex + 1) / stages.length) * 100)
     : 0;
 
+  const schoolName = data?.school?.name;
+  const schoolLogo = data?.school?.logo;
+
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        {schoolName || schoolLogo ? (
+          <View style={styles.schoolRow}>
+            {schoolLogo ? (
+              <Image source={{ uri: schoolLogo }} style={styles.schoolLogo} resizeMode="cover" />
+            ) : (
+              <View style={styles.schoolLogoFallback}>
+                <Text style={styles.schoolLogoFallbackText}>{(schoolName ?? '?').charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            {schoolName ? <Text style={styles.schoolName} numberOfLines={1}>{schoolName}</Text> : null}
+          </View>
+        ) : null}
         <Text style={styles.headerTitle}>{t('enrollment_status.title', 'Enrollment Progress')}</Text>
         <Text style={styles.headerSubtitle}>{t('enrollment_status.subtitle', 'Where you are in the admission process')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
         {isLoading ? (
           <>
             <Skeleton width="60%" height={22} borderRadius={6} style={styles.mb16} />
@@ -271,14 +293,12 @@ export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentSta
         )}
 
         <View style={styles.footerWrap}>
-          <GlassButton
-            label={t('menu.log_out', 'Log Out')}
-            variant="danger"
-            onPress={logout}
-            radius={RADIUS.lg}
-          />
+          <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.7}>
+            <LogOutIcon color={SUBTLE} />
+            <Text style={styles.logoutButtonText}>{t('menu.log_out', 'Log Out')}</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -293,13 +313,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: INK, textAlign: 'center' },
-  headerSubtitle: { fontSize: 13.5, color: SUBTLE, textAlign: 'center', marginTop: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: INK, textAlign: 'center' },
+  headerSubtitle: { fontSize: 13, color: SUBTLE, textAlign: 'center', marginTop: 3 },
 
-  content: { padding: 20, paddingBottom: 48 },
+  schoolRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  schoolLogo: { width: 32, height: 32, borderRadius: 10, marginRight: 8, backgroundColor: '#F0F1F3' },
+  schoolLogoFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    marginRight: 8,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  schoolLogoFallbackText: { fontSize: 15, fontWeight: '800', color: EMERALD },
+  schoolName: { fontSize: 14.5, fontWeight: '700', color: INK, maxWidth: 240 },
+
+  content: { flex: 1, padding: 16, paddingBottom: 14 },
   mb16: { marginBottom: 16 },
 
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: INK, marginTop: 28, marginBottom: 14 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: INK, marginTop: 16, marginBottom: 10 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusPill: { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
@@ -317,41 +351,41 @@ const styles = StyleSheet.create({
 
   actionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 22,
-    marginTop: 20,
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 14,
     borderLeftWidth: 4,
     borderLeftColor: EMERALD,
     ...SHADOW.level2,
   },
-  actionHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  actionHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   actionIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
-  actionPill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 6 },
+  actionPill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 4 },
   actionPillText: { fontSize: 11.5, fontWeight: '700' },
-  actionHeading: { fontSize: 17, fontWeight: '800', color: INK },
-  actionBody: { fontSize: 15, color: INK, lineHeight: 22 },
+  actionHeading: { fontSize: 16, fontWeight: '800', color: INK },
+  actionBody: { fontSize: 14, color: INK, lineHeight: 20 },
 
   stagesCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 20,
+    borderRadius: 20,
+    padding: 16,
     ...SHADOW.level2,
   },
-  stepRow: { flexDirection: 'row', borderRadius: 16 },
-  stepRowCurrent: { backgroundColor: EMERALD_SOFT, marginHorizontal: -10, paddingHorizontal: 10, paddingTop: 8 },
-  stepIconCol: { width: 40, alignItems: 'center' },
+  stepRow: { flexDirection: 'row', borderRadius: 14 },
+  stepRowCurrent: { backgroundColor: EMERALD_SOFT, marginHorizontal: -8, paddingHorizontal: 8, paddingTop: 6 },
+  stepIconCol: { width: 36, alignItems: 'center' },
   stepNumberCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 2.4,
     borderColor: '#D9DCE1',
     alignItems: 'center',
@@ -361,12 +395,12 @@ const styles = StyleSheet.create({
   stepNumberCircleCurrent: { borderColor: EMERALD, ...SHADOW.level1 },
   stepNumberText: { fontSize: 15, fontWeight: '800', color: '#B8BCC2' },
   stepNumberTextCurrent: { color: EMERALD },
-  stepLine: { width: 3, flex: 1, minHeight: 32, backgroundColor: '#D9DCE1', marginTop: 4, borderRadius: 2 },
+  stepLine: { width: 3, flex: 1, minHeight: 18, backgroundColor: '#D9DCE1', marginTop: 4, borderRadius: 2 },
   stepLineDone: { backgroundColor: EMERALD },
-  stepTextCol: { flex: 1, marginLeft: 16, paddingBottom: 26, justifyContent: 'center' },
-  stepLabel: { fontSize: 16.5, fontWeight: '700', color: SUBTLE },
+  stepTextCol: { flex: 1, marginLeft: 14, paddingBottom: 14, justifyContent: 'center' },
+  stepLabel: { fontSize: 15.5, fontWeight: '700', color: SUBTLE },
   stepLabelDone: { color: INK },
-  stepLabelCurrent: { color: EMERALD, fontWeight: '800', fontSize: 17.5 },
+  stepLabelCurrent: { color: EMERALD, fontWeight: '800', fontSize: 16.5 },
   hereTag: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   hereDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: EMERALD, marginRight: 6 },
   stepCurrentTag: { fontSize: 12.5, fontWeight: '700', color: EMERALD },
@@ -391,5 +425,17 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: '#E5484D', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
   retryButtonText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' },
 
-  footerWrap: { marginTop: 32 },
+  footerWrap: { marginTop: 12, alignItems: 'center' },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: '#F4F5F7',
+    borderRadius: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+  },
+  logoutButtonText: { fontSize: 15, fontWeight: '700', color: SUBTLE, marginLeft: 8 },
 });

@@ -47,6 +47,7 @@ export interface SchoolProfile {
   email: string | null;
   phone: string | null;
   address: string | null;
+  description: string | null;
   institution_type: InstitutionType | null;
   logo: string | null;
   seal: string | null;
@@ -119,6 +120,7 @@ export interface InstitutionProfileInput {
   email?: string;
   phone?: string;
   address?: string;
+  description?: string | null;
   institution_type?: InstitutionType;
   timezone?: string;
   default_language?: string;
