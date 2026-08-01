@@ -35,6 +35,7 @@ export interface AuthUser {
   school_id: number | null;
   code: string | null;
   photo?: string | null;
+  address?: string | null;
   is_orphan?: boolean;
   // The school's locked student-code prefix (e.g. "MLP2648"), set once by
   // the admin via SchoolCodeSetupScreen. Null/undefined means it hasn't

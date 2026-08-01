@@ -412,7 +412,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               </View>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => handlePlaceholderPress(t('student_dashboard.editing_profile', 'Editing your profile'))}
+                onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
                 <PencilIcon color={PALE_GREEN} size={16} />

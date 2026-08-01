@@ -127,6 +127,7 @@ import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
+import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
 import RecordFeePaymentScreen from '../screens/admin/RecordFeePaymentScreen';
 import CashierAccountsScreen from '../screens/admin/CashierAccountsScreen';
@@ -607,6 +608,7 @@ export default function RootNavigator() {
       <Stack.Screen name="CashierAccounts" component={CashierAccountsScreen} />
       <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>
