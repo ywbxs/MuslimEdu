@@ -1,4 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+
+// Per-account, per-section/subject/date cache of the last successfully
+// fetched roster, so a teacher who opens a roster (or the Scan screen, which
+// also needs this to resolve a scanned code to a student) offline still sees
+// real data instead of an error - same cache-then-network pattern as
+// academicScheduleService.ts's fetchMySchedule.
+const ROSTER_CACHE_PREFIX = '@attendance_roster_cache_v1';
+
+function rosterCacheKey(token: string, sectionId: number, subjectId: number, date: string): string {
+  return `${ROSTER_CACHE_PREFIX}:${token.slice(-12)}:${sectionId}:${subjectId}:${date}`;
+}
 
 // --- Shared fetch helper (same pattern as teacherClassService.ts) ---
 
@@ -58,6 +70,9 @@ export interface AttendanceClassOption {
 export interface RosterStudent {
   student_id: number;
   student_name: string;
+  // Present once the backend fix that adds it to teacher_attendance_roster
+  // is deployed; optional so this keeps working against an older backend.
+  code?: string | null;
   photo: string | null;
   status: AttendanceStatus | null;
   check_in_time: string | null;
@@ -110,23 +125,39 @@ export async function fetchAttendanceRoster(
   subjectId: number,
   date: string
 ): Promise<AttendanceRoster> {
-  const data = await authedPost('/teacher_attendance_roster', token, {
-    section_id: sectionId,
-    subject_id: subjectId,
-    date,
-  });
-  const students: any[] = data.students ?? [];
-  return {
-    section_id: data.section_id,
-    section_name: data.section_name,
-    subject_id: data.subject_id,
-    date: data.date,
-    summary: data.summary ?? {},
-    students: students.map((s) => ({
-      ...s,
-      photo: absoluteUrl(s.photo ?? null),
-    })),
-  };
+  const cacheKey = rosterCacheKey(token, sectionId, subjectId, date);
+  try {
+    const data = await authedPost('/teacher_attendance_roster', token, {
+      section_id: sectionId,
+      subject_id: subjectId,
+      date,
+    });
+    const students: any[] = data.students ?? [];
+    const roster: AttendanceRoster = {
+      section_id: data.section_id,
+      section_name: data.section_name,
+      subject_id: data.subject_id,
+      date: data.date,
+      summary: data.summary ?? {},
+      students: students.map((s) => ({
+        ...s,
+        photo: absoluteUrl(s.photo ?? null),
+      })),
+    };
+    AsyncStorage.setItem(cacheKey, JSON.stringify(roster)).catch(() => {
+      // Best-effort cache write - losing it just means a future offline
+      // load falls back further (or throws), not that this call fails.
+    });
+    return roster;
+  } catch (err) {
+    try {
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached) as AttendanceRoster;
+    } catch {
+      // Fall through to rethrow the original network error.
+    }
+    throw err;
+  }
 }
 
 // --- Teacher: save/overwrite a batch of statuses for a section/subject/date ---
@@ -144,6 +175,44 @@ export async function submitAttendance(
     date,
     records,
   });
+}
+
+/**
+ * Optimistically applies a set of records to the cached roster (written by
+ * fetchAttendanceRoster above) and re-persists it, so a Save made while
+ * offline - queued via enqueueAttendanceSubmit rather than actually sent -
+ * still shows up immediately if the teacher reopens this roster before the
+ * queue has a chance to flush. Returns null if there's nothing cached yet
+ * for this roster (nothing to update).
+ */
+export async function applyRecordsToCachedRoster(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+  records: AttendanceRecordInput[],
+): Promise<AttendanceRoster | null> {
+  const cacheKey = rosterCacheKey(token, sectionId, subjectId, date);
+  try {
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (!cached) return null;
+    const roster = JSON.parse(cached) as AttendanceRoster;
+    const byId = new Map(records.map((r) => [r.student_id, r]));
+    const students = roster.students.map((s) => {
+      const rec = byId.get(s.student_id);
+      if (!rec) return s;
+      return { ...s, status: rec.status, check_in_time: rec.check_in_time ?? s.check_in_time, remarks: rec.remarks ?? s.remarks };
+    });
+    const summary: AttendanceSummary = {};
+    for (const s of students) {
+      if (s.status) summary[s.status] = (summary[s.status] ?? 0) + 1;
+    }
+    const updated: AttendanceRoster = { ...roster, students, summary };
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return null;
+  }
 }
 
 // --- Teacher: one-scan check-in via a student's QR/ID code ---

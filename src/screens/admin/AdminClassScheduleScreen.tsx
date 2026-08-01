@@ -105,6 +105,45 @@ function IconClock({ color }: { color: string }) {
     </Svg>
   );
 }
+function IconLayers({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3l9 5-9 5-9-5 9-5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconBook({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1={4} y1={20.5} x2={20} y2={20.5} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconUser({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={3.6} stroke={color} strokeWidth={2} />
+      <Path d="M4.5 20c1.3-3.6 4.3-5.5 7.5-5.5s6.2 1.9 7.5 5.5" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconSlash({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={8.5} stroke={color} strokeWidth={2} />
+      <Line x1={6.5} y1={17.5} x2={17.5} y2={6.5} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconCheckSmall({ color }: { color: string }) {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 12.5l4.5 4.5L19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 function RowSkeleton({ styles, theme }: { styles: any; theme: AcademicGlassTheme }) {
   return (
@@ -115,15 +154,23 @@ function RowSkeleton({ styles, theme }: { styles: any; theme: AcademicGlassTheme
   );
 }
 
-// --- Chip picker helper: label + list of {id,name} rendered as chips, with an optional "None" chip ---
-function ChipPicker<T extends { id: number; name: string }>({
+/**
+ * Bento tile picker: each option is a spatial card (icon + name, elevated,
+ * selected state gets a filled accent tile + check badge) laid out in a
+ * wrapping grid, rather than a flat row of small text chips - same bento
+ * visual language as the attendance feature's swipe cards and method
+ * chooser tiles, applied here to Section/Subject/Teacher/Room selection.
+ */
+function BentoOptionGrid<T extends { id: number; name: string }>({
   label,
   options,
   value,
   onChange,
   allowNone,
   noneLabel,
+  icon,
   styles,
+  theme,
 }: {
   label: string;
   options: T[];
@@ -131,22 +178,51 @@ function ChipPicker<T extends { id: number; name: string }>({
   onChange: (id: number | null) => void;
   allowNone?: boolean;
   noneLabel?: string;
+  icon: (color: string) => React.ReactNode;
   styles: any;
+  theme: AcademicGlassTheme;
 }) {
   return (
     <>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.chipsWrap}>
+      <View style={styles.bentoGrid}>
         {allowNone ? (
-          <TouchableOpacity style={[styles.chip, value === null && styles.chipActive]} onPress={() => onChange(null)} activeOpacity={0.75}>
-            <Text style={[styles.chipText, value === null && styles.chipTextActive]}>{noneLabel}</Text>
+          <TouchableOpacity
+            style={[styles.bentoTile, value === null && styles.bentoTileActive]}
+            onPress={() => onChange(null)}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.bentoIconWrap, value === null && styles.bentoIconWrapActive]}>
+              <IconSlash color={value === null ? theme.onAccent : theme.textSecondary} />
+            </View>
+            <Text style={[styles.bentoTileText, value === null && styles.bentoTileTextActive]} numberOfLines={2}>
+              {noneLabel}
+            </Text>
+            {value === null ? (
+              <View style={styles.bentoCheck}>
+                <IconCheckSmall color={theme.onAccent} />
+              </View>
+            ) : null}
           </TouchableOpacity>
         ) : null}
         {options.map((opt) => {
           const active = opt.id === value;
           return (
-            <TouchableOpacity key={opt.id} style={[styles.chip, active && styles.chipActive]} onPress={() => onChange(opt.id)} activeOpacity={0.75}>
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.name}</Text>
+            <TouchableOpacity
+              key={opt.id}
+              style={[styles.bentoTile, active && styles.bentoTileActive]}
+              onPress={() => onChange(opt.id)}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.bentoIconWrap, active && styles.bentoIconWrapActive]}>{icon(active ? theme.onAccent : theme.accent)}</View>
+              <Text style={[styles.bentoTileText, active && styles.bentoTileTextActive]} numberOfLines={2}>
+                {opt.name}
+              </Text>
+              {active ? (
+                <View style={styles.bentoCheck}>
+                  <IconCheckSmall color={theme.onAccent} />
+                </View>
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -248,21 +324,25 @@ function ScheduleEditSheet({
       isValid: !!sectionId,
       content: (
         <>
-          <ChipPicker
+          <BentoOptionGrid
             label={t('admin_class_schedule.section_label', 'Class Section')}
             options={pickers.sections}
             value={sectionId}
             onChange={setSectionId}
+            icon={(color) => <IconLayers color={color} />}
             styles={styles}
+            theme={theme}
           />
-          <ChipPicker
+          <BentoOptionGrid
             label={t('admin_class_schedule.subject_label', 'Subject')}
             options={pickers.subjects}
             value={subjectId}
             onChange={setSubjectId}
             allowNone
             noneLabel={t('common.none', 'None')}
+            icon={(color) => <IconBook color={color} />}
             styles={styles}
+            theme={theme}
           />
         </>
       ),
@@ -274,23 +354,27 @@ function ScheduleEditSheet({
       isValid: true,
       content: (
         <>
-          <ChipPicker
+          <BentoOptionGrid
             label={t('admin_class_schedule.teacher_label', 'Teacher')}
             options={pickers.teachers}
             value={teacherId}
             onChange={setTeacherId}
             allowNone
             noneLabel={t('admin_class_schedule.unassigned', 'Unassigned')}
+            icon={(color) => <IconUser color={color} />}
             styles={styles}
+            theme={theme}
           />
-          <ChipPicker
+          <BentoOptionGrid
             label={t('admin_class_schedule.room_label', 'Room')}
             options={pickers.rooms}
             value={roomId}
             onChange={setRoomId}
             allowNone
             noneLabel={t('common.none', 'None')}
+            icon={(color) => <IconDoor color={color} />}
             styles={styles}
+            theme={theme}
           />
         </>
       ),
@@ -312,12 +396,17 @@ function ScheduleEditSheet({
           />
 
           <Text style={styles.fieldLabel}>{t('admin_class_schedule.day_label', 'Day')}</Text>
-          <View style={styles.chipsWrap}>
+          <View style={styles.bentoDayGrid}>
             {DAYS.map((d) => {
               const active = d.key === day;
               return (
-                <TouchableOpacity key={d.key} style={[styles.chip, active && styles.chipActive]} onPress={() => setDay(d.key)} activeOpacity={0.75}>
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{dayLabel(t, d.key)}</Text>
+                <TouchableOpacity
+                  key={d.key}
+                  style={[styles.bentoDayTile, active && styles.bentoDayTileActive]}
+                  onPress={() => setDay(d.key)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.bentoDayTileText, active && styles.bentoDayTileTextActive]}>{dayLabel(t, d.key)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -765,6 +854,65 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     chipActive: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
     chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
     chipTextActive: { color: theme.accent },
+
+    // Bento tile picker (Section/Subject/Teacher/Room) - spatial cards
+    // instead of flat text chips, matching the attendance feature's card
+    // language.
+    bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    bentoTile: {
+      width: '30%',
+      minHeight: 92,
+      borderRadius: 16,
+      backgroundColor: theme.surface,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 6,
+      ...theme.elevation1,
+    },
+    bentoTileActive: { backgroundColor: theme.accent, borderColor: theme.accent, ...theme.elevation2 },
+    bentoIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    bentoIconWrapActive: { backgroundColor: 'rgba(255,255,255,0.22)' },
+    bentoTileText: { fontSize: 12, fontWeight: '700', color: theme.textPrimary, textAlign: 'center' },
+    bentoTileTextActive: { color: theme.onAccent },
+    bentoCheck: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: 'rgba(255,255,255,0.28)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // Bento day-of-week grid - a compact row of 7 equal spatial tiles.
+    bentoDayGrid: { flexDirection: 'row', gap: 6 },
+    bentoDayTile: {
+      flex: 1,
+      height: 52,
+      borderRadius: 14,
+      backgroundColor: theme.surface,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...theme.elevation1,
+    },
+    bentoDayTileActive: { backgroundColor: theme.accent, borderColor: theme.accent, ...theme.elevation2 },
+    bentoDayTileText: { fontSize: 12, fontWeight: '700', color: theme.textPrimary },
+    bentoDayTileTextActive: { color: theme.onAccent },
     textInput: {
       borderRadius: 12,
       borderWidth: 1,

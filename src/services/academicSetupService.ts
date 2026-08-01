@@ -1,4 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+
+// Per-account cache of the last successfully fetched school branding, so a
+// student's ID card still shows the right name/logo/background offline -
+// same cache-then-network pattern as academicScheduleService.ts's
+// fetchMySchedule.
+const BRANDING_CACHE_PREFIX = '@school_branding_cache_v1';
+
+function brandingCacheKey(token: string): string {
+  return `${BRANDING_CACHE_PREFIX}:${token.slice(-12)}`;
+}
 
 // --- Shared fetch helper (same pattern as adminAttendanceService.ts) ---
 
@@ -193,12 +204,28 @@ export interface SchoolBranding {
  * setup payload.
  */
 export async function fetchMySchoolBranding(token: string): Promise<SchoolBranding> {
-  const data = await authedRequest('/my_school_branding', token);
-  return {
-    name: data.name ?? null,
-    logo: absoluteUrl(data.logo ?? null),
-    id_card_background: absoluteUrl(data.id_card_background ?? null),
-  };
+  const cacheKey = brandingCacheKey(token);
+  try {
+    const data = await authedRequest('/my_school_branding', token);
+    const branding: SchoolBranding = {
+      name: data.name ?? null,
+      logo: absoluteUrl(data.logo ?? null),
+      id_card_background: absoluteUrl(data.id_card_background ?? null),
+    };
+    AsyncStorage.setItem(cacheKey, JSON.stringify(branding)).catch(() => {
+      // Best-effort cache write - losing it just means a future offline
+      // load falls back further (or throws), not that this call fails.
+    });
+    return branding;
+  } catch (err) {
+    try {
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached) as SchoolBranding;
+    } catch {
+      // Fall through to rethrow the original network error.
+    }
+    throw err;
+  }
 }
 
 export async function completeSetup(token: string): Promise<SchoolProfile> {
