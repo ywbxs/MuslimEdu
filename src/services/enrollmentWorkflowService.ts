@@ -120,6 +120,30 @@ async function authedPost<T = any>(
   return data as T;
 }
 
+// Multipart variant for admin_enrollment_workflow_payment_update - the only
+// call in this file that can carry a file (the optional receipt photo).
+async function authedPostForm<T = any>(path: string, token: string, form: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message =
+      (typeof data.message === 'string' && data.message) ||
+      (data.errors && (Object.values(data.errors)[0] as string[])?.[0]) ||
+      `Request failed (${response.status})`;
+    const err = new ApiError(message);
+    err.errors = data.errors;
+    throw err;
+  }
+
+  return data as T;
+}
+
 /* --------------------------------------------------------------------- */
 /* Stage configuration (per-school, ordered list)                        */
 /* --------------------------------------------------------------------- */
@@ -241,6 +265,142 @@ export async function fetchEnrollmentWorkflowHistory(
   recordId: number
 ): Promise<{ record: WorkflowRecord; history: WorkflowHistoryEntry[] }> {
   return authedPost('/admin_enrollment_workflow_history', token, { record_id: recordId });
+}
+
+// Reaching a terminal stage only marks the workflow record 'completed' - it
+// does not place the student in a class/section (see controller comment on
+// EnrollmentWorkflowController::admin_enrollment_workflow_advance). This is
+// the separate, deliberate action that actually creates the roster
+// Enrollment row, callable once a record is 'completed'.
+export async function placeEnrollmentWorkflowInSection(
+  token: string,
+  recordId: number,
+  classId: number,
+  sectionId: number
+): Promise<void> {
+  await authedPost('/admin_enrollment_workflow_place_in_section', token, {
+    record_id: recordId,
+    class_id: classId,
+    section_id: sectionId,
+  });
+}
+
+/* --------------------------------------------------------------------- */
+/* Fee types (per-school, admin-managed: Tuition, Miscellaneous, ...)    */
+/* --------------------------------------------------------------------- */
+
+export interface FeeType {
+  id: number;
+  school_id: number;
+  name: string;
+  code: string | null;
+  amount: string | number | null;
+  is_required: boolean;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface FeeTypeInput {
+  name: string;
+  code?: string | null;
+  amount?: number | null;
+  is_required?: boolean;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export async function fetchFeeTypes(token: string, status?: 'active' | 'inactive'): Promise<FeeType[]> {
+  const data = await authedPost<{ fee_types: FeeType[] }>(
+    '/admin_enrollment_fee_types_list',
+    token,
+    status ? { status } : {}
+  );
+  return data.fee_types ?? [];
+}
+
+export async function createFeeType(token: string, input: FeeTypeInput): Promise<FeeType> {
+  const data = await authedPost<{ fee_type: FeeType; message: string }>('/admin_enrollment_fee_types_create', token, input);
+  return data.fee_type;
+}
+
+export async function updateFeeType(token: string, feeTypeId: number, input: Partial<FeeTypeInput>): Promise<FeeType> {
+  const data = await authedPost<{ fee_type: FeeType; message: string }>('/admin_enrollment_fee_types_update', token, {
+    fee_type_id: feeTypeId,
+    ...input,
+  });
+  return data.fee_type;
+}
+
+export async function deleteFeeType(token: string, feeTypeId: number): Promise<void> {
+  await authedPost('/admin_enrollment_fee_types_delete', token, { fee_type_id: feeTypeId });
+}
+
+/* --------------------------------------------------------------------- */
+/* Payments (per student, per fee type - the "recibo" the approver checks) */
+/* --------------------------------------------------------------------- */
+
+export type PaymentStatus = 'unpaid' | 'paid' | 'waived';
+export type PaymentMode = 'cash' | 'bank_transfer' | 'gcash' | 'check' | 'other';
+
+export interface WorkflowPayment {
+  id: number;
+  record_id: number;
+  fee_type_id: number;
+  amount: string | number | null;
+  status: PaymentStatus;
+  payment_mode: PaymentMode | null;
+  receipt_number: string | null;
+  receipt_photo: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  feeType?: FeeType;
+}
+
+export async function fetchWorkflowPayments(token: string, recordId: number): Promise<WorkflowPayment[]> {
+  const data = await authedPost<{ payments: WorkflowPayment[] }>('/admin_enrollment_workflow_payments_list', token, {
+    record_id: recordId,
+  });
+  return data.payments ?? [];
+}
+
+export interface PaymentUpdateInput {
+  status: PaymentStatus;
+  amount?: number | null;
+  payment_mode?: PaymentMode | null;
+  receipt_number?: string | null;
+  notes?: string | null;
+  receiptPhoto?: { uri: string; fileName?: string; type?: string } | null;
+}
+
+export async function updateWorkflowPayment(
+  token: string,
+  recordId: number,
+  feeTypeId: number,
+  input: PaymentUpdateInput
+): Promise<WorkflowPayment> {
+  const form = new FormData();
+  form.append('record_id', String(recordId));
+  form.append('fee_type_id', String(feeTypeId));
+  form.append('status', input.status);
+  if (input.amount != null) form.append('amount', String(input.amount));
+  if (input.payment_mode) form.append('payment_mode', input.payment_mode);
+  if (input.receipt_number) form.append('receipt_number', input.receipt_number);
+  if (input.notes) form.append('notes', input.notes);
+  if (input.receiptPhoto) {
+    // @ts-ignore - React Native's FormData accepts this shape for file uploads
+    form.append('receipt_photo', {
+      uri: input.receiptPhoto.uri,
+      name: input.receiptPhoto.fileName ?? 'receipt.jpg',
+      type: input.receiptPhoto.type ?? 'image/jpeg',
+    });
+  }
+
+  const data = await authedPostForm<{ payment: WorkflowPayment; message: string }>(
+    '/admin_enrollment_workflow_payment_update',
+    token,
+    form
+  );
+  return data.payment;
 }
 
 /* --------------------------------------------------------------------- */

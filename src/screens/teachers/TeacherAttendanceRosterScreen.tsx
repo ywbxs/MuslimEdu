@@ -27,7 +27,7 @@ import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import SwipeableAttendanceCard, { SwipeDirection } from '../../components/SwipeableAttendanceCard';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SHADOW, GLASS } from '../../theme/glass';
+import { SHADOW, GLASS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#E7F5EC';
@@ -328,14 +328,23 @@ export default function TeacherAttendanceRosterScreen() {
 
       {!isLoading && students.length > 0 ? (
         <View style={styles.quickBar}>
-          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark:')}</Text>
-          {ATTENDANCE_STATUSES.map((status) => (
-            <TouchableOpacity key={status} style={styles.quickBarBtn} onPress={() => markAll(status)}>
-              <Text style={[styles.quickBarBtnText, { color: STATUS_META[status].color }]}>
-                {t('teacher_attendance_roster.all_status', 'All {status}').replace('{status}', statusLabel(status))}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark')}</Text>
+          <View style={styles.quickBarChipRow}>
+            {ATTENDANCE_STATUSES.map((status) => {
+              const meta = STATUS_META[status];
+              return (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.quickBarChip, { backgroundColor: meta.soft, borderColor: meta.color }]}
+                  onPress={() => markAll(status)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickBarChipDot, { backgroundColor: meta.color }]} />
+                  <Text style={[styles.quickBarChipText, { color: meta.color }]}>{statusLabel(status)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
@@ -478,19 +487,25 @@ const styles = StyleSheet.create({
   dateLabel: { fontSize: 14.5, fontWeight: '700', color: INK, minWidth: 140, textAlign: 'center' },
 
   quickBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
+    paddingVertical: 12,
     backgroundColor: GLASS_SURFACE,
     borderBottomWidth: 1,
     borderBottomColor: GLASS_BORDER,
   },
-  quickBarLabel: { fontSize: 12, color: SUBTLE, fontWeight: '600' },
-  quickBarBtn: { paddingVertical: 4 },
-  quickBarBtnText: { fontSize: 12, fontWeight: '700' },
+  quickBarLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
+  quickBarChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickBarChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    ...SHADOW.level1,
+  },
+  quickBarChipDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
+  quickBarChipText: { fontSize: 12, fontWeight: '700' },
 
   legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
   legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
@@ -501,10 +516,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: GLASS_SURFACE,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     padding: 10,
     marginBottom: 8,
-  ...SHADOW.level1,
+    ...SHADOW.level1,
   },
   flex1: { flex: 1 },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },

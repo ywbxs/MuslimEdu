@@ -8,26 +8,37 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  Image,
+  TextInput,
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { launchImageLibrary } from 'react-native-image-picker';
 import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { can } from '../../services/permissions';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
+import { absoluteUrl } from '../../config/api';
 import GlassBackground from '../../components/glass/GlassBackground';
 import {
   WorkflowRecord,
   WorkflowHistoryEntry,
   WorkflowStage,
+  WorkflowPayment,
+  PaymentStatus,
+  PaymentMode,
   fetchEnrollmentWorkflowHistory,
   fetchEnrollmentStages,
   advanceEnrollmentWorkflow,
   withdrawEnrollmentWorkflow,
+  placeEnrollmentWorkflowInSection,
+  fetchWorkflowPayments,
+  updateWorkflowPayment,
 } from '../../services/enrollmentWorkflowService';
+import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 
 /**
  * Admin: one student's enrollment-workflow record - current stage, full
@@ -87,17 +98,43 @@ export default function EnrollmentWorkflowDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [advanceModalVisible, setAdvanceModalVisible] = useState(false);
 
+  // "Place in Section" - the step that actually creates the roster
+  // Enrollment row once a workflow record is completed (see
+  // placeEnrollmentWorkflowInSection). Two-step picker: class, then section.
+  const [placeModalVisible, setPlaceModalVisible] = useState(false);
+  const [placeStep, setPlaceStep] = useState<'class' | 'section'>('class');
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [sections, setSections] = useState<SectionOption[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<ClassOption | null>(null);
+  const [placing, setPlacing] = useState(false);
+
+  // Fee checklist ("recibo") - what this student owes and has paid, shown
+  // and edited right on this screen so the approver sees it before tapping
+  // "Move to Stage" into the terminal stage (which the backend also gates
+  // on - see admin_enrollment_workflow_advance's recibo-gate comment).
+  const [payments, setPayments] = useState<WorkflowPayment[]>([]);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [activePayment, setActivePayment] = useState<WorkflowPayment | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('unpaid');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode | null>(null);
+  const [receiptNumber, setReceiptNumber] = useState('');
+  const [receiptPhoto, setReceiptPhoto] = useState<{ uri: string; fileName?: string; type?: string } | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+
   const load = useCallback(async () => {
     if (!token || !recordId) return;
     try {
       setError(null);
-      const [historyData, stagesData] = await Promise.all([
+      const [historyData, stagesData, paymentsData] = await Promise.all([
         fetchEnrollmentWorkflowHistory(token, recordId),
         fetchEnrollmentStages(token, 'active'),
+        fetchWorkflowPayments(token, recordId),
       ]);
       setRecord(historyData.record);
       setHistory(historyData.history);
       setStages(stagesData);
+      setPayments(paymentsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('enrollment_workflow_detail.load_error', 'Failed to load this record.'));
     } finally {
@@ -153,6 +190,89 @@ export default function EnrollmentWorkflowDetailScreen() {
         },
       ]
     );
+  };
+
+  const openPlaceModal = async () => {
+    setPlaceStep('class');
+    setSelectedClass(null);
+    setSections([]);
+    setPlaceModalVisible(true);
+    if (classes.length === 0 && token) {
+      try {
+        setClasses(await fetchClasses(token));
+      } catch (err) {
+        Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.classes_error', 'Could not load classes.'));
+      }
+    }
+  };
+
+  const onPickClass = async (cls: ClassOption) => {
+    if (!token) return;
+    setSelectedClass(cls);
+    setPlaceStep('section');
+    setSectionsLoading(true);
+    try {
+      setSections(await fetchSections(token, String(cls.id)));
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.sections_error', 'Could not load sections.'));
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  const onPickSection = async (section: SectionOption) => {
+    if (!token || !record || !selectedClass) return;
+    setPlacing(true);
+    try {
+      await placeEnrollmentWorkflowInSection(token, record.id, selectedClass.id, section.id);
+      setPlaceModalVisible(false);
+      Alert.alert(
+        t('enrollment_workflow_detail.placed_title', 'Student Placed'),
+        t('enrollment_workflow_detail.placed_message', '{name} has been added to {class} - {section}.')
+          .replace('{name}', record.student?.name ?? t('enrollment_workflow_detail.this_student', 'this student'))
+          .replace('{class}', selectedClass.name)
+          .replace('{section}', section.name)
+      );
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.place_error', 'Could not place the student in that section.'));
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  const openPaymentModal = (payment: WorkflowPayment) => {
+    setActivePayment(payment);
+    setPaymentStatus(payment.status);
+    setPaymentMode(payment.payment_mode);
+    setReceiptNumber(payment.receipt_number ?? '');
+    setReceiptPhoto(null);
+    setPaymentModalVisible(true);
+  };
+
+  const pickReceiptPhoto = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.8 });
+    if (result.didCancel || result.errorCode || !result.assets?.[0]?.uri) return;
+    const asset = result.assets[0];
+    setReceiptPhoto({ uri: asset.uri as string, fileName: asset.fileName ?? undefined, type: asset.type ?? undefined });
+  };
+
+  const onSavePayment = async () => {
+    if (!token || !record || !activePayment) return;
+    setSavingPayment(true);
+    try {
+      await updateWorkflowPayment(token, record.id, activePayment.fee_type_id, {
+        status: paymentStatus,
+        payment_mode: paymentMode,
+        receipt_number: receiptNumber.trim() || null,
+        receiptPhoto,
+      });
+      setPaymentModalVisible(false);
+      setPayments(await fetchWorkflowPayments(token, record.id));
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.payment_save_error', 'Could not save this payment.'));
+    } finally {
+      setSavingPayment(false);
+    }
   };
 
   if (loading) {
@@ -225,6 +345,46 @@ export default function EnrollmentWorkflowDetailScreen() {
           ) : null}
         </View>
 
+        {payments.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('enrollment_workflow_detail.fees', 'Fees')}</Text>
+            {payments.map((payment) => {
+              const feeName = payment.feeType?.name ?? t('enrollment_workflow_detail.fee_fallback', 'Fee');
+              const statusColors =
+                payment.status === 'paid'
+                  ? { color: theme.success, bg: theme.successSoft }
+                  : payment.status === 'waived'
+                  ? { color: theme.accent, bg: theme.accentSoft }
+                  : { color: theme.danger, bg: theme.dangerSoft };
+              return (
+                <TouchableOpacity key={payment.id} style={styles.feeRow} onPress={() => openPaymentModal(payment)}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.feeRowHeader}>
+                      <Text style={styles.feeName}>{feeName}</Text>
+                      {payment.feeType?.is_required ? (
+                        <Text style={styles.feeRequiredTag}>{t('enrollment_workflow_detail.fee_required', 'Required')}</Text>
+                      ) : null}
+                    </View>
+                    {payment.payment_mode || payment.receipt_number ? (
+                      <Text style={styles.feeMeta}>
+                        {[
+                          payment.payment_mode ? t(`enrollment_workflow_detail.mode_${payment.payment_mode}`, payment.payment_mode.replace('_', ' ')) : null,
+                          payment.receipt_number ? `#${payment.receipt_number}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.feeStatusBadge, { color: statusColors.color, backgroundColor: statusColors.bg }]}>
+                    {t(`enrollment_workflow_detail.payment_status_${payment.status}`, payment.status)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        ) : null}
+
         {isInProgress ? (
           <View style={styles.actionsRow}>
             <TouchableOpacity
@@ -243,6 +403,18 @@ export default function EnrollmentWorkflowDetailScreen() {
                 <Text style={styles.withdrawButtonText}>{t('enrollment_workflow_detail.withdraw', 'Withdraw')}</Text>
               </TouchableOpacity>
             ) : null}
+          </View>
+        ) : null}
+
+        {record.status === 'completed' ? (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.advanceButton]}
+              onPress={openPlaceModal}
+              disabled={busy || placing}
+            >
+              <Text style={styles.advanceButtonText}>{t('enrollment_workflow_detail.place_in_section', 'Place in Section...')}</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -308,6 +480,141 @@ export default function EnrollmentWorkflowDetailScreen() {
               <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={placeModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPlaceModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {placeStep === 'class'
+                ? t('enrollment_workflow_detail.pick_class_title', 'Select Class')
+                : t('enrollment_workflow_detail.pick_section_title', 'Select Section')}
+            </Text>
+            {placeStep === 'section' ? (
+              <TouchableOpacity onPress={() => setPlaceStep('class')} style={{ marginBottom: 8 }}>
+                <Text style={styles.retryText}>{t('enrollment_workflow_detail.change_class', '‹ Change class')}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {placeStep === 'section' && sectionsLoading ? (
+              <ActivityIndicator color={theme.accent} style={{ marginVertical: 20 }} />
+            ) : (
+              <FlatList
+                data={placeStep === 'class' ? classes : sections}
+                keyExtractor={(item) => item.id.toString()}
+                style={{ maxHeight: 320 }}
+                ListEmptyComponent={
+                  <Text style={styles.emptyHistoryText}>
+                    {placeStep === 'class'
+                      ? t('enrollment_workflow_detail.no_classes', 'No classes found.')
+                      : t('enrollment_workflow_detail.no_sections', 'No sections found for this class.')}
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    disabled={placing}
+                    onPress={() => (placeStep === 'class' ? onPickClass(item as ClassOption) : onPickSection(item as SectionOption))}
+                  >
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                    {placing ? <ActivityIndicator size="small" color={theme.accent} /> : null}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setPlaceModalVisible(false)}>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={paymentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPaymentModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 8 }}>
+            <Text style={styles.modalTitle}>{activePayment?.feeType?.name ?? t('enrollment_workflow_detail.fee_fallback', 'Fee')}</Text>
+
+            <Text style={styles.label}>{t('enrollment_workflow_detail.payment_status_label', 'Status')}</Text>
+            <View style={styles.chipRow}>
+              {(['unpaid', 'paid', 'waived'] as PaymentStatus[]).map((s) => {
+                const selected = paymentStatus === s;
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.chip, selected && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                    onPress={() => setPaymentStatus(s)}
+                  >
+                    <Text style={[styles.chipText, selected && { color: theme.onAccent }]}>
+                      {t(`enrollment_workflow_detail.payment_status_${s}`, s)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>{t('enrollment_workflow_detail.payment_mode_label', 'Payment Mode')}</Text>
+            <View style={styles.chipRow}>
+              {(['cash', 'bank_transfer', 'gcash', 'check', 'other'] as PaymentMode[]).map((m) => {
+                const selected = paymentMode === m;
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.chip, selected && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                    onPress={() => setPaymentMode(selected ? null : m)}
+                  >
+                    <Text style={[styles.chipText, selected && { color: theme.onAccent }]}>
+                      {t(`enrollment_workflow_detail.mode_${m}`, m.replace('_', ' '))}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>{t('enrollment_workflow_detail.receipt_number_label', 'Receipt / OR Number')}</Text>
+            <TextInput
+              style={styles.input}
+              value={receiptNumber}
+              onChangeText={setReceiptNumber}
+              placeholder={t('enrollment_workflow_detail.receipt_number_placeholder', 'e.g. OR-00123')}
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Text style={styles.label}>{t('enrollment_workflow_detail.receipt_photo_label', 'Receipt Photo (optional)')}</Text>
+            <TouchableOpacity style={styles.photoPicker} onPress={pickReceiptPhoto}>
+              {receiptPhoto ? (
+                <Image source={{ uri: receiptPhoto.uri }} style={styles.photoPreview} />
+              ) : activePayment?.receipt_photo ? (
+                <Image source={{ uri: absoluteUrl(activePayment.receipt_photo) ?? undefined }} style={styles.photoPreview} />
+              ) : (
+                <Text style={styles.photoPickerText}>{t('enrollment_workflow_detail.receipt_photo_pick', 'Tap to attach a photo')}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.saveButton, savingPayment && styles.saveButtonDisabled]}
+              disabled={savingPayment}
+              onPress={onSavePayment}
+            >
+              {savingPayment ? (
+                <ActivityIndicator color={theme.onAccent} />
+              ) : (
+                <Text style={styles.saveButtonText}>{t('enrollment_workflow_detail.payment_save', 'Save Payment')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setPaymentModalVisible(false)}>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -424,4 +731,70 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     modalItemText: { fontSize: 15, color: theme.textPrimary },
     modalCloseButton: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
     modalCloseText: { fontSize: 14.5, fontWeight: '600', color: theme.textSecondary },
+
+    feeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.md ?? 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      marginBottom: 10,
+    },
+    feeRowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    feeName: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
+    feeRequiredTag: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      backgroundColor: theme.surfaceVariant,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      textTransform: 'uppercase',
+    },
+    feeMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 4, textTransform: 'capitalize' },
+    feeStatusBadge: {
+      fontSize: 11,
+      fontWeight: '700',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+      overflow: 'hidden',
+      textTransform: 'capitalize',
+    },
+
+    label: { fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, marginBottom: 6, marginTop: 16 },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: RADIUS.pill ?? 20,
+      borderWidth: 1,
+      borderColor: theme.borderStrong,
+    },
+    chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary, textTransform: 'capitalize' },
+    input: {
+      height: 48,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: RADIUS.sm,
+      paddingHorizontal: 16,
+      fontSize: 15,
+      backgroundColor: theme.surface,
+      color: theme.textPrimary,
+    },
+    photoPicker: {
+      minHeight: 120,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.borderStrong,
+      borderRadius: RADIUS.md ?? 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    photoPickerText: { fontSize: 13, color: theme.textSecondary },
+    photoPreview: { width: '100%', height: 160, resizeMode: 'cover' },
   });
