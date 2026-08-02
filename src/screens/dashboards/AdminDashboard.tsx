@@ -7,6 +7,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
+import SyncStatusCard from '../../components/SyncStatusCard';
 import SchoolCodeSetupScreen from '../admin/SchoolCodeSetupScreen';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
@@ -867,6 +868,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
+          <SyncStatusCard />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
           <View style={styles.grid}>
             {items.map((item) => {

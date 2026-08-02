@@ -9,6 +9,7 @@ import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicG
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import BentoGridCard, { BentoGrid } from '../../components/glass/BentoGridCard';
+import ProgressRing from '../../components/glass/ProgressRing';
 import BottomNavBar from '../../components/BottomNavBar';
 import { fetchAcademicSessions } from '../../services/academicSessionService';
 import { fetchGradingSystems, fetchSubjectsCatalog } from '../../services/adminAcademicCatalogService';
@@ -31,11 +32,14 @@ import { fetchEnrollmentStages, fetchFeeTypes } from '../../services/enrollmentW
 
 type ItemStatus = 'checking' | 'done' | 'todo' | 'error';
 
+type ChecklistCategory = 'foundation' | 'operations' | 'enrollment';
+
 interface ChecklistItem {
   key: string;
   title: string;
   desc: string;
   route: string;
+  category: ChecklistCategory;
   status: ItemStatus;
   count: number | null;
 }
@@ -131,12 +135,13 @@ export default function SetupChecklistScreen() {
     if (!token) return;
     setLoading(true);
 
-    const checks: Array<{ key: string; title: string; desc: string; route: string; run: () => Promise<number> }> = [
+    const checks: Array<{ key: string; title: string; desc: string; route: string; category: ChecklistCategory; run: () => Promise<number> }> = [
       {
         key: 'academic_year',
         title: t('setup_checklist.academic_year_title', 'Academic Year'),
         desc: t('setup_checklist.academic_year_desc', 'At least one school year with a current year set.'),
         route: 'AcademicYears',
+        category: 'foundation',
         run: async () => (await fetchAcademicSessions(token)).length,
       },
       {
@@ -144,6 +149,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.grading_title', 'Grading System'),
         desc: t('setup_checklist.grading_desc', 'How grades are scored and reported.'),
         route: 'GradingSystems',
+        category: 'foundation',
         run: async () => (await fetchGradingSystems(token)).length,
       },
       {
@@ -151,6 +157,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.classes_title', 'Classes & Sections'),
         desc: t('setup_checklist.classes_desc', 'Create classes, then sections (with room + adviser) inside them.'),
         route: 'ClassList',
+        category: 'foundation',
         run: async () => (await fetchClasses(token)).length,
       },
       {
@@ -158,6 +165,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.subjects_title', 'Subjects'),
         desc: t('setup_checklist.subjects_desc', 'The subject catalog sections and schedules pull from.'),
         route: 'ProgramsCatalog',
+        category: 'foundation',
         run: async () => (await fetchSubjectsCatalog(token)).length,
       },
       {
@@ -165,6 +173,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.schedule_title', 'Class Schedule'),
         desc: t('setup_checklist.schedule_desc', 'Assign subject, teacher, room and time to each section.'),
         route: 'AdminSchedule',
+        category: 'foundation',
         run: async () => (await listSchedules(token)).length,
       },
       {
@@ -172,6 +181,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.attendance_title', 'Attendance Config'),
         desc: t('setup_checklist.attendance_desc', 'Which capture methods (manual, QR, face) are active.'),
         route: 'AttendanceConfig',
+        category: 'operations',
         run: async () => (await fetchAttendanceMethods(token)).length,
       },
       {
@@ -179,6 +189,7 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.enrollment_stages_title', 'Enrollment Stages'),
         desc: t('setup_checklist.enrollment_stages_desc', 'The admission pipeline students move through.'),
         route: 'EnrollmentStages',
+        category: 'enrollment',
         run: async () => (await fetchEnrollmentStages(token)).length,
       },
       {
@@ -186,11 +197,12 @@ export default function SetupChecklistScreen() {
         title: t('setup_checklist.fee_types_title', 'Fee Types'),
         desc: t('setup_checklist.fee_types_desc', 'Tuition, miscellaneous, service fees - what enrollment collects.'),
         route: 'EnrollmentFeeTypes',
+        category: 'enrollment',
         run: async () => (await fetchFeeTypes(token)).length,
       },
     ];
 
-    setItems(checks.map((c) => ({ key: c.key, title: c.title, desc: c.desc, route: c.route, status: 'checking', count: null })));
+    setItems(checks.map((c) => ({ key: c.key, title: c.title, desc: c.desc, route: c.route, category: c.category, status: 'checking', count: null })));
 
     const results = await Promise.all(
       checks.map(async (c) => {
@@ -242,6 +254,20 @@ export default function SetupChecklistScreen() {
   };
 
   const doneCount = items.filter((i) => i.status === 'done').length;
+  const overallPercent = items.length > 0 ? (doneCount / items.length) * 100 : 0;
+
+  const CATEGORY_LABELS: Record<ChecklistCategory, string> = {
+    foundation: t('setup_checklist.category_foundation', 'Academic Foundation'),
+    operations: t('setup_checklist.category_operations', 'Operations'),
+    enrollment: t('setup_checklist.category_enrollment', 'Enrollment & Fees'),
+  };
+  const categoryBreakdown = (['foundation', 'operations', 'enrollment'] as ChecklistCategory[])
+    .map((cat) => {
+      const catItems = items.filter((i) => i.category === cat);
+      const catDone = catItems.filter((i) => i.status === 'done').length;
+      return { key: cat, label: CATEGORY_LABELS[cat], done: catDone, total: catItems.length };
+    })
+    .filter((c) => c.total > 0);
 
   return (
     <View style={styles.container}>
@@ -255,10 +281,31 @@ export default function SetupChecklistScreen() {
       </View>
 
       {!loading ? (
-        <View style={styles.progressBanner}>
-          <Text style={styles.progressText}>
-            {t('setup_checklist.progress', '{done} of {total} set up').replace('{done}', String(doneCount)).replace('{total}', String(items.length))}
-          </Text>
+        <View style={styles.analyticsCard}>
+          <ProgressRing
+            percent={overallPercent}
+            color={theme.accent}
+            trackColor={theme.surfaceVariant}
+            labelColor={theme.textSecondary}
+            label={t('setup_checklist.ready', 'ready')}
+          />
+          <View style={{ flex: 1, marginLeft: 16 }}>
+            <Text style={styles.analyticsTitle}>
+              {t('setup_checklist.progress', '{done} of {total} set up').replace('{done}', String(doneCount)).replace('{total}', String(items.length))}
+            </Text>
+            {categoryBreakdown.map((c) => {
+              const pct = c.total > 0 ? (c.done / c.total) * 100 : 0;
+              return (
+                <View key={c.key} style={styles.categoryRow}>
+                  <Text style={styles.categoryLabel} numberOfLines={1}>{c.label}</Text>
+                  <View style={styles.categoryBarTrack}>
+                    <View style={[styles.categoryBarFill, { width: `${pct}%`, backgroundColor: pct === 100 ? theme.success : theme.accent }]} />
+                  </View>
+                  <Text style={styles.categoryCount}>{c.done}/{c.total}</Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
@@ -319,15 +366,24 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
 
-    progressBanner: {
+    analyticsCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginHorizontal: 16,
       marginTop: 12,
-      backgroundColor: theme.accentSoft,
-      borderRadius: RADIUS.md,
-      paddingVertical: 10,
-      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+      ...theme.elevation2,
     },
-    progressText: { fontSize: 13, fontWeight: '700', color: theme.accent },
+    analyticsTitle: { fontSize: 13.5, fontWeight: '700', color: theme.textPrimary, marginBottom: 10 },
+    categoryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 7 },
+    categoryLabel: { fontSize: 10.5, color: theme.textSecondary, width: 92 },
+    categoryBarTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: theme.surfaceVariant, overflow: 'hidden', marginHorizontal: 8 },
+    categoryBarFill: { height: 6, borderRadius: 3 },
+    categoryCount: { fontSize: 10.5, fontWeight: '700', color: theme.textSecondary, width: 28, textAlign: 'right' },
 
     helperText: { fontSize: 12.5, color: theme.textSecondary, paddingHorizontal: 16, paddingTop: 12, lineHeight: 18 },
   });
