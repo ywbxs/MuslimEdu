@@ -10,7 +10,7 @@ import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import SchoolCodeSetupScreen from '../admin/SchoolCodeSetupScreen';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
-import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser } from '../../utils/orphanSchool';
+import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser, isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
@@ -88,6 +88,14 @@ function StagesIcon({ color }: { color: string }) {
       <Circle cx="12" cy="12" r="2.2" stroke={color} strokeWidth={1.8} />
       <Circle cx="19" cy="18" r="2.2" stroke={color} strokeWidth={1.8} />
       <Path d="M7 7l3.5 3.5M14 14l3.5 3.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function QuranTrackerIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M8 8h8M8 11.5h6" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -292,6 +300,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // shown separately below via MonthlyReportsCard. Every academic tile is
   // filtered out of `items` below; RootNavigator guards the routes too.
   const isOrphanSchool = isOrphanSchoolUser(user);
+  const showQuranTracker = isQuranTrackingSchoolUser(user);
 
   const childLabel = isOrphanSchool
     ? t('admin_dashboard.children_label', 'children')
@@ -422,6 +431,18 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       locked: isGradingLocked,
       lockedMessage: gradingLockedMessage,
     },
+    ...(showQuranTracker
+      ? [
+          {
+            key: 'quranTracker',
+            title: t('admin_dashboard.quran_tracker_title', 'Quran Tracker'),
+            desc: t('admin_dashboard.quran_tracker_desc', 'Track each student\'s surah, juz, and memorization progress'),
+            variant: 'soft' as Variant,
+            route: 'StudentProgress',
+            icon: (c: string) => <QuranTrackerIcon color={c} />,
+          },
+        ]
+      : []),
     {
       key: 'examCategories',
       title: t('admin_dashboard.exam_categories_title', 'Exam Categories'),
