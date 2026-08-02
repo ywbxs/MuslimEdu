@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import { fetchTeacherReportStatus, TeacherReportStatus } from '../../services/teacherOrphanService';
+import { isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
@@ -309,6 +310,7 @@ interface TeacherDashboardProps {
 export default function TeacherDashboard({ footer }: TeacherDashboardProps = {}) {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
+  const isQuranTrackingSchool = isQuranTrackingSchoolUser(user);
   const { t } = useLocale();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -599,10 +601,11 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               <QuickActionCard
                 icon={<AssessmentIcon color={EMERALD} size={20} />}
                 title={t('teacher_dashboard.student_progress_title', 'Student Progress')}
-                description={t(
-                  'teacher_dashboard.student_progress_desc',
-                  'Attendance, grades, behavior, memorization in one view',
-                )}
+                description={
+                  isQuranTrackingSchool
+                    ? t('teacher_dashboard.student_progress_desc_quran', 'Attendance, grades, behavior, memorization in one view')
+                    : t('teacher_dashboard.student_progress_desc', 'Attendance, grades, and behavior in one view')
+                }
                 onPress={() => (navigation as any).navigate('StudentProgress')}
               />
               <QuickActionCard

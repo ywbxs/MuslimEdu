@@ -27,16 +27,18 @@ export function isOrphanSchoolUser(user: Partial<AuthUser> | null | undefined): 
 }
 
 /**
- * Madrasa/Mahad/Markaz schools run Quran memorization tracking (surah,
- * juz, memorization status) alongside their regular academics - a Regular
- * School has no use for it, so the "Quran Tracker" tile is scoped to just
- * these three institution_type values rather than shown to everyone.
- * Backed by MemorizationController / StudentProgressScreen, which already
- * has full add/edit/delete for memorization records.
+ * Quran memorization tracking (surah, juz, memorization status) is scoped
+ * to Markaz schools only - explicitly not Madrasa/Mahad/Regular/Orphanage,
+ * per admin request ("Quran tracker only on markaz can access, not other
+ * than that"). Checked in two places: AdminDashboard's tile visibility,
+ * and StudentProgressScreen's own render (the backstop - a teacher can
+ * still reach that screen via TeacherDashboard's generic "Student
+ * Progress" tile regardless of school type, so the memorization section
+ * itself has to gate on this too, not just the menu entry point).
  */
 export function isQuranTrackingSchoolUser(user: Partial<AuthUser> | null | undefined): boolean {
   if (!user) return false;
-  return user.institution_type === 'madrasa' || user.institution_type === 'mahad' || user.institution_type === 'markaz';
+  return user.institution_type === 'markaz';
 }
 
 /**

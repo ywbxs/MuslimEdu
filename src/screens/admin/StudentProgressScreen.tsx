@@ -32,6 +32,7 @@ import {
 } from '../../services/teacherStudentProgressService';
 import { ClassSection, ClassStudent, fetchAllSections, fetchClassStudents, fetchMyClasses } from '../../services/teacherClassService';
 import { fetchClassProgressCsv, fetchStudentProgressCsv } from '../../services/reportExportService';
+import { isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 
 /**
  * M4 progress & risk indicators + memorization tracking. Combines two new
@@ -83,6 +84,11 @@ export default function StudentProgressScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
+  // Quran memorization tracking is Markaz-only (per admin request) - this
+  // is the backstop, since a teacher can still reach this screen via
+  // TeacherDashboard's generic "Student Progress" tile regardless of
+  // school type, not just through AdminDashboard's Markaz-gated tile.
+  const isQuranTrackingSchool = isQuranTrackingSchoolUser(user);
   const { t } = useLocale();
   const isAdmin = !!user && ADMIN_ROLES.includes(user.role_id);
   const statusLabel = (status: MemorizationStatus) =>
@@ -391,52 +397,58 @@ export default function StudentProgressScreen() {
                 {t('student_progress.metric_behavior_incidents', 'Behavior incidents (last {n} days)').replace('{n}', String(summary.lookback_days))}: {summary.behavior.incidents_last_90_days}
                 {summary.behavior.major_incidents_last_90_days > 0 ? ` (${summary.behavior.major_incidents_last_90_days} ${t('student_progress.major', 'major')})` : ''}
               </Text>
-              <Text style={styles.metricRow}>
-                {t('student_progress.metric_memorization', 'Memorization')}: {summary.memorization.memorized_count} {t('student_progress.memorized', 'memorized')}, {summary.memorization.in_progress_count} {t('student_progress.in_progress', 'in progress')}
-              </Text>
+              {isQuranTrackingSchool ? (
+                <Text style={styles.metricRow}>
+                  {t('student_progress.metric_memorization', 'Memorization')}: {summary.memorization.memorized_count} {t('student_progress.memorized', 'memorized')}, {summary.memorization.in_progress_count} {t('student_progress.in_progress', 'in progress')}
+                </Text>
+              ) : null}
               <TouchableOpacity onPress={onExportStudentReport} disabled={exporting} style={styles.exportStudentRow}>
                 <Text style={styles.actionLink}>{exporting ? t('student_progress.preparing', 'Preparing…') : t('student_progress.export_student_report', '⬇ Export this report (CSV)')}</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeader}>{t('student_progress.memorization_records', 'Memorization Records')}</Text>
-              <TouchableOpacity onPress={openNewRecord}>
-                <Text style={styles.actionLink}>{t('student_progress.add', '+ Add')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {memLoading ? (
-              <ActivityIndicator color={EMERALD} />
-            ) : memRecords.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>{t('student_progress.empty_memorization', 'No memorization records yet for this student.')}</Text>
-              </View>
-            ) : (
-              memRecords.map((r) => (
-                <View key={r.id} style={styles.card}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.rowTitle}>
-                      {r.surah_name} {r.juz_number ? `(${t('student_progress.juz', 'Juz')} ${r.juz_number})` : ''}
-                    </Text>
-                    <Text style={styles.statusBadge}>{statusLabel(r.status)}</Text>
-                  </View>
-                  <Text style={styles.rowSub}>
-                    {r.recorded_date.slice(0, 10)}
-                    {r.quality_rating ? ` · ${qualityLabel(r.quality_rating)}` : ''}
-                  </Text>
-                  {!!r.notes && <Text style={styles.metricRow}>{r.notes}</Text>}
-                  <View style={styles.actionsRow}>
-                    <TouchableOpacity onPress={() => openEditRecord(r)}>
-                      <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => confirmDeleteRecord(r)}>
-                      <Text style={[styles.actionLink, styles.deleteLink]}>{t('common.delete', 'Delete')}</Text>
-                    </TouchableOpacity>
-                  </View>
+            {isQuranTrackingSchool ? (
+              <>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionHeader}>{t('student_progress.memorization_records', 'Memorization Records')}</Text>
+                  <TouchableOpacity onPress={openNewRecord}>
+                    <Text style={styles.actionLink}>{t('student_progress.add', '+ Add')}</Text>
+                  </TouchableOpacity>
                 </View>
-              ))
-            )}
+
+                {memLoading ? (
+                  <ActivityIndicator color={EMERALD} />
+                ) : memRecords.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.emptyText}>{t('student_progress.empty_memorization', 'No memorization records yet for this student.')}</Text>
+                  </View>
+                ) : (
+                  memRecords.map((r) => (
+                    <View key={r.id} style={styles.card}>
+                      <View style={styles.rowBetween}>
+                        <Text style={styles.rowTitle}>
+                          {r.surah_name} {r.juz_number ? `(${t('student_progress.juz', 'Juz')} ${r.juz_number})` : ''}
+                        </Text>
+                        <Text style={styles.statusBadge}>{statusLabel(r.status)}</Text>
+                      </View>
+                      <Text style={styles.rowSub}>
+                        {r.recorded_date.slice(0, 10)}
+                        {r.quality_rating ? ` · ${qualityLabel(r.quality_rating)}` : ''}
+                      </Text>
+                      {!!r.notes && <Text style={styles.metricRow}>{r.notes}</Text>}
+                      <View style={styles.actionsRow}>
+                        <TouchableOpacity onPress={() => openEditRecord(r)}>
+                          <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDeleteRecord(r)}>
+                          <Text style={[styles.actionLink, styles.deleteLink]}>{t('common.delete', 'Delete')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
