@@ -1,12 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Path, Circle } from 'react-native-svg';
@@ -15,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import BentoGridCard, { BentoGrid } from '../../components/glass/BentoGridCard';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
@@ -23,8 +17,7 @@ import { FeeType, fetchFeeTypes, deleteFeeType } from '../../services/enrollment
 /**
  * Admin: what a student owes during enrollment (Tuition Fee, Miscellaneous,
  * Service Fee, ...). Reachable from EnrollmentStagesScreen's "Fees" button.
- * Mirrors EnrollmentStagesScreen's list/add/edit/delete structure - same
- * module, same conventions.
+ * Bento grid, same spatial-UI language as EnrollmentStagesScreen.
  */
 
 function IconChevronLeft({ color }: { color: string }) {
@@ -36,16 +29,14 @@ function IconChevronLeft({ color }: { color: string }) {
 }
 function IconCoin({ color }: { color: string }) {
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v10M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.8 2.5 2c0 1.5-1.5 2-2.5 2.4-1.2.4-2.5 1-2.5 2.6 0 1.2 1.1 2.2 2.5 2.2s2.5-.8 2.5-2" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function IconFlag({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 21V4M5 4h12l-3 4 3 4H5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M12 7v10M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.8 2.5 2c0 1.5-1.5 2-2.5 2.4-1.2.4-2.5 1-2.5 2.6 0 1.2 1.1 2.2 2.5 2.2s2.5-.8 2.5-2"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
     </Svg>
   );
 }
@@ -110,72 +101,11 @@ export default function EnrollmentFeeTypesScreen() {
     );
   };
 
-  const renderFeeType = ({ item }: { item: FeeType }) => {
-    const isActive = item.is_active;
-    const amount = formatAmount(item.amount);
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
-        onPress={() => (navigation as any).navigate('EnrollmentFeeTypeForm', { feeTypeId: item.id })}
-      >
-        <View style={styles.iconCol}>
-          <View style={[styles.iconBadge, { backgroundColor: theme.accentSoft }]}>
-            <IconCoin color={theme.accent} />
-          </View>
-        </View>
-
-        <View style={styles.cardBody}>
-          <View style={styles.cardHeader}>
-            {item.code ? (
-              <View style={styles.codeBadge}>
-                <Text style={styles.codeText}>{item.code}</Text>
-              </View>
-            ) : (
-              <View />
-            )}
-            <Text
-              style={[
-                styles.statusBadgeText,
-                {
-                  color: isActive ? theme.accent : theme.textSecondary,
-                  backgroundColor: isActive ? theme.accentSoft : theme.surfaceVariant,
-                },
-              ]}
-            >
-              {isActive ? t('enrollment_fee_types.active', 'active') : t('enrollment_fee_types.inactive', 'inactive')}
-            </Text>
-          </View>
-
-          <Text style={styles.name}>{item.name}</Text>
-          {amount ? <Text style={styles.amount}>{amount}</Text> : null}
-
-          {item.is_required ? (
-            <View style={styles.terminalRow}>
-              <IconFlag color={theme.accent} />
-              <Text style={styles.terminalText}>{t('enrollment_fee_types.required', 'Required before enrollment completes')}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.cardFooter}>
-            <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-              <Text style={styles.deleteButtonText}>{t('enrollment_fee_types.delete', 'Delete')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   const renderSkeletonCard = (key: number) => (
-    <View key={key} style={styles.card}>
-      <View style={styles.iconCol}>
-        <Skeleton width={40} height={40} borderRadius={20} baseColor={theme.skeletonBase} />
-      </View>
-      <View style={styles.cardBody}>
-        <Skeleton width={60} height={18} borderRadius={6} style={{ marginBottom: 10 }} baseColor={theme.skeletonBase} />
-        <Skeleton width="55%" height={18} baseColor={theme.skeletonBase} />
-      </View>
+    <View key={key} style={styles.skeletonCard}>
+      <Skeleton width={42} height={42} borderRadius={21} style={{ marginBottom: 12 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="70%" height={16} borderRadius={6} style={{ marginBottom: 8 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="45%" height={12} baseColor={theme.skeletonBase} />
     </View>
   );
 
@@ -189,7 +119,7 @@ export default function EnrollmentFeeTypesScreen() {
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_fee_types.title', 'Fee Types')}</Text>
           <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
+        <BentoGrid>{[0, 1, 2].map(renderSkeletonCard)}</BentoGrid>
         <BottomNavBar />
       </View>
     );
@@ -203,10 +133,7 @@ export default function EnrollmentFeeTypesScreen() {
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_fee_types.title', 'Fee Types')}</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => (navigation as any).navigate('EnrollmentFeeTypeForm')}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('EnrollmentFeeTypeForm')}>
           <Text style={styles.addButtonText}>{t('enrollment_fee_types.add', '+ Add')}</Text>
         </TouchableOpacity>
       </View>
@@ -221,19 +148,11 @@ export default function EnrollmentFeeTypesScreen() {
       ) : null}
 
       <Text style={styles.helperText}>
-        {t(
-          'enrollment_fee_types.helper',
-          'What a student owes during enrollment. Required fees must show Paid or Waived before a student can be officially enrolled.'
-        )}
+        {t('enrollment_fee_types.helper', 'What a student owes during enrollment. Required fees must show Paid or Waived before a student can be officially enrolled.')}
       </Text>
 
-      <FlatList
-        style={{ flex: 1 }}
-        data={feeTypes}
-        renderItem={renderFeeType}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
+      <ScrollView style={{ flex: 1 }}>
+        {feeTypes.length === 0 ? (
           <EmptyState
             icon="💰"
             title={t('enrollment_fee_types.empty_title', 'No fee types yet')}
@@ -242,8 +161,35 @@ export default function EnrollmentFeeTypesScreen() {
             onAction={() => (navigation as any).navigate('EnrollmentFeeTypeForm')}
             colors={theme}
           />
-        }
-      />
+        ) : (
+          <BentoGrid>
+            {feeTypes.map((item) => (
+              <BentoGridCard
+                key={item.id}
+                icon={<IconCoin color={theme.accent} />}
+                title={item.name}
+                subtitle={formatAmount(item.amount) ?? undefined}
+                meta={item.is_required ? t('enrollment_fee_types.required', 'Required before enrollment completes') : undefined}
+                badgeText={item.is_active ? t('enrollment_fee_types.active', 'active') : t('enrollment_fee_types.inactive', 'inactive')}
+                badgeTone={item.is_active ? 'accent' : 'neutral'}
+                onPress={() => (navigation as any).navigate('EnrollmentFeeTypeForm', { feeTypeId: item.id })}
+                theme={theme}
+              />
+            ))}
+          </BentoGrid>
+        )}
+        {feeTypes.length > 0 ? (
+          <View style={styles.deleteHintRow}>
+            {feeTypes.map((item) => (
+              <TouchableOpacity key={item.id} onPress={() => handleDelete(item)} style={styles.deleteChip}>
+                <Text style={styles.deleteChipText}>
+                  {t('enrollment_fee_types.delete_x', 'Delete {name}').replace('{name}', item.name)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+      </ScrollView>
       <BottomNavBar />
     </View>
   );
@@ -266,21 +212,10 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     headerTitleFlex: { flex: 1, marginLeft: 8 },
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
-    addButton: {
-      backgroundColor: theme.accent,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 6,
-    },
+    addButton: { backgroundColor: theme.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
     addButtonText: { color: theme.onAccent, fontWeight: '600', fontSize: 14 },
 
-    helperText: {
-      fontSize: 12.5,
-      color: theme.textSecondary,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      lineHeight: 18,
-    },
+    helperText: { fontSize: 12.5, color: theme.textSecondary, paddingHorizontal: 16, paddingTop: 12, lineHeight: 18 },
 
     errorBanner: {
       flexDirection: 'row',
@@ -290,69 +225,22 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       marginHorizontal: 16,
       marginTop: 12,
       padding: 12,
-      borderRadius: RADIUS.md ?? 10,
+      borderRadius: RADIUS.md,
     },
     errorBannerText: { color: theme.danger, fontSize: 13, flex: 1, marginRight: 8 },
     retryText: { color: theme.danger, fontWeight: '700', fontSize: 13 },
 
-    listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
-    card: {
-      flexDirection: 'row',
+    skeletonCard: {
+      width: '47%',
+      minHeight: 132,
       backgroundColor: theme.surface,
       borderRadius: RADIUS.lg,
-      padding: 14,
-      marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.border,
-      ...theme.elevation2,
+      padding: 16,
     },
-    iconCol: {
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      width: 40,
-      marginRight: 12,
-      paddingTop: 2,
-    },
-    iconBadge: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cardBody: { flex: 1 },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    codeBadge: {
-      backgroundColor: theme.accentSoft,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 6,
-    },
-    codeText: { fontSize: 12, fontWeight: '700', color: theme.accentSoftText },
-    statusBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    name: { fontSize: 16, fontWeight: '700', color: theme.textPrimary, marginBottom: 4 },
-    amount: { fontSize: 14, fontWeight: '600', color: theme.textSecondary, marginBottom: 8 },
-    terminalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-    terminalText: { fontSize: 11.5, color: theme.textSecondary, marginLeft: 6 },
-    cardFooter: { flexDirection: 'row', justifyContent: 'flex-end' },
-    deleteButton: {
-      borderWidth: 1,
-      borderColor: theme.dangerSoft,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-    },
-    deleteButtonText: { color: theme.danger, fontSize: 12, fontWeight: '600' },
+
+    deleteHintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 20 },
+    deleteChip: { borderWidth: 1, borderColor: theme.dangerSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+    deleteChipText: { color: theme.danger, fontSize: 11, fontWeight: '600' },
   });
