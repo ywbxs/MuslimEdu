@@ -62,3 +62,17 @@ export async function fetchStudentProgressCsv(token: string, studentId: number):
 export async function fetchClassProgressCsv(token: string, sectionId: number): Promise<CsvReport> {
   return authedPost('/report_class_progress_csv', token, { section_id: sectionId });
 }
+
+/**
+ * Mints a short-lived signed link to a printable "whole student status"
+ * HTML report (attendance summary, enrollment/fee status) - see
+ * ReportController's docblock for why this is a browser-openable link
+ * rather than an in-app PDF: no verified PDF/print module in this app, no
+ * SSH/composer access to add a PDF-rendering package server-side either.
+ * Open the returned url with React Native's Linking.openURL(); the device
+ * browser's own "Print > Save as PDF" produces the actual PDF file.
+ */
+export async function fetchStudentReportLink(token: string, studentId: number): Promise<string> {
+  const data = await authedPost('/admin_student_report_link', token, { student_id: studentId });
+  return data.url;
+}

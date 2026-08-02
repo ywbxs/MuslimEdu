@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,7 @@ import {
   OrphanProfileFields,
   BasicProfileFields,
 } from '../services/adminService';
+import { fetchStudentReportLink } from '../services/reportExportService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 import UserAvatar from './UserAvatar';
 import { COLORS, BRAND } from '../theme/glass';
@@ -321,6 +323,7 @@ export function ChildProfileSheet({
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [fields, setFields] = useState<EditableFields>(emptyEditable);
 
   useEffect(() => {
@@ -366,6 +369,19 @@ export function ChildProfileSheet({
     if (isSaving) return;
     setIsEditing(false);
     onClose();
+  };
+
+  const handleViewReport = async () => {
+    if (!token || !studentId) return;
+    setReportLoading(true);
+    try {
+      const url = await fetchStudentReportLink(token, studentId);
+      await Linking.openURL(url);
+    } catch (err) {
+      Alert.alert('Could not open report', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -492,6 +508,19 @@ export function ChildProfileSheet({
                   />
                 ) : null}
               </View>
+
+              {canEdit ? (
+                <TouchableOpacity style={styles.reportBtn} onPress={handleViewReport} disabled={reportLoading} activeOpacity={0.85}>
+                  {reportLoading ? (
+                    <ActivityIndicator size="small" color={EMERALD} />
+                  ) : (
+                    <>
+                      <IconReport color={EMERALD} />
+                      <Text style={styles.reportBtnText}>View Full Report</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : null}
 
               {isEditing ? (
                 <View style={styles.profileSection}>
@@ -681,6 +710,18 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     marginTop: 4,
   },
+  reportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: EMERALD,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  reportBtnText: { color: EMERALD, fontSize: 14, fontWeight: '700' },
   profileSectionLabel: {
     fontSize: 12,
     fontWeight: '700',
