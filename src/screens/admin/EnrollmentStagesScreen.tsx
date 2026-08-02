@@ -276,6 +276,12 @@ export default function EnrollmentStagesScreen() {
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Enrollment Stages</Text>
         <TouchableOpacity
           style={styles.studentsButton}
+          onPress={() => (navigation as any).navigate('EnrollmentFeeTypes')}
+        >
+          <Text style={styles.studentsButtonText}>{t('enrollment_stages.fees', 'Fees')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.studentsButton}
           onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}
         >
           <Text style={styles.studentsButtonText}>{t('enrollment_stages.students', 'Students')}</Text>
