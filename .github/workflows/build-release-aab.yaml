@@ -1,0 +1,136 @@
+name: Build MuslimEdu Release AAB (Play Store)
+
+# Manual only - a release build is a deliberate action, not something that
+# should fire on every push the way the debug APK workflow does.
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: "Version shown to users, e.g. 1.0.0"
+        required: true
+        default: "1.0.0"
+      versionCode:
+        description: "Play Store internal build number - must go UP by at least 1 every time you upload, never reuse a number"
+        required: true
+        default: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your source files
+        uses: actions/checkout@v4
+        with:
+          path: source-files
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Create a fresh React Native project
+        run: npx @react-native-community/cli@latest init MuslimEdu --package-name com.muslimeduu --skip-install
+
+      - name: Copy your custom app code into the project
+        run: |
+          rm -rf MuslimEdu/App.tsx
+          cp -r source-files/src MuslimEdu/src
+          cp source-files/App.tsx MuslimEdu/App.tsx
+
+      - name: Copy your app icon over the default one
+        run: cp -r source-files/android-icons/* MuslimEdu/android/app/src/main/res/
+
+      - name: Add camera permission for QR/ID scanning
+        run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
+      - name: Install base dependencies
+        working-directory: MuslimEdu
+        run: npm install
+
+      - name: Install navigation + feature packages
+        working-directory: MuslimEdu
+        run: |
+          npm install \
+            "@react-navigation/native@^7" \
+            "@react-navigation/native-stack@^7" \
+            "@react-navigation/bottom-tabs@^7" \
+            "react-native-screens@^4" \
+            "@react-native-async-storage/async-storage@1.23.1" \
+            react-native-keychain \
+            react-native-svg \
+            react-native-image-picker \
+            "@react-native-documents/picker@10.1.7" \
+            react-native-linear-gradient \
+            "@react-native-community/blur" \
+            react-native-fs \
+            "@bam.tech/react-native-image-resizer" \
+            axios \
+            "@react-native-async-storage/async-storage" \
+            "@react-native-community/datetimepicker" \
+            "@react-native-community/netinfo@^11.4.1" \
+            "react-native-vision-camera@^4.7.3" \
+            "react-native-qrcode-svg@^6.3.21" \
+            "react-native-view-shot@^4.0.3"
+
+      - name: Set the version shown in the Play Store and internal build number
+        working-directory: MuslimEdu/android/app
+        run: |
+          sed -i "s/versionCode [0-9]\+/versionCode ${{ github.event.inputs.versionCode }}/" build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${{ github.event.inputs.versionName }}\"/" build.gradle
+          echo "--- resulting version lines ---"
+          grep -E "versionCode|versionName" build.gradle
+
+      - name: Turn on code shrinking/obfuscation for the release build
+        working-directory: MuslimEdu/android/app
+        run: |
+          # RN's template names this flag enableProguardInReleaseBuilds and
+          # defaults it to false - flip it on for the store build. If a
+          # future RN template renames/removes this flag, this line simply
+          # makes no change (sed doesn't error on a non-matching pattern),
+          # so it's safe to leave in either way.
+          sed -i 's/def enableProguardInReleaseBuilds = false/def enableProguardInReleaseBuilds = true/' build.gradle
+
+      - name: Decode the upload keystore from the repo secret
+        working-directory: MuslimEdu/android/app
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > muslimedu-upload.keystore
+
+      - name: Point Gradle at the upload keystore (never written to the repo)
+        working-directory: MuslimEdu/android
+        run: |
+          {
+            echo "MYAPP_RELEASE_STORE_FILE=muslimedu-upload.keystore"
+            echo "MYAPP_RELEASE_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+            echo "MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            echo "MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+          } >> gradle.properties
+
+      - name: Wire the release build to sign with that keystore
+        working-directory: MuslimEdu
+        run: node ../source-files/tools/apply-release-signing.js android/app/build.gradle
+
+      - name: Bundle JavaScript into the release build
+        working-directory: MuslimEdu
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Build the signed release App Bundle (.aab) for Play Store upload
+        working-directory: MuslimEdu/android
+        run: chmod +x gradlew && ./gradlew bundleRelease
+
+      - name: Upload the .aab
+        uses: actions/upload-artifact@v4
+        with:
+          name: muslimedu-release-aab
+          path: MuslimEdu/android/app/build/outputs/bundle/release/app-release.aab
