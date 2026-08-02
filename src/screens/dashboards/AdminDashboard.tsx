@@ -214,6 +214,47 @@ function ArrowRight({ color, size = 18 }: { color: string; size?: number }) {
   );
 }
 
+// Declutter: this school is only using the foundation pieces for now
+// (academic setup, enrollment, cashier/registrar accounts, ID cards,
+// attendance, grading, and school-level settings) - everything else stays
+// built and reachable by route, just hidden from the menu until the admin
+// asks for it back. To bring one back, remove its key from this set.
+const HIDDEN_FOR_NOW_KEYS = new Set([
+  'examCategories',
+  'gradebookReview',
+  'announcementReview',
+  'lessonPlanReview',
+  'assessmentReview',
+  'assessmentGrades',
+  'materialsReview',
+  'studentNumbers',
+  'academicSchedule', // duplicate of classSchedule - same screen
+  'academicCalendar',
+  'academicAnalytics',
+  'completionHub',
+  'graduation',
+  'promotionPolicy',
+  'documentTemplates',
+  'gradeRelease',
+  'studentIdRules',
+  'studentLifecycle',
+  'timetableConflicts',
+  'permissions',
+  'security',
+  'orgStructure',
+  'behaviorIncidents',
+  'examinations',
+  'studentProgress',
+  'integrationSettings',
+  'localizationSettings',
+  'authorizationAudit',
+  'analyticsExtended',
+  'notifications',
+  'fees',
+  'studentDocumentRequests',
+  'studentServiceRequests',
+]);
+
 type Variant = 'solid' | 'soft';
 interface ManageItem {
   key: string;
@@ -703,7 +744,9 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       route: 'AccountSettings',
       icon: (c) => <GearIcon color={c} />,
     },
-  ].filter((item) => !(isOrphanSchool && ACADEMIC_ADMIN_TILE_KEYS.has(item.key)));
+  ]
+    .filter((item) => !(isOrphanSchool && ACADEMIC_ADMIN_TILE_KEYS.has(item.key)))
+    .filter((item) => !HIDDEN_FOR_NOW_KEYS.has(item.key));
 
   // --- Parallax + fade for the background layer only. The ScrollView content
   // (greeting, reports card, grid) scrolls at normal speed on top, so it
