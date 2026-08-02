@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, absoluteUrl } from '../config/api';
 
 /**
  * M4 report export. Backend returns { filename, csv } as JSON rather than
@@ -63,16 +63,38 @@ export async function fetchClassProgressCsv(token: string, sectionId: number): P
   return authedPost('/report_class_progress_csv', token, { section_id: sectionId });
 }
 
+export interface StudentReportData {
+  student: {
+    id: number;
+    name: string;
+    email: string;
+    photo: string | null;
+    class_name: string | null;
+    section_name: string | null;
+  };
+  generated_at: string;
+  attendance: { status: string; count: number }[];
+  payments: {
+    fee_name: string | null;
+    status: 'unpaid' | 'paid' | 'waived';
+    amount: string | number | null;
+    payment_mode: string | null;
+    receipt_number: string | null;
+  }[];
+}
+
 /**
- * Mints a short-lived signed link to a printable "whole student status"
- * HTML report (attendance summary, enrollment/fee status) - see
- * ReportController's docblock for why this is a browser-openable link
- * rather than an in-app PDF: no verified PDF/print module in this app, no
- * SSH/composer access to add a PDF-rendering package server-side either.
- * Open the returned url with React Native's Linking.openURL(); the device
- * browser's own "Print > Save as PDF" produces the actual PDF file.
+ * "Whole student status" report data - rendered natively inside the app
+ * (StudentReportScreen), not opened in an external browser. A plain
+ * Sanctum-authenticated JSON endpoint, same convention as every other
+ * route in this API; the app builds its own React Native UI from the
+ * data instead of relying on a PDF/HTML/WebView renderer that doesn't
+ * exist in this project.
  */
-export async function fetchStudentReportLink(token: string, studentId: number): Promise<string> {
-  const data = await authedPost('/admin_student_report_link', token, { student_id: studentId });
-  return data.url;
+export async function fetchStudentReportData(token: string, studentId: number): Promise<StudentReportData> {
+  const data = await authedPost('/admin_student_report_data', token, { student_id: studentId });
+  return {
+    ...data,
+    student: { ...data.student, photo: absoluteUrl(data.student?.photo) },
+  };
 }

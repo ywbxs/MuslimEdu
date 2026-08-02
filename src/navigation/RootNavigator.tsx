@@ -72,6 +72,7 @@ import EnrollmentFeeTypesScreen from '../screens/admin/EnrollmentFeeTypesScreen'
 import EnrollmentFeeTypeFormScreen from '../screens/admin/EnrollmentFeeTypeFormScreen';
 import SetupChecklistScreen from '../screens/admin/SetupChecklistScreen';
 import SyncStatusScreen from '../screens/common/SyncStatusScreen';
+import StudentReportScreen from '../screens/common/StudentReportScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
 import AcademicHubScreen from '../screens/student/AcademicHubScreen';
 import AcademicYearsScreen from '../screens/admin/AcademicYearsScreen';
@@ -301,6 +302,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="SyncStatus"
                 component={SyncStatusScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="StudentReport"
+                component={StudentReportScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
