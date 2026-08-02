@@ -13,12 +13,17 @@ export default function App() {
       <LocaleProvider>
         <OfflineQueueProvider>
           <AuthProvider>
-            {/* OfflineStatusBar floats above whatever screen is active, so
-                it shows on every tab/pushed screen without each one having
-                to render it itself. */}
+            {/* OfflineStatusBar is a normal flex sibling ABOVE the
+                navigator, not an absolute overlay - going offline pushes
+                the whole screen down by the banner's height instead of
+                floating a pill over whatever's underneath it. Shows on
+                every tab/pushed screen without each one rendering it
+                itself. */}
             <View style={{ flex: 1 }}>
-              <RootNavigator />
               <OfflineStatusBar />
+              <View style={{ flex: 1 }}>
+                <RootNavigator />
+              </View>
             </View>
           </AuthProvider>
         </OfflineQueueProvider>
