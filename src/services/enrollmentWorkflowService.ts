@@ -243,6 +243,24 @@ export async function fetchEnrollmentWorkflowHistory(
   return authedPost('/admin_enrollment_workflow_history', token, { record_id: recordId });
 }
 
+// Reaching a terminal stage only marks the workflow record 'completed' - it
+// does not place the student in a class/section (see controller comment on
+// EnrollmentWorkflowController::admin_enrollment_workflow_advance). This is
+// the separate, deliberate action that actually creates the roster
+// Enrollment row, callable once a record is 'completed'.
+export async function placeEnrollmentWorkflowInSection(
+  token: string,
+  recordId: number,
+  classId: number,
+  sectionId: number
+): Promise<void> {
+  await authedPost('/admin_enrollment_workflow_place_in_section', token, {
+    record_id: recordId,
+    class_id: classId,
+    section_id: sectionId,
+  });
+}
+
 /* --------------------------------------------------------------------- */
 /* Student-facing read (own progress only)                               */
 /* --------------------------------------------------------------------- */

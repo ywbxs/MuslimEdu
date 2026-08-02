@@ -27,7 +27,9 @@ import {
   fetchEnrollmentStages,
   advanceEnrollmentWorkflow,
   withdrawEnrollmentWorkflow,
+  placeEnrollmentWorkflowInSection,
 } from '../../services/enrollmentWorkflowService';
+import { fetchClasses, fetchSections, ClassOption, SectionOption } from '../../services/adminService';
 
 /**
  * Admin: one student's enrollment-workflow record - current stage, full
@@ -86,6 +88,17 @@ export default function EnrollmentWorkflowDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [advanceModalVisible, setAdvanceModalVisible] = useState(false);
+
+  // "Place in Section" - the step that actually creates the roster
+  // Enrollment row once a workflow record is completed (see
+  // placeEnrollmentWorkflowInSection). Two-step picker: class, then section.
+  const [placeModalVisible, setPlaceModalVisible] = useState(false);
+  const [placeStep, setPlaceStep] = useState<'class' | 'section'>('class');
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [sections, setSections] = useState<SectionOption[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<ClassOption | null>(null);
+  const [placing, setPlacing] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !recordId) return;
@@ -153,6 +166,54 @@ export default function EnrollmentWorkflowDetailScreen() {
         },
       ]
     );
+  };
+
+  const openPlaceModal = async () => {
+    setPlaceStep('class');
+    setSelectedClass(null);
+    setSections([]);
+    setPlaceModalVisible(true);
+    if (classes.length === 0 && token) {
+      try {
+        setClasses(await fetchClasses(token));
+      } catch (err) {
+        Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.classes_error', 'Could not load classes.'));
+      }
+    }
+  };
+
+  const onPickClass = async (cls: ClassOption) => {
+    if (!token) return;
+    setSelectedClass(cls);
+    setPlaceStep('section');
+    setSectionsLoading(true);
+    try {
+      setSections(await fetchSections(token, String(cls.id)));
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.sections_error', 'Could not load sections.'));
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  const onPickSection = async (section: SectionOption) => {
+    if (!token || !record || !selectedClass) return;
+    setPlacing(true);
+    try {
+      await placeEnrollmentWorkflowInSection(token, record.id, selectedClass.id, section.id);
+      setPlaceModalVisible(false);
+      Alert.alert(
+        t('enrollment_workflow_detail.placed_title', 'Student Placed'),
+        t('enrollment_workflow_detail.placed_message', '{name} has been added to {class} - {section}.')
+          .replace('{name}', record.student?.name ?? t('enrollment_workflow_detail.this_student', 'this student'))
+          .replace('{class}', selectedClass.name)
+          .replace('{section}', section.name)
+      );
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_detail.place_error', 'Could not place the student in that section.'));
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (loading) {
@@ -246,6 +307,18 @@ export default function EnrollmentWorkflowDetailScreen() {
           </View>
         ) : null}
 
+        {record.status === 'completed' ? (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.advanceButton]}
+              onPress={openPlaceModal}
+              disabled={busy || placing}
+            >
+              <Text style={styles.advanceButtonText}>{t('enrollment_workflow_detail.place_in_section', 'Place in Section...')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <Text style={styles.sectionLabel}>{t('enrollment_workflow_detail.history', 'History')}</Text>
         {history.length === 0 ? (
           <Text style={styles.emptyHistoryText}>{t('enrollment_workflow_detail.no_history', 'No stage changes recorded yet.')}</Text>
@@ -305,6 +378,57 @@ export default function EnrollmentWorkflowDetailScreen() {
               )}
             />
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setAdvanceModalVisible(false)}>
+              <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={placeModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPlaceModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {placeStep === 'class'
+                ? t('enrollment_workflow_detail.pick_class_title', 'Select Class')
+                : t('enrollment_workflow_detail.pick_section_title', 'Select Section')}
+            </Text>
+            {placeStep === 'section' ? (
+              <TouchableOpacity onPress={() => setPlaceStep('class')} style={{ marginBottom: 8 }}>
+                <Text style={styles.retryText}>{t('enrollment_workflow_detail.change_class', '‹ Change class')}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {placeStep === 'section' && sectionsLoading ? (
+              <ActivityIndicator color={theme.accent} style={{ marginVertical: 20 }} />
+            ) : (
+              <FlatList
+                data={placeStep === 'class' ? classes : sections}
+                keyExtractor={(item) => item.id.toString()}
+                style={{ maxHeight: 320 }}
+                ListEmptyComponent={
+                  <Text style={styles.emptyHistoryText}>
+                    {placeStep === 'class'
+                      ? t('enrollment_workflow_detail.no_classes', 'No classes found.')
+                      : t('enrollment_workflow_detail.no_sections', 'No sections found for this class.')}
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    disabled={placing}
+                    onPress={() => (placeStep === 'class' ? onPickClass(item as ClassOption) : onPickSection(item as SectionOption))}
+                  >
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                    {placing ? <ActivityIndicator size="small" color={theme.accent} /> : null}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setPlaceModalVisible(false)}>
               <Text style={styles.modalCloseText}>{t('common.close', 'Close')}</Text>
             </TouchableOpacity>
           </View>
