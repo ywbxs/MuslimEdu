@@ -29,6 +29,8 @@ export interface StudentSummary {
   class_name?: string | null;
   section_id: number | null;
   section_name?: string | null;
+  room_number?: string | null;
+  adviser_name?: string | null;
   orphan_id_number: string | null;
   status?: ChildStatus;
   joined_date?: string | null;

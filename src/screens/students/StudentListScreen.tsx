@@ -95,6 +95,23 @@ function IconCalendar({ color }: { color: string }) {
     </Svg>
   );
 }
+function IconLayers({ color }: { color: string }) {
+  return (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3l9 5-9 5-9-5 9-5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconAlertTriangle({ color }: { color: string }) {
+  return (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 4 2.5 20h19L12 4Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1={12} y1={10} x2={12} y2={14.5} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx={12} cy={17} r={0.9} fill={color} />
+    </Svg>
+  );
+}
 function IconClose({ color }: { color: string }) {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -356,12 +373,28 @@ export default function StudentListScreen() {
                 <View style={styles.cardBody}>
                   <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
                   <Text style={styles.meta} numberOfLines={1}>{item.email}</Text>
-                  {joined ? (
-                    <View style={styles.joinedChip}>
-                      <IconCalendar color={EMERALD} />
-                      <Text style={styles.joinedChipText}>{t('student_list.joined', 'Joined {date}').replace('{date}', joined)}</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.chipRow}>
+                    {item.section_name ? (
+                      <View style={styles.sectionChip}>
+                        <IconLayers color={EMERALD} />
+                        <Text style={styles.sectionChipText} numberOfLines={1}>
+                          {[item.class_name, item.section_name].filter(Boolean).join(' - ')}
+                          {item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : ''}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.warnChip}>
+                        <IconAlertTriangle color={AMBER} />
+                        <Text style={styles.warnChipText}>{t('student_list.not_enrolled', 'Not placed in a section')}</Text>
+                      </View>
+                    )}
+                    {joined ? (
+                      <View style={styles.joinedChip}>
+                        <IconCalendar color={EMERALD} />
+                        <Text style={styles.joinedChipText}>{t('student_list.joined', 'Joined {date}').replace('{date}', joined)}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
                 <IconChevronRight color="#C4C9CF" />
               </TouchableOpacity>
@@ -464,6 +497,7 @@ const styles = StyleSheet.create({
   cardBody: { flex: 1, marginLeft: 12 },
   name: { fontSize: 15.5, fontWeight: '700', color: INK },
   meta: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },
   joinedChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,10 +506,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginTop: 7,
     gap: 5,
   },
   joinedChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD },
+  sectionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: EMERALD_SOFT,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 5,
+    maxWidth: '100%',
+  },
+  sectionChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD, flexShrink: 1 },
+  warnChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: AMBER_SOFT,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 5,
+  },
+  warnChipText: { fontSize: 11.5, fontWeight: '600', color: AMBER },
 
   // --- Sheets (filter + profile) ---
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
