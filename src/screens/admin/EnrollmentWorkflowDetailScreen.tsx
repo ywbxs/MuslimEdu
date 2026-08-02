@@ -350,7 +350,7 @@ export default function EnrollmentWorkflowDetailScreen() {
             {workflowStatusLabel(record.status)}
           </Text>
           <Text style={styles.currentStageLabel}>{t('enrollment_workflow_detail.current_stage', 'CURRENT STAGE')}</Text>
-          <Text style={styles.currentStageValue}>{record.currentStage?.name ?? '—'}</Text>
+          <Text style={styles.currentStageValue}>{record.current_stage?.name ?? '—'}</Text>
           {record.notes ? (
             <>
               <Text style={styles.currentStageLabel}>{t('enrollment_workflow_detail.notes', 'NOTES')}</Text>
@@ -474,12 +474,12 @@ export default function EnrollmentWorkflowDetailScreen() {
                 <View style={styles.historyDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.historyText}>
-                    {h.fromStage?.name ?? t('enrollment_workflow_detail.started', 'Started')} <Text style={styles.historyArrow}>→</Text>{' '}
-                    {h.toStage?.name ?? '—'}
+                    {h.from_stage?.name ?? t('enrollment_workflow_detail.started', 'Started')} <Text style={styles.historyArrow}>→</Text>{' '}
+                    {h.to_stage?.name ?? '—'}
                   </Text>
                   <Text style={styles.historyMeta}>
                     {formatDate(h.created_at)}
-                    {h.changedByUser?.name ? ` · ${t('enrollment_workflow_detail.by', 'by')} ${h.changedByUser.name}` : ''}
+                    {h.changed_by_user?.name ? ` · ${t('enrollment_workflow_detail.by', 'by')} ${h.changed_by_user.name}` : ''}
                   </Text>
                   {h.notes ? <Text style={styles.historyNotes}>{h.notes}</Text> : null}
                 </View>
@@ -877,4 +877,14 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     photoPickerText: { fontSize: 13, color: theme.textSecondary },
     photoPreview: { width: '100%', height: 160, resizeMode: 'cover' },
+    saveButton: {
+      backgroundColor: theme.accent,
+      borderRadius: RADIUS.sm,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 20,
+    },
+    saveButtonDisabled: { opacity: 0.6 },
+    saveButtonText: { color: theme.onAccent, fontWeight: '700', fontSize: 14.5 },
   });

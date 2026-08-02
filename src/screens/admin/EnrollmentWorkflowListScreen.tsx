@@ -221,7 +221,7 @@ export default function EnrollmentWorkflowListScreen() {
 
         <Text style={styles.studentName} numberOfLines={1}>{studentName}</Text>
         <Text style={styles.stageText} numberOfLines={1}>
-          {item.currentStage?.name ?? t('enrollment_workflow_list.unknown_stage', 'Unknown stage')}
+          {item.current_stage?.name ?? t('enrollment_workflow_list.unknown_stage', 'Unknown stage')}
         </Text>
 
         {placed ? (

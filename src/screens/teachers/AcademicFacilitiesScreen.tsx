@@ -1,21 +1,352 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
-import { archiveBuilding, archiveRoom, Building, listBuildings, listRooms, Room, RoomType, saveBuilding, saveRoom } from '../../services/academicFacilitiesService';
+import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
+import { RADIUS } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+import { BentoGrid } from '../../components/glass/BentoGridCard';
+import { Skeleton } from '../../components/Skeleton';
+import { EmptyState } from '../../components/EmptyState';
+import BottomNavBar from '../../components/BottomNavBar';
+import { archiveBuilding, archiveRoom, Building, listBuildings, listRooms, Room } from '../../services/academicFacilitiesService';
 
-const TYPES: RoomType[] = ['classroom','laboratory','library','office','hall','mosque','learning_space','other'];
-export default function AcademicFacilitiesScreen() {
-  const navigation = useNavigation(); const insets = useSafeAreaInsets(); const { token } = useAuth(); const { t } = useLocale();
-  const [buildings,setBuildings]=useState<Building[]>([]); const [rooms,setRooms]=useState<Room[]>([]); const [selected,setSelected]=useState<number|undefined>(); const [loading,setLoading]=useState(true); const [refreshing,setRefreshing]=useState(false); const [modal,setModal]=useState<'building'|'room'|null>(null); const [name,setName]=useState(''); const [code,setCode]=useState(''); const [floor,setFloor]=useState('1'); const [capacity,setCapacity]=useState('30'); const [roomType,setRoomType]=useState<RoomType>('classroom'); const [error,setError]=useState<string|null>(null);
-  const load = useCallback(async()=>{ if(!token)return; setError(null); try { const b=await listBuildings(token); setBuildings(b); const r=await listRooms(token, selected); setRooms(r); } catch(e:any){setError(e?.message??t('academic_facilities.load_error','Could not load facilities.'));} finally{setLoading(false);setRefreshing(false);} },[token,selected,t]);
-  useEffect(()=>{load()},[load]);
-  const openBuilding=()=>{setName('');setCode('');setModal('building')}; const openRoom=()=>{if(!selected){Alert.alert(t('academic_facilities.select_building_title','Select a building'),t('academic_facilities.select_building_message','Choose a building before adding a room.'));return;}setName('');setCode('');setFloor('1');setCapacity('30');setRoomType('classroom');setModal('room')};
-  const submit=async()=>{if(!token||!name.trim()||!code.trim())return; try { if(modal==='building') await saveBuilding(token,{name:name.trim(),code:code.trim().toUpperCase(),floor_count:Math.max(1,Number(floor)||1)}); else if(modal==='room'&&selected) await saveRoom(token,{building_id:selected,name:name.trim(),code:code.trim().toUpperCase(),room_type:roomType,floor_number:Math.max(1,Number(floor)||1),capacity:Math.max(0,Number(capacity)||0)}); setModal(null); load(); }catch(e:any){Alert.alert(t('academic_facilities.save_error_title','Could not save'),e?.message??t('common.try_again','Please try again.'))}};
-  if(loading)return <View style={[styles.center,{paddingTop:insets.top}]}><ActivityIndicator size="large" color={EMERALD}/><Text style={styles.muted}>{t('academic_facilities.loading','Loading facilities…')}</Text></View>;
-  return <View style={styles.flex}><View style={[styles.header,{paddingTop:insets.top+10}]}><TouchableOpacity onPress={()=>navigation.goBack()} style={styles.back}><Text style={styles.backText}>‹</Text></TouchableOpacity><View><Text style={styles.title}>{t('academic_facilities.title','Facilities')}</Text><Text style={styles.subtitle}>{t('academic_facilities.subtitle','Buildings, floors, rooms and learning spaces')}</Text></View></View><ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{setRefreshing(true);load()}} tintColor={EMERALD}/>} contentContainerStyle={[styles.content,{paddingBottom:insets.bottom+30}]}>{error?<Text style={styles.error}>{error}</Text>:null}<View style={styles.toolbar}><Text style={styles.sectionTitle}>{t('academic_facilities.buildings','Buildings')}</Text><TouchableOpacity onPress={openBuilding} style={styles.add}><Text style={styles.addText}>+ {t('academic_facilities.building','Building')}</Text></TouchableOpacity></View>{buildings.length===0?<Text style={styles.muted}>{t('academic_facilities.no_buildings','No buildings yet. Add the first one.')}</Text>:buildings.map(b=><TouchableOpacity key={b.id} onPress={()=>setSelected(b.id===selected?undefined:b.id)} style={[styles.building, b.id===selected&&styles.selected]}><View><Text style={styles.code}>{b.code}</Text><Text style={styles.itemTitle}>{b.name}</Text><Text style={styles.meta}>{b.floor_count} {b.floor_count===1?t('academic_facilities.floor','floor'):t('academic_facilities.floors','floors')} · {b.rooms_count??0} {t('academic_facilities.rooms','rooms')}</Text></View><TouchableOpacity onPress={()=>Alert.alert(t('academic_facilities.archive_building_title','Archive building?'), t('academic_facilities.archive_building_message','It must have no active rooms.'),[{text:t('common.cancel','Cancel'),style:'cancel'},{text:t('academic_facilities.archive','Archive'),style:'destructive',onPress:async()=>{try{await archiveBuilding(token!,b.id);load()}catch(e:any){Alert.alert(t('academic_facilities.cannot_archive_title','Cannot archive'),e?.message)}}}])}><Text style={styles.archive}>{t('academic_facilities.archive','Archive')}</Text></TouchableOpacity></TouchableOpacity>)}<View style={styles.toolbar}><Text style={styles.sectionTitle}>{selected?t('academic_facilities.rooms_in_building','Rooms in selected building'):t('academic_facilities.all_rooms','All rooms')}</Text><TouchableOpacity onPress={openRoom} style={styles.add}><Text style={styles.addText}>+ {t('academic_facilities.room','Room')}</Text></TouchableOpacity></View>{rooms.length===0?<Text style={styles.muted}>{t('academic_facilities.no_rooms','No rooms found.')}</Text>:rooms.map(r=><View key={r.id} style={styles.room}><View style={styles.roomIcon}><Text style={styles.roomIconText}>⌂</Text></View><View style={styles.roomText}><Text style={styles.itemTitle}>{r.name}</Text><Text style={styles.meta}>{r.code} · {r.room_type} · {t('academic_facilities.floor_label','Floor')} {r.floor_number} · {t('academic_facilities.capacity_label','Capacity')} {r.capacity}</Text></View><TouchableOpacity onPress={()=>Alert.alert(t('academic_facilities.archive_room_title','Archive room?'),undefined,[{text:t('common.cancel','Cancel'),style:'cancel'},{text:t('academic_facilities.archive','Archive'),style:'destructive',onPress:async()=>{await archiveRoom(token!,r.id);load()}}])}><Text style={styles.archive}>×</Text></TouchableOpacity></View>)}</ScrollView><Modal visible={!!modal} transparent animationType="slide" onRequestClose={()=>setModal(null)}><View style={styles.overlay}><View style={[styles.sheet,{paddingBottom:insets.bottom+18}]}><Text style={styles.sheetTitle}>{modal==='building'?t('academic_facilities.new_building','New building'):t('academic_facilities.new_room','New room')}</Text><TextInput style={styles.input} placeholder={t('academic_facilities.name_placeholder','Name')} value={name} onChangeText={setName}/><TextInput style={styles.input} placeholder={t('academic_facilities.code_placeholder','Code')} value={code} onChangeText={setCode} autoCapitalize="characters"/><TextInput style={styles.input} placeholder={modal==='building'?t('academic_facilities.floors_placeholder','Floors'):t('academic_facilities.floor_number_placeholder','Floor number')} value={floor} onChangeText={setFloor} keyboardType="number-pad"/>{modal==='room'?<><TextInput style={styles.input} placeholder={t('academic_facilities.capacity_placeholder','Capacity')} value={capacity} onChangeText={setCapacity} keyboardType="number-pad"/><ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>{TYPES.map(rt=><TouchableOpacity key={rt} onPress={()=>setRoomType(rt)} style={[styles.chip,roomType===rt&&styles.chipActive]}><Text style={[styles.chipText,roomType===rt&&styles.chipTextActive]}>{rt}</Text></TouchableOpacity>)}</ScrollView></>:null}<TouchableOpacity style={styles.save} onPress={submit}><Text style={styles.saveText}>{t('common.save','Save')}</Text></TouchableOpacity><TouchableOpacity onPress={()=>setModal(null)}><Text style={styles.cancel}>{t('common.cancel','Cancel')}</Text></TouchableOpacity></View></View></Modal></View>;
+/**
+ * Bento redesign - was a single unreadable one-line JSX blob with no edit
+ * capability (create + archive only). Buildings/rooms are now spatial
+ * tiles (icon, code badge, meta, tap-to-edit) via BuildingFormScreen/
+ * RoomFormScreen's step wizards, matching Enrollment Stages/Fee Types.
+ */
+
+function IconChevronLeft({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M15 5l-7 7 7 7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
 }
-const styles=StyleSheet.create({flex:{flex:1,backgroundColor:'#F5F7F6'},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'#F5F7F6'},muted:{color:SUBTLE,fontSize:13,lineHeight:19,marginTop:8},error:{color:'#B42318',backgroundColor:'#FEE4E2',padding:12,borderRadius:12},header:{flexDirection:'row',alignItems:'center',paddingHorizontal:16,paddingBottom:14,backgroundColor:'#FFF',borderBottomWidth:1,borderBottomColor:'#E2E8E4'},back:{width:38,height:38,borderRadius:19,backgroundColor:EMERALD_SOFT,alignItems:'center',justifyContent:'center',marginRight:12},backText:{fontSize:28,color:EMERALD,marginTop:-3},title:{fontSize:20,fontWeight:'800',color:INK},subtitle:{fontSize:12.5,color:SUBTLE,marginTop:2},content:{padding:16},toolbar:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:20,marginBottom:10},sectionTitle:{fontSize:12,fontWeight:'900',letterSpacing:1,textTransform:'uppercase',color:SUBTLE},add:{backgroundColor:EMERALD_SOFT,borderRadius:999,paddingHorizontal:12,paddingVertical:8},addText:{color:EMERALD,fontWeight:'800',fontSize:12},building:{backgroundColor:'#FFF',borderRadius:16,padding:15,marginBottom:9,borderWidth:1,borderColor:'#E2E8E4',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},selected:{borderColor:EMERALD,borderWidth:2},code:{fontSize:10,fontWeight:'900',color:EMERALD,letterSpacing:1},itemTitle:{fontSize:15,fontWeight:'800',color:INK,marginTop:3},meta:{fontSize:12,color:SUBTLE,marginTop:4},archive:{fontSize:12,color:'#B42318',fontWeight:'700'},room:{backgroundColor:'#FFF',borderRadius:14,padding:13,marginBottom:8,flexDirection:'row',alignItems:'center',borderWidth:1,borderColor:'#E2E8E4'},roomIcon:{width:36,height:36,borderRadius:12,backgroundColor:EMERALD_SOFT,alignItems:'center',justifyContent:'center'},roomIconText:{color:EMERALD,fontSize:19},roomText:{flex:1,marginLeft:11},overlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,0.35)'},sheet:{backgroundColor:'#FFF',borderTopLeftRadius:24,borderTopRightRadius:24,padding:20},sheetTitle:{fontSize:20,fontWeight:'800',color:INK,marginBottom:14},input:{borderWidth:1,borderColor:'#E2E8E4',borderRadius:12,paddingHorizontal:13,paddingVertical:12,fontSize:15,marginBottom:10},chips:{marginBottom:12},chip:{paddingHorizontal:12,paddingVertical:9,borderRadius:999,borderWidth:1,borderColor:'#E2E8E4',marginRight:7},chipActive:{backgroundColor:EMERALD,borderColor:EMERALD},chipText:{color:SUBTLE,fontSize:12},chipTextActive:{color:'#FFF'},save:{backgroundColor:EMERALD,borderRadius:13,height:48,alignItems:'center',justifyContent:'center',marginTop:4},saveText:{color:'#FFF',fontWeight:'800'},cancel:{color:SUBTLE,textAlign:'center',paddingTop:14,fontWeight:'700'}});
+function IconBuilding({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h16M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M15 21v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconDoor({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M6 21h14" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx={13} cy={13} r={0.9} fill={color} />
+    </Svg>
+  );
+}
+
+export default function AcademicFacilitiesScreen() {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const theme = useAcademicGlassTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { token } = useAuth();
+  const { t } = useLocale();
+
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selected, setSelected] = useState<number | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      const [b, r] = await Promise.all([listBuildings(token), listRooms(token, selected)]);
+      setBuildings(b);
+      setRooms(r);
+    } catch (e: any) {
+      setError(e?.message ?? t('academic_facilities.load_error', 'Could not load facilities.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [token, selected, t]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const handleArchiveBuilding = (b: Building) => {
+    Alert.alert(
+      t('academic_facilities.archive_building_title', 'Archive Building'),
+      t('academic_facilities.archive_building_message', 'Archive "{name}"? It must have no active rooms.').replace('{name}', b.name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('academic_facilities.archive', 'Archive'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await archiveBuilding(token!, b.id);
+              load();
+            } catch (e: any) {
+              Alert.alert(t('academic_facilities.cannot_archive_title', 'Cannot Archive'), e?.message ?? t('common.try_again', 'Please try again.'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleArchiveRoom = (r: Room) => {
+    Alert.alert(
+      t('academic_facilities.archive_room_title', 'Archive Room'),
+      t('academic_facilities.archive_room_message', 'Archive "{name}"?').replace('{name}', r.name),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('academic_facilities.archive', 'Archive'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await archiveRoom(token!, r.id);
+              load();
+            } catch (e: any) {
+              Alert.alert(t('academic_facilities.cannot_archive_title', 'Cannot Archive'), e?.message ?? t('common.try_again', 'Please try again.'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderSkeletonCard = (key: number) => (
+    <View key={key} style={styles.tile}>
+      <Skeleton width={40} height={40} borderRadius={20} style={{ marginBottom: 10 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="70%" height={15} borderRadius={6} style={{ marginBottom: 8 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="45%" height={11} baseColor={theme.skeletonBase} />
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+            <IconChevronLeft color={theme.textPrimary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('academic_facilities.title', 'Facilities')}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <BentoGrid>{[0, 1, 2, 3].map(renderSkeletonCard)}</BentoGrid>
+        <BottomNavBar />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <GlassBackground variant="canvas" />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+          <IconChevronLeft color={theme.textPrimary} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleFlex}>
+          <Text style={styles.headerTitle}>{t('academic_facilities.title', 'Facilities')}</Text>
+          <Text style={styles.headerSubtitle}>{t('academic_facilities.subtitle', 'Buildings, floors, rooms and learning spaces')}</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+          <TouchableOpacity onPress={load}>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <ScrollView>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionLabel}>{t('academic_facilities.buildings', 'Buildings')}</Text>
+          <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('BuildingForm')}>
+            <Text style={styles.addButtonText}>+ {t('academic_facilities.building', 'Building')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {buildings.length === 0 ? (
+          <EmptyState
+            icon="🏢"
+            title={t('academic_facilities.empty_buildings_title', 'No buildings yet')}
+            subtitle={t('academic_facilities.no_buildings', 'Add the first one to start organizing rooms by floor.')}
+            actionLabel={t('academic_facilities.empty_action', 'Add Building')}
+            onAction={() => (navigation as any).navigate('BuildingForm')}
+            colors={theme}
+          />
+        ) : (
+          <BentoGrid>
+            {buildings.map((b) => {
+              const isSelected = b.id === selected;
+              return (
+                <TouchableOpacity
+                  key={b.id}
+                  style={[styles.tile, isSelected && styles.tileSelected]}
+                  activeOpacity={0.85}
+                  onPress={() => setSelected(b.id === selected ? undefined : b.id)}
+                  onLongPress={() => (navigation as any).navigate('BuildingForm', { buildingId: b.id })}
+                >
+                  <View style={[styles.iconWrap, isSelected && { backgroundColor: theme.accent }]}>
+                    <IconBuilding color={isSelected ? theme.onAccent : theme.accent} />
+                  </View>
+                  <Text style={styles.codeBadge}>{b.code}</Text>
+                  <Text style={styles.tileTitle} numberOfLines={1}>{b.name}</Text>
+                  <Text style={styles.tileMeta}>
+                    {b.floor_count} {b.floor_count === 1 ? t('academic_facilities.floor', 'floor') : t('academic_facilities.floors', 'floors')} · {b.rooms_count ?? 0} {t('academic_facilities.rooms', 'rooms')}
+                  </Text>
+                  <View style={styles.tileFooter}>
+                    <TouchableOpacity onPress={() => (navigation as any).navigate('BuildingForm', { buildingId: b.id })}>
+                      <Text style={styles.editLink}>{t('common.edit', 'Edit')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleArchiveBuilding(b)}>
+                      <Text style={styles.archiveLink}>{t('academic_facilities.archive', 'Archive')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </BentoGrid>
+        )}
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionLabel}>
+            {selected ? t('academic_facilities.rooms_in_building', 'Rooms in Selected Building') : t('academic_facilities.all_rooms', 'All Rooms')}
+          </Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              if (!selected) {
+                Alert.alert(t('academic_facilities.select_building_title', 'Select a Building'), t('academic_facilities.select_building_message', 'Choose a building before adding a room.'));
+                return;
+              }
+              (navigation as any).navigate('RoomForm', { buildingId: selected });
+            }}
+          >
+            <Text style={styles.addButtonText}>+ {t('academic_facilities.room', 'Room')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {rooms.length === 0 ? (
+          <EmptyState
+            icon="🚪"
+            title={t('academic_facilities.empty_rooms_title', 'No rooms found')}
+            subtitle={t('academic_facilities.no_rooms', 'Select a building above, then add its first room.')}
+            colors={theme}
+          />
+        ) : (
+          <BentoGrid>
+            {rooms.map((r) => (
+              <TouchableOpacity
+                key={r.id}
+                style={styles.tile}
+                activeOpacity={0.85}
+                onPress={() => (navigation as any).navigate('RoomForm', { buildingId: r.building_id, roomId: r.id })}
+              >
+                <View style={styles.iconWrap}>
+                  <IconDoor color={theme.accent} />
+                </View>
+                <Text style={styles.codeBadge}>{r.code}</Text>
+                <Text style={styles.tileTitle} numberOfLines={1}>{r.name}</Text>
+                <Text style={styles.tileMeta}>
+                  {t(`academic_facilities.type_${r.room_type}`, String(r.room_type).replace('_', ' '))} · {t('academic_facilities.floor_label', 'Floor')} {r.floor_number}
+                </Text>
+                <Text style={styles.tileMeta}>{t('academic_facilities.capacity_label', 'Capacity')} {r.capacity}</Text>
+                <View style={styles.tileFooter}>
+                  <Text style={styles.editLink}>{t('common.edit', 'Edit')}</Text>
+                  <TouchableOpacity onPress={() => handleArchiveRoom(r)}>
+                    <Text style={styles.archiveLink}>{t('academic_facilities.archive', 'Archive')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </BentoGrid>
+        )}
+      </ScrollView>
+      <BottomNavBar />
+    </View>
+  );
+}
+
+const makeStyles = (theme: AcademicGlassTheme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: theme.textPrimary },
+    headerSubtitle: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
+    headerTitleFlex: { flex: 1, marginLeft: 8 },
+    backButton: { width: 32 },
+    headerSpacer: { width: 32 },
+
+    errorBanner: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.dangerSoft,
+      marginHorizontal: 16,
+      marginTop: 12,
+      padding: 12,
+      borderRadius: RADIUS.md,
+    },
+    errorBannerText: { color: theme.danger, fontSize: 13, flex: 1, marginRight: 8 },
+    retryText: { color: theme.danger, fontWeight: '700', fontSize: 13 },
+
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 4,
+    },
+    sectionLabel: { fontSize: 12, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
+    addButton: { backgroundColor: theme.accentSoft, borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 7 },
+    addButtonText: { color: theme.accent, fontWeight: '700', fontSize: 12.5 },
+
+    tile: {
+      width: '47%',
+      minHeight: 150,
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      ...theme.elevation2,
+    },
+    tileSelected: { borderColor: theme.accent, borderWidth: 2 },
+    iconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    codeBadge: { fontSize: 10, fontWeight: '700', color: theme.accent, letterSpacing: 0.6, marginBottom: 2 },
+    tileTitle: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary, marginBottom: 4 },
+    tileMeta: { fontSize: 11, color: theme.textSecondary, marginBottom: 2 },
+    tileFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 8 },
+    editLink: { fontSize: 11.5, fontWeight: '700', color: theme.accent },
+    archiveLink: { fontSize: 11.5, fontWeight: '700', color: theme.danger },
+  });

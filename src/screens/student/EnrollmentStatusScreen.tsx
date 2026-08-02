@@ -123,7 +123,7 @@ export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentSta
   }, [load]);
 
   const record = data?.record ?? null;
-  const currentOrder = record?.currentStage?.order ?? -1;
+  const currentOrder = record?.current_stage?.order ?? -1;
   const isFullyCompleted = record?.status === 'completed';
   const statusMeta = record ? STATUS_META[record.status] ?? STATUS_META.in_progress : null;
 
@@ -205,7 +205,7 @@ export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentSta
               </View>
             ) : null}
 
-            {record?.status === 'in_progress' && record.currentStage ? (
+            {record?.status === 'in_progress' && record.current_stage ? (
               <View style={styles.actionCard}>
                 <View style={styles.actionHeaderRow}>
                   <View style={styles.actionIconWrap}>
@@ -213,14 +213,14 @@ export default function EnrollmentStatusScreen({ onStatusLoaded }: EnrollmentSta
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={[styles.actionPill, { backgroundColor: EMERALD_SOFT }]}>
-                      <Text style={[styles.actionPillText, { color: EMERALD }]}>{record.currentStage.name}</Text>
+                      <Text style={[styles.actionPillText, { color: EMERALD }]}>{record.current_stage.name}</Text>
                     </View>
                     <Text style={styles.actionHeading}>{t('enrollment_status.what_to_do_now', 'What to do now')}</Text>
                   </View>
                 </View>
                 <Text style={styles.actionBody}>
-                  {record.currentStage.student_instructions?.trim()
-                    ? record.currentStage.student_instructions
+                  {record.current_stage.student_instructions?.trim()
+                    ? record.current_stage.student_instructions
                     : t('enrollment_status.no_instructions', 'Please contact the school office for next steps.')}
                 </Text>
               </View>
