@@ -87,6 +87,8 @@ import ProgramsCatalogScreen from '../screens/admin/ProgramsCatalogScreen';
 import ProgramFormScreen from '../screens/admin/ProgramFormScreen';
 import StudentIdentityScreen from '../screens/student/StudentIdentityScreen';
 import AcademicFacilitiesScreen from '../screens/teachers/AcademicFacilitiesScreen';
+import BuildingFormScreen from '../screens/teachers/BuildingFormScreen';
+import RoomFormScreen from '../screens/teachers/RoomFormScreen';
 import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
@@ -639,6 +641,8 @@ export default function RootNavigator() {
       <Stack.Screen name="AdminSchedule" component={AdminClassScheduleScreen} />
       <Stack.Screen name="AcademicSchedule" component={AdminClassScheduleScreen} />
       <Stack.Screen name="AcademicFacilities" component={AcademicFacilitiesScreen} />
+      <Stack.Screen name="BuildingForm" component={BuildingFormScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="RoomForm" component={RoomFormScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />

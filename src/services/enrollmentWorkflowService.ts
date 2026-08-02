@@ -73,7 +73,10 @@ export interface WorkflowRecord {
   completed_at: string | null;
   notes: string | null;
   student?: WorkflowStudentSummary;
-  currentStage?: WorkflowStage;
+  // Laravel serializes eager-loaded relations using the snake_case of the
+  // relation method name (currentStage() -> "current_stage" in JSON), not
+  // the camelCase method name itself.
+  current_stage?: WorkflowStage;
   // Populated from the actual roster Enrollment row for this student+session
   // (if any) - null until "Place in Section" has been done, even for a
   // 'completed' record. Lets the list show placement state at a glance.
@@ -87,9 +90,9 @@ export interface WorkflowHistoryEntry {
   changed_by: number;
   notes: string | null;
   created_at: string;
-  fromStage?: { id: number; name: string } | null;
-  toStage?: { id: number; name: string } | null;
-  changedByUser?: { id: number; name: string };
+  from_stage?: { id: number; name: string } | null;
+  to_stage?: { id: number; name: string } | null;
+  changed_by_user?: { id: number; name: string };
 }
 
 class ApiError extends Error {
@@ -436,7 +439,7 @@ export interface StudentWorkflowRecord {
   id: number;
   status: 'in_progress' | 'completed' | 'withdrawn';
   current_stage_id: number;
-  currentStage?: StudentWorkflowStage;
+  current_stage?: StudentWorkflowStage;
 }
 
 export interface StudentWorkflowHistoryEntry {
