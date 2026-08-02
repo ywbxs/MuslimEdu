@@ -66,6 +66,13 @@ const WORKFLOW_STATUS_FALLBACKS: Record<string, string> = {
   withdrawn: 'withdrawn',
 };
 
+function formatMoney(value: string | number | null | undefined): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (Number.isNaN(num)) return null;
+  return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -118,6 +125,7 @@ export default function EnrollmentWorkflowDetailScreen() {
   const [activePayment, setActivePayment] = useState<WorkflowPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('unpaid');
   const [paymentMode, setPaymentMode] = useState<PaymentMode | null>(null);
+  const [amount, setAmount] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [receiptPhoto, setReceiptPhoto] = useState<{ uri: string; fileName?: string; type?: string } | null>(null);
   const [savingPayment, setSavingPayment] = useState(false);
@@ -244,6 +252,10 @@ export default function EnrollmentWorkflowDetailScreen() {
     setActivePayment(payment);
     setPaymentStatus(payment.status);
     setPaymentMode(payment.payment_mode);
+    // Prefill with whatever was actually recorded before; if nothing was
+    // recorded yet, prefill with the admin's suggested amount for this fee
+    // type so the cashier sees what to collect instead of a blank field.
+    setAmount(payment.amount != null ? String(payment.amount) : payment.feeType?.amount != null ? String(payment.feeType.amount) : '');
     setReceiptNumber(payment.receipt_number ?? '');
     setReceiptPhoto(null);
     setPaymentModalVisible(true);
@@ -258,10 +270,12 @@ export default function EnrollmentWorkflowDetailScreen() {
 
   const onSavePayment = async () => {
     if (!token || !record || !activePayment) return;
+    const parsedAmount = amount.trim() ? Number(amount.trim()) : null;
     setSavingPayment(true);
     try {
       await updateWorkflowPayment(token, record.id, activePayment.fee_type_id, {
         status: paymentStatus,
+        amount: Number.isNaN(parsedAmount) ? null : parsedAmount,
         payment_mode: paymentMode,
         receipt_number: receiptNumber.trim() || null,
         receiptPhoto,
@@ -348,6 +362,27 @@ export default function EnrollmentWorkflowDetailScreen() {
         {payments.length > 0 ? (
           <>
             <Text style={styles.sectionLabel}>{t('enrollment_workflow_detail.fees', 'Fees')}</Text>
+            {(() => {
+              // What's still owed: unpaid/waived-pending fees, using the
+              // recorded amount if one was set, otherwise the admin's
+              // suggested amount for that fee type - so the cashier sees a
+              // running total to collect before they even open a fee row.
+              const outstanding = payments.filter((p) => p.status === 'unpaid');
+              const totalDue = outstanding.reduce((sum, p) => {
+                const val = p.amount ?? p.feeType?.amount;
+                const num = val != null ? parseFloat(String(val)) : 0;
+                return sum + (Number.isNaN(num) ? 0 : num);
+              }, 0);
+              if (outstanding.length === 0) return null;
+              return (
+                <View style={styles.totalDueBanner}>
+                  <Text style={styles.totalDueLabel}>
+                    {t('enrollment_workflow_detail.total_due', 'Total due ({count} unpaid)').replace('{count}', String(outstanding.length))}
+                  </Text>
+                  <Text style={styles.totalDueValue}>{formatMoney(totalDue) ?? '0.00'}</Text>
+                </View>
+              );
+            })()}
             {payments.map((payment) => {
               const feeName = payment.feeType?.name ?? t('enrollment_workflow_detail.fee_fallback', 'Fee');
               const statusColors =
@@ -356,6 +391,7 @@ export default function EnrollmentWorkflowDetailScreen() {
                   : payment.status === 'waived'
                   ? { color: theme.accent, bg: theme.accentSoft }
                   : { color: theme.danger, bg: theme.dangerSoft };
+              const displayAmount = formatMoney(payment.amount ?? payment.feeType?.amount);
               return (
                 <TouchableOpacity key={payment.id} style={styles.feeRow} onPress={() => openPaymentModal(payment)}>
                   <View style={{ flex: 1 }}>
@@ -365,6 +401,14 @@ export default function EnrollmentWorkflowDetailScreen() {
                         <Text style={styles.feeRequiredTag}>{t('enrollment_workflow_detail.fee_required', 'Required')}</Text>
                       ) : null}
                     </View>
+                    {displayAmount ? (
+                      <Text style={styles.feeAmount}>
+                        {displayAmount}
+                        {payment.amount == null && payment.feeType?.amount != null
+                          ? ` ${t('enrollment_workflow_detail.fee_suggested', '(suggested)')}`
+                          : ''}
+                      </Text>
+                    ) : null}
                     {payment.payment_mode || payment.receipt_number ? (
                       <Text style={styles.feeMeta}>
                         {[
@@ -562,6 +606,28 @@ export default function EnrollmentWorkflowDetailScreen() {
               })}
             </View>
 
+            <Text style={styles.label}>{t('enrollment_workflow_detail.amount_label', 'Amount')}</Text>
+            <TextInput
+              style={styles.input}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder={
+                activePayment?.feeType?.amount != null
+                  ? String(activePayment.feeType.amount)
+                  : t('enrollment_workflow_detail.amount_placeholder', 'e.g. 5000')
+              }
+              placeholderTextColor={theme.textMuted}
+              keyboardType="decimal-pad"
+            />
+            {activePayment?.feeType?.amount != null ? (
+              <Text style={styles.amountHint}>
+                {t('enrollment_workflow_detail.amount_suggested_hint', "School's suggested amount: {amount}").replace(
+                  '{amount}',
+                  formatMoney(activePayment.feeType.amount) ?? String(activePayment.feeType.amount)
+                )}
+              </Text>
+            ) : null}
+
             <Text style={styles.label}>{t('enrollment_workflow_detail.payment_mode_label', 'Payment Mode')}</Text>
             <View style={styles.chipRow}>
               {(['cash', 'bank_transfer', 'gcash', 'check', 'other'] as PaymentMode[]).map((m) => {
@@ -732,6 +798,18 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     modalCloseButton: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
     modalCloseText: { fontSize: 14.5, fontWeight: '600', color: theme.textSecondary },
 
+    totalDueBanner: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.dangerSoft,
+      borderRadius: RADIUS.md ?? 10,
+      padding: 14,
+      marginBottom: 10,
+    },
+    totalDueLabel: { fontSize: 12.5, fontWeight: '700', color: theme.danger },
+    totalDueValue: { fontSize: 18, fontWeight: '800', color: theme.danger },
+
     feeRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -744,6 +822,8 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     feeRowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     feeName: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
+    feeAmount: { fontSize: 15, fontWeight: '700', color: theme.accent, marginTop: 4 },
+    amountHint: { fontSize: 11.5, color: theme.textSecondary, marginTop: 6 },
     feeRequiredTag: {
       fontSize: 10,
       fontWeight: '700',
