@@ -70,6 +70,7 @@ import EnrollmentWorkflowListScreen from '../screens/admin/EnrollmentWorkflowLis
 import EnrollmentWorkflowDetailScreen from '../screens/admin/EnrollmentWorkflowDetailScreen';
 import EnrollmentFeeTypesScreen from '../screens/admin/EnrollmentFeeTypesScreen';
 import EnrollmentFeeTypeFormScreen from '../screens/admin/EnrollmentFeeTypeFormScreen';
+import SetupChecklistScreen from '../screens/admin/SetupChecklistScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
 import AcademicHubScreen from '../screens/student/AcademicHubScreen';
 import AcademicYearsScreen from '../screens/admin/AcademicYearsScreen';
@@ -289,6 +290,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="EnrollmentFeeTypeForm"
                 component={EnrollmentFeeTypeFormScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="SetupChecklist"
+                component={SetupChecklistScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen

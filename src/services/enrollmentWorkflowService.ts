@@ -74,6 +74,11 @@ export interface WorkflowRecord {
   notes: string | null;
   student?: WorkflowStudentSummary;
   currentStage?: WorkflowStage;
+  // Populated from the actual roster Enrollment row for this student+session
+  // (if any) - null until "Place in Section" has been done, even for a
+  // 'completed' record. Lets the list show placement state at a glance.
+  class_name?: string | null;
+  section_name?: string | null;
 }
 
 export interface WorkflowHistoryEntry {
@@ -216,7 +221,14 @@ export async function fetchEnrollmentWorkflowList(
     token,
     filters
   );
-  return data.records ?? [];
+  // Backend photo paths are relative to the asset host - every other
+  // service absolutizes at the fetch layer (see UserAvatar's own comment),
+  // this one just hadn't needed a student photo until the list card grew
+  // an avatar.
+  return (data.records ?? []).map((r) => ({
+    ...r,
+    student: r.student ? { ...r.student, photo: absoluteUrl(r.student.photo) } : r.student,
+  }));
 }
 
 export async function startEnrollmentWorkflow(

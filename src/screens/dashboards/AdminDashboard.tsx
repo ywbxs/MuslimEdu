@@ -91,6 +91,15 @@ function StagesIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ChecklistIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 5h16v16H4z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M7.5 10l1.5 1.5L11.5 8" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M14 9.5h4M7.5 16l1.5 1.5 2.5-3.5M14 16.5h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function GearIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -282,6 +291,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
         );
 
   const items: ManageItem[] = [
+    {
+      key: 'setupChecklist',
+      title: t('admin_dashboard.setup_checklist_title', 'Setup Checklist'),
+      desc: t('admin_dashboard.setup_checklist_desc', 'Everything needed before your portals are ready to use'),
+      variant: 'solid',
+      route: 'SetupChecklist',
+      icon: (c) => <ChecklistIcon color={c} />,
+    },
     {
       key: 'students',
       title: childTitle,
