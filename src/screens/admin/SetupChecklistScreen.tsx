@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Path, Circle } from 'react-native-svg';
@@ -8,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import BentoGridCard, { BentoGrid } from '../../components/glass/BentoGridCard';
 import BottomNavBar from '../../components/BottomNavBar';
 import { fetchAcademicSessions } from '../../services/academicSessionService';
 import { fetchGradingSystems, fetchSubjectsCatalog } from '../../services/adminAcademicCatalogService';
@@ -43,20 +44,6 @@ function IconChevronLeft({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12.5l4.5 4.5L19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -279,41 +266,35 @@ export default function SetupChecklistScreen() {
         {t('setup_checklist.helper', "Everything a school needs before its portals are ready for day-to-day use. Tap any item to set it up or review it - come back here any time from the admin menu.")}
       </Text>
 
-      <ScrollView contentContainerStyle={styles.listContent}>
-        {items.map((item) => {
-          const isDone = item.status === 'done';
-          const isError = item.status === 'error';
-          const badgeColor = isDone ? theme.success : isError ? theme.danger : theme.accent;
-          const badgeBg = isDone ? theme.successSoft : isError ? theme.dangerSoft : theme.accentSoft;
-          return (
-            <TouchableOpacity
-              key={item.key}
-              style={styles.itemCard}
-              activeOpacity={0.85}
-              onPress={() => (navigation as any).navigate(item.route)}
-            >
-              <View style={[styles.iconWrap, isDone && { backgroundColor: theme.successSoft }]}>{iconFor(item.key, isDone ? theme.success : theme.accent)}</View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.itemTitle}>{item.title}</Text>
-                <Text style={styles.itemDesc} numberOfLines={2}>{item.desc}</Text>
-              </View>
-              {item.status === 'checking' ? (
-                <ActivityIndicator size="small" color={theme.accent} />
-              ) : (
-                <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
-                  {isDone ? (
-                    <IconCheck color={theme.success} />
-                  ) : (
-                    <Text style={[styles.statusBadgeText, { color: badgeColor }]}>
-                      {isError ? t('setup_checklist.check_failed', '!') : t('setup_checklist.todo', 'Set up')}
-                    </Text>
-                  )}
-                </View>
-              )}
-              <IconChevronRight color={theme.textMuted} />
-            </TouchableOpacity>
-          );
-        })}
+      <ScrollView>
+        <BentoGrid>
+          {items.map((item) => {
+            const isDone = item.status === 'done';
+            const isChecking = item.status === 'checking';
+            const isError = item.status === 'error';
+            const badgeTone = isDone ? 'success' : isError ? 'danger' : 'accent';
+            const badgeText = isChecking
+              ? t('setup_checklist.checking', 'Checking…')
+              : isDone
+              ? t('setup_checklist.done', 'Done')
+              : isError
+              ? t('setup_checklist.check_failed', 'Unavailable')
+              : t('setup_checklist.todo', 'Set up');
+            return (
+              <BentoGridCard
+                key={item.key}
+                icon={iconFor(item.key, isDone ? theme.success : theme.accent)}
+                title={item.title}
+                subtitle={item.desc}
+                meta={isDone && item.count != null ? t('setup_checklist.count_meta', '{count} configured').replace('{count}', String(item.count)) : undefined}
+                badgeText={badgeText}
+                badgeTone={badgeTone as any}
+                onPress={() => (navigation as any).navigate(item.route)}
+                theme={theme}
+              />
+            );
+          })}
+        </BentoGrid>
       </ScrollView>
       <BottomNavBar />
     </View>
@@ -349,37 +330,4 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     progressText: { fontSize: 13, fontWeight: '700', color: theme.accent },
 
     helperText: { fontSize: 12.5, color: theme.textSecondary, paddingHorizontal: 16, paddingTop: 12, lineHeight: 18 },
-
-    listContent: { padding: 16, paddingBottom: 40 },
-    itemCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.surface,
-      borderRadius: RADIUS.lg,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 14,
-      marginBottom: 12,
-      ...theme.elevation2,
-    },
-    iconWrap: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      backgroundColor: theme.accentSoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    itemTitle: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary, marginBottom: 3 },
-    itemDesc: { fontSize: 11.5, color: theme.textSecondary, lineHeight: 15 },
-    statusBadge: {
-      minWidth: 26,
-      height: 26,
-      borderRadius: 13,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 8,
-      marginRight: 8,
-    },
-    statusBadgeText: { fontSize: 11, fontWeight: '700' },
   });
