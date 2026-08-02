@@ -13,14 +13,16 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline } from 'react-native-svg';
+import Svg, { Polyline, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { can } from '../../services/permissions';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-import { Skeleton } from '../../components/Skeleton';
+import { BentoGrid } from '../../components/glass/BentoGridCard';
+import UserAvatar from '../../components/UserAvatar';
+import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
 import {
@@ -63,6 +65,22 @@ function IconChevronLeft({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconLayers({ color }: { color: string }) {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3l9 5-9 5-9-5 9-5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconAlertTriangle({ color }: { color: string }) {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 4 2.5 20h19L12 4Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M12 10v4.5" stroke={color} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -180,37 +198,61 @@ export default function EnrollmentWorkflowListScreen() {
     }
   };
 
-  const renderRecord = ({ item }: { item: WorkflowRecord }) => {
+  const renderRecord = (item: WorkflowRecord) => {
     const statusColor =
       item.status === 'completed' ? theme.success : item.status === 'withdrawn' ? theme.danger : theme.accent;
     const statusBg =
       item.status === 'completed' ? theme.successSoft : item.status === 'withdrawn' ? theme.dangerSoft : theme.accentSoft;
+    const studentName = item.student?.name ?? t('enrollment_workflow_list.student_fallback', 'Student #{id}').replace('{id}', String(item.user_id));
+    const placed = !!item.section_name;
     return (
       <TouchableOpacity
+        key={item.id}
         style={styles.card}
         activeOpacity={0.85}
         onPress={() => (navigation as any).navigate('EnrollmentWorkflowDetail', { recordId: item.id })}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.studentName}>
-            {item.student?.name ?? t('enrollment_workflow_list.student_fallback', 'Student #{id}').replace('{id}', String(item.user_id))}
+        <View style={styles.cardTop}>
+          <UserAvatar name={studentName} photo={item.student?.photo ?? null} size={44} ringColor={theme.border} dotColor={statusColor} />
+          <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
+            {workflowStatusLabel(item.status)}
           </Text>
-          <Text style={styles.stageText}>{item.currentStage?.name ?? t('enrollment_workflow_list.unknown_stage', 'Unknown stage')}</Text>
         </View>
-        <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
-          {workflowStatusLabel(item.status)}
+
+        <Text style={styles.studentName} numberOfLines={1}>{studentName}</Text>
+        <Text style={styles.stageText} numberOfLines={1}>
+          {item.currentStage?.name ?? t('enrollment_workflow_list.unknown_stage', 'Unknown stage')}
         </Text>
+
+        {placed ? (
+          <View style={styles.sectionChip}>
+            <IconLayers color={theme.accent} />
+            <Text style={styles.sectionChipText} numberOfLines={1}>
+              {[item.class_name, item.section_name].filter(Boolean).join(' - ')}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.warnChip}>
+            <IconAlertTriangle color={theme.danger} />
+            <Text style={styles.warnChipText} numberOfLines={1}>
+              {item.status === 'completed'
+                ? t('enrollment_workflow_list.needs_placement', 'Needs section')
+                : t('enrollment_workflow_list.not_placed', 'Not placed')}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
 
   const renderSkeletonCard = (key: number) => (
     <View key={key} style={styles.card}>
-      <View style={{ flex: 1 }}>
-        <Skeleton width="60%" height={16} style={{ marginBottom: 8 }} baseColor={theme.skeletonBase} />
-        <Skeleton width="40%" height={13} baseColor={theme.skeletonBase} />
+      <View style={styles.cardTop}>
+        <SkeletonCircle size={44} baseColor={theme.skeletonBase} />
+        <Skeleton width={60} height={20} borderRadius={10} baseColor={theme.skeletonBase} />
       </View>
-      <Skeleton width={70} height={22} borderRadius={12} baseColor={theme.skeletonBase} />
+      <Skeleton width="70%" height={15} style={{ marginTop: 10, marginBottom: 6 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="45%" height={12} baseColor={theme.skeletonBase} />
     </View>
   );
 
@@ -224,7 +266,7 @@ export default function EnrollmentWorkflowListScreen() {
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_workflow_list.title', 'Enrollment Records')}</Text>
           <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.listContainer}>{[0, 1, 2, 3, 4].map(renderSkeletonCard)}</View>
+        <BentoGrid>{[0, 1, 2, 3, 4].map(renderSkeletonCard)}</BentoGrid>
         <BottomNavBar />
       </View>
     );
@@ -278,13 +320,8 @@ export default function EnrollmentWorkflowListScreen() {
         ))}
       </ScrollView>
 
-      <FlatList
-        style={{ flex: 1 }}
-        data={records}
-        renderItem={renderRecord}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
+      <ScrollView style={{ flex: 1 }}>
+        {records.length === 0 ? (
           <EmptyState
             icon="📋"
             title={t('enrollment_workflow_list.empty_title', 'No records here')}
@@ -295,8 +332,10 @@ export default function EnrollmentWorkflowListScreen() {
             }
             colors={theme}
           />
-        }
-      />
+        ) : (
+          <BentoGrid>{records.map(renderRecord)}</BentoGrid>
+        )}
+      </ScrollView>
       <BottomNavBar />
 
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
@@ -390,29 +429,51 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     filterButtonText: { fontSize: 12, color: theme.textSecondary, fontWeight: '500', textTransform: 'capitalize' },
     filterButtonTextActive: { color: theme.onAccent },
 
-    listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
     card: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      width: '47%',
+      minHeight: 150,
       backgroundColor: theme.surface,
       borderRadius: RADIUS.lg,
-      padding: 16,
-      marginBottom: 12,
+      padding: 14,
       borderWidth: 1,
       borderColor: theme.border,
       ...theme.elevation2,
     },
-    studentName: { fontSize: 15.5, fontWeight: '700', color: theme.textPrimary, marginBottom: 3 },
-    stageText: { fontSize: 12.5, color: theme.textSecondary },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    studentName: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary, marginBottom: 2 },
+    stageText: { fontSize: 12, color: theme.textSecondary, marginBottom: 10 },
     statusBadge: {
-      fontSize: 11,
+      fontSize: 10.5,
       fontWeight: '600',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 10,
       overflow: 'hidden',
       textTransform: 'capitalize',
     },
+    sectionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: theme.accentSoft,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      gap: 5,
+      maxWidth: '100%',
+    },
+    sectionChipText: { fontSize: 11, fontWeight: '600', color: theme.accent, flexShrink: 1 },
+    warnChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: theme.dangerSoft,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      gap: 5,
+    },
+    warnChipText: { fontSize: 11, fontWeight: '600', color: theme.danger },
 
     modalContainer: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
     modalContent: {
