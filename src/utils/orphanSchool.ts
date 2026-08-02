@@ -27,6 +27,19 @@ export function isOrphanSchoolUser(user: Partial<AuthUser> | null | undefined): 
 }
 
 /**
+ * Madrasa/Mahad/Markaz schools run Quran memorization tracking (surah,
+ * juz, memorization status) alongside their regular academics - a Regular
+ * School has no use for it, so the "Quran Tracker" tile is scoped to just
+ * these three institution_type values rather than shown to everyone.
+ * Backed by MemorizationController / StudentProgressScreen, which already
+ * has full add/edit/delete for memorization records.
+ */
+export function isQuranTrackingSchoolUser(user: Partial<AuthUser> | null | undefined): boolean {
+  if (!user) return false;
+  return user.institution_type === 'madrasa' || user.institution_type === 'mahad' || user.institution_type === 'markaz';
+}
+
+/**
  * Root-stack routes that don't apply to an orphan school - the academic
  * subsystem (classes, sections, subjects, curriculum, timetable, attendance,
  * grading, exams, assessments, lesson plans, materials, graduation/promotion,
