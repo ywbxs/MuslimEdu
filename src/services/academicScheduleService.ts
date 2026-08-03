@@ -40,6 +40,11 @@ export interface AcademicSchedule {
   section_name?: string | null;
   teacher_name?: string | null;
   subject_name?: string | null;
+  // Optional - only present once the backend resolves them (campus via
+  // section -> class -> campus, units from the subject record). Missing on
+  // an older backend just means those table columns show a dash.
+  campus_name?: string | null;
+  units?: number | string | null;
 }
 
 const DAY_TO_INT: Record<Day, number> = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
@@ -72,6 +77,8 @@ function fromBackendSchedule(row: any): AcademicSchedule {
     section_name: row.section_name ?? null,
     teacher_name: row.teacher_name ?? null,
     subject_name: row.subject_name ?? null,
+    campus_name: row.campus_name ?? null,
+    units: row.units ?? null,
   };
 }
 
