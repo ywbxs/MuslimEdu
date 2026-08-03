@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
@@ -118,6 +118,14 @@ interface Props {
   onEdit?: (post: Post) => void;
   onChangePrivacy?: (post: Post, privacy: Post['privacy']) => void;
   onPressAuthor?: (userId: number) => void;
+  // Overrides the outer card's own margins/radius/background - used by the
+  // feed deck card, which owns its own fixed-size wrapper (with the radius,
+  // clip and shadow) and needs PostCard to render as plain transparent
+  // content inside it. Omit to keep today's standalone vertical-card look.
+  containerStyle?: StyleProp<ViewStyle>;
+  // Forwarded to PostImageGrid (own + quoted images) - omit to keep the
+  // default full-width image grid sizing.
+  contentWidth?: number;
 }
 
 const PRIVACY_MENU_OPTIONS: { key: Post['privacy']; label: string }[] = [
@@ -136,6 +144,8 @@ export default function PostCard({
   onEdit,
   onChangePrivacy,
   onPressAuthor,
+  containerStyle,
+  contentWidth,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -182,7 +192,7 @@ export default function PostCard({
   const heartColor = post.is_liked ? HEART_RED : SUBTLE;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, containerStyle]}>
       {/* Repost banner */}
       {quoted && (
         <View style={styles.repostBanner}>
@@ -225,7 +235,7 @@ export default function PostCard({
       {/* Own images */}
       {!quoted && post.images.length > 0 && (
         <View style={styles.imageWrap}>
-          <PostImageGrid images={post.images} onPressImage={(i) => onPressImage?.(post.images, i)} />
+          <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
         </View>
       )}
 
@@ -247,6 +257,7 @@ export default function PostCard({
             <View style={{ marginTop: 8 }}>
               <PostImageGrid
                 images={quoted.images}
+                width={contentWidth != null ? contentWidth - 28 : undefined}
                 onPressImage={(i) => onPressImage?.(quoted.images, i)}
               />
             </View>

@@ -14,6 +14,10 @@ interface Props {
   images: string[];
   onPressImage?: (index: number) => void;
   maxHeight?: number;
+  // Overrides GRID_WIDTH for callers that don't use the default full-width
+  // vertical card (e.g. the fixed-width feed deck card) - omit to keep
+  // today's behavior exactly as-is.
+  width?: number;
 }
 
 /**
@@ -24,9 +28,10 @@ interface Props {
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320 }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width }: Props) {
   if (!images || images.length === 0) return null;
 
+  const W = width ?? GRID_WIDTH;
   const tap = (index: number) => onPressImage?.(index);
 
   const Tile = ({
@@ -52,7 +57,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320 }:
 
   if (images.length === 1) {
     return (
-      <View style={[styles.wrap, { height: Math.min(maxHeight, GRID_WIDTH * 1.05) }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05) }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
@@ -60,7 +65,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320 }:
 
   if (images.length === 2) {
     return (
-      <View style={[styles.wrap, styles.row, { height: 200 }]}>
+      <View style={[styles.wrap, styles.row, { width: W, height: 200 }]}>
         <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <Tile uri={images[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
       </View>
@@ -69,7 +74,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320 }:
 
   if (images.length === 3) {
     return (
-      <View style={[styles.wrap, styles.row, { height: 240 }]}>
+      <View style={[styles.wrap, styles.row, { width: W, height: 240 }]}>
         <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <View style={[styles.half, { marginLeft: GAP / 2 }]}>
           <Tile uri={images[1]} style={[styles.fill, { marginBottom: GAP / 2 }]} index={1} />
@@ -84,7 +89,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320 }:
   const remaining = images.length - 4;
 
   return (
-    <View style={[styles.wrap, { height: 240 }]}>
+    <View style={[styles.wrap, { width: W, height: 240 }]}>
       <View style={[styles.row, { flex: 1, marginBottom: GAP / 2 }]}>
         <Tile uri={visible[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <Tile uri={visible[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
