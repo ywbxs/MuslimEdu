@@ -20,6 +20,7 @@ import {
   fetchSchools,
   createSchool,
   setSchoolStatus,
+  trashSchool,
   School,
   SchoolType,
 } from '../../services/superAdminService';
@@ -77,15 +78,24 @@ function EmptyIcon() {
     </Svg>
   );
 }
+function TrashIcon({ color }: { color: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 const SchoolRow = React.memo(function SchoolRow({
   item,
   onPress,
   onToggleStatus,
+  onDelete,
 }: {
   item: School;
   onPress: () => void;
   onToggleStatus: () => void;
+  onDelete: () => void;
 }) {
   const { t } = useLocale();
   const active = item.status === 1;
@@ -115,6 +125,9 @@ const SchoolRow = React.memo(function SchoolRow({
         <Text style={active ? styles.statusPillTextOk : styles.statusPillTextMissing}>
           {active ? t('school_list.status_active', 'Active') : t('school_list.status_disabled', 'Disabled')}
         </Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.deleteIconBtn} onPress={onDelete} hitSlop={8}>
+        <TrashIcon color={DANGER} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -324,6 +337,29 @@ export default function SchoolListScreen() {
     ]);
   };
 
+  const handleDelete = (school: School) => {
+    Alert.alert(
+      t('school_list.delete_confirm_title', 'Delete this school?'),
+      t('school_list.delete_confirm_message', 'It moves to Trash and is removed everywhere immediately. It can be restored for 30 days, after which it - and everything in it - is permanently deleted.'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            try {
+              await trashSchool(token, school.id);
+              load(query);
+            } catch (err) {
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
@@ -335,9 +371,14 @@ export default function SchoolListScreen() {
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>{t('school_list.header_title', 'Schools')}</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
-          <PlusIcon color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => (navigation as any).navigate('SuperAdminTrash')} hitSlop={8} style={styles.trashLinkBtn}>
+            <TrashIcon color={SUBTLE} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
+            <PlusIcon color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchWrap}>
@@ -380,6 +421,7 @@ export default function SchoolListScreen() {
               item={item}
               onPress={() => (navigation as any).navigate('SuperAdminSchoolAdmins', { schoolId: item.id, schoolName: item.title })}
               onToggleStatus={() => handleToggleStatus(item)}
+              onDelete={() => handleDelete(item)}
             />
           )}
           ListEmptyComponent={
@@ -416,6 +458,8 @@ const styles = StyleSheet.create({
   backText: { color: EMERALD, fontSize: 16, fontWeight: '600', marginLeft: 2 },
   headerTitleWrap: { alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: INK },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  trashLinkBtn: { padding: 4 },
   addBtn: {
     width: 38,
     height: 38,
@@ -474,6 +518,7 @@ const styles = StyleSheet.create({
   statusPillMissing: { backgroundColor: 'rgba(239,68,68,0.1)' },
   statusPillTextOk: { fontSize: 11.5, color: EMERALD, fontWeight: '700' },
   statusPillTextMissing: { fontSize: 11.5, color: DANGER, fontWeight: '700' },
+  deleteIconBtn: { marginLeft: 10, padding: 4 },
 
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },

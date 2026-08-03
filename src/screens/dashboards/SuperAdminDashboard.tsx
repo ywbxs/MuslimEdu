@@ -39,6 +39,22 @@ function FlagIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ClockHistoryIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={13} r={8} stroke={color} strokeWidth={2} />
+      <Path d="M12 9v4l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M4 4v4h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function TrashCanIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function ArrowRightIcon({ color }: { color: string }) {
   return (
     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -151,6 +167,22 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           title={t('superadmin_dashboard.post_moderation_title', 'Post Moderation')}
           desc={t('superadmin_dashboard.post_moderation_desc', 'Review and remove posts/comments, any school')}
           onPress={() => (navigation as any).navigate('SuperAdminPostModeration')}
+        />
+        <SuperAdminCard
+          icon={<ClockHistoryIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.activity_log_title', 'Activity Log')}
+          desc={t('superadmin_dashboard.activity_log_desc', 'What every school and admin has changed')}
+          onPress={() => (navigation as any).navigate('SuperAdminActivityLog')}
+        />
+        <SuperAdminCard
+          icon={<TrashCanIcon color={EMERALD} />}
+          title={
+            overview && overview.trash.schools + overview.trash.admins > 0
+              ? `${t('superadmin_dashboard.trash_title', 'Trash')} (${overview.trash.schools + overview.trash.admins})`
+              : t('superadmin_dashboard.trash_title', 'Trash')
+          }
+          desc={t('superadmin_dashboard.trash_desc', 'Deleted schools/admins - restore or purge within 30 days')}
+          onPress={() => (navigation as any).navigate('SuperAdminTrash')}
         />
       </View>
     </DashboardShell>

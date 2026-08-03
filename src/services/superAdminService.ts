@@ -54,6 +54,7 @@ export interface DashboardOverview {
   users_by_role: Record<string, number>;
   posts: { total: number; comments: number };
   api_keys_active: number;
+  trash: { schools: number; admins: number };
 }
 
 export type SchoolType = 'regular' | 'orphanage';
@@ -146,6 +147,35 @@ export interface ModeratedComment {
   replies: ModeratedComment[];
 }
 
+export interface TrashedSchool extends School {
+  deleted_at: string;
+  days_remaining: number;
+}
+
+export interface TrashedAdmin extends SchoolAdmin {
+  deleted_at: string;
+  days_remaining: number;
+}
+
+export interface ActivityLogEntry {
+  id: number;
+  school_id: number | null;
+  user: { id: number; name: string; email: string } | null;
+  auditable_type: string;
+  auditable_id: number;
+  action: 'created' | 'updated' | 'deleted';
+  old_values: Record<string, any> | null;
+  new_values: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface ActivityLogResult {
+  logs: ActivityLogEntry[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
 // --- Dashboard ---
 
 export async function fetchDashboardOverview(token: string): Promise<DashboardOverview> {
@@ -195,6 +225,26 @@ export async function setSchoolStatus(token: string, schoolId: number, status: 0
   return data.school;
 }
 
+// --- School trash (30-day delete, restore, or permanent purge) ---
+
+export async function trashSchool(token: string, schoolId: number): Promise<void> {
+  await authedPost('/superadmin_school_trash', token, { school_id: schoolId });
+}
+
+export async function restoreSchool(token: string, schoolId: number): Promise<School> {
+  const data = await authedPost('/superadmin_school_restore', token, { school_id: schoolId });
+  return data.school;
+}
+
+export async function purgeSchool(token: string, schoolId: number): Promise<void> {
+  await authedPost('/superadmin_school_purge', token, { school_id: schoolId });
+}
+
+export async function fetchTrashedSchools(token: string): Promise<TrashedSchool[]> {
+  const data = await authedPost('/superadmin_trashed_schools', token, {});
+  return data.schools;
+}
+
 // --- Admins per school ---
 
 export async function fetchSchoolAdmins(token: string, schoolId: number): Promise<SchoolAdmin[]> {
@@ -210,12 +260,29 @@ export async function createSchoolAdmin(
   return data.admin;
 }
 
+/** Moves the admin to trash (recoverable for 30 days) - not an instant hard delete. */
 export async function deleteSchoolAdmin(token: string, userId: number): Promise<void> {
   await authedPost('/superadmin_admin_delete', token, { user_id: userId });
 }
 
 export async function resetSchoolAdminPassword(token: string, userId: number, password: string): Promise<void> {
   await authedPost('/superadmin_admin_reset_password', token, { user_id: userId, password });
+}
+
+// --- Admin trash (restore, or permanent purge) ---
+
+export async function restoreSchoolAdmin(token: string, userId: number): Promise<SchoolAdmin> {
+  const data = await authedPost('/superadmin_admin_restore', token, { user_id: userId });
+  return data.admin;
+}
+
+export async function purgeSchoolAdmin(token: string, userId: number): Promise<void> {
+  await authedPost('/superadmin_admin_purge', token, { user_id: userId });
+}
+
+export async function fetchTrashedAdmins(token: string): Promise<TrashedAdmin[]> {
+  const data = await authedPost('/superadmin_trashed_admins', token, {});
+  return data.admins;
 }
 
 // --- API Locker ---
@@ -282,4 +349,19 @@ export async function deleteModeratedPost(token: string, postId: number): Promis
 
 export async function deleteModeratedComment(token: string, commentId: number): Promise<void> {
   await authedPost('/superadmin_comment_delete', token, { comment_id: commentId });
+}
+
+// --- Activity log ---
+
+export async function fetchActivityLog(
+  token: string,
+  opts: { schoolId?: number; userId?: number; auditableType?: string; action?: 'created' | 'updated' | 'deleted'; page?: number } = {},
+): Promise<ActivityLogResult> {
+  return authedPost('/superadmin_activity_log', token, {
+    school_id: opts.schoolId,
+    user_id: opts.userId,
+    auditable_type: opts.auditableType,
+    action: opts.action,
+    page: opts.page,
+  });
 }

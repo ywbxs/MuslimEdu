@@ -152,6 +152,8 @@ import SchoolAdminsScreen from '../screens/superadmin/SchoolAdminsScreen';
 import ApiLockerScreen from '../screens/superadmin/ApiLockerScreen';
 import BackendStatusScreen from '../screens/superadmin/BackendStatusScreen';
 import PostModerationScreen from '../screens/superadmin/PostModerationScreen';
+import TrashScreen from '../screens/superadmin/TrashScreen';
+import ActivityLogScreen from '../screens/superadmin/ActivityLogScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -686,6 +688,8 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminApiLocker" component={ApiLockerScreen} />
       <Stack.Screen name="SuperAdminBackendStatus" component={BackendStatusScreen} />
       <Stack.Screen name="SuperAdminPostModeration" component={PostModerationScreen} />
+      <Stack.Screen name="SuperAdminTrash" component={TrashScreen} />
+      <Stack.Screen name="SuperAdminActivityLog" component={ActivityLogScreen} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

@@ -412,7 +412,7 @@ export default function SchoolAdminsScreen() {
   const handleDelete = (admin: SchoolAdmin) => {
     Alert.alert(
       t('school_admins.delete_confirm_title', 'Delete this admin?'),
-      t('school_admins.delete_confirm_message', 'They will lose access to the app immediately. This cannot be undone.'),
+      t('school_admins.delete_confirm_message', 'They lose access immediately and are signed out everywhere. They move to Trash and can be restored for 30 days, after which they\'re permanently deleted.'),
       [
         { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
