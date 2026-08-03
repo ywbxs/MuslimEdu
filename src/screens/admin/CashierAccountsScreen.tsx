@@ -136,7 +136,7 @@ function AddCashierSheet({
     }
     setIsSubmitting(true);
     try {
-      await addCashier(token, {
+      const created = await addCashier(token, {
         name: name.trim(),
         email: email.trim(),
         password: password.trim(),
@@ -145,10 +145,10 @@ function AddCashierSheet({
       resetForm();
       onClose();
       onCreated();
-      Alert.alert(
-        t('cashier_accounts.cashier_added_title', 'Cashier added'),
-        t('cashier_accounts.cashier_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim()),
-      );
+      const message = created.code
+        ? t('cashier_accounts.cashier_added_message_with_code', '{name} can now log in with the email and password you set. Staff code: {code}').replace('{name}', name.trim()).replace('{code}', created.code)
+        : t('cashier_accounts.cashier_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim());
+      Alert.alert(t('cashier_accounts.cashier_added_title', 'Cashier added'), message);
     } catch (err) {
       Alert.alert(t('cashier_accounts.add_error_title', 'Could not add cashier'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {

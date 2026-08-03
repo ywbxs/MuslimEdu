@@ -56,6 +56,7 @@ export type SegmentKey =
 export type ResetMode = 'never' | 'yearly';
 export type YearFormat = 'full' | 'short';
 export type Separator = '' | '-' | '/' | '.' | '_';
+export type TargetType = 'student' | 'staff';
 
 export interface StudentNumberConfig {
   id: number | null;
@@ -251,8 +252,9 @@ function configFromBackendFormat(format: any): StudentNumberConfig {
   };
 }
 
-function draftToBackendFormat(draft: StudentNumberDraft): Record<string, any> {
+function draftToBackendFormat(draft: StudentNumberDraft, targetType: TargetType): Record<string, any> {
   return {
+    target_type: targetType,
     prefix: draft.prefix,
     suffix: draft.suffix,
     separator: draft.separator,
@@ -295,9 +297,12 @@ function previewResultFrom(sampleString: string, nextNumber: number, scopeKey: s
 
 // --- Endpoints ---
 
-/** POST /admin_student_number_format_show */
-export async function fetchStudentNumberConfig(token: string): Promise<StudentNumberConfigResponse> {
-  const data = await authedRequest('/admin_student_number_format_show', token);
+/** POST /admin_student_number_format_show - targetType defaults to 'student'; pass 'staff' for the staff format. */
+export async function fetchStudentNumberConfig(
+  token: string,
+  targetType: TargetType = 'student',
+): Promise<StudentNumberConfigResponse> {
+  const data = await authedRequest('/admin_student_number_format_show', token, { target_type: targetType });
   const format = data.format ?? {};
   const sequence = (data.sequences ?? [])[0];
   return {
@@ -321,8 +326,9 @@ export async function fetchStudentNumberConfig(token: string): Promise<StudentNu
 export async function previewStudentNumber(
   token: string,
   draft: StudentNumberDraft,
+  targetType: TargetType = 'student',
 ): Promise<{ preview: PreviewResult; context: PreviewContext }> {
-  const data = await authedRequest('/admin_student_number_format_preview', token, draftToBackendFormat(draft));
+  const data = await authedRequest('/admin_student_number_format_preview', token, draftToBackendFormat(draft, targetType));
   return {
     preview: previewResultFrom(data.preview, data.next_number, data.scope_key),
     context: contextFromSampleContext(data.sample_context),
@@ -333,8 +339,9 @@ export async function previewStudentNumber(
 export async function saveStudentNumberConfig(
   token: string,
   draft: StudentNumberDraft,
+  targetType: TargetType = 'student',
 ): Promise<{ config: StudentNumberConfig; preview: PreviewResult }> {
-  const data = await authedRequest('/admin_student_number_format_save', token, draftToBackendFormat(draft));
+  const data = await authedRequest('/admin_student_number_format_save', token, draftToBackendFormat(draft, targetType));
   const format = data.format ?? {};
   const sequence = (data.sequences ?? [])[0];
   return {

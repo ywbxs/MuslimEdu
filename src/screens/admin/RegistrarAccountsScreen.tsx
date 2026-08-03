@@ -135,7 +135,7 @@ function AddRegistrarSheet({
     }
     setIsSubmitting(true);
     try {
-      await addRegistrar(token, {
+      const created = await addRegistrar(token, {
         name: name.trim(),
         email: email.trim(),
         password: password.trim(),
@@ -144,10 +144,10 @@ function AddRegistrarSheet({
       resetForm();
       onClose();
       onCreated();
-      Alert.alert(
-        t('registrar_accounts.registrar_added_title', 'Registrar added'),
-        t('registrar_accounts.registrar_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim()),
-      );
+      const message = created.code
+        ? t('registrar_accounts.registrar_added_message_with_code', '{name} can now log in with the email and password you set. Staff code: {code}').replace('{name}', name.trim()).replace('{code}', created.code)
+        : t('registrar_accounts.registrar_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim());
+      Alert.alert(t('registrar_accounts.registrar_added_title', 'Registrar added'), message);
     } catch (err) {
       Alert.alert(t('registrar_accounts.add_error_title', 'Could not add registrar'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {

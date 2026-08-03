@@ -248,7 +248,7 @@ function AddTeacherSheet({
     }
     setIsSubmitting(true);
     try {
-      await addTeacher(token, {
+      const created = await addTeacher(token, {
         name: name.trim(),
         email: email.trim(),
         password: password.trim(),
@@ -257,7 +257,10 @@ function AddTeacherSheet({
       resetForm();
       onClose();
       onCreated();
-      Alert.alert(t('admin_teacher_list.teacher_added_title', 'Teacher added'), t('admin_teacher_list.teacher_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim()));
+      const message = created.code
+        ? t('admin_teacher_list.teacher_added_message_with_code', '{name} can now log in with the email and password you set. Staff code: {code}').replace('{name}', name.trim()).replace('{code}', created.code)
+        : t('admin_teacher_list.teacher_added_message', '{name} can now log in with the email and password you set.').replace('{name}', name.trim());
+      Alert.alert(t('admin_teacher_list.teacher_added_title', 'Teacher added'), message);
     } catch (err) {
       Alert.alert(t('admin_teacher_list.add_error_title', 'Could not add teacher'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {

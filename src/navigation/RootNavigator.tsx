@@ -93,7 +93,6 @@ import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
 import SubjectFormScreen from '../screens/admin/SubjectFormScreen';
-import StudentNumberConfigScreen from '../screens/admin/StudentNumberConfigScreen';
 import ChatBoxScreen from '../screens/chat/ChatBoxScreen';
 import CreatePostScreen from '../screens/common/CreatePostScreen';
 import PostCommentsScreen from '../screens/common/PostCommentsScreen';
@@ -120,7 +119,7 @@ import DocumentTemplateScreen from '../screens/admin/DocumentTemplateScreen';
 import GradeReleaseScreen from '../screens/admin/GradeReleaseScreen';
 import IntegrationSettingsScreen from '../screens/admin/IntegrationSettingsScreen';
 import LocalizationSettingsScreen from '../screens/admin/LocalizationSettingsScreen';
-import StudentIdConfigScreen from '../screens/admin/StudentIdConfigScreen';
+import StudentStaffCodeSetupScreen from '../screens/admin/StudentStaffCodeSetupScreen';
 import AttendanceConfigScreen from '../screens/admin/AttendanceConfigScreen';
 import PermissionsScreen from '../screens/admin/PermissionsScreen';
 import SecuritySettingsScreen from '../screens/admin/SecuritySettingsScreen';
@@ -351,11 +350,6 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="ProgramForm"
                 component={ProgramFormScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
-              <Stack.Screen
-                name="StudentNumberConfig"
-                component={StudentNumberConfigScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
@@ -656,7 +650,7 @@ export default function RootNavigator() {
       <Stack.Screen name="GradeRelease" component={GradeReleaseScreen} />
       <Stack.Screen name="IntegrationSettings" component={IntegrationSettingsScreen} />
       <Stack.Screen name="LocalizationSettings" component={LocalizationSettingsScreen} />
-      <Stack.Screen name="StudentIdConfig" component={StudentIdConfigScreen} />
+      <Stack.Screen name="StudentStaffCodeSetup" component={StudentStaffCodeSetupScreen} />
       <Stack.Screen name="AttendanceConfig" component={AttendanceConfigScreen} />
       <Stack.Screen name="Permissions" component={PermissionsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />

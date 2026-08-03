@@ -17,6 +17,7 @@ import { fetchClasses } from '../../services/adminService';
 import { listSchedules } from '../../services/academicScheduleService';
 import { fetchAttendanceMethods } from '../../services/attendanceConfigService';
 import { fetchEnrollmentStages, fetchFeeTypes } from '../../services/enrollmentWorkflowService';
+import { fetchStudentNumberConfig } from '../../services/studentNumberService';
 
 /**
  * Persistent, revisitable version of AcademicSetupWizardScreen (which only
@@ -119,6 +120,15 @@ function IconCoin({ color }: { color: string }) {
     </Svg>
   );
 }
+function IconIdCard({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6h18v12H3z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={8} cy={12} r={2.2} stroke={color} strokeWidth={1.8} />
+      <Path d="M13 10h6M13 14h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 export default function SetupChecklistScreen() {
   const navigation = useNavigation();
@@ -167,6 +177,20 @@ export default function SetupChecklistScreen() {
         route: 'ProgramsCatalog',
         category: 'foundation',
         run: async () => (await fetchSubjectsCatalog(token)).length,
+      },
+      {
+        key: 'student_staff_codes',
+        title: t('setup_checklist.student_staff_codes_title', 'Student & Staff Codes'),
+        desc: t('setup_checklist.student_staff_codes_desc', 'The code format assigned automatically to new students and staff.'),
+        route: 'StudentStaffCodeSetup',
+        category: 'foundation',
+        run: async () => {
+          const [student, staff] = await Promise.all([
+            fetchStudentNumberConfig(token, 'student'),
+            fetchStudentNumberConfig(token, 'staff'),
+          ]);
+          return student.is_configured && staff.is_configured ? 1 : 0;
+        },
       },
       {
         key: 'schedule',
@@ -240,6 +264,8 @@ export default function SetupChecklistScreen() {
         return <IconLayers color={color} />;
       case 'subjects':
         return <IconBook color={color} />;
+      case 'student_staff_codes':
+        return <IconIdCard color={color} />;
       case 'schedule':
         return <IconClock color={color} />;
       case 'attendance':

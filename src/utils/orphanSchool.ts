@@ -163,15 +163,12 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'EnrollmentWorkflowList',
   'EnrollmentWorkflowDetail',
   'EnrollmentStatus',
-  // Student numbering/ID/lifecycle - built around campus/department/academic
-  // year codes and class-to-class transfers, none of which exist for an
-  // orphan school. Orphan admission already uses a completely different,
-  // separate code scheme (a locked school_code prefix + admin-typed suffix,
-  // set up via SchoolCodeSetupScreen and applied in AdmissionScreen), so
-  // these config screens don't describe how orphan child codes are actually
-  // built and would only mislead the admin.
-  'StudentNumberConfig',
-  'StudentIdConfig',
+  // Student lifecycle - class-to-class transfers, which don't exist for an
+  // orphan school (no class-based structure). Note: student/staff CODE
+  // setup (StudentStaffCodeSetupScreen) is deliberately NOT in this set -
+  // orphan children get an automatically-generated code the same way any
+  // other student does, and orphan schools have staff too, so that screen
+  // is reachable for every school type (see its own dashboard tile).
   'StudentLifecycle',
   // Setup Checklist - every item on it (classes/sections, subjects, class
   // schedule, attendance config, fee types, enrollment stages) is part of
@@ -212,7 +209,7 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'academicAnalytics', 'completionHub', 'graduation', 'promotionPolicy',
   'documentTemplates', 'gradeRelease', 'orgStructure', 'behaviorIncidents',
   'examinations', 'studentProgress', 'analyticsExtended', 'attendance',
-  'enrollment', 'studentNumbers', 'studentIdRules', 'studentLifecycle',
+  'enrollment', 'studentLifecycle',
   'permissions', 'integrationSettings', 'localizationSettings',
   'authorizationAudit', 'fees', 'studentDocumentRequests',
   'studentServiceRequests', 'cashiers', 'registrars', 'idCards',
