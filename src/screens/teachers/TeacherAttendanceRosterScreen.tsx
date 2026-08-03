@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -218,9 +218,18 @@ export default function TeacherAttendanceRosterScreen() {
     }
   }, [token, sectionId, subjectId, date, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // useFocusEffect, not a plain useEffect: a plain effect only reruns when
+  // load()'s own deps change (token, section, subject, date) - navigating
+  // away (e.g. to History) and back to this exact same screen instance
+  // doesn't change any of those, so a leftover error from an earlier failed
+  // save used to sit on screen indefinitely instead of clearing on the next
+  // real visit. This also covers the initial mount, so no separate
+  // useEffect is needed alongside it.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const shiftDate = (deltaDays: number) => {
     const d = fromISO(date);
@@ -532,9 +541,15 @@ const styles = StyleSheet.create({
   legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
   legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
 
-  deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'center' },
-  bannerMargin: { marginHorizontal: 16, marginTop: 12 },
-  progressText: { fontSize: 12.5, color: SUBTLE, marginBottom: 14, fontWeight: '600', textAlign: 'center' },
+  // flex-start, not 'center': centering re-balances against whatever space
+  // is left above it, so an error/success banner appearing (shrinking that
+  // space) yanked the progress text and card upward right against the
+  // banner instead of just pushing the deck down - looked like the two were
+  // overlapping. Anchoring to the top keeps the deck's position stable
+  // regardless of whether a banner is showing.
+  deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'flex-start' },
+  bannerMargin: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
+  progressText: { fontSize: 12.5, color: SUBTLE, marginTop: 8, marginBottom: 14, fontWeight: '600', textAlign: 'center' },
   bigSkeletonCard: {
     width: '100%',
     maxWidth: 500,
