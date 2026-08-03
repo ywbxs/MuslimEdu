@@ -74,6 +74,13 @@ export interface RosterStudent {
   // is deployed; optional so this keeps working against an older backend.
   code?: string | null;
   photo: string | null;
+  // Optional - only present once the backend includes user_information's
+  // address/gender/birthday (decoded into a precomputed age) in the roster
+  // response. Missing on an older backend just means the big attendance
+  // card falls back to showing name/photo/status only.
+  address?: string | null;
+  gender?: string | null;
+  age?: number | null;
   status: AttendanceStatus | null;
   check_in_time: string | null;
   remarks: string | null;

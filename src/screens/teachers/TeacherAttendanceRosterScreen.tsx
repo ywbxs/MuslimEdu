@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Modal,
@@ -24,7 +23,7 @@ import {
 } from '../../services/teacherAttendanceService';
 import { enqueueAttendanceSubmit } from '../../services/offlineQueue';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
-import SwipeableAttendanceCard, { SwipeDirection } from '../../components/SwipeableAttendanceCard';
+import BigAttendanceCard, { SwipeDirection } from '../../components/BigAttendanceCard';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, RADIUS } from '../../theme/glass';
@@ -96,22 +95,10 @@ function IconCheckCircle({ color }: { color: string }) {
   );
 }
 
-function StudentRowSkeleton() {
-  return (
-    <View style={styles.row}>
-      <SkeletonCircle size={40} />
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Skeleton width="55%" height={14} borderRadius={4} />
-      </View>
-      <Skeleton width={150} height={30} borderRadius={8} />
-    </View>
-  );
-}
-
 // right=Present, left=Absent, up=Excused, down=Late - the 4 quick swipe
-// directions on SwipeableAttendanceCard. Leave (and remarks) don't get a
-// swipe direction; they're set from the detail sheet opened by tapping a
-// card instead - see StudentDetailSheet below.
+// directions on BigAttendanceCard. Leave (and remarks) don't get a swipe
+// direction; they're set from the detail sheet opened by tapping a card
+// instead - see StudentDetailSheet below.
 const SWIPE_TO_STATUS: Record<SwipeDirection, AttendanceStatus> = {
   right: 'present',
   left: 'absent',
@@ -197,6 +184,9 @@ export default function TeacherAttendanceRosterScreen() {
   const [statuses, setStatuses] = useState<Record<number, AttendanceStatus>>({});
   const [remarksMap, setRemarksMap] = useState<Record<number, string>>({});
   const [detailStudentId, setDetailStudentId] = useState<number | null>(null);
+  // Which student's big card is on top of the deck - one at a time, like a
+  // photo gallery, instead of the old scrolling list of small rows.
+  const [cardIndex, setCardIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +210,7 @@ export default function TeacherAttendanceRosterScreen() {
       });
       setStatuses(initial);
       setRemarksMap(initialRemarks);
+      setCardIndex(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.load_error', 'Could not load the roster.'));
     } finally {
@@ -353,78 +344,109 @@ export default function TeacherAttendanceRosterScreen() {
           <Text style={styles.legendText}>
             {t(
               'teacher_attendance_roster.swipe_legend',
-              'Swipe right: Present  ·  left: Absent  ·  up: Excused  ·  down: Late  ·  tap for Leave/remarks',
+              'Swipe the card - right: Present · left: Absent · up: Excused · down: Late · tap for Leave/remarks',
             )}
           </Text>
         </View>
       ) : null}
 
-      {isLoading ? (
-        <View style={styles.listContent}>
-          <StudentRowSkeleton />
-          <StudentRowSkeleton />
-          <StudentRowSkeleton />
-          <StudentRowSkeleton />
+      {error ? (
+        <View style={[styles.errorBanner, styles.bannerMargin]}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
+      ) : null}
+      {saveMessage ? (
+        <View style={[styles.successBanner, styles.bannerMargin]}>
+          <IconCheckCircle color={EMERALD} />
+          <Text style={styles.successText}>{saveMessage}</Text>
+        </View>
+      ) : null}
+
+      {isLoading ? (
+        <View style={styles.deckWrap}>
+          <View style={styles.bigSkeletonCard}>
+            <SkeletonCircle size={136} style={{ marginBottom: 16 }} />
+            <Skeleton width="60%" height={18} style={{ marginBottom: 8 }} />
+            <Skeleton width="40%" height={12} />
+          </View>
+        </View>
+      ) : students.length === 0 ? (
+        !error ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>{t('teacher_attendance_roster.empty_title', 'No students enrolled')}</Text>
+            <Text style={styles.emptyDesc}>{t('teacher_attendance_roster.empty_desc', 'This section has no enrolled students for the running session.')}</Text>
+          </View>
+        ) : null
       ) : (
-        <FlatList
-          data={students}
-          keyExtractor={(item) => String(item.student_id)}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            !error ? (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>{t('teacher_attendance_roster.empty_title', 'No students enrolled')}</Text>
-                <Text style={styles.emptyDesc}>{t('teacher_attendance_roster.empty_desc', 'This section has no enrolled students for the running session.')}</Text>
-              </View>
-            ) : null
-          }
-          ListHeaderComponent={
-            <>
-              {error ? (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
-              {saveMessage ? (
-                <View style={styles.successBanner}>
-                  <IconCheckCircle color={EMERALD} />
-                  <Text style={styles.successText}>{saveMessage}</Text>
-                </View>
-              ) : null}
-              {students.length > 0 ? (
-                <Text style={styles.progressText}>
-                  {t('teacher_attendance_roster.marked_progress', '{marked} of {total} marked')
-                    .replace('{marked}', String(markedCount))
-                    .replace('{total}', String(students.length))}
-                  {Object.entries(summaryCounts).length > 0
-                    ? '  ·  ' +
-                      Object.entries(summaryCounts)
-                        .map(([s, c]) => `${STATUS_META[s as AttendanceStatus].short} ${c}`)
-                        .join('  ')
-                    : ''}
-                </Text>
-              ) : null}
-            </>
-          }
-          renderItem={({ item }) => {
-            const currentStatus = statuses[item.student_id] ?? null;
-            const meta = currentStatus ? STATUS_META[currentStatus] : null;
-            return (
-              <SwipeableAttendanceCard
-                name={item.student_name}
-                photo={item.photo}
-                statusLabel={currentStatus ? statusLabel(currentStatus) : null}
-                statusColor={meta?.color}
-                statusSoft={meta?.soft}
-                onSwipe={(direction) =>
-                  setStatuses((prev) => ({ ...prev, [item.student_id]: SWIPE_TO_STATUS[direction] }))
-                }
-                onPress={() => setDetailStudentId(item.student_id)}
-              />
-            );
-          }}
-        />
+        <View style={styles.deckWrap}>
+          <Text style={styles.progressText}>
+            {t('teacher_attendance_roster.marked_progress', '{marked} of {total} marked')
+              .replace('{marked}', String(markedCount))
+              .replace('{total}', String(students.length))}
+            {Object.entries(summaryCounts).length > 0
+              ? '  ·  ' +
+                Object.entries(summaryCounts)
+                  .map(([s, c]) => `${STATUS_META[s as AttendanceStatus].short} ${c}`)
+                  .join('  ')
+              : ''}
+          </Text>
+
+          {cardIndex < students.length ? (
+            (() => {
+              const item = students[cardIndex];
+              const currentStatus = statuses[item.student_id] ?? null;
+              const meta = currentStatus ? STATUS_META[currentStatus] : null;
+              return (
+                <BigAttendanceCard
+                  key={item.student_id}
+                  name={item.student_name}
+                  photo={item.photo}
+                  subtitle={item.code ? `${t('teacher_attendance_roster.id_prefix', 'ID')}: ${item.code}` : null}
+                  address={item.address}
+                  age={item.age}
+                  statusLabel={currentStatus ? statusLabel(currentStatus) : null}
+                  statusColor={meta?.color}
+                  statusSoft={meta?.soft}
+                  onSwipeComplete={(direction) => {
+                    setStatuses((prev) => ({ ...prev, [item.student_id]: SWIPE_TO_STATUS[direction] }));
+                    setCardIndex((i) => i + 1);
+                  }}
+                  onPress={() => setDetailStudentId(item.student_id)}
+                />
+              );
+            })()
+          ) : (
+            <View style={styles.completeCard}>
+              <IconCheckCircle color={EMERALD} />
+              <Text style={styles.completeTitle}>{t('teacher_attendance_roster.deck_done_title', "That's everyone")}</Text>
+              <Text style={styles.completeDesc}>
+                {t('teacher_attendance_roster.deck_done_desc', 'Review a card below or tap Save Attendance to submit.')}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.deckNavRow}>
+            <TouchableOpacity
+              style={[styles.deckNavBtn, cardIndex === 0 && styles.deckNavBtnDisabled]}
+              onPress={() => setCardIndex((i) => Math.max(0, i - 1))}
+              disabled={cardIndex === 0}
+              hitSlop={10}
+            >
+              <IconChevronLeft color={cardIndex === 0 ? '#C4C9CF' : INK} size={20} />
+            </TouchableOpacity>
+            <Text style={styles.deckNavCount}>
+              {Math.min(cardIndex + 1, students.length)} / {students.length}
+            </Text>
+            <TouchableOpacity
+              style={[styles.deckNavBtn, cardIndex >= students.length && styles.deckNavBtnDisabled]}
+              onPress={() => setCardIndex((i) => Math.min(students.length, i + 1))}
+              disabled={cardIndex >= students.length}
+              hitSlop={10}
+            >
+              <IconChevronRight color={cardIndex >= students.length ? '#C4C9CF' : INK} size={20} />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {!isLoading && students.length > 0 ? (
@@ -510,17 +532,53 @@ const styles = StyleSheet.create({
   legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
   legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
 
-  listContent: { padding: 16, paddingBottom: 100 },
-  progressText: { fontSize: 12.5, color: SUBTLE, marginBottom: 10, fontWeight: '600' },
-  row: {
+  deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'center' },
+  bannerMargin: { marginHorizontal: 16, marginTop: 12 },
+  progressText: { fontSize: 12.5, color: SUBTLE, marginBottom: 14, fontWeight: '600', textAlign: 'center' },
+  bigSkeletonCard: {
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
+    backgroundColor: GLASS_SURFACE,
+    borderRadius: RADIUS.xl,
+    alignItems: 'center',
+    paddingVertical: 40,
+    marginHorizontal: 20,
+    ...SHADOW.level2,
+  },
+  completeCard: {
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
+    backgroundColor: GLASS_SURFACE,
+    borderRadius: RADIUS.xl,
+    alignItems: 'center',
+    paddingVertical: 44,
+    paddingHorizontal: 24,
+    marginHorizontal: 20,
+    ...SHADOW.level2,
+  },
+  completeTitle: { fontSize: 17, fontWeight: '700', color: INK, marginTop: 12, marginBottom: 6 },
+  completeDesc: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 18 },
+  deckNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
-    borderRadius: RADIUS.md,
-    padding: 10,
-    marginBottom: 8,
-    ...SHADOW.level1,
+    justifyContent: 'center',
+    gap: 24,
+    marginTop: 20,
   },
+  deckNavBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GLASS_SURFACE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+  },
+  deckNavBtnDisabled: { opacity: 0.4 },
+  deckNavCount: { fontSize: 13.5, fontWeight: '700', color: INK, minWidth: 56, textAlign: 'center' },
   flex1: { flex: 1 },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
   sheet: {
