@@ -147,6 +147,11 @@ import CashierAccountsScreen from '../screens/admin/CashierAccountsScreen';
 import CashierProfileScreen from '../screens/admin/CashierProfileScreen';
 import RegistrarAccountsScreen from '../screens/admin/RegistrarAccountsScreen';
 import AcademicUnavailableScreen from '../screens/common/AcademicUnavailableScreen';
+import SchoolListScreen from '../screens/superadmin/SchoolListScreen';
+import SchoolAdminsScreen from '../screens/superadmin/SchoolAdminsScreen';
+import ApiLockerScreen from '../screens/superadmin/ApiLockerScreen';
+import BackendStatusScreen from '../screens/superadmin/BackendStatusScreen';
+import PostModerationScreen from '../screens/superadmin/PostModerationScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -676,6 +681,11 @@ export default function RootNavigator() {
       <Stack.Screen name="IdCardTemplate" component={IdCardTemplateScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="SuperAdminSchoolList" component={SchoolListScreen} />
+      <Stack.Screen name="SuperAdminSchoolAdmins" component={SchoolAdminsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminApiLocker" component={ApiLockerScreen} />
+      <Stack.Screen name="SuperAdminBackendStatus" component={BackendStatusScreen} />
+      <Stack.Screen name="SuperAdminPostModeration" component={PostModerationScreen} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>
