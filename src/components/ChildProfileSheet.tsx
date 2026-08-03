@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAuth } from '../context/AuthContext';
+import { isOrphanSchoolUser } from '../utils/orphanSchool';
 import {
   fetchChildProfile,
   updateOrphanProfile,
@@ -255,6 +257,70 @@ function EditField({
   );
 }
 
+function parseDateValue(value: string): Date {
+  const parsed = value ? new Date(value) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function formatDateValue(date: Date): string {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD - matches what the backend already expects
+}
+
+// Native date picker instead of a typed "YYYY-MM-DD" text field - a typed
+// date invites malformed values the backend can't parse. Android's picker is
+// a self-dismissing dialog; iOS's spinner stays open until "Done" is tapped.
+function DateField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [show, setShow] = useState(false);
+
+  const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShow(false);
+      if (event.type === 'set' && selectedDate) {
+        onChange(formatDateValue(selectedDate));
+      }
+      return;
+    }
+    if (selectedDate) onChange(formatDateValue(selectedDate));
+  };
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={styles.editLabel}>{label}</Text>
+      <TouchableOpacity style={styles.editInput} onPress={() => setShow(true)} activeOpacity={0.7}>
+        <Text style={{ fontSize: 14.5, color: value ? INK : SUBTLE }}>
+          {value || placeholder || 'Select date'}
+        </Text>
+      </TouchableOpacity>
+      {show ? (
+        <View style={Platform.OS === 'ios' ? styles.iosPickerWrap : undefined}>
+          <DateTimePicker
+            value={parseDateValue(value)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={handleChange}
+          />
+          {Platform.OS === 'ios' ? (
+            <TouchableOpacity style={styles.iosPickerDone} onPress={() => setShow(false)} activeOpacity={0.85}>
+              <Text style={styles.iosPickerDoneText}>Done</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 type EditableFields = {
   name: string;
   email: string;
@@ -315,7 +381,8 @@ export function ChildProfileSheet({
   onClose: () => void;
   canEdit?: boolean;
 }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isOrphanSchool = isOrphanSchoolUser(user);
   const navigation = useNavigation();
   const [profile, setProfile] = useState<ChildProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -395,25 +462,30 @@ export function ChildProfileSheet({
       if (fields.password.trim()) {
         basicFields.password = fields.password.trim();
       }
-      const orphanFields: OrphanProfileFields = {
-        guardian_name: fields.guardian_name.trim(),
-        guardian_relation: fields.guardian_relation.trim(),
-        guardian_phone: fields.guardian_phone.trim(),
-        health_status: fields.health_status.trim(),
-        special_needs: fields.special_needs.trim(),
-        admission_date: fields.admission_date.trim(),
-        admission_reason: fields.admission_reason.trim(),
-      };
+      // Guardian/health/admission fields are orphan-school only - a regular
+      // school never shows that section (see isEditing below), so there's
+      // nothing to save here and no reason to touch that endpoint at all.
+      const orphanFields: OrphanProfileFields | null = isOrphanSchool
+        ? {
+            guardian_name: fields.guardian_name.trim(),
+            guardian_relation: fields.guardian_relation.trim(),
+            guardian_phone: fields.guardian_phone.trim(),
+            health_status: fields.health_status.trim(),
+            special_needs: fields.special_needs.trim(),
+            admission_date: fields.admission_date.trim(),
+            admission_reason: fields.admission_reason.trim(),
+          }
+        : null;
       await Promise.all([
         updateChildBasicProfile(token, studentId, basicFields),
-        updateOrphanProfile(token, studentId, orphanFields),
+        ...(orphanFields ? [updateOrphanProfile(token, studentId, orphanFields)] : []),
       ]);
       setProfile((prev) =>
         prev
           ? {
               ...prev,
               ...basicFields,
-              orphan_profile: { ...prev.orphan_profile, ...orphanFields } as any,
+              ...(orphanFields ? { orphan_profile: { ...prev.orphan_profile, ...orphanFields } as any } : {}),
             }
           : prev,
       );
@@ -516,17 +588,21 @@ export function ChildProfileSheet({
                   <EditField label="Phone" value={fields.phone} onChangeText={(v) => setFields((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" />
                   <EditField label="Address" value={fields.address} onChangeText={(v) => setFields((p) => ({ ...p, address: v }))} />
                   <EditField label="Gender" value={fields.gender} onChangeText={(v) => setFields((p) => ({ ...p, gender: v }))} placeholder="male / female" autoCapitalize="none" />
-                  <EditField label="Birthday" value={fields.birthday} onChangeText={(v) => setFields((p) => ({ ...p, birthday: v }))} placeholder="YYYY-MM-DD" />
+                  <DateField label="Birthday" value={fields.birthday} onChange={(v) => setFields((p) => ({ ...p, birthday: v }))} placeholder="Select date of birth" />
                   <EditField label="New Password" value={fields.password} onChangeText={(v) => setFields((p) => ({ ...p, password: v }))} placeholder="Leave blank to keep current password" secureTextEntry autoCapitalize="none" />
 
-                  <Text style={[styles.profileSectionLabel, { marginTop: 4 }]}>Guardian & care details</Text>
-                  <EditField label="Guardian name" value={fields.guardian_name} onChangeText={(v) => setFields((p) => ({ ...p, guardian_name: v }))} />
-                  <EditField label="Guardian relation" value={fields.guardian_relation} onChangeText={(v) => setFields((p) => ({ ...p, guardian_relation: v }))} placeholder="e.g. Uncle, Grandmother" />
-                  <EditField label="Guardian phone" value={fields.guardian_phone} onChangeText={(v) => setFields((p) => ({ ...p, guardian_phone: v }))} />
-                  <EditField label="Health status" value={fields.health_status} onChangeText={(v) => setFields((p) => ({ ...p, health_status: v }))} />
-                  <EditField label="Special needs" value={fields.special_needs} onChangeText={(v) => setFields((p) => ({ ...p, special_needs: v }))} />
-                  <EditField label="Admission date" value={fields.admission_date} onChangeText={(v) => setFields((p) => ({ ...p, admission_date: v }))} placeholder="YYYY-MM-DD" />
-                  <EditField label="Admission reason" value={fields.admission_reason} onChangeText={(v) => setFields((p) => ({ ...p, admission_reason: v }))} multiline />
+                  {isOrphanSchool ? (
+                    <>
+                      <Text style={[styles.profileSectionLabel, { marginTop: 4 }]}>Guardian & care details</Text>
+                      <EditField label="Guardian name" value={fields.guardian_name} onChangeText={(v) => setFields((p) => ({ ...p, guardian_name: v }))} />
+                      <EditField label="Guardian relation" value={fields.guardian_relation} onChangeText={(v) => setFields((p) => ({ ...p, guardian_relation: v }))} placeholder="e.g. Uncle, Grandmother" />
+                      <EditField label="Guardian phone" value={fields.guardian_phone} onChangeText={(v) => setFields((p) => ({ ...p, guardian_phone: v }))} />
+                      <EditField label="Health status" value={fields.health_status} onChangeText={(v) => setFields((p) => ({ ...p, health_status: v }))} />
+                      <EditField label="Special needs" value={fields.special_needs} onChangeText={(v) => setFields((p) => ({ ...p, special_needs: v }))} />
+                      <DateField label="Admission date" value={fields.admission_date} onChange={(v) => setFields((p) => ({ ...p, admission_date: v }))} placeholder="Select admission date" />
+                      <EditField label="Admission reason" value={fields.admission_reason} onChangeText={(v) => setFields((p) => ({ ...p, admission_reason: v }))} multiline />
+                    </>
+                  ) : null}
 
                   <View style={styles.editActionsRow}>
                     <TouchableOpacity
@@ -578,7 +654,7 @@ export function ChildProfileSheet({
                     </View>
                   ) : null}
 
-                  {canEdit && !hasOrphanInfo ? (
+                  {canEdit && isOrphanSchool && !hasOrphanInfo ? (
                     <View style={styles.profileSection}>
                       <Text style={styles.profileNoteText}>
                         No guardian or care details on file yet. Tap Edit above to add them.
@@ -740,6 +816,9 @@ const styles = StyleSheet.create({
     color: INK,
   },
   editInputMultiline: { minHeight: 80, textAlignVertical: 'top' },
+  iosPickerWrap: { backgroundColor: CANVAS, borderRadius: 12, marginTop: 8, paddingBottom: 8 },
+  iosPickerDone: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 6 },
+  iosPickerDoneText: { color: EMERALD, fontWeight: '700', fontSize: 14 },
   editActionsRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   editActionBtn: { flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   editActionBtnGhost: { backgroundColor: CANVAS },
