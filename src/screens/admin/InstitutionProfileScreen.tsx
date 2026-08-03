@@ -34,6 +34,7 @@ import {
   InstitutionType,
   CalendarType,
   AcademicYearStructure,
+  ProgramDuration,
 } from '../../services/academicSetupService';
 
 /**
@@ -83,6 +84,11 @@ const YEAR_STRUCTURE_FALLBACKS: Record<AcademicYearStructure, string> = {
   custom: 'Custom',
 };
 
+const PROGRAM_DURATION_FALLBACKS: Record<ProgramDuration, string> = {
+  one_year: 'One Year',
+  three_year: 'Three Years',
+};
+
 interface PendingPhoto {
   uri: string;
   fileName: string;
@@ -109,6 +115,7 @@ export default function InstitutionProfileScreen() {
   const institutionTypeLabel = (type: InstitutionType) => t(`institution_profile.type_${type}`, INSTITUTION_TYPE_FALLBACKS[type]);
   const calendarTypeLabel = (type: CalendarType) => t(`institution_profile.calendar_${type}`, CALENDAR_TYPE_FALLBACKS[type]);
   const yearStructureLabel = (s: AcademicYearStructure) => t(`institution_profile.year_structure_${s}`, YEAR_STRUCTURE_FALLBACKS[s]);
+  const programDurationLabel = (d: ProgramDuration) => t(`institution_profile.program_duration_${d}`, PROGRAM_DURATION_FALLBACKS[d]);
   const dayLabel = (i: number) => t(`institution_profile.day_${DAY_KEYS[i]}`, DAY_FALLBACKS[i]);
 
   const [loading, setLoading] = useState(true);
@@ -134,6 +141,7 @@ export default function InstitutionProfileScreen() {
   const [hoursStart, setHoursStart] = useState('');
   const [hoursEnd, setHoursEnd] = useState('');
   const [yearStructure, setYearStructure] = useState<AcademicYearStructure | null>(null);
+  const [programDuration, setProgramDuration] = useState<ProgramDuration | null>(null);
 
   // Branding — existing (already-uploaded) URLs vs a newly-picked local file
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
@@ -163,6 +171,7 @@ export default function InstitutionProfileScreen() {
       setHoursStart(s.school_hours_start ?? '');
       setHoursEnd(s.school_hours_end ?? '');
       setYearStructure(s.academic_year_structure);
+      setProgramDuration(s.program_duration);
       setExistingLogoUrl(s.logo);
       setExistingSealUrl(s.seal);
     } catch (err) {
@@ -238,6 +247,7 @@ export default function InstitutionProfileScreen() {
         school_hours_start: hoursStart || undefined,
         school_hours_end: hoursEnd || undefined,
         academic_year_structure: yearStructure ?? undefined,
+        program_duration: institutionType === 'markaz' ? programDuration ?? undefined : undefined,
         logo: newLogo ? { uri: newLogo.uri, fileName: newLogo.fileName, type: newLogo.type } : undefined,
         seal: newSeal ? { uri: newSeal.uri, fileName: newSeal.fileName, type: newSeal.type } : undefined,
       });
@@ -341,6 +351,17 @@ export default function InstitutionProfileScreen() {
             ))}
           </View>
           <Text style={styles.hint}>{t('institution_profile.institution_type_hint', 'Only sets editable starting defaults - nothing here is hardcoded to this choice.')}</Text>
+
+          {institutionType === 'markaz' ? (
+            <>
+              <Text style={styles.label}>{t('institution_profile.program_duration', 'Program Duration')}</Text>
+              <View style={styles.chipRow}>
+                {status.program_durations.map((d) => (
+                  <Chip key={d} label={programDurationLabel(d)} selected={programDuration === d} onPress={() => setProgramDuration(d)} styles={styles} />
+                ))}
+              </View>
+            </>
+          ) : null}
 
           {/* Localization & calendar */}
           <Text style={styles.sectionTitle}>{t('institution_profile.localization_calendar', 'Localization & Calendar')}</Text>

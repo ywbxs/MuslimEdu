@@ -1,35 +1,119 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { AcademicSchedule, Day, fetchMySchedule } from '../../services/academicScheduleService';
 import { Skeleton } from '../../components/Skeleton';
 
 const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
 const CANVAS = '#F6F7F9';
 const DANGER_SOFT = '#FCEDED';
 const DANGER = '#E5484D';
+const HEADER_BG = '#FAFBFC';
 
 /**
  * Student: read-only weekly timetable, scoped by the backend to this
  * student's enrolled section (AcademicScheduleController::mine, routed as
- * POST /my_schedules) - previously broken (imported functions that didn't
- * exist in scheduleService.ts, so opening this screen crashed). Now wired
- * to the same working endpoint the admin builder and teacher schedule
- * screens use.
+ * POST /my_schedules). Laid out as a scrollable table - Code / Description /
+ * Day / Time / Room / Campus / Section / Unit / Instructor - matching the
+ * school's existing web registrar schedule sheet, instead of the previous
+ * per-day list of cards. The backend returns one row per single day a class
+ * meets (so a class held Mon/Wed/Fri is 3 separate rows with the same
+ * subject/section/time); groupIntoTableRows below merges same-class rows
+ * across days into one table row with a combined day code ("MWF"), which is
+ * how the reference sheet displays it.
  */
 
-const DAYS: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_ORDER: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_ABBREV: Record<Day, string> = {
+  sunday: 'SU',
+  monday: 'M',
+  tuesday: 'T',
+  wednesday: 'W',
+  thursday: 'TH',
+  friday: 'F',
+  saturday: 'S',
+};
 
-function dayLabel(t: (key: string, fallback: string) => string, day: Day): string {
-  return t(`student_schedule.day_${day}`, day.charAt(0).toUpperCase() + day.slice(1));
+interface TableRow {
+  key: string;
+  code: string;
+  description: string;
+  dayCode: string;
+  time: string;
+  room: string;
+  campus: string;
+  section: string;
+  unit: string;
+  instructor: string;
 }
+
+function formatTime12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.slice(0, 5).split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr ?? '00';
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m}${suffix}`;
+}
+
+function formatUnit(units: AcademicSchedule['units']): string {
+  if (units === null || units === undefined || units === '') return '—';
+  const n = Number(units);
+  if (Number.isNaN(n)) return String(units);
+  return Number.isInteger(n) ? String(n) : String(n).replace(/\.?0+$/, '');
+}
+
+// Groups schedule rows that are the same class meeting on different days
+// (same subject/section/room/teacher/time) into one table row with a
+// combined day code, e.g. Mon+Wed+Fri -> "MWF".
+function groupIntoTableRows(rows: AcademicSchedule[]): TableRow[] {
+  const groups = new Map<string, AcademicSchedule[]>();
+  rows.forEach((r) => {
+    const key = [r.code, r.subject_id, r.section_id, r.room_id, r.teacher_id, r.starts_at, r.ends_at].join('|');
+    const existing = groups.get(key);
+    if (existing) existing.push(r);
+    else groups.set(key, [r]);
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const first = group[0];
+    const dayCode = DAY_ORDER.filter((d) => group.some((g) => g.day_of_week === d))
+      .map((d) => DAY_ABBREV[d])
+      .join('');
+    return {
+      key: group.map((g) => g.id).join('-'),
+      code: first.code,
+      description: first.subject_name ?? first.code,
+      dayCode,
+      time: `${formatTime12h(first.starts_at)}-${formatTime12h(first.ends_at)}`,
+      room: first.room_name ?? '—',
+      campus: first.campus_name ?? '—',
+      section: first.section_name ?? '—',
+      unit: formatUnit(first.units),
+      instructor: first.teacher_name ?? '—',
+    };
+  });
+}
+
+const COLUMNS: { key: keyof TableRow; label: string; width: number }[] = [
+  { key: 'code', label: 'CODE', width: 90 },
+  { key: 'description', label: 'DESCRIPTION', width: 240 },
+  { key: 'dayCode', label: 'DAY', width: 60 },
+  { key: 'time', label: 'TIME', width: 150 },
+  { key: 'room', label: 'ROOM', width: 80 },
+  { key: 'campus', label: 'CAMPUS', width: 160 },
+  { key: 'section', label: 'SECTION', width: 90 },
+  { key: 'unit', label: 'UNIT', width: 60 },
+  { key: 'instructor', label: 'INSTRUCTOR', width: 200 },
+];
+const TABLE_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 
 function IconChevronLeft({ color }: { color: string }) {
   return (
@@ -38,21 +122,37 @@ function IconChevronLeft({ color }: { color: string }) {
     </Svg>
   );
 }
-function IconDoor({ color }: { color: string }) {
+
+function TableHeaderRow() {
   return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={6} y1={21} x2={20} y2={21} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={13} cy={13} r={0.8} stroke={color} strokeWidth={2} />
-    </Svg>
+    <View style={styles.headerRow}>
+      {COLUMNS.map((col) => (
+        <View key={col.key} style={[styles.cell, { width: col.width }]}>
+          <Text style={styles.headerCellText}>{col.label}</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
-function RowSkeleton() {
+function TableDataRow({ row, striped }: { row: TableRow; striped: boolean }) {
   return (
-    <View style={styles.card}>
-      <Skeleton width="45%" height={15} borderRadius={4} />
-      <Skeleton width="60%" height={12} borderRadius={4} style={{ marginTop: 10 }} />
+    <View style={[styles.dataRow, striped && styles.dataRowStriped]}>
+      {COLUMNS.map((col) => (
+        <View key={col.key} style={[styles.cell, { width: col.width }]}>
+          <Text style={styles.dataCellText} numberOfLines={2}>{row[col.key]}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <View style={styles.skeletonWrap}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} width="100%" height={44} borderRadius={8} style={{ marginBottom: 8 }} />
+      ))}
     </View>
   );
 }
@@ -95,14 +195,7 @@ export default function StudentScheduleScreen() {
     load({ silent: true });
   };
 
-  const grouped = useMemo(
-    () =>
-      DAYS.map((day) => ({
-        day,
-        items: rows.filter((r) => r.day_of_week === day).sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
-      })).filter((g) => g.items.length > 0),
-    [rows]
-  );
+  const tableRows = useMemo(() => groupIntoTableRows(rows), [rows]);
 
   return (
     <View style={styles.flex}>
@@ -116,14 +209,10 @@ export default function StudentScheduleScreen() {
       </View>
 
       {isLoading ? (
-        <ScrollView contentContainerStyle={styles.list}>
-          <RowSkeleton />
-          <RowSkeleton />
-          <RowSkeleton />
-        </ScrollView>
+        <TableSkeleton />
       ) : (
         <ScrollView
-          contentContainerStyle={styles.list}
+          contentContainerStyle={styles.outerScroll}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
         >
           {error ? (
@@ -132,33 +221,20 @@ export default function StudentScheduleScreen() {
             </View>
           ) : null}
 
-          {!error && grouped.length === 0 ? (
+          {!error && tableRows.length === 0 ? (
             <Text style={styles.empty}>{t('student_schedule.empty', 'No published schedule yet.')}</Text>
           ) : null}
 
-          {grouped.map((g) => (
-            <View key={g.day} style={styles.dayGroup}>
-              <Text style={styles.dayGroupTitle}>{dayLabel(t, g.day)}</Text>
-              {g.items.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <Text style={styles.day}>{dayLabel(t, item.day_of_week)}</Text>
-                  <Text style={styles.time}>
-                    {item.starts_at.slice(0, 5)} - {item.ends_at.slice(0, 5)}
-                  </Text>
-                  <Text style={styles.subject}>{item.subject_name ?? item.code}</Text>
-                  <View style={styles.metaRow}>
-                    {item.teacher_name ? <Text style={styles.meta}>{t('student_schedule.teacher_label', 'Teacher')}: {item.teacher_name}</Text> : null}
-                    {item.room_name ? (
-                      <View style={styles.roomRow}>
-                        <IconDoor color={SUBTLE} />
-                        <Text style={styles.meta}>{t('student_schedule.room_label', 'Room')}: {item.room_name}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ))}
-            </View>
-          ))}
+          {tableRows.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ width: TABLE_WIDTH }}>
+              <View style={styles.table}>
+                <TableHeaderRow />
+                {tableRows.map((row, i) => (
+                  <TableDataRow key={row.key} row={row} striped={i % 2 === 1} />
+                ))}
+              </View>
+            </ScrollView>
+          ) : null}
         </ScrollView>
       )}
     </View>
@@ -181,16 +257,44 @@ const styles = StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 60 },
   backText: { color: EMERALD, fontSize: 15, fontWeight: '600', marginLeft: 2 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
-  list: { padding: 16 },
-  dayGroup: { marginBottom: 18 },
-  dayGroupTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10 },
-  day: { fontWeight: '800', color: EMERALD, fontSize: 12, textTransform: 'uppercase' },
-  time: { fontSize: 20, fontWeight: '800', color: INK, marginTop: 4 },
-  subject: { fontSize: 15, fontWeight: '700', color: INK, marginTop: 6 },
-  metaRow: { marginTop: 6, gap: 4 },
-  roomRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  meta: { fontSize: 12, color: SUBTLE },
+
+  outerScroll: { padding: 16, paddingBottom: 32 },
+  skeletonWrap: { padding: 16 },
+
+  table: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: HEADER_BG,
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
+  },
+  dataRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
+  },
+  dataRowStriped: { backgroundColor: '#FBFCFD' },
+  cell: {
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: HAIRLINE,
+  },
+  headerCellText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: SUBTLE,
+    letterSpacing: 0.4,
+  },
+  dataCellText: { fontSize: 12.5, fontWeight: '600', color: INK, lineHeight: 16 },
+
   empty: { textAlign: 'center', color: SUBTLE, marginTop: 36 },
   errorBanner: { backgroundColor: DANGER_SOFT, borderRadius: 14, padding: 16, marginBottom: 12 },
   errorText: { color: DANGER, fontSize: 13.5, textAlign: 'center' },

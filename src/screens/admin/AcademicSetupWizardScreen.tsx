@@ -23,6 +23,7 @@ import {
   completeSetup,
   createAcademicYear,
   InstitutionType,
+  ProgramDuration,
   SetupStatus,
 } from '../../services/academicSetupService';
 import { updateOwnProfile } from '../../services/userProfileService';
@@ -74,6 +75,11 @@ const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
   orphanage: 'Orphan School',
 };
 
+const PROGRAM_DURATION_LABELS: Record<ProgramDuration, string> = {
+  one_year: 'One Year',
+  three_year: 'Three Years',
+};
+
 function CheckIcon() {
   return (
     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -112,6 +118,8 @@ export default function AcademicSetupWizardScreen() {
 
   // Step: institution
   const [institutionType, setInstitutionType] = useState<InstitutionType | null>(null);
+  // Markaz-only sub-choice - see PROGRAM_DURATION_LABELS.
+  const [programDuration, setProgramDuration] = useState<ProgramDuration | null>(null);
   // Step: profile
   const [name, setName] = useState('');
   const [nameAr, setNameAr] = useState('');
@@ -142,6 +150,7 @@ export default function AcademicSetupWizardScreen() {
       const data = await fetchSetupStatus(token);
       setStatus(data);
       setInstitutionType(data.school.institution_type);
+      setProgramDuration(data.school.program_duration);
       setName(data.school.name ?? '');
       setNameAr(data.school.name_ar ?? '');
       setAddress(data.school.address ?? '');
@@ -184,9 +193,16 @@ export default function AcademicSetupWizardScreen() {
         setError(t('academic_setup_wizard.choose_institution_type', 'Choose an institution type to continue.'));
         return;
       }
+      if (institutionType === 'markaz' && !programDuration) {
+        setError(t('academic_setup_wizard.choose_program_duration', 'Choose a program duration to continue.'));
+        return;
+      }
       setSubmitting(true);
       try {
-        await saveInstitutionProfile(token, { institution_type: institutionType });
+        await saveInstitutionProfile(token, {
+          institution_type: institutionType,
+          program_duration: institutionType === 'markaz' ? programDuration ?? undefined : undefined,
+        });
         await advance();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_type_error', 'Could not save institution type.'));
@@ -360,6 +376,30 @@ export default function AcademicSetupWizardScreen() {
                     <Text style={styles.optionLabel}>{t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}</Text>
                   </TouchableOpacity>
                 ))}
+
+                {institutionType === 'markaz' ? (
+                  <View style={styles.programDurationWrap}>
+                    <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
+                    <Text style={styles.stepHint}>
+                      {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
+                    </Text>
+                    {status.program_durations.map((duration) => (
+                      <TouchableOpacity
+                        key={duration}
+                        style={[styles.optionRow, programDuration === duration && styles.optionRowSelected]}
+                        onPress={() => setProgramDuration(duration)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[styles.radio, programDuration === duration && styles.radioSelected]}>
+                          {programDuration === duration ? <View style={styles.radioDot} /> : null}
+                        </View>
+                        <Text style={styles.optionLabel}>
+                          {t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -545,6 +585,7 @@ const styles = StyleSheet.create({
   radioSelected: { borderColor: EMERALD },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: EMERALD },
   optionLabel: { fontSize: 15, color: INK, fontWeight: '600' },
+  programDurationWrap: { marginTop: 20, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEEF0' },
 
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 6, marginTop: 12 },
   input: {},

@@ -14,6 +14,7 @@ import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportSc
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
+import TeacherAttendanceClassesScreen from '../screens/teachers/TeacherAttendanceClassesScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
 import {
   fetchStudentEnrollmentWorkflowStatus,
@@ -86,11 +87,26 @@ function MenuIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ScanIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Rect x="9" y="9" width="6" height="6" rx="1" stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
 
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
   Reports: (c) => <ReportsIcon color={c} />,
+  Scan: (c) => <ScanIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
   Menu: (c) => <MenuIcon color={c} />,
 };
@@ -291,6 +307,14 @@ export default function MainTabs() {
   }
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
+  const isTeacherRole = user.role === 'teacher';
+  // Reports is the monthly-report feature (child report wizard / teacher-
+  // orphan report / admin orphan overview) - it only has real content for
+  // orphan schools (see ReportsRouter above); everywhere else it was just a
+  // dead placeholder tab. Admin keeps seeing it either way (unchanged); for
+  // teacher/student it's now hidden entirely on a non-orphan school instead
+  // of showing that empty placeholder.
+  const showReports = isAdminRole || isOrphanSchoolUser(user);
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
@@ -303,7 +327,21 @@ export default function MainTabs() {
       {/* Admins get a real single-student admission form here. */}
       {isAdminRole && <Tab.Screen name="Admission" component={AdmissionScreen} />}
 
-      <Tab.Screen name="Reports" component={ReportsRouter} />
+      {showReports && <Tab.Screen name="Reports" component={ReportsRouter} />}
+
+      {/* Teacher-only, every school type: jumps into the class picker with
+          directTo=AttendanceScan, so tapping a class goes straight into
+          scanning instead of the Manual/Scan/Face chooser. Sits next to
+          Reports (or in Reports' old spot when hidden) so it lands near the
+          middle of the bar. */}
+      {isTeacherRole && (
+        <Tab.Screen
+          name="Scan"
+          component={TeacherAttendanceClassesScreen}
+          initialParams={{ directTo: 'AttendanceScan' }}
+        />
+      )}
+
       <Tab.Screen name="Chat" component={ChatListScreen} />
       <Tab.Screen name="Menu" component={MenuScreen} />
     </Tab.Navigator>

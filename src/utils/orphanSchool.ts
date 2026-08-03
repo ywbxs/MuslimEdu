@@ -173,6 +173,10 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'StudentNumberConfig',
   'StudentIdConfig',
   'StudentLifecycle',
+  // Setup Checklist - every item on it (classes/sections, subjects, class
+  // schedule, attendance config, fee types, enrollment stages) is part of
+  // the class-based academic hub an orphan school doesn't have.
+  'SetupChecklist',
   // Admin-only settings with nothing to configure for an orphan school - no
   // fee-collection/document-request/service-ticket pipeline tied to a
   // student-in-classes model, no cross-role permission matrix to speak of
@@ -199,6 +203,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
 
 /** Admin dashboard tile keys that map onto the routes above. */
 export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
+  'setupChecklist',
   'classes', 'classSchedule', 'academicSetup', 'gradingSystems', 'examCategories',
   'gradebookReview', 'announcementReview', 'lessonPlanReview',
   'assessmentReview', 'assessmentGrades', 'materialsReview',

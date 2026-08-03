@@ -242,7 +242,8 @@ export default function StudentListScreen() {
     setIsRefreshing(false);
   };
 
-  const title = isOrphanSchoolUser(user)
+  const isOrphanSchool = isOrphanSchoolUser(user);
+  const title = isOrphanSchool
     ? t('student_list.title_children', 'Children')
     : t('student_list.title_students', 'Students');
 
@@ -382,7 +383,10 @@ export default function StudentListScreen() {
                           {item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : ''}
                         </Text>
                       </View>
-                    ) : (
+                    ) : isOrphanSchool ? null : (
+                      // Orphan schools have no class/section model at all - see
+                      // isOrphanSchoolUser's doc comment - so this warning would
+                      // fire for every single child there and mean nothing.
                       <View style={styles.warnChip}>
                         <IconAlertTriangle color={AMBER} />
                         <Text style={styles.warnChipText}>{t('student_list.not_enrolled', 'Not placed in a section')}</Text>

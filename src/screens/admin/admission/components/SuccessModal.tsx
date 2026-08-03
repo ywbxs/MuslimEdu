@@ -137,7 +137,11 @@ export default function AdmissionSuccessModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: md3.color.scrim,
+    // Solid, not the theme's translucent glass scrim - this modal covers a
+    // form the admin just filled in with real data (student code, phone,
+    // password field), and glass surfaces let that text visibly bleed
+    // through behind the confirmation card.
+    backgroundColor: 'rgba(8, 15, 12, 0.78)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -145,7 +149,9 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: md3.color.surface,
+    // Solid white, not md3.color.surface (translucent glass) - same
+    // bleed-through reasoning as the backdrop above.
+    backgroundColor: '#FFFFFF',
     borderRadius: md3.shape.xl,
     paddingTop: 36,
     paddingBottom: 24,

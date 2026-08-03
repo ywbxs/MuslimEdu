@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCameraPermission, useCodeScanner, Code } from 'react-native-vision-camera';
 import Svg, { Polyline, Path } from 'react-native-svg';
@@ -89,6 +89,7 @@ export default function AttendanceScanScreen() {
   const [scanned, setScanned] = useState<ScannedEntry[]>([]);
   const [banner, setBanner] = useState<{ text: string; isError: boolean } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const lastScans = useRef<Map<string, number>>(new Map());
   // Kept in memory (and cached on disk by fetchAttendanceRoster itself) so a
   // scanned code can be resolved to a student locally while offline, the
@@ -177,6 +178,25 @@ export default function AttendanceScanScreen() {
     },
   });
 
+  // Each scan already checks the student in immediately (one POST per scan,
+  // see handleCode above) - this button is the teacher's explicit "I'm done
+  // scanning this batch" action. The brief loading state is deliberate, not
+  // padding: it gives the camera view a beat to tear down cleanly before the
+  // roster screen mounts, instead of the two transitions colliding.
+  const handleFinish = () => {
+    if (isFinishing) return;
+    setIsFinishing(true);
+    setTimeout(() => {
+      (navigation as any).replace('TeacherAttendanceRoster', {
+        sectionId,
+        subjectId,
+        classLabel,
+        subjectLabel,
+        date,
+      });
+    }, 400);
+  };
+
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -236,6 +256,21 @@ export default function AttendanceScanScreen() {
             <Text style={styles.emptyHint}>{t('attendance_scan.empty_hint', 'Point the camera at a student ID card to check them in.')}</Text>
           }
         />
+
+        <TouchableOpacity
+          style={[styles.finishButton, (scanned.length === 0 || isFinishing) && styles.finishButtonDisabled]}
+          onPress={handleFinish}
+          disabled={scanned.length === 0 || isFinishing}
+          activeOpacity={0.85}
+        >
+          {isFinishing ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.finishButtonText}>
+              {t('attendance_scan.save_and_view', 'Save & View Attendance Status')}
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -301,4 +336,16 @@ const styles = StyleSheet.create({
   scannedName: { fontSize: 11, color: INK, marginTop: 6, fontWeight: '600' },
   scannedCheck: { position: 'absolute', top: -2, right: 2 },
   emptyHint: { fontSize: 12.5, color: SUBTLE, paddingHorizontal: 16, lineHeight: 18 },
+
+  finishButton: {
+    backgroundColor: EMERALD,
+    borderRadius: RADIUS.md,
+    marginHorizontal: 16,
+    marginTop: SPACING.md,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  finishButtonDisabled: { opacity: 0.5 },
+  finishButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

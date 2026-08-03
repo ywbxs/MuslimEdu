@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -82,11 +82,16 @@ function ClassCardSkeleton() {
 // One card per (section, subject) pair the teacher is allowed to take
 // attendance for - homeroom sections first (from Section.class_teacher_id),
 // then subject periods (from ClassSubjectTeacher), exactly as returned by
-// teacher_attendance_classes. Tapping a card jumps straight to today's
-// roster for that pair.
+// teacher_attendance_classes. Tapping a card normally jumps to
+// AttendanceMethodChooser (Manual/Scan/Face) for that pair - but when
+// reached via the bottom tab bar's "Scan" tab (see MainTabs.tsx), the
+// route's `directTo` param skips that chooser and jumps straight into
+// AttendanceScan, since the whole point of that tab is scanning.
 export default function TeacherAttendanceClassesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const directTo = route.params?.directTo ?? 'AttendanceMethodChooser';
   const { token } = useAuth();
   const { t } = useLocale();
   const [classes, setClasses] = useState<AttendanceClassOption[]>([]);
@@ -170,7 +175,7 @@ export default function TeacherAttendanceClassesScreen() {
                 style={styles.card}
                 activeOpacity={0.85}
                 onPress={() =>
-                  (navigation as any).navigate('AttendanceMethodChooser', {
+                  (navigation as any).navigate(directTo, {
                     sectionId: item.section_id,
                     subjectId: item.subject_id,
                     classLabel: `${item.class_name ?? ''} - ${item.section_name}`.trim(),
