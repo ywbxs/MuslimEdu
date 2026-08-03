@@ -50,6 +50,10 @@ async function authedRequest(path: string, token: string, body: FormData | Recor
 export type InstitutionType = 'mahad' | 'madrasa' | 'markaz' | 'regular_school' | 'orphanage';
 export type CalendarType = 'gregorian' | 'hijri' | 'dual';
 export type AcademicYearStructure = 'semester' | 'trimester' | 'quarter' | 'continuous' | 'custom';
+// Markaz-only: whether the school's program runs as a single year or a
+// 3-year track. Meaningless (and always null) for every other
+// institution_type - only shown/settable when institution_type === 'markaz'.
+export type ProgramDuration = 'one_year' | 'three_year';
 
 export interface SchoolProfile {
   id: number;
@@ -71,6 +75,7 @@ export interface SchoolProfile {
   school_hours_start: string | null;
   school_hours_end: string | null;
   academic_year_structure: AcademicYearStructure | null;
+  program_duration: ProgramDuration | null;
   setup_completed: boolean;
   setup_completed_at: string | null;
   academic_system_version: number;
@@ -82,6 +87,7 @@ export interface SetupStatus {
   institution_types: InstitutionType[];
   calendar_types: CalendarType[];
   academic_year_structures: AcademicYearStructure[];
+  program_durations: ProgramDuration[];
 }
 
 export interface AcademicYear {
@@ -143,6 +149,7 @@ export interface InstitutionProfileInput {
   school_hours_start?: string;
   school_hours_end?: string;
   academic_year_structure?: AcademicYearStructure;
+  program_duration?: ProgramDuration;
   logo?: { uri: string; fileName?: string; type?: string } | null;
   seal?: { uri: string; fileName?: string; type?: string } | null;
   id_card_background?: { uri: string; fileName?: string; type?: string } | null;
