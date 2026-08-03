@@ -307,9 +307,43 @@ export async function admitStudent(
     type: photo.type ?? 'image/jpeg',
   });
 
-  const data = await authedPost('/admin_admission_single', token, form);
-  const record = data.student ?? data.data?.student ?? data.data ?? data;
-  return record as AdmittedStudent;
+  try {
+    const data = await authedPost('/admin_admission_single', token, form);
+    const record = data.student ?? data.data?.student ?? data.data ?? data;
+    return record as AdmittedStudent;
+  } catch (err) {
+    // authedPost already treats "error status but a record is in the body"
+    // as success - but the backend sometimes returns an error response with
+    // NO record at all (e.g. thumbnail generation throws after the student
+    // row is already committed), which looks identical to a real failure.
+    // As a last resort, check whether a student matching what was just
+    // submitted now exists in the roster before surfacing the error.
+    const found = await findJustAdmittedStudent(token, input).catch(() => null);
+    if (found) return found;
+    throw err;
+  }
+}
+
+/**
+ * Looks for a student in the admin's roster matching what was just
+ * submitted to admitStudent, preferring the most specific identifying field
+ * available (code, then email, then exact name match). Only used after the
+ * admission request itself appears to have failed, to tell "actually
+ * failed" apart from "succeeded but the error response didn't say so".
+ */
+async function findJustAdmittedStudent(
+  token: string,
+  input: AdmissionInput,
+): Promise<AdmittedStudent | null> {
+  const search = input.code || input.email || input.name || '';
+  if (!search) return null;
+  const students = await fetchStudents(token, search);
+  const match =
+    (input.code && students.find((s) => s.code === input.code)) ||
+    (input.email && students.find((s) => s.email === input.email)) ||
+    students.find((s) => s.name === input.name);
+  if (!match) return null;
+  return { id: match.id, name: match.name, email: match.email, code: match.code ?? null };
 }
 
 /**
