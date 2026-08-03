@@ -311,10 +311,9 @@ export default function MainTabs() {
   // Reports is the monthly-report feature (child report wizard / teacher-
   // orphan report / admin orphan overview) - it only has real content for
   // orphan schools (see ReportsRouter above); everywhere else it was just a
-  // dead placeholder tab. Admin keeps seeing it either way (unchanged); for
-  // teacher/student it's now hidden entirely on a non-orphan school instead
-  // of showing that empty placeholder.
-  const showReports = isAdminRole || isOrphanSchoolUser(user);
+  // dead placeholder tab. Hidden for every role, including admin, on a
+  // non-orphan school.
+  const showReports = isOrphanSchoolUser(user);
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
