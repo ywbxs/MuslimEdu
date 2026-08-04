@@ -4,19 +4,19 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { getDashboardForRole } from '../../navigation/roleScreens';
 import { GlassButton } from '../../components/glass/GlassKit';
-import AccessibilityCard from '../../components/AccessibilityCard';
 import { RADIUS } from '../../theme/glass';
 
 /**
  * Menu tab = the role dashboard itself (Manage/Reports cards etc, whatever
- * getDashboardForRole renders for this user's role) PLUS the accessibility
- * card and log out button appended at the very bottom of that same scroll
- * view - adding the card here puts it on every role's Menu tab for free.
+ * getDashboardForRole renders for this user's role) PLUS the log out button
+ * appended at the very bottom of that same scroll view.
  *
  * There is no separate "Dashboard" page to tap into anymore - everything
  * lives on this one screen. The profile card (avatar/name/email/role) has
  * been removed - log out is styled to match the rest of the app's cards
- * (rounded-rect, RADIUS.lg) instead of a pill button.
+ * (rounded-rect, RADIUS.lg) instead of a pill button. Accessibility (display
+ * size) now lives in Account Settings rather than as a card directly on this
+ * screen - each dashboard's own Settings tile already reaches it.
  */
 export default function MenuScreen() {
   const { user, logout } = useAuth();
@@ -26,7 +26,6 @@ export default function MenuScreen() {
 
   const footer = (
     <View style={styles.footerWrap}>
-      <AccessibilityCard />
       <GlassButton
         label={t('menu.log_out', 'Log Out')}
         variant="danger"
@@ -42,5 +41,5 @@ export default function MenuScreen() {
 
 const styles = StyleSheet.create({
   footerWrap: { marginTop: 8 },
-  logoutButton: { marginTop: 16 },
+  logoutButton: {},
 });

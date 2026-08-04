@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   UserSettings,
@@ -46,6 +47,7 @@ export default function AccountSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { t, refresh: refreshLocale } = useLocale();
+  const { scale, setScale } = useDisplayScale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +194,27 @@ export default function AccountSettingsScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.sectionTitle}>{t('account_settings.accessibility_section', 'Accessibility')}</Text>
+        <View style={styles.card}>
+          <Text style={styles.label}>{t('account_settings.display_size_label', 'Text & display size')}</Text>
+          <View style={styles.chipRow}>
+            {DISPLAY_SCALE_OPTIONS.map((opt) => {
+              const selected = Math.abs(opt.value - scale) < 0.001;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.chip, selected && styles.chipActive]}
+                  onPress={() => setScale(opt.value)}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                    {t(`accessibility.size.${opt.key}`, opt.label)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         <Text style={styles.sectionTitle}>{t('account_settings.language_appearance_section', 'Language & appearance')}</Text>
         <View style={styles.card}>
           <Text style={styles.label}>{t('account_settings.language_label', 'Language')}</Text>
