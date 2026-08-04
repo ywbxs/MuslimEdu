@@ -246,6 +246,12 @@ export default function PostCard({
 
   const quoted = post.repost_of;
   const heartColor = post.is_liked ? HEART_RED : SUBTLE;
+  // A short text-only post in a fixed-height clipped card (see clipContent)
+  // would otherwise leave a big blank gap below it, since the clipped
+  // region is flex:1 and top-aligned by default. Centering only kicks in
+  // when there's no image/quote to naturally fill that space - a post with
+  // an image already has something to occupy the rest of the card.
+  const isTextOnly = clipContent && !quoted && post.images.length === 0;
 
   return (
     <>
@@ -290,7 +296,7 @@ export default function PostCard({
           this region alone (flex:1, overflow:hidden) without affecting the
           header above or the action bar below, which always stay fully
           visible in a fixed-height card. */}
-      <View style={clipContent ? styles.clippedContent : undefined}>
+      <View style={[clipContent && styles.clippedContent, isTextOnly && styles.clippedContentCentered]}>
         {/* Body text */}
         {!!post.content &&
           (clipContent ? (
@@ -455,6 +461,9 @@ const styles = StyleSheet.create({
   // (siblings, not flexed) keep their own natural size and this region
   // alone absorbs and clips whatever's left in the fixed-height card.
   clippedContent: { flex: 1, overflow: 'hidden' },
+  // A text-only post has nothing else to fill the clipped region, so it's
+  // centered vertically instead of pinned to the top with blank space below.
+  clippedContentCentered: { justifyContent: 'center' },
   repostBanner: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 },
   repostBannerText: { fontSize: 12, color: SUBTLE, marginLeft: 6, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center' },
