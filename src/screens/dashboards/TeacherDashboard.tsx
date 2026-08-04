@@ -16,6 +16,7 @@ import { fetchTeacherReportStatus, TeacherReportStatus } from '../../services/te
 import { isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
+import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -645,6 +646,14 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             onPress={() => (navigation as any).navigate('AccountSettings')}
           />
         </View>
+
+        {/* Today's class schedule preview - a quick reminder of what the
+            teacher is teaching today, without leaving Home. Regular schools
+            only - orphan schools have no class/schedule concept (same
+            gating as the academic Quick Action tiles above). fetchMySchedule
+            already resolves "mine" server-side by role, so this same
+            component works unchanged for a teacher. */}
+        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
         {/* This Month Overview - orphan students only (it's report-backed) */}
         {isOrphan ? (
