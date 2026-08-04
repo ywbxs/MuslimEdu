@@ -46,26 +46,36 @@ export default function StudentIdCardScreen() {
   const [theme, setTheme] = useState<CardTheme>(CARD_THEMES[0]);
   const [sectionName, setSectionName] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
+  const [schoolAddress, setSchoolAddress] = useState<string | null>(null);
   const [schoolBackground, setSchoolBackground] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Every role has a card - a teacher/staff account gets the "Staff ID
+  // Card" label instead of "Student ID Card", same component either way.
+  const isStaff = user?.role !== 'student' && user?.role !== 'parent';
+
   useEffect(() => {
     if (!token) return;
-    fetchMySchedule(token)
-      .then((rows) => setSectionName(rows[0]?.section_name ?? null))
-      .catch(() => {
-        // Best-effort enrichment only - the card still works with just
-        // name/photo/code if this fails or the student has no schedule yet.
-      });
+    if (!isStaff) {
+      fetchMySchedule(token)
+        .then((rows) => setSectionName(rows[0]?.section_name ?? null))
+        .catch(() => {
+          // Best-effort enrichment only - the card still works with just
+          // name/photo/code if this fails or the student has no schedule yet.
+        });
+    }
     fetchMySchoolBranding(token)
       .then((branding) => {
         setSchoolName(branding.name);
+        setSchoolLogo(branding.logo);
+        setSchoolAddress(branding.address ?? null);
         setSchoolBackground(branding.id_card_background);
       })
       .catch(() => {
         // Best-effort - falls back to the default gradient theme below.
       });
-  }, [token]);
+  }, [token, isStaff]);
 
   if (!user) return null;
 
@@ -97,7 +107,9 @@ export default function StudentIdCardScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={INK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('student_id_card.title', 'My ID Card')}</Text>
+        <Text style={styles.headerTitle}>
+          {isStaff ? t('student_id_card.staff_title', 'My Staff ID Card') : t('student_id_card.title', 'My ID Card')}
+        </Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -110,6 +122,10 @@ export default function StudentIdCardScreen() {
               code: user.code ?? String(user.id),
               sectionName,
               schoolName,
+              schoolLogoUrl: schoolLogo,
+              schoolAddress,
+              address: user.address ?? null,
+              cardType: isStaff ? 'staff' : 'student',
             }}
             theme={theme}
             backgroundImageUrl={schoolBackground}

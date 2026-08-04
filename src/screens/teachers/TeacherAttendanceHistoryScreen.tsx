@@ -48,9 +48,22 @@ const RANGE_PRESETS: { key: string; label: string; days: number }[] = [
 function toISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+// The backend's `date` field isn't guaranteed to be a bare 'YYYY-MM-DD' -
+// some responses send a full timestamp ('2026-08-04T00:00:00.000000Z' or
+// '2026-08-04 00:00:00'). Splitting the whole string on '-' in that case
+// pulls the time/timezone suffix into the day component and produces
+// "Invalid Date". Only ever read the leading date portion.
+function normalizeDateOnly(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? match[0] : value;
+}
 function formatDateHeader(iso: string) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const [y, m, d] = normalizeDateOnly(iso).split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) return iso;
+  // weekday: 'long' is what actually answers "what day was attendance
+  // taken" (e.g. "Tuesday, Aug 4") rather than just the bare date.
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function IconChevronLeft({ color }: { color: string }) {
@@ -126,9 +139,10 @@ export default function TeacherAttendanceHistoryScreen() {
   const sections = useMemo(() => {
     const byDate = new Map<string, HistoryRecord[]>();
     records.forEach((r) => {
-      const list = byDate.get(r.date) ?? [];
+      const key = normalizeDateOnly(r.date);
+      const list = byDate.get(key) ?? [];
       list.push(r);
-      byDate.set(r.date, list);
+      byDate.set(key, list);
     });
     return Array.from(byDate.entries())
       .sort((a, b) => (a[0] < b[0] ? 1 : -1))

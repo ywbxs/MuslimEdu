@@ -89,6 +89,9 @@ export default function StudentIdCardsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schoolBackground, setSchoolBackground] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
+  const [schoolAddress, setSchoolAddress] = useState<string | null>(null);
   const [selected, setSelected] = useState<StudentSummary | null>(null);
   const [theme, setTheme] = useState<CardTheme>(CARD_THEMES[0]);
   const [isExporting, setIsExporting] = useState(false);
@@ -106,6 +109,9 @@ export default function StudentIdCardsScreen() {
       .then(([list, branding]) => {
         setStudents(list);
         setSchoolBackground(branding?.id_card_background ?? null);
+        setSchoolName(branding?.name ?? null);
+        setSchoolLogo(branding?.logo ?? null);
+        setSchoolAddress(branding?.address ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : t('student_id_cards.load_error', 'Could not load students.')))
       .finally(() => setIsLoading(false));
@@ -294,6 +300,12 @@ export default function StudentIdCardsScreen() {
                     code: selected.code ?? String(selected.id),
                     className: selected.class_name,
                     sectionName: selected.section_name,
+                    schoolName,
+                    schoolLogoUrl: schoolLogo,
+                    schoolAddress,
+                    address: selected.address ?? null,
+                    dateOfBirth: selected.birthday ?? null,
+                    cardType: 'student',
                   }}
                   theme={theme}
                   backgroundImageUrl={schoolBackground}
@@ -333,6 +345,12 @@ export default function StudentIdCardsScreen() {
               code: batchStudent.code ?? String(batchStudent.id),
               className: batchStudent.class_name,
               sectionName: batchStudent.section_name,
+              schoolName,
+              schoolLogoUrl: schoolLogo,
+              schoolAddress,
+              address: batchStudent.address ?? null,
+              dateOfBirth: batchStudent.birthday ?? null,
+              cardType: 'student',
             }}
             theme={theme}
             backgroundImageUrl={schoolBackground}

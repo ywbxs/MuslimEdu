@@ -265,6 +265,55 @@ export async function updateAttendanceRecord(
   });
 }
 
+// --- Teacher: "done" lock for one section/subject/date ---
+//
+// Once a teacher finishes marking a roster and taps Save, the roster locks
+// itself against further swipes/quick-marks so it can't be re-marked by
+// accident. There's no backend "locked" flag for attendance yet, so this is
+// tracked client-side (per account/section/subject/date, same key shape as
+// the roster cache above) - it survives app restarts via AsyncStorage, but a
+// teacher can always tap "Unlock" to fix a mistake, which just clears the
+// flag and re-enables editing.
+
+const ROSTER_LOCK_PREFIX = '@attendance_roster_lock_v1';
+
+function rosterLockKey(token: string, sectionId: number, subjectId: number, date: string): string {
+  return `${ROSTER_LOCK_PREFIX}:${token.slice(-12)}:${sectionId}:${subjectId}:${date}`;
+}
+
+export async function getRosterLock(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(rosterLockKey(token, sectionId, subjectId, date));
+    return value === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function setRosterLock(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+  locked: boolean,
+): Promise<void> {
+  try {
+    const key = rosterLockKey(token, sectionId, subjectId, date);
+    if (locked) {
+      await AsyncStorage.setItem(key, '1');
+    } else {
+      await AsyncStorage.removeItem(key);
+    }
+  } catch {
+    // Best-effort - worst case the lock doesn't survive an app restart.
+  }
+}
+
 // --- Teacher: date-range history for one section/subject ---
 
 export async function fetchAttendanceHistory(

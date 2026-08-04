@@ -33,6 +33,11 @@ const SAMPLE_STUDENT = {
   code: 'DEMO-0001',
   className: 'Grade 5',
   sectionName: 'A',
+  dateOfBirth: '2014-05-12',
+  address: '123 Sample Street',
+  emergencyContactName: 'John Student',
+  emergencyContactPhone: '+1 555 0100',
+  cardType: 'student' as const,
 };
 
 /**
@@ -149,7 +154,16 @@ export default function IdCardTemplateScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.sectionLabel}>{t('id_card_template.preview_label', 'Preview')}</Text>
           <View style={styles.previewWrap}>
-            <StudentIdCard student={SAMPLE_STUDENT} theme={CARD_THEMES[0]} backgroundImageUrl={previewBackgroundUrl} />
+            <StudentIdCard
+              student={{
+                ...SAMPLE_STUDENT,
+                schoolName: school?.name ?? undefined,
+                schoolLogoUrl: school?.logo ?? undefined,
+                schoolAddress: school?.address ?? undefined,
+              }}
+              theme={CARD_THEMES[0]}
+              backgroundImageUrl={previewBackgroundUrl}
+            />
           </View>
 
           <Text style={styles.hint}>

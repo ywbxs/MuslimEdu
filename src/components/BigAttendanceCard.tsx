@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
+import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
@@ -8,13 +9,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
-const SURFACE = COLORS.surface;
 
 export type SwipeDirection = 'right' | 'left' | 'up' | 'down';
 
 // Present/Absent/Excused/Late cover the 4 quick-swipe directions - same
-// mapping as SwipeableAttendanceCard (the old inline-list card), kept
-// identical so muscle memory carries over between the two views.
+// mapping as the quick-mark chip bar on TeacherAttendanceRosterScreen, kept
+// identical so muscle memory carries over between the two ways of marking.
 const DIRECTION_META: Record<SwipeDirection, { label: string; color: string; soft: string }> = {
   right: { label: 'Present', color: '#0F9D58', soft: '#E7F5EC' },
   left: { label: 'Absent', color: '#E5484D', soft: '#FCEDED' },
@@ -22,12 +22,17 @@ const DIRECTION_META: Record<SwipeDirection, { label: string; color: string; sof
   down: { label: 'Late', color: '#B8860B', soft: '#FBF2DE' },
 };
 
+// Same deep-emerald gradient as CARD_THEMES[0] in StudentIdCard.tsx, so the
+// card a teacher swipes through during manual attendance reads as "the same
+// real ID card" rather than a plain, unrelated list-row card.
+const CARD_GRADIENT: [string, string, string] = ['#0B3D2E', '#0F9D58', '#22C55E'];
+
 const SWIPE_THRESHOLD = 100;
 const TAP_SLOP = 6;
 const FLIGHT_DISTANCE = SCREEN_WIDTH * 1.15;
 const FLIGHT_DURATION = 220;
 
-function IconPin({ color, size = 15 }: { color: string; size?: number }) {
+function IconPin({ color, size = 13 }: { color: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
@@ -35,10 +40,19 @@ function IconPin({ color, size = 15 }: { color: string; size?: number }) {
     </Svg>
   );
 }
-function IconCake({ color, size = 15 }: { color: string; size?: number }) {
+function IconCake({ color, size = 13 }: { color: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M4 21v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6M4 21h16M4 17c1.5 1 2.5-1 4 0s2.5 1 4 0 2.5-1 4 0 2.5 1 4 0M12 9V5M9 5c0-1.5 3-1.5 3-3 0 1.5 3 1.5 3 3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconLock({ color = '#FFFFFF', size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={5} y={11} width={14} height={9} rx={2} stroke={color} strokeWidth={2} />
+      <Path d="M8 11V8a4 4 0 0 1 8 0v3" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={12} y1={15} x2={12} y2={17} stroke={color} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -52,18 +66,25 @@ export interface BigAttendanceCardProps {
   statusLabel: string | null; // e.g. "Present" - null when not yet marked
   statusColor?: string | null;
   statusSoft?: string | null;
+  schoolName?: string | null;
   onSwipeComplete: (direction: SwipeDirection) => void;
   onPress: () => void;
+  // True once the roster has been saved/"done" for this date - the card
+  // stops responding to swipes/taps (a locked padlock badge shows instead
+  // of the status pill) until the teacher unlocks it to fix a mistake.
+  disabled?: boolean;
 }
 
 /**
- * One full-size, one-at-a-time attendance card - photo, name, address, age
- * and a status badge, marked by swiping the whole card off screen (like a
- * photo gallery / Tinder-style deck) instead of a row in a scrolling list.
- * Same 4-direction swipe-to-status gesture and tap-for-detail-sheet
- * behavior as SwipeableAttendanceCard, just at deck-card scale with a fly-
- * off exit animation - see TeacherAttendanceRosterScreen for how the parent
- * advances to the next student once onSwipeComplete fires.
+ * One full-size, one-at-a-time attendance card styled like the school's
+ * real Student ID card (same gradient/kicker-label look as
+ * components/StudentIdCard.tsx) instead of a plain white card - photo,
+ * name, ID code, address and age, marked by swiping the whole card off
+ * screen (like a photo gallery / Tinder-style deck). Same 4-direction
+ * swipe-to-status gesture and tap-for-detail-sheet behavior as before, just
+ * re-skinned; see TeacherAttendanceRosterScreen for how the parent advances
+ * to the next student once onSwipeComplete fires, and for the lock/unlock
+ * flow that sets `disabled`.
  *
  * Built with RN's built-in PanResponder + Animated (no gesture-handler/
  * reanimated dependency), matching the rest of this app's swipe gestures.
@@ -77,8 +98,10 @@ export default function BigAttendanceCard({
   statusLabel,
   statusColor,
   statusSoft,
+  schoolName,
   onSwipeComplete,
   onPress,
+  disabled = false,
 }: BigAttendanceCardProps) {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [previewDirection, setPreviewDirection] = useState<SwipeDirection | null>(null);
@@ -91,9 +114,9 @@ export default function BigAttendanceCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isFlying,
+      onStartShouldSetPanResponder: () => !isFlying && !disabled,
       onMoveShouldSetPanResponder: (_evt, gesture) =>
-        !isFlying && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
+        !isFlying && !disabled && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
       onPanResponderMove: (_evt, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
 
@@ -151,74 +174,108 @@ export default function BigAttendanceCard({
   ).current;
 
   const preview = previewDirection ? DIRECTION_META[previewDirection] : null;
-  const badgeColor = preview?.color ?? statusColor ?? SUBTLE;
-  const badgeSoft = preview?.soft ?? statusSoft ?? '#F1F3F2';
+  const badgeColor = preview?.color ?? statusColor ?? 'rgba(255,255,255,0.85)';
+  const badgeSoft = preview?.soft ?? statusSoft ?? 'rgba(255,255,255,0.16)';
   const badgeText = preview?.label ?? statusLabel ?? 'Swipe to mark';
+  const badgeTextColor = preview || statusColor ? (preview ? preview.color : '#FFFFFF') : '#FFFFFF';
 
   return (
     <Animated.View
       {...panResponder.panHandlers}
       style={[
-        styles.card,
-        preview ? { borderColor: preview.color, borderWidth: 2 } : null,
+        styles.cardShadow,
         { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] },
       ]}
     >
-      {preview ? (
-        <View style={[styles.stamp, { borderColor: preview.color }]}>
-          <Text style={[styles.stampText, { color: preview.color }]}>{preview.label.toUpperCase()}</Text>
+      <LinearGradient
+        colors={CARD_GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.card, preview ? { borderColor: preview.color, borderWidth: 2 } : null]}
+      >
+        {preview ? (
+          <View style={[styles.stamp, { borderColor: preview.color }]}>
+            <Text style={[styles.stampText, { color: preview.color }]}>{preview.label.toUpperCase()}</Text>
+          </View>
+        ) : null}
+
+        {disabled ? (
+          <View style={styles.lockOverlay}>
+            <IconLock />
+          </View>
+        ) : null}
+
+        <View style={styles.kickerWrap}>
+          <Text style={styles.kicker}>{schoolName ? schoolName.toUpperCase() : 'STUDENT ID CARD'}</Text>
         </View>
-      ) : null}
 
-      <View style={styles.photoWrap}>
-        <UserAvatar name={name} photo={photo} size={136} dotColor={null} ringColor="#FFFFFF" />
-      </View>
+        <View style={styles.photoWrap}>
+          <UserAvatar name={name} photo={photo} size={124} dotColor={null} ringColor="rgba(255,255,255,0.7)" />
+        </View>
 
-      <Text style={styles.name} numberOfLines={1}>{name}</Text>
-      {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
 
-      <View style={styles.infoWrap}>
-        {address ? (
-          <View style={styles.infoRow}>
-            <IconPin color={SUBTLE} />
-            <Text style={styles.infoText} numberOfLines={1}>{address}</Text>
-          </View>
-        ) : null}
-        {age != null ? (
-          <View style={styles.infoRow}>
-            <IconCake color={SUBTLE} />
-            <Text style={styles.infoText}>{age} years old</Text>
-          </View>
-        ) : null}
-      </View>
+        <View style={styles.infoWrap}>
+          {address ? (
+            <View style={styles.infoRow}>
+              <IconPin color="rgba(255,255,255,0.85)" />
+              <Text style={styles.infoText} numberOfLines={1}>{address}</Text>
+            </View>
+          ) : null}
+          {age != null ? (
+            <View style={styles.infoRow}>
+              <IconCake color="rgba(255,255,255,0.85)" />
+              <Text style={styles.infoText}>{age} years old</Text>
+            </View>
+          ) : null}
+        </View>
 
-      <View style={[styles.badge, { backgroundColor: badgeSoft }]}>
-        <Text style={[styles.badgeText, { color: badgeColor }]} numberOfLines={1}>{badgeText}</Text>
-      </View>
+        <View style={[styles.badge, { backgroundColor: disabled ? 'rgba(255,255,255,0.16)' : badgeSoft }]}>
+          <Text style={[styles.badgeText, { color: disabled ? '#FFFFFF' : badgeTextColor }]} numberOfLines={1}>
+            {disabled ? 'Locked' : badgeText}
+          </Text>
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  cardShadow: {
     width: SCREEN_WIDTH - 40,
     alignSelf: 'center',
-    backgroundColor: SURFACE,
+    borderRadius: RADIUS.xl,
+    ...SHADOW.level3,
+  },
+  card: {
     borderRadius: RADIUS.xl,
     borderWidth: 1.5,
     borderColor: 'transparent',
     alignItems: 'center',
-    paddingTop: 28,
+    paddingTop: 24,
     paddingBottom: 22,
     paddingHorizontal: 22,
-    ...SHADOW.level3,
+    overflow: 'hidden',
+  },
+  kickerWrap: { marginBottom: 16 },
+  kicker: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   photoWrap: { marginBottom: 16 },
-  name: { fontSize: 21, fontWeight: '800', color: INK, textAlign: 'center' },
-  subtitle: { fontSize: 13, color: SUBTLE, marginTop: 3, textAlign: 'center' },
+  name: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3, textAlign: 'center', fontWeight: '600' },
   infoWrap: { width: '100%', marginTop: 18, gap: 10 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoText: { fontSize: 14, color: INK, fontWeight: '500', flexShrink: 1 },
+  infoText: { fontSize: 14, color: '#FFFFFF', fontWeight: '500', flexShrink: 1 },
   badge: {
     marginTop: 20,
     borderRadius: RADIUS.pill,
@@ -236,6 +293,18 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     transform: [{ rotate: '18deg' }],
     zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   stampText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.6 },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(11,13,16,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+  },
 });

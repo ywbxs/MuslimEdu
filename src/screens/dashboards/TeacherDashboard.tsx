@@ -641,6 +641,12 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             </>
           )}
           <QuickActionCard
+            icon={<IdCardIcon color={EMERALD} size={20} />}
+            title={t('teacher_dashboard.id_card_title', 'My ID Card')}
+            description={t('teacher_dashboard.id_card_desc', 'View and export your staff ID card')}
+            onPress={() => (navigation as any).navigate('StudentIdCard')}
+          />
+          <QuickActionCard
             icon={<BellIcon color={EMERALD} size={20} />}
             title={t('teacher_dashboard.notifications_title', 'Notifications')}
             description={t('teacher_dashboard.notifications_desc', 'Stay updated with important alerts')}

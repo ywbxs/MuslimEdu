@@ -200,6 +200,10 @@ export interface SchoolBranding {
   name: string | null;
   logo: string | null;
   id_card_background: string | null;
+  // Best-effort - not every backend deployment of /my_school_branding sends
+  // this yet. Falls back to null (StudentIdCard just omits the address row)
+  // rather than breaking on an older server response.
+  address?: string | null;
 }
 
 /**
@@ -218,6 +222,7 @@ export async function fetchMySchoolBranding(token: string): Promise<SchoolBrandi
       name: data.name ?? null,
       logo: absoluteUrl(data.logo ?? null),
       id_card_background: absoluteUrl(data.id_card_background ?? null),
+      address: data.address ?? null,
     };
     AsyncStorage.setItem(cacheKey, JSON.stringify(branding)).catch(() => {
       // Best-effort cache write - losing it just means a future offline

@@ -17,11 +17,14 @@ import {
   fetchAttendanceRoster,
   submitAttendance,
   applyRecordsToCachedRoster,
+  getRosterLock,
+  setRosterLock,
   RosterStudent,
   AttendanceStatus,
   ATTENDANCE_STATUSES,
 } from '../../services/teacherAttendanceService';
 import { enqueueAttendanceSubmit } from '../../services/offlineQueue';
+import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import BigAttendanceCard, { SwipeDirection } from '../../components/BigAttendanceCard';
 
@@ -49,8 +52,13 @@ const STATUS_META: Record<AttendanceStatus, { label: string; short: string; colo
 function toISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+// Same defensive parsing as TeacherAttendanceHistoryScreen's
+// normalizeDateOnly - a `date` value returned as a full timestamp
+// ('2026-08-04T00:00:00.000000Z') must not have its time/timezone suffix
+// fed into the day component, or Date() silently becomes Invalid Date.
 function fromISO(s: string) {
-  const [y, m, d] = s.split('-').map(Number);
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const [y, m, d] = (match ? match[0] : s).split('-').map(Number);
   return new Date(y, m - 1, d);
 }
 function formatDateLabel(iso: string, t: (key: string, fallback?: string) => string) {
@@ -60,7 +68,8 @@ function formatDateLabel(iso: string, t: (key: string, fallback?: string) => str
   yestDate.setDate(yestDate.getDate() - 1);
   if (iso === today) return t('teacher_attendance_roster.today', 'Today');
   if (iso === toISO(yestDate)) return t('teacher_attendance_roster.yesterday', 'Yesterday');
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
@@ -91,6 +100,22 @@ function IconCheckCircle({ color }: { color: string }) {
     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
       <Polyline points="8.5 12 11 14.5 15.5 9.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconLock({ color, size = 16 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7z" stroke={color} strokeWidth={2} />
+      <Path d="M8 9V7a4 4 0 0 1 8 0v2" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconUnlock({ color, size = 16 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7z" stroke={color} strokeWidth={2} />
+      <Path d="M8 9V7a4 4 0 0 1 7.6-1.8" stroke={color} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -191,6 +216,13 @@ export default function TeacherAttendanceRosterScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+  // Set once Save Attendance succeeds for this exact section/subject/date -
+  // stops further swipes/quick-marks until the teacher explicitly unlocks
+  // it (e.g. to fix a mistake). Persisted per date via
+  // getRosterLock/setRosterLock so it survives leaving and reopening this
+  // screen, not just re-render.
+  const [isLocked, setIsLocked] = useState(false);
 
   const isFuture = fromISO(date).getTime() > fromISO(toISO(new Date())).getTime();
 
@@ -200,7 +232,10 @@ export default function TeacherAttendanceRosterScreen() {
     setError(null);
     setSaveMessage(null);
     try {
-      const data = await fetchAttendanceRoster(token, sectionId, subjectId, date);
+      const [data, locked] = await Promise.all([
+        fetchAttendanceRoster(token, sectionId, subjectId, date),
+        getRosterLock(token, sectionId, subjectId, date),
+      ]);
       setStudents(data.students);
       const initial: Record<number, AttendanceStatus> = {};
       const initialRemarks: Record<number, string> = {};
@@ -211,6 +246,7 @@ export default function TeacherAttendanceRosterScreen() {
       setStatuses(initial);
       setRemarksMap(initialRemarks);
       setCardIndex(0);
+      setIsLocked(locked);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.load_error', 'Could not load the roster.'));
     } finally {
@@ -222,6 +258,16 @@ export default function TeacherAttendanceRosterScreen() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token) return;
+    fetchMySchoolBranding(token)
+      .then((branding) => setSchoolName(branding.name))
+      .catch(() => {
+        // Best-effort only - the swipe card just falls back to a generic
+        // "STUDENT ID CARD" kicker label when this fails.
+      });
+  }, [token]);
+
   const shiftDate = (deltaDays: number) => {
     const d = fromISO(date);
     d.setDate(d.getDate() + deltaDays);
@@ -231,6 +277,7 @@ export default function TeacherAttendanceRosterScreen() {
   };
 
   const markAll = (status: AttendanceStatus) => {
+    if (isLocked) return;
     const next: Record<number, AttendanceStatus> = {};
     students.forEach((s) => {
       next[s.student_id] = status;
@@ -248,7 +295,7 @@ export default function TeacherAttendanceRosterScreen() {
   }, [statuses]);
 
   const handleSave = async () => {
-    if (!token || !sectionId) return;
+    if (!token || !sectionId || isLocked) return;
     if (markedCount < students.length) {
       setError(
         t('teacher_attendance_roster.mark_all_first', 'Mark all {total} students before saving ({done} done).')
@@ -278,11 +325,23 @@ export default function TeacherAttendanceRosterScreen() {
         const result = await submitAttendance(token, sectionId, subjectId, date, records);
         setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
       }
+      // Attendance is "done" for this date - lock the roster so it can't
+      // be re-marked by accident. setRosterLock persists it so it's still
+      // locked if the teacher leaves and comes back.
+      await setRosterLock(token, sectionId, subjectId, date, true);
+      setIsLocked(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.save_error', 'Could not save attendance.'));
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleUnlock = async () => {
+    if (!token || !sectionId) return;
+    await setRosterLock(token, sectionId, subjectId, date, false);
+    setIsLocked(false);
+    setSaveMessage(null);
   };
 
   return (
@@ -317,21 +376,40 @@ export default function TeacherAttendanceRosterScreen() {
         </TouchableOpacity>
       </View>
 
+      {isLocked ? (
+        <View style={styles.lockedBanner}>
+          <View style={styles.lockedBannerText}>
+            <IconLock color="#8A5CF6" />
+            <Text style={styles.lockedBannerLabel}>
+              {t('teacher_attendance_roster.locked_desc', 'Attendance for this day is done and locked.')}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.unlockBtn} onPress={handleUnlock} activeOpacity={0.85}>
+            <IconUnlock color="#8A5CF6" size={14} />
+            <Text style={styles.unlockBtnText}>{t('teacher_attendance_roster.unlock', 'Unlock to edit')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {!isLoading && students.length > 0 ? (
         <View style={styles.quickBar}>
-          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark')}</Text>
+          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark - mark everyone at once')}</Text>
           <View style={styles.quickBarChipRow}>
             {ATTENDANCE_STATUSES.map((status) => {
               const meta = STATUS_META[status];
               return (
                 <TouchableOpacity
                   key={status}
-                  style={[styles.quickBarChip, { backgroundColor: meta.soft, borderColor: meta.color }]}
+                  style={[
+                    styles.quickBarChip,
+                    { backgroundColor: meta.color, opacity: isLocked ? 0.4 : 1 },
+                  ]}
                   onPress={() => markAll(status)}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
+                  disabled={isLocked}
                 >
-                  <View style={[styles.quickBarChipDot, { backgroundColor: meta.color }]} />
-                  <Text style={[styles.quickBarChipText, { color: meta.color }]}>{statusLabel(status)}</Text>
+                  <View style={styles.quickBarChipDot} />
+                  <Text style={styles.quickBarChipText}>{statusLabel(status)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -342,10 +420,12 @@ export default function TeacherAttendanceRosterScreen() {
       {!isLoading && students.length > 0 ? (
         <View style={styles.legendBar}>
           <Text style={styles.legendText}>
-            {t(
-              'teacher_attendance_roster.swipe_legend',
-              'Swipe the card - right: Present · left: Absent · up: Excused · down: Late · tap for Leave/remarks',
-            )}
+            {isLocked
+              ? t('teacher_attendance_roster.locked_legend', 'Unlock this day to swipe or quick-mark again.')
+              : t(
+                  'teacher_attendance_roster.swipe_legend',
+                  'Swipe the card - right: Present · left: Absent · up: Excused · down: Late · tap for Leave/remarks',
+                )}
           </Text>
         </View>
       ) : null}
@@ -407,11 +487,14 @@ export default function TeacherAttendanceRosterScreen() {
                   statusLabel={currentStatus ? statusLabel(currentStatus) : null}
                   statusColor={meta?.color}
                   statusSoft={meta?.soft}
+                  schoolName={schoolName}
+                  disabled={isLocked}
                   onSwipeComplete={(direction) => {
+                    if (isLocked) return;
                     setStatuses((prev) => ({ ...prev, [item.student_id]: SWIPE_TO_STATUS[direction] }));
                     setCardIndex((i) => i + 1);
                   }}
-                  onPress={() => setDetailStudentId(item.student_id)}
+                  onPress={() => !isLocked && setDetailStudentId(item.student_id)}
                 />
               );
             })()
@@ -451,9 +534,19 @@ export default function TeacherAttendanceRosterScreen() {
 
       {!isLoading && students.length > 0 ? (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.85} onPress={handleSave} disabled={isSaving}>
+          <TouchableOpacity
+            style={[styles.saveButton, isLocked && styles.saveButtonLocked]}
+            activeOpacity={0.85}
+            onPress={handleSave}
+            disabled={isSaving || isLocked}
+          >
             {isSaving ? (
               <ActivityIndicator color="#FFFFFF" />
+            ) : isLocked ? (
+              <>
+                <IconLock color="#FFFFFF" size={15} />
+                <Text style={styles.saveButtonText}>{t('teacher_attendance_roster.done_locked', 'Done - Locked')}</Text>
+              </>
             ) : (
               <Text style={styles.saveButtonText}>{t('teacher_attendance_roster.save_attendance', 'Save Attendance')}</Text>
             )}
@@ -510,27 +603,53 @@ const styles = StyleSheet.create({
 
   quickBar: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: GLASS_SURFACE,
     borderBottomWidth: 1,
     borderBottomColor: GLASS_BORDER,
   },
-  quickBarLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
-  quickBarChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickBarLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 },
+  quickBarChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   quickBarChip: {
+    flex: 1,
+    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: 1.5,
+    justifyContent: 'center',
+    borderRadius: RADIUS.md,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    ...SHADOW.level1,
+    paddingVertical: 12,
+    ...SHADOW.level2,
   },
-  quickBarChipDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
-  quickBarChipText: { fontSize: 12, fontWeight: '700' },
+  quickBarChipDot: { width: 7, height: 7, borderRadius: 4, marginRight: 7, backgroundColor: 'rgba(255,255,255,0.85)' },
+  quickBarChipText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
 
   legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
   legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
+
+  lockedBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#F0EAFC',
+    borderRadius: RADIUS.md,
+    padding: 14,
+    gap: 10,
+  },
+  lockedBannerText: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  lockedBannerLabel: { flex: 1, fontSize: 12.5, fontWeight: '700', color: '#5B3FA0' },
+  unlockBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#8A5CF6',
+  },
+  unlockBtnText: { fontSize: 12.5, fontWeight: '700', color: '#8A5CF6' },
 
   deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'center' },
   bannerMargin: { marginHorizontal: 16, marginTop: 12 },
@@ -632,11 +751,14 @@ const styles = StyleSheet.create({
     borderTopColor: GLASS_BORDER,
   },
   saveButton: {
+    flexDirection: 'row',
+    gap: 8,
     backgroundColor: EMERALD,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  saveButtonLocked: { backgroundColor: '#8A5CF6' },
   saveButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });
