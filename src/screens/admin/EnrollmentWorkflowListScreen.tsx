@@ -416,8 +416,15 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     errorBannerText: { color: theme.danger, fontSize: 13, flex: 1, marginRight: 8 },
     retryText: { color: theme.danger, fontWeight: '700', fontSize: 13 },
 
-    filterBar: { paddingHorizontal: 16, paddingVertical: 12 },
+    // alignItems is required here - a horizontal ScrollView's content is a
+    // row flex container, which defaults to alignItems: 'stretch' with no
+    // explicit height on any child. Without this, every filterButton below
+    // stretches to fill the ScrollView's full cross-axis height instead of
+    // hugging its own padding, turning the pill row into near-full-screen
+    // vertical bars.
+    filterBar: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 0 },
     filterButton: {
+      alignSelf: 'flex-start',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
