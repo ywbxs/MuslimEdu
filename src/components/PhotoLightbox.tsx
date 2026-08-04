@@ -67,7 +67,7 @@ export default function PhotoLightbox({ visible, photos, initialIndex, onClose }
       Alert.alert(
         'Downloaded',
         Platform.OS === 'android'
-          ? 'Saved to your Downloads folder.'
+          ? 'Saved to your device.'
           : 'Saved in the app - open the Files app and look under "On My iPhone/iPad" to view it.',
       );
     } catch (err) {
