@@ -66,8 +66,18 @@ export default function CreatePostScreen() {
   const [compressing, setCompressing] = useState(false);
 
   const hasExistingImages = !!editPost && editPost.images.length > 0;
+  // Brand-new posts require a photo, same as Instagram - the caption is
+  // optional on top of it. Editing an existing post (which may predate this
+  // rule) and reposting (commenting on someone else's already-posted
+  // content) are unaffected - neither one is "posting text only" from
+  // scratch.
+  const isNewPost = !editPost && !repostOfId;
   const canSubmit =
-    (content.trim().length > 0 || images.length > 0 || hasExistingImages) && !submitting && !compressing;
+    (isNewPost
+      ? images.length > 0
+      : content.trim().length > 0 || images.length > 0 || hasExistingImages) &&
+    !submitting &&
+    !compressing;
 
   // Admins and teachers can author content (new posts, edits, or a repost
   // with a comment attached). Students only ever reach this screen via a
@@ -166,7 +176,13 @@ export default function CreatePostScreen() {
           <UserAvatar name={user?.name ?? '?'} photo={user?.photo} size={42} dotColor={null} />
           <TextInput
             style={styles.input}
-            placeholder={repostOfId ? t('create_post.comment_placeholder', 'Add a comment (optional)...') : t('create_post.mind_placeholder', "What's on your mind?")}
+            placeholder={
+              repostOfId
+                ? t('create_post.comment_placeholder', 'Add a comment (optional)...')
+                : isNewPost
+                ? t('create_post.caption_placeholder', 'Add a caption (optional)...')
+                : t('create_post.mind_placeholder', "What's on your mind?")
+            }
             placeholderTextColor={SUBTLE}
             value={content}
             onChangeText={setContent}
@@ -234,6 +250,11 @@ export default function CreatePostScreen() {
               </Text>
             )}
           </TouchableOpacity>
+          {images.length === 0 && (
+            <Text style={styles.photoRequiredHint}>
+              {t('create_post.photo_required_hint', 'A photo is required to post - text-only posts aren’t allowed.')}
+            </Text>
+          )}
         </View>
       )}
     </KeyboardAvoidingView>
@@ -283,4 +304,5 @@ const styles = StyleSheet.create({
   addPhotoBtn: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#EAF7EF' },
   addPhotoBtnDisabled: { opacity: 0.5 },
   addPhotoText: { color: EMERALD, fontWeight: '700', fontSize: 14 },
+  photoRequiredHint: { marginTop: 8, fontSize: 12, color: SUBTLE },
 });

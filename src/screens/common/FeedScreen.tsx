@@ -51,13 +51,6 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
     </Svg>
   );
 }
-function TextIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 6h14M12 6v13" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the deck - reached the same way every other card is, by swiping to
@@ -304,13 +297,10 @@ export default function FeedScreen() {
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
           <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', "What's on your mind?")}
+            {t('feed.composer_placeholder', 'Share a photo...')}
           </Text>
           <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
             <PhotoIcon />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <TextIcon />
           </TouchableOpacity>
         </TouchableOpacity>
       )}
