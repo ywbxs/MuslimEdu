@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,6 +90,7 @@ export default function FeedScreen() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
@@ -103,24 +105,34 @@ export default function FeedScreen() {
     return items;
   }, [posts, hasMore]);
 
-  const load = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await fetchFeed(token);
-      setPosts(res.posts);
-      setHasMore(res.hasMore);
-      setNextBeforeId(res.nextBeforeId);
-      setIndex(0);
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    } catch (err: any) {
-      Alert.alert(
-        t('feed.load_error_title', 'Couldn’t load feed'),
-        err?.message ?? t('common.try_again_full', 'Please try again.'),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [token, t]);
+  const load = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!token) return;
+      if (!opts.silent) setLoading(true);
+      try {
+        const res = await fetchFeed(token);
+        setPosts(res.posts);
+        setHasMore(res.hasMore);
+        setNextBeforeId(res.nextBeforeId);
+        setIndex(0);
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      } catch (err: any) {
+        Alert.alert(
+          t('feed.load_error_title', 'Couldn’t load feed'),
+          err?.message ?? t('common.try_again_full', 'Please try again.'),
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [token, t],
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load({ silent: true });
+  };
 
   useEffect(() => {
     load();
@@ -331,6 +343,7 @@ export default function FeedScreen() {
             disableIntervalMomentum
             contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
             getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             removeClippedSubviews={false}
             initialNumToRender={2}
             maxToRenderPerBatch={3}
