@@ -388,6 +388,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'staffIdCards',
+      title: t('admin_dashboard.staff_id_cards_title', 'Staff ID Cards'),
+      desc: t('admin_dashboard.staff_id_cards_desc', 'View and export teacher, cashier, and registrar ID cards'),
+      variant: 'soft',
+      route: 'StaffIdCards',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'classes',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),

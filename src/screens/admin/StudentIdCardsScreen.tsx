@@ -5,7 +5,7 @@ import { captureRef } from 'react-native-view-shot';
 import Svg, { Polyline, Line, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { fetchStudents, StudentSummary } from '../../services/adminService';
+import { fetchStudents, fetchChildProfile, StudentSummary, ChildProfile } from '../../services/adminService';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import { saveLocalFileToDevice } from '../../utils/downloadFile';
 import StudentIdCard, { CARD_THEMES, CardTheme } from '../../components/StudentIdCard';
@@ -89,7 +89,11 @@ export default function StudentIdCardsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schoolBackground, setSchoolBackground] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolAddress, setSchoolAddress] = useState<string | null>(null);
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   const [selected, setSelected] = useState<StudentSummary | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ChildProfile | null>(null);
   const [theme, setTheme] = useState<CardTheme>(CARD_THEMES[0]);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -106,6 +110,9 @@ export default function StudentIdCardsScreen() {
       .then(([list, branding]) => {
         setStudents(list);
         setSchoolBackground(branding?.id_card_background ?? null);
+        setSchoolName(branding?.name ?? null);
+        setSchoolAddress(branding?.address ?? null);
+        setSchoolLogo(branding?.logo ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : t('student_id_cards.load_error', 'Could not load students.')))
       .finally(() => setIsLoading(false));
@@ -135,6 +142,28 @@ export default function StudentIdCardsScreen() {
       setIsExporting(false);
     }
   };
+
+  // Full profile (DOB, emergency contact, signature) isn't in the list
+  // response - only the single-record admin_child_profile has it - so it's
+  // fetched on demand the moment a student is opened. The card still
+  // renders immediately with the summary fields while this resolves.
+  useEffect(() => {
+    if (!selected || !token) {
+      setSelectedProfile(null);
+      return;
+    }
+    let cancelled = false;
+    fetchChildProfile(token, selected.id)
+      .then((profile) => {
+        if (!cancelled) setSelectedProfile(profile);
+      })
+      .catch(() => {
+        // Best-effort - the card falls back to the summary fields.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, token]);
 
   const toggleSelectMode = () => {
     setIsSelectMode((prev) => !prev);
@@ -290,10 +319,20 @@ export default function StudentIdCardsScreen() {
                 <StudentIdCard
                   student={{
                     name: selected.name,
+                    nameAr: selectedProfile?.name_ar ?? selected.name_ar,
                     photo: selected.photo,
                     code: selected.code ?? String(selected.id),
+                    personType: 'student',
                     className: selected.class_name,
                     sectionName: selected.section_name,
+                    schoolName,
+                    schoolAddress,
+                    schoolLogoUrl: schoolLogo,
+                    dob: selectedProfile?.birthday,
+                    address: selectedProfile?.address ?? selected.address,
+                    emergencyContactName: selectedProfile?.emergency_contact_name,
+                    emergencyContactPhone: selectedProfile?.emergency_contact_phone,
+                    signatureUrl: selectedProfile?.signature,
                   }}
                   theme={theme}
                   backgroundImageUrl={schoolBackground}
@@ -329,10 +368,16 @@ export default function StudentIdCardsScreen() {
           <StudentIdCard
             student={{
               name: batchStudent.name,
+              nameAr: batchStudent.name_ar,
               photo: batchStudent.photo,
               code: batchStudent.code ?? String(batchStudent.id),
+              personType: 'student',
               className: batchStudent.class_name,
               sectionName: batchStudent.section_name,
+              schoolName,
+              schoolAddress,
+              schoolLogoUrl: schoolLogo,
+              address: batchStudent.address,
             }}
             theme={theme}
             backgroundImageUrl={schoolBackground}

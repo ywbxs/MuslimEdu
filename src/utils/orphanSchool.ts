@@ -114,11 +114,6 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AttendanceScan',
   'TeacherAttendanceHistory',
   'AdminAttendanceAnalytics',
-  // Student ID/QR cards - built to power the QR/ID-scan attendance method
-  // above, so it follows the same orphan-hidden scope.
-  'StudentIdCards',
-  'StudentIdCard',
-  'IdCardTemplate',
   // Grading / gradebook / exams
   'GradingSystems',
   'GradingSystemForm',

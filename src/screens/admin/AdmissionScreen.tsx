@@ -21,6 +21,7 @@ import FormField from './admission/components/FormField';
 import ChipGroup from './admission/components/ChipGroup';
 import PhotoField, { PreparedPhotoState } from './admission/components/PhotoField';
 import AdmissionSuccessModal from './admission/components/SuccessModal';
+import SignaturePad, { SignaturePadHandle } from '../../components/SignaturePad';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
@@ -34,6 +35,7 @@ import {
   ClassOption,
   SectionOption,
 } from '../../services/adminService';
+import { PickedPhoto } from '../../services/orphanService';
 
 // Plain text fields, grouped by which step they belong to. Class + Section
 // are ID pickers and the photo is its own step, both handled separately below.
@@ -46,9 +48,12 @@ const BASE_FIELDS: {
   secure?: boolean;
 }[] = [
   { key: 'name', label: 'Full name', required: true },
+  { key: 'name_ar', label: 'Arabic name' },
   { key: 'email', label: 'Email', keyboard: 'email-address', requiredWhenOrphan: true },
   { key: 'password', label: 'Password', required: true, secure: true },
   { key: 'phone', label: 'Phone', keyboard: 'phone-pad', requiredWhenOrphan: true },
+  { key: 'emergency_contact_name', label: 'Emergency contact name' },
+  { key: 'emergency_contact_phone', label: 'Emergency contact phone', keyboard: 'phone-pad' },
 ];
 
 // Orphan-profile fields. These only ever get saved on the backend when the
@@ -72,7 +77,7 @@ const ORPHAN_FIELDS: {
   { key: 'admission_reason', label: 'Admission reason', multiline: true, required: true },
 ];
 
-type StepKey = 'basic' | 'photo' | 'class' | 'orphan';
+type StepKey = 'basic' | 'photo' | 'signature' | 'class' | 'orphan';
 type FieldErrors = Partial<Record<string, string>>;
 
 function ChevronLeft({ size = 20 }: { size?: number }) {
@@ -103,6 +108,9 @@ export default function AdmissionScreen() {
   const [form, setForm] = useState<AdmissionInput>(emptyForm);
   const [photo, setPhoto] = useState<PreparedPhotoState | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [signature, setSignature] = useState<PickedPhoto | null>(null);
+  const [signatureEmpty, setSignatureEmpty] = useState(true);
+  const signaturePadRef = useRef<SignaturePadHandle>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -123,6 +131,9 @@ export default function AdmissionScreen() {
     setForm(emptyForm);
     setPhoto(null);
     setPhotoError(null);
+    setSignature(null);
+    setSignatureEmpty(true);
+    signaturePadRef.current?.clear();
     setFieldErrors({});
     setSubmitError(null);
     setStepIndex(0);
@@ -161,6 +172,7 @@ export default function AdmissionScreen() {
   const steps: { key: StepKey; title: string; subtitle: string }[] = [
     { key: 'basic', title: t('admission.step_basic_title', 'Basic Info'), subtitle: t('admission.step_basic_subtitle', "The student's name, login, and contact details.") },
     { key: 'photo', title: t('admission.step_photo_title', 'Profile Picture'), subtitle: t('admission.step_photo_subtitle', 'A clear photo helps staff recognize this student.') },
+    { key: 'signature', title: t('admission.step_signature_title', 'Signature'), subtitle: t('admission.step_signature_subtitle', "Draw the student's signature for their ID card - optional, skip if unavailable.") },
     // Orphan schools don't organize children by class/section - they're
     // identified by the unified student code (auto-generated on the backend,
     // or set manually via the "Student code" field in Basic Info) instead.
@@ -201,12 +213,20 @@ export default function AdmissionScreen() {
     return errs;
   };
 
-  const goNext = () => {
+  const goNext = async () => {
     let errs: FieldErrors = {};
     if (step.key === 'basic') errs = validateBasic();
     if (step.key === 'photo' && !photo) {
       setPhotoError(t('admission.error_photo_required', 'A profile picture is required.'));
       return;
+    }
+    if (step.key === 'signature' && !signatureEmpty && signaturePadRef.current) {
+      try {
+        const uri = await signaturePadRef.current.capture();
+        setSignature({ uri, fileName: 'signature.png', type: 'image/png' });
+      } catch {
+        // Best-effort - admission can proceed without a signature image.
+      }
     }
     if (step.key === 'class') errs = validateClass();
     if (step.key === 'orphan') errs = validateOrphan();
@@ -246,7 +266,7 @@ export default function AdmissionScreen() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const student = await admitStudent(token, form, photo);
+      const student = await admitStudent(token, form, photo, signature);
       const name = student?.name ?? form.name;
       resetForm();
       setAdmittedName(name);
@@ -309,6 +329,14 @@ export default function AdmissionScreen() {
             initial={form.name?.trim()?.[0]?.toUpperCase() ?? '?'}
             error={photoError}
             onErrorChange={setPhotoError}
+          />
+        );
+
+      case 'signature':
+        return (
+          <SignaturePad
+            ref={signaturePadRef}
+            onStrokeChange={(isEmpty) => setSignatureEmpty(isEmpty)}
           />
         );
 

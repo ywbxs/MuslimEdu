@@ -42,6 +42,7 @@ import TeacherAttendanceHistoryScreen from '../screens/teachers/TeacherAttendanc
 import AdminAttendanceAnalyticsScreen from '../screens/teachers/AdminAttendanceAnalyticsScreen';
 import StudentIdCardScreen from '../screens/student/StudentIdCardScreen';
 import StudentIdCardsScreen from '../screens/admin/StudentIdCardsScreen';
+import StaffIdCardsScreen from '../screens/admin/StaffIdCardsScreen';
 import IdCardTemplateScreen from '../screens/admin/IdCardTemplateScreen';
 import TeacherGradebookClassesScreen from '../screens/teachers/TeacherGradebookClassesScreen';
 import TeacherGradebookRosterScreen from '../screens/teachers/TeacherGradebookRosterScreen';
@@ -674,6 +675,7 @@ export default function RootNavigator() {
       <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
       <Stack.Screen name="StudentIdCard" component={StudentIdCardScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="StudentIdCards" component={StudentIdCardsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="StaffIdCards" component={StaffIdCardsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="IdCardTemplate" component={IdCardTemplateScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

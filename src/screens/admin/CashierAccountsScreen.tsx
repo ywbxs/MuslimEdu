@@ -106,16 +106,22 @@ function AddCashierSheet({
   const { token } = useAuth();
   const { t } = useLocale();
   const [name, setName] = useState('');
+  const [nameAr, setNameAr] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setName('');
+    setNameAr('');
     setEmail('');
     setPassword('');
     setPhone('');
+    setEmergencyContactName('');
+    setEmergencyContactPhone('');
   };
 
   const handleClose = () => {
@@ -138,9 +144,12 @@ function AddCashierSheet({
     try {
       const created = await addCashier(token, {
         name: name.trim(),
+        name_ar: nameAr.trim() || undefined,
         email: email.trim(),
         password: password.trim(),
         phone: phone.trim() || undefined,
+        emergency_contact_name: emergencyContactName.trim() || undefined,
+        emergency_contact_phone: emergencyContactPhone.trim() || undefined,
       });
       resetForm();
       onClose();
@@ -180,6 +189,15 @@ function AddCashierSheet({
               autoCapitalize="words"
             />
 
+            <Text style={styles.fieldLabel}>{t('cashier_accounts.name_ar_label', 'Arabic Name (optional)')}</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder={t('cashier_accounts.name_ar_placeholder', 'الاسم بالعربية')}
+              placeholderTextColor={SUBTLE}
+              value={nameAr}
+              onChangeText={setNameAr}
+            />
+
             <Text style={styles.fieldLabel}>{t('cashier_accounts.email_label', 'Email')}</Text>
             <TextInput
               style={styles.fieldInput}
@@ -209,6 +227,26 @@ function AddCashierSheet({
               placeholderTextColor={SUBTLE}
               value={phone}
               onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={styles.fieldLabel}>{t('cashier_accounts.emergency_contact_name_label', 'Emergency Contact Name (optional)')}</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder={t('cashier_accounts.emergency_contact_name_placeholder', 'e.g. Fatimah binti Ahmad')}
+              placeholderTextColor={SUBTLE}
+              value={emergencyContactName}
+              onChangeText={setEmergencyContactName}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.fieldLabel}>{t('cashier_accounts.emergency_contact_phone_label', 'Emergency Contact Phone (optional)')}</Text>
+            <TextInput
+              style={styles.fieldInput}
+              placeholder={t('cashier_accounts.emergency_contact_phone_placeholder', 'e.g. 012-345 6789')}
+              placeholderTextColor={SUBTLE}
+              value={emergencyContactPhone}
+              onChangeText={setEmergencyContactPhone}
               keyboardType="phone-pad"
             />
 

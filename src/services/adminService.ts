@@ -22,6 +22,7 @@ export type ChildStatus = 'active' | 'pending' | 'inactive';
 export interface StudentSummary {
   id: number;
   name: string;
+  name_ar?: string | null;
   email: string;
   photo: string | null;
   code?: string | null;
@@ -44,20 +45,27 @@ export interface StudentSummary {
  * Full profile payload for one child - what /admin_child_profile returns.
  * Extends the list-row shape (StudentSummary) with the extra detail only
  * the single-record endpoint sends: the nested orphan-only record
- * (guardian, health, admission info), null for non-orphan schools.
+ * (guardian, health, admission info), null for non-orphan schools, plus
+ * the ID-card-only fields (emergency contact, signature).
  */
 export interface ChildProfile extends StudentSummary {
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  signature?: string | null;
   orphan_profile?: OrphanProfile | null;
 }
 
 export interface AdmissionInput {
   name: string;
+  name_ar?: string;
   email?: string;
   password?: string;
   phone?: string;
   code?: string;
   class_id?: string;
   section_id?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
   // Orphan-profile fields. The backend only persists these when the admin's
   // school is orphanage-type (a school-level setting - see AuthUser.is_orphan),
   // but it's harmless to send them either way.
@@ -243,6 +251,7 @@ export async function fetchChildProfile(token: string, studentId: number): Promi
   return {
     ...record,
     photo: absoluteUrl(record.photo ?? null),
+    signature: record.signature ? absoluteUrl(record.signature) : null,
     status: (record.status ?? record.admission_status ?? 'active') as ChildStatus,
     joined_date: record.joined_date ?? record.admission_date ?? record.created_at ?? null,
     orphan_profile: record.orphan_profile ?? null,
@@ -294,6 +303,7 @@ export async function admitStudent(
   token: string,
   input: AdmissionInput,
   photo: PickedPhoto,
+  signature?: PickedPhoto | null,
 ): Promise<AdmittedStudent> {
   const form = new FormData();
   Object.entries(input).forEach(([key, value]) => {
@@ -306,6 +316,14 @@ export async function admitStudent(
     name: photo.fileName ?? 'profile.jpg',
     type: photo.type ?? 'image/jpeg',
   });
+  if (signature) {
+    // @ts-ignore - same file-upload shape as `photo` above.
+    form.append('signature', {
+      uri: signature.uri,
+      name: signature.fileName ?? 'signature.png',
+      type: signature.type ?? 'image/png',
+    });
+  }
 
   try {
     const data = await authedPost('/admin_admission_single', token, form);
