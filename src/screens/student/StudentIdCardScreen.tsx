@@ -46,6 +46,8 @@ export default function StudentIdCardScreen() {
   const [theme, setTheme] = useState<CardTheme>(CARD_THEMES[0]);
   const [sectionName, setSectionName] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolAddress, setSchoolAddress] = useState<string | null>(null);
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   const [schoolBackground, setSchoolBackground] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -60,6 +62,8 @@ export default function StudentIdCardScreen() {
     fetchMySchoolBranding(token)
       .then((branding) => {
         setSchoolName(branding.name);
+        setSchoolAddress(branding.address);
+        setSchoolLogo(branding.logo);
         setSchoolBackground(branding.id_card_background);
       })
       .catch(() => {
@@ -108,8 +112,12 @@ export default function StudentIdCardScreen() {
               name: user.name,
               photo: user.photo ?? null,
               code: user.code ?? String(user.id),
+              personType: 'student',
               sectionName,
               schoolName,
+              schoolAddress,
+              schoolLogoUrl: schoolLogo,
+              address: user.address ?? null,
             }}
             theme={theme}
             backgroundImageUrl={schoolBackground}

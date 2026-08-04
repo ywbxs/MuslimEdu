@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import UserAvatar from './UserAvatar';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
@@ -12,20 +13,40 @@ const SURFACE = COLORS.surface;
 
 export type SwipeDirection = 'right' | 'left' | 'up' | 'down';
 
-// Present/Absent/Excused/Late cover the 4 quick-swipe directions - same
-// mapping as SwipeableAttendanceCard (the old inline-list card), kept
-// identical so muscle memory carries over between the two views.
-const DIRECTION_META: Record<SwipeDirection, { label: string; color: string; soft: string }> = {
-  right: { label: 'Present', color: '#0F9D58', soft: '#E7F5EC' },
-  left: { label: 'Absent', color: '#E5484D', soft: '#FCEDED' },
-  up: { label: 'Excused', color: '#4C6EF5', soft: '#EAEDFC' },
-  down: { label: 'Late', color: '#B8860B', soft: '#FBF2DE' },
+export interface DirectionMeta {
+  code: string;
+  label: string;
+  color: string;
+}
+
+// Present/Absent/Excused/Late cover the 4 quick-swipe directions by default -
+// same mapping as before, used whenever a caller doesn't pass its own
+// (school-configured) directionMeta.
+const DEFAULT_DIRECTION_META: Record<SwipeDirection, DirectionMeta> = {
+  right: { code: 'present', label: 'Present', color: '#0F9D58' },
+  left: { code: 'absent', label: 'Absent', color: '#E5484D' },
+  up: { code: 'excused', label: 'Excused', color: '#4C6EF5' },
+  down: { code: 'late', label: 'Late', color: '#B8860B' },
 };
+
+// Lightens a "#RRGGBB" color into a soft translucent fill for badges/stamps,
+// so a dynamically-configured status color (from AttendanceStatusConfig)
+// always has a matching soft background without needing a second color
+// stored per status.
+function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) return hex;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 const SWIPE_THRESHOLD = 100;
 const TAP_SLOP = 6;
 const FLIGHT_DISTANCE = SCREEN_WIDTH * 1.15;
 const FLIGHT_DURATION = 220;
+const HEADER_HEIGHT = 64;
 
 function IconPin({ color, size = 15 }: { color: string; size?: number }) {
   return (
@@ -52,18 +73,23 @@ export interface BigAttendanceCardProps {
   statusLabel: string | null; // e.g. "Present" - null when not yet marked
   statusColor?: string | null;
   statusSoft?: string | null;
-  onSwipeComplete: (direction: SwipeDirection) => void;
+  // Maps the 4 swipe directions to the school's configured statuses (falls
+  // back to the present/absent/excused/late defaults above if omitted).
+  directionMeta?: Partial<Record<SwipeDirection, DirectionMeta>>;
+  onSwipeComplete: (direction: SwipeDirection, code: string) => void;
   onPress: () => void;
 }
 
 /**
- * One full-size, one-at-a-time attendance card - photo, name, address, age
- * and a status badge, marked by swiping the whole card off screen (like a
- * photo gallery / Tinder-style deck) instead of a row in a scrolling list.
- * Same 4-direction swipe-to-status gesture and tap-for-detail-sheet
- * behavior as SwipeableAttendanceCard, just at deck-card scale with a fly-
- * off exit animation - see TeacherAttendanceRosterScreen for how the parent
- * advances to the next student once onSwipeComplete fires.
+ * One full-size, one-at-a-time attendance card - styled like the school's ID
+ * card (gradient header band, avatar overlapping the header/body boundary)
+ * so the manual swipe-attendance flow visually matches the printed/exported
+ * ID card instead of looking like a plain unrelated profile card - marked by
+ * swiping the whole card off screen (like a photo gallery / Tinder-style
+ * deck) instead of a row in a scrolling list. Same 4-direction swipe-to-
+ * status gesture and tap-for-detail-sheet behavior as before, just at deck-
+ * card scale with a fly-off exit animation - see TeacherAttendanceRosterScreen
+ * for how the parent advances to the next student once onSwipeComplete fires.
  *
  * Built with RN's built-in PanResponder + Animated (no gesture-handler/
  * reanimated dependency), matching the rest of this app's swipe gestures.
@@ -77,12 +103,20 @@ export default function BigAttendanceCard({
   statusLabel,
   statusColor,
   statusSoft,
+  directionMeta,
   onSwipeComplete,
   onPress,
 }: BigAttendanceCardProps) {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [previewDirection, setPreviewDirection] = useState<SwipeDirection | null>(null);
   const [isFlying, setIsFlying] = useState(false);
+
+  const meta: Record<SwipeDirection, DirectionMeta> = {
+    right: directionMeta?.right ?? DEFAULT_DIRECTION_META.right,
+    left: directionMeta?.left ?? DEFAULT_DIRECTION_META.left,
+    up: directionMeta?.up ?? DEFAULT_DIRECTION_META.up,
+    down: directionMeta?.down ?? DEFAULT_DIRECTION_META.down,
+  };
 
   const rotate = pan.x.interpolate({
     inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
@@ -140,7 +174,7 @@ export default function BigAttendanceCard({
             : { x: gesture.dx, y: FLIGHT_DISTANCE };
 
         Animated.timing(pan, { toValue: target, duration: FLIGHT_DURATION, useNativeDriver: false }).start(() => {
-          onSwipeComplete(direction as SwipeDirection);
+          onSwipeComplete(direction as SwipeDirection, meta[direction as SwipeDirection].code);
         });
       },
       onPanResponderTerminate: () => {
@@ -150,9 +184,9 @@ export default function BigAttendanceCard({
     }),
   ).current;
 
-  const preview = previewDirection ? DIRECTION_META[previewDirection] : null;
+  const preview = previewDirection ? meta[previewDirection] : null;
   const badgeColor = preview?.color ?? statusColor ?? SUBTLE;
-  const badgeSoft = preview?.soft ?? statusSoft ?? '#F1F3F2';
+  const badgeSoft = preview ? withAlpha(preview.color, 0.12) : statusSoft ?? '#F1F3F2';
   const badgeText = preview?.label ?? statusLabel ?? 'Swipe to mark';
 
   return (
@@ -170,8 +204,10 @@ export default function BigAttendanceCard({
         </View>
       ) : null}
 
+      <LinearGradient colors={['#0B3D2E', '#0F9D58', '#22C55E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBand} />
+
       <View style={styles.photoWrap}>
-        <UserAvatar name={name} photo={photo} size={136} dotColor={null} ringColor="#FFFFFF" />
+        <UserAvatar name={name} photo={photo} size={120} dotColor={null} ringColor="#FFFFFF" />
       </View>
 
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
@@ -208,12 +244,19 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
     alignItems: 'center',
-    paddingTop: 28,
+    overflow: 'hidden',
     paddingBottom: 22,
     paddingHorizontal: 22,
     ...SHADOW.level3,
   },
-  photoWrap: { marginBottom: 16 },
+  headerBand: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
+  },
+  photoWrap: { marginTop: HEADER_HEIGHT - 60, marginBottom: 16 },
   name: { fontSize: 21, fontWeight: '800', color: INK, textAlign: 'center' },
   subtitle: { fontSize: 13, color: SUBTLE, marginTop: 3, textAlign: 'center' },
   infoWrap: { width: '100%', marginTop: 18, gap: 10 },

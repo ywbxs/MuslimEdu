@@ -198,6 +198,7 @@ export async function saveInstitutionProfile(
 
 export interface SchoolBranding {
   name: string | null;
+  address: string | null;
   logo: string | null;
   id_card_background: string | null;
 }
@@ -216,6 +217,7 @@ export async function fetchMySchoolBranding(token: string): Promise<SchoolBrandi
     const data = await authedRequest('/my_school_branding', token);
     const branding: SchoolBranding = {
       name: data.name ?? null,
+      address: data.address ?? null,
       logo: absoluteUrl(data.logo ?? null),
       id_card_background: absoluteUrl(data.id_card_background ?? null),
     };

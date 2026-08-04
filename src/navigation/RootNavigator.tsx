@@ -42,6 +42,7 @@ import TeacherAttendanceHistoryScreen from '../screens/teachers/TeacherAttendanc
 import AdminAttendanceAnalyticsScreen from '../screens/teachers/AdminAttendanceAnalyticsScreen';
 import StudentIdCardScreen from '../screens/student/StudentIdCardScreen';
 import StudentIdCardsScreen from '../screens/admin/StudentIdCardsScreen';
+import StaffIdCardsScreen from '../screens/admin/StaffIdCardsScreen';
 import IdCardTemplateScreen from '../screens/admin/IdCardTemplateScreen';
 import TeacherGradebookClassesScreen from '../screens/teachers/TeacherGradebookClassesScreen';
 import TeacherGradebookRosterScreen from '../screens/teachers/TeacherGradebookRosterScreen';
@@ -93,7 +94,6 @@ import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
 import SubjectFormScreen from '../screens/admin/SubjectFormScreen';
-import StudentNumberConfigScreen from '../screens/admin/StudentNumberConfigScreen';
 import ChatBoxScreen from '../screens/chat/ChatBoxScreen';
 import CreatePostScreen from '../screens/common/CreatePostScreen';
 import PostCommentsScreen from '../screens/common/PostCommentsScreen';
@@ -120,7 +120,7 @@ import DocumentTemplateScreen from '../screens/admin/DocumentTemplateScreen';
 import GradeReleaseScreen from '../screens/admin/GradeReleaseScreen';
 import IntegrationSettingsScreen from '../screens/admin/IntegrationSettingsScreen';
 import LocalizationSettingsScreen from '../screens/admin/LocalizationSettingsScreen';
-import StudentIdConfigScreen from '../screens/admin/StudentIdConfigScreen';
+import StudentStaffCodeSetupScreen from '../screens/admin/StudentStaffCodeSetupScreen';
 import AttendanceConfigScreen from '../screens/admin/AttendanceConfigScreen';
 import PermissionsScreen from '../screens/admin/PermissionsScreen';
 import SecuritySettingsScreen from '../screens/admin/SecuritySettingsScreen';
@@ -147,6 +147,13 @@ import CashierAccountsScreen from '../screens/admin/CashierAccountsScreen';
 import CashierProfileScreen from '../screens/admin/CashierProfileScreen';
 import RegistrarAccountsScreen from '../screens/admin/RegistrarAccountsScreen';
 import AcademicUnavailableScreen from '../screens/common/AcademicUnavailableScreen';
+import SchoolListScreen from '../screens/superadmin/SchoolListScreen';
+import SchoolAdminsScreen from '../screens/superadmin/SchoolAdminsScreen';
+import ApiLockerScreen from '../screens/superadmin/ApiLockerScreen';
+import BackendStatusScreen from '../screens/superadmin/BackendStatusScreen';
+import PostModerationScreen from '../screens/superadmin/PostModerationScreen';
+import TrashScreen from '../screens/superadmin/TrashScreen';
+import ActivityLogScreen from '../screens/superadmin/ActivityLogScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -344,11 +351,6 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="ProgramForm"
                 component={ProgramFormScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
-              <Stack.Screen
-                name="StudentNumberConfig"
-                component={StudentNumberConfigScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
@@ -649,7 +651,7 @@ export default function RootNavigator() {
       <Stack.Screen name="GradeRelease" component={GradeReleaseScreen} />
       <Stack.Screen name="IntegrationSettings" component={IntegrationSettingsScreen} />
       <Stack.Screen name="LocalizationSettings" component={LocalizationSettingsScreen} />
-      <Stack.Screen name="StudentIdConfig" component={StudentIdConfigScreen} />
+      <Stack.Screen name="StudentStaffCodeSetup" component={StudentStaffCodeSetupScreen} />
       <Stack.Screen name="AttendanceConfig" component={AttendanceConfigScreen} />
       <Stack.Screen name="Permissions" component={PermissionsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
@@ -673,9 +675,17 @@ export default function RootNavigator() {
       <Stack.Screen name="RegistrarAccounts" component={RegistrarAccountsScreen} />
       <Stack.Screen name="StudentIdCard" component={StudentIdCardScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="StudentIdCards" component={StudentIdCardsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="StaffIdCards" component={StaffIdCardsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="IdCardTemplate" component={IdCardTemplateScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="SuperAdminSchoolList" component={SchoolListScreen} />
+      <Stack.Screen name="SuperAdminSchoolAdmins" component={SchoolAdminsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminApiLocker" component={ApiLockerScreen} />
+      <Stack.Screen name="SuperAdminBackendStatus" component={BackendStatusScreen} />
+      <Stack.Screen name="SuperAdminPostModeration" component={PostModerationScreen} />
+      <Stack.Screen name="SuperAdminTrash" component={TrashScreen} />
+      <Stack.Screen name="SuperAdminActivityLog" component={ActivityLogScreen} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

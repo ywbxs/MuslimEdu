@@ -48,9 +48,17 @@ const RANGE_PRESETS: { key: string; label: string; days: number }[] = [
 function toISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function formatDateHeader(iso: string) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+// Backend now sends a bare "Y-m-d" (see teacher_attendance_history's fix
+// for the "Invalid Date" bug), but this stays defensive against a full ISO
+// timestamp too ("2026-08-01T00:00:00.000000Z") - taking only the date
+// portion before the 'T' - so a stale/uncached record shape never breaks
+// the header instead of silently mis-parsing it.
+function formatDateHeader(raw: string) {
+  const datePart = raw.split('T')[0];
+  const [y, m, d] = datePart.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function IconChevronLeft({ color }: { color: string }) {

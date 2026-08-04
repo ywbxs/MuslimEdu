@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
@@ -7,8 +7,11 @@ import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, ClassOption } from '../../services/adminService';
 import {
   fetchAttendanceAnalytics,
+  fetchAttendanceLocks,
+  unlockAttendance,
   AttendanceAnalytics,
   AttendanceStatusCounts,
+  AttendanceLockRow,
 } from '../../services/adminAttendanceService';
 import { Skeleton } from '../../components/Skeleton';
 
@@ -140,6 +143,10 @@ export default function AdminAttendanceAnalyticsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [locks, setLocks] = useState<AttendanceLockRow[]>([]);
+  const [isLoadingLocks, setIsLoadingLocks] = useState(true);
+  const [unlockingKey, setUnlockingKey] = useState<string | null>(null);
+
   const range = useMemo(() => {
     const preset = RANGE_PRESETS.find((r) => r.key === rangeKey) ?? RANGE_PRESETS[1];
     const to = new Date();
@@ -178,6 +185,42 @@ export default function AdminAttendanceAnalyticsScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadLocks = useCallback(async () => {
+    if (!token) return;
+    setIsLoadingLocks(true);
+    try {
+      const data = await fetchAttendanceLocks(token);
+      setLocks(data);
+    } catch {
+      // Best-effort - the locked-attendance card just shows empty rather
+      // than blocking the rest of the analytics screen from loading.
+    } finally {
+      setIsLoadingLocks(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadLocks();
+  }, [loadLocks]);
+
+  const lockKey = (l: AttendanceLockRow) => `${l.section_id}:${l.subject_id}:${l.date}`;
+
+  const handleUnlock = async (l: AttendanceLockRow) => {
+    if (!token) return;
+    setUnlockingKey(lockKey(l));
+    try {
+      await unlockAttendance(token, l.section_id, l.subject_id, l.date);
+      setLocks((prev) => prev.filter((row) => lockKey(row) !== lockKey(l)));
+    } catch (err) {
+      Alert.alert(
+        t('admin_attendance_analytics.unlock_error_title', 'Could not unlock'),
+        err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'),
+      );
+    } finally {
+      setUnlockingKey(null);
+    }
+  };
 
   const counts = analytics?.status_counts ?? { present: 0, late: 0, absent: 0, excused: 0, leave: 0 };
 
@@ -277,6 +320,52 @@ export default function AdminAttendanceAnalyticsScreen() {
             </View>
           )}
         </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t('admin_attendance_analytics.locked_title', 'Locked attendance')}</Text>
+          <Text style={styles.cardSubtitle}>
+            {t('admin_attendance_analytics.locked_subtitle', 'Submitted days a teacher can no longer edit - unlock one if they made a mistake.')}
+          </Text>
+
+          {isLoadingLocks ? (
+            <Skeleton width="100%" height={48} borderRadius={12} style={{ marginTop: 12 }} />
+          ) : locks.length === 0 ? (
+            <Text style={styles.lockedEmptyText}>{t('admin_attendance_analytics.locked_empty', 'Nothing is currently locked.')}</Text>
+          ) : (
+            <View style={{ marginTop: 12, gap: 8 }}>
+              {locks.map((l) => {
+                const key = lockKey(l);
+                return (
+                  <View key={key} style={styles.lockedRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.lockedRowTitle} numberOfLines={1}>
+                        {l.section_name ?? t('admin_attendance_analytics.locked_unknown_section', 'Section')}
+                        {l.class_name ? ` · ${l.class_name}` : ''}
+                        {l.subject_name ? ` · ${l.subject_name}` : ''}
+                      </Text>
+                      <Text style={styles.lockedRowMeta} numberOfLines={1}>
+                        {l.date}
+                        {l.locked_by_name ? ` · ${t('admin_attendance_analytics.locked_by_prefix', 'by')} ${l.locked_by_name}` : ''}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.unlockBtn}
+                      onPress={() => handleUnlock(l)}
+                      disabled={unlockingKey === key}
+                      activeOpacity={0.85}
+                    >
+                      {unlockingKey === key ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <Text style={styles.unlockBtnText}>{t('admin_attendance_analytics.unlock', 'Unlock')}</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -349,4 +438,26 @@ const styles = StyleSheet.create({
 
   trendEmpty: { paddingVertical: 30, alignItems: 'center' },
   trendEmptyText: { fontSize: 12.5, color: SUBTLE },
+
+  lockedEmptyText: { fontSize: 12.5, color: SUBTLE, marginTop: 12 },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FBF2DE',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  lockedRowTitle: { fontSize: 13, fontWeight: '700', color: INK },
+  lockedRowMeta: { fontSize: 11.5, color: SUBTLE, marginTop: 2 },
+  unlockBtn: {
+    backgroundColor: EMERALD,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  unlockBtnText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
 });

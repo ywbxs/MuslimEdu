@@ -48,7 +48,13 @@ async function authedPost(path: string, token: string, body: Record<string, any>
 
 export const HOMEROOM_SUBJECT_ID = 0;
 
-export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused' | 'leave';
+// Widened from a fixed 5-value union to a plain string: attendance statuses
+// are now school-configurable (see AttendanceStatusConfig /
+// fetchTeacherAttendanceStatuses below), so a status "code" is whatever the
+// admin configured, not necessarily one of the original 5. The 5 defaults
+// below remain the fallback for a school that hasn't configured any yet
+// (both server- and client-side).
+export type AttendanceStatus = string;
 
 export const ATTENDANCE_STATUSES: AttendanceStatus[] = ['present', 'late', 'absent', 'excused', 'leave'];
 
@@ -98,6 +104,12 @@ export interface AttendanceRoster {
   date: string;
   students: RosterStudent[];
   summary: AttendanceSummary;
+  // Once a teacher submits this section/subject/date ("done"), it locks -
+  // no more edits/resubmits until an admin unlocks it. Optional so this
+  // keeps working against an older backend that doesn't send lock state yet.
+  locked?: boolean;
+  locked_at?: string | null;
+  locked_by_name?: string | null;
 }
 
 export interface AttendanceRecordInput {
@@ -115,6 +127,27 @@ export interface HistoryRecord {
   status: AttendanceStatus;
   check_in_time: string | null;
   remarks: string | null;
+}
+
+export interface DynamicAttendanceStatus {
+  id: number;
+  code: string;
+  label: string;
+  color: string | null;
+  counts_as_present: boolean;
+  requires_remark: boolean;
+  sort_order: number;
+}
+
+/**
+ * The school's admin-configured attendance statuses (see AttendanceConfigScreen),
+ * read via a teacher-reachable route since admin_attendance_status_list is
+ * admin-only. Falls back to the same 5 hardcoded defaults server-side for a
+ * school that hasn't configured any yet, so this always returns a usable list.
+ */
+export async function fetchTeacherAttendanceStatuses(token: string): Promise<DynamicAttendanceStatus[]> {
+  const data = await authedPost('/teacher_attendance_statuses', token);
+  return data.statuses ?? [];
 }
 
 // --- Teacher: which classes/subjects they can take attendance for ---
@@ -150,6 +183,9 @@ export async function fetchAttendanceRoster(
         ...s,
         photo: absoluteUrl(s.photo ?? null),
       })),
+      locked: !!data.locked,
+      locked_at: data.locked_at ?? null,
+      locked_by_name: data.locked_by_name ?? null,
     };
     AsyncStorage.setItem(cacheKey, JSON.stringify(roster)).catch(() => {
       // Best-effort cache write - losing it just means a future offline
@@ -175,7 +211,7 @@ export async function submitAttendance(
   subjectId: number,
   date: string,
   records: AttendanceRecordInput[]
-): Promise<{ message: string; summary: AttendanceSummary; count: number }> {
+): Promise<{ message: string; summary: AttendanceSummary; count: number; locked?: boolean; locked_at?: string | null }> {
   return authedPost('/teacher_attendance_submit', token, {
     section_id: sectionId,
     subject_id: subjectId,

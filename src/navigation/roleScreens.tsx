@@ -6,6 +6,7 @@ import TeacherDashboard from '../screens/dashboards/TeacherDashboard';
 import CashierDashboard from '../screens/dashboards/CashierDashboard';
 import RegistrarDashboard from '../screens/dashboards/RegistrarDashboard';
 import PlaceholderDashboard from '../screens/dashboards/PlaceholderDashboard';
+import SuperAdminDashboard from '../screens/dashboards/SuperAdminDashboard';
 
 /**
  * Maps each role to the component that should render as their dashboard.
@@ -27,7 +28,7 @@ export function getDashboardForRole(role: UserRole, footer?: React.ReactNode): R
       return <AdminDashboard footer={footer} />;
 
     case 'superadmin':
-      return <PlaceholderDashboard roleLabel="Super Admin" footer={footer} />;
+      return <SuperAdminDashboard footer={footer} />;
 
     case 'teacher':
       return <TeacherDashboard footer={footer} />;

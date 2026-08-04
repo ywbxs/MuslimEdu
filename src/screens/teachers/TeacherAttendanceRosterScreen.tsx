@@ -8,7 +8,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -17,13 +17,15 @@ import {
   fetchAttendanceRoster,
   submitAttendance,
   applyRecordsToCachedRoster,
+  fetchTeacherAttendanceStatuses,
   RosterStudent,
   AttendanceStatus,
+  DynamicAttendanceStatus,
   ATTENDANCE_STATUSES,
 } from '../../services/teacherAttendanceService';
 import { enqueueAttendanceSubmit } from '../../services/offlineQueue';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
-import BigAttendanceCard, { SwipeDirection } from '../../components/BigAttendanceCard';
+import BigAttendanceCard, { SwipeDirection, DirectionMeta } from '../../components/BigAttendanceCard';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, RADIUS } from '../../theme/glass';
@@ -38,13 +40,45 @@ const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 
-const STATUS_META: Record<AttendanceStatus, { label: string; short: string; color: string; soft: string }> = {
+interface StatusMeta {
+  label: string;
+  short: string;
+  color: string;
+  soft: string;
+}
+
+// Fallback for the brief window before fetchTeacherAttendanceStatuses()
+// resolves (and for a school with no configured statuses at all, though the
+// backend already returns these same 5 defaults in that case too).
+const DEFAULT_STATUS_META: Record<string, StatusMeta> = {
   present: { label: 'Present', short: 'P', color: '#0F9D58', soft: '#E7F5EC' },
   late: { label: 'Late', short: 'L', color: '#B8860B', soft: '#FBF2DE' },
   absent: { label: 'Absent', short: 'A', color: '#E5484D', soft: '#FCEDED' },
   excused: { label: 'Excused', short: 'E', color: '#4C6EF5', soft: '#EAEDFC' },
   leave: { label: 'Leave', short: 'Lv', color: '#8A5CF6', soft: '#F0EAFC' },
 };
+
+// Lightens a "#RRGGBB" color into a soft translucent fill, so a dynamically
+// configured status color always has a matching soft background without
+// needing a second color stored per status.
+function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) return hex;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function buildStatusMeta(statuses: DynamicAttendanceStatus[]): Record<string, StatusMeta> {
+  if (statuses.length === 0) return DEFAULT_STATUS_META;
+  const meta: Record<string, StatusMeta> = {};
+  statuses.forEach((s) => {
+    const color = s.color ?? '#8A9099';
+    meta[s.code] = { label: s.label, short: s.label.slice(0, 2), color, soft: withAlpha(color, 0.12) };
+  });
+  return meta;
+}
 
 function toISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -95,16 +129,13 @@ function IconCheckCircle({ color }: { color: string }) {
   );
 }
 
-// right=Present, left=Absent, up=Excused, down=Late - the 4 quick swipe
-// directions on BigAttendanceCard. Leave (and remarks) don't get a swipe
-// direction; they're set from the detail sheet opened by tapping a card
-// instead - see StudentDetailSheet below.
-const SWIPE_TO_STATUS: Record<SwipeDirection, AttendanceStatus> = {
-  right: 'present',
-  left: 'absent',
-  up: 'excused',
-  down: 'late',
-};
+// The first 4 configured statuses (by sort_order) map to the 4 swipe
+// directions on BigAttendanceCard, in this fixed position order. Any
+// statuses beyond the first 4 don't get a swipe direction; they're only
+// reachable from the detail sheet opened by tapping a card instead - see
+// StudentDetailSheet below (mirrors how "leave" was the 5th, sheet-only
+// status before statuses became school-configurable).
+const SWIPE_DIRECTION_ORDER: SwipeDirection[] = ['right', 'left', 'up', 'down'];
 
 // Opened by tapping (not swiping) a card - lets a teacher pick any of the 5
 // statuses explicitly (covers Leave, which has no swipe direction) and add
@@ -114,6 +145,8 @@ function StudentDetailSheet({
   studentName,
   status,
   remarks,
+  statuses,
+  statusMeta,
   onChangeStatus,
   onChangeRemarks,
   onClose,
@@ -122,6 +155,8 @@ function StudentDetailSheet({
   studentName: string;
   status: AttendanceStatus | null;
   remarks: string;
+  statuses: DynamicAttendanceStatus[];
+  statusMeta: Record<string, StatusMeta>;
   onChangeStatus: (status: AttendanceStatus) => void;
   onChangeRemarks: (text: string) => void;
   onClose: () => void;
@@ -134,18 +169,18 @@ function StudentDetailSheet({
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle} numberOfLines={1}>{studentName}</Text>
           <View style={styles.sheetStatusRow}>
-            {ATTENDANCE_STATUSES.map((s) => {
-              const meta = STATUS_META[s];
-              const active = status === s;
+            {statuses.map((s) => {
+              const meta = statusMeta[s.code] ?? DEFAULT_STATUS_META.present;
+              const active = status === s.code;
               return (
                 <TouchableOpacity
-                  key={s}
+                  key={s.code}
                   style={[styles.sheetStatusChip, { backgroundColor: active ? meta.color : meta.soft }]}
                   activeOpacity={0.8}
-                  onPress={() => onChangeStatus(s)}
+                  onPress={() => onChangeStatus(s.code)}
                 >
                   <Text style={[styles.sheetStatusChipText, { color: active ? '#FFFFFF' : meta.color }]}>
-                    {t(`teacher_attendance_roster.status_${s}`, meta.label)}
+                    {t(`teacher_attendance_roster.status_${s.code}`, meta.label)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -177,7 +212,46 @@ export default function TeacherAttendanceRosterScreen() {
   const { token } = useAuth();
   const { t } = useLocale();
   const { isOnline } = useOfflineQueue();
-  const statusLabel = (status: AttendanceStatus) => t(`teacher_attendance_roster.status_${status}`, STATUS_META[status].label);
+
+  const [configuredStatuses, setConfiguredStatuses] = useState<DynamicAttendanceStatus[]>([]);
+  const statusMeta = useMemo(() => buildStatusMeta(configuredStatuses), [configuredStatuses]);
+  const statusLabel = (status: AttendanceStatus) =>
+    t(`teacher_attendance_roster.status_${status}`, (statusMeta[status] ?? DEFAULT_STATUS_META.present).label);
+
+  const effectiveStatuses: DynamicAttendanceStatus[] = useMemo(
+    () =>
+      configuredStatuses.length > 0
+        ? configuredStatuses
+        : ATTENDANCE_STATUSES.map((code) => ({
+            id: 0,
+            code,
+            label: DEFAULT_STATUS_META[code]?.label ?? code,
+            color: DEFAULT_STATUS_META[code]?.color ?? null,
+            counts_as_present: false,
+            requires_remark: false,
+            sort_order: 0,
+          })),
+    [configuredStatuses],
+  );
+
+  const directionMeta: Partial<Record<SwipeDirection, DirectionMeta>> = useMemo(() => {
+    const result: Partial<Record<SwipeDirection, DirectionMeta>> = {};
+    effectiveStatuses.slice(0, 4).forEach((s, i) => {
+      const meta = statusMeta[s.code] ?? DEFAULT_STATUS_META.present;
+      result[SWIPE_DIRECTION_ORDER[i]] = { code: s.code, label: meta.label, color: meta.color };
+    });
+    return result;
+  }, [effectiveStatuses, statusMeta]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchTeacherAttendanceStatuses(token)
+      .then(setConfiguredStatuses)
+      .catch(() => {
+        // Falls back to DEFAULT_STATUS_META - the quick-mark bar and swipe
+        // card still work with the original 5 statuses.
+      });
+  }, [token]);
 
   const [date, setDate] = useState<string>(initialDate ?? toISO(new Date()));
   const [students, setStudents] = useState<RosterStudent[]>([]);
@@ -191,6 +265,9 @@ export default function TeacherAttendanceRosterScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [lockedAt, setLockedAt] = useState<string | null>(null);
+  const [lockedByName, setLockedByName] = useState<string | null>(null);
 
   const isFuture = fromISO(date).getTime() > fromISO(toISO(new Date())).getTime();
 
@@ -211,6 +288,9 @@ export default function TeacherAttendanceRosterScreen() {
       setStatuses(initial);
       setRemarksMap(initialRemarks);
       setCardIndex(0);
+      setLocked(!!data.locked);
+      setLockedAt(data.locked_at ?? null);
+      setLockedByName(data.locked_by_name ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.load_error', 'Could not load the roster.'));
     } finally {
@@ -218,9 +298,18 @@ export default function TeacherAttendanceRosterScreen() {
     }
   }, [token, sectionId, subjectId, date, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // useFocusEffect, not a plain useEffect: a plain effect only reruns when
+  // load()'s own deps change (token, section, subject, date) - navigating
+  // away (e.g. to History) and back to this exact same screen instance
+  // doesn't change any of those, so a leftover error from an earlier failed
+  // save used to sit on screen indefinitely instead of clearing on the next
+  // real visit. This also covers the initial mount, so no separate
+  // useEffect is needed alongside it.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const shiftDate = (deltaDays: number) => {
     const d = fromISO(date);
@@ -248,7 +337,7 @@ export default function TeacherAttendanceRosterScreen() {
   }, [statuses]);
 
   const handleSave = async () => {
-    if (!token || !sectionId) return;
+    if (!token || !sectionId || locked) return;
     if (markedCount < students.length) {
       setError(
         t('teacher_attendance_roster.mark_all_first', 'Mark all {total} students before saving ({done} done).')
@@ -277,6 +366,10 @@ export default function TeacherAttendanceRosterScreen() {
       } else {
         const result = await submitAttendance(token, sectionId, subjectId, date, records);
         setSaveMessage(result.message ?? t('teacher_attendance_roster.saved', 'Attendance saved.'));
+        if (result.locked) {
+          setLocked(true);
+          setLockedAt(result.locked_at ?? null);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_roster.save_error', 'Could not save attendance.'));
@@ -317,12 +410,25 @@ export default function TeacherAttendanceRosterScreen() {
         </TouchableOpacity>
       </View>
 
-      {!isLoading && students.length > 0 ? (
+      {!isLoading && locked ? (
+        <View style={[styles.lockBanner, styles.bannerMargin]}>
+          <Text style={styles.lockBannerTitle}>
+            {t('teacher_attendance_roster.locked_title', 'Attendance locked')}
+          </Text>
+          <Text style={styles.lockBannerText}>
+            {lockedByName
+              ? t('teacher_attendance_roster.locked_by', 'Submitted by {name}. Ask an admin to unlock this day to make changes.').replace('{name}', lockedByName)
+              : t('teacher_attendance_roster.locked_generic', 'This day has already been submitted. Ask an admin to unlock it to make changes.')}
+          </Text>
+        </View>
+      ) : null}
+
+      {!isLoading && students.length > 0 && !locked ? (
         <View style={styles.quickBar}>
           <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark')}</Text>
           <View style={styles.quickBarChipRow}>
-            {ATTENDANCE_STATUSES.map((status) => {
-              const meta = STATUS_META[status];
+            {effectiveStatuses.map((s) => s.code).map((status) => {
+              const meta = statusMeta[status] ?? DEFAULT_STATUS_META.present;
               return (
                 <TouchableOpacity
                   key={status}
@@ -339,13 +445,15 @@ export default function TeacherAttendanceRosterScreen() {
         </View>
       ) : null}
 
-      {!isLoading && students.length > 0 ? (
+      {!isLoading && students.length > 0 && !locked ? (
         <View style={styles.legendBar}>
           <Text style={styles.legendText}>
-            {t(
-              'teacher_attendance_roster.swipe_legend',
-              'Swipe the card - right: Present · left: Absent · up: Excused · down: Late · tap for Leave/remarks',
-            )}
+            {t('teacher_attendance_roster.swipe_legend_prefix', 'Swipe the card')}
+            {directionMeta.right ? ` - right: ${directionMeta.right.label}` : ''}
+            {directionMeta.left ? ` · left: ${directionMeta.left.label}` : ''}
+            {directionMeta.up ? ` · up: ${directionMeta.up.label}` : ''}
+            {directionMeta.down ? ` · down: ${directionMeta.down.label}` : ''}
+            {' · '}{t('teacher_attendance_roster.swipe_legend_suffix', 'tap for more / remarks')}
           </Text>
         </View>
       ) : null}
@@ -377,6 +485,26 @@ export default function TeacherAttendanceRosterScreen() {
             <Text style={styles.emptyDesc}>{t('teacher_attendance_roster.empty_desc', 'This section has no enrolled students for the running session.')}</Text>
           </View>
         ) : null
+      ) : locked ? (
+        // Read-only once locked - no swipeable deck, since nothing here can
+        // be saved anyway (handleSave bails out early, and the backend
+        // rejects a resubmit too). Just a plain list of what was submitted.
+        <View style={styles.lockedListWrap}>
+          {students.map((s) => {
+            const status = statuses[s.student_id] ?? null;
+            const meta = status ? statusMeta[status] ?? DEFAULT_STATUS_META.present : null;
+            return (
+              <View key={s.student_id} style={styles.lockedListRow}>
+                <Text style={styles.lockedListName} numberOfLines={1}>{s.student_name}</Text>
+                {meta ? (
+                  <View style={[styles.lockedListPill, { backgroundColor: meta.soft }]}>
+                    <Text style={[styles.lockedListPillText, { color: meta.color }]}>{statusLabel(status as AttendanceStatus)}</Text>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
       ) : (
         <View style={styles.deckWrap}>
           <Text style={styles.progressText}>
@@ -386,7 +514,7 @@ export default function TeacherAttendanceRosterScreen() {
             {Object.entries(summaryCounts).length > 0
               ? '  ·  ' +
                 Object.entries(summaryCounts)
-                  .map(([s, c]) => `${STATUS_META[s as AttendanceStatus].short} ${c}`)
+                  .map(([s, c]) => `${(statusMeta[s] ?? DEFAULT_STATUS_META.present).short} ${c}`)
                   .join('  ')
               : ''}
           </Text>
@@ -395,7 +523,7 @@ export default function TeacherAttendanceRosterScreen() {
             (() => {
               const item = students[cardIndex];
               const currentStatus = statuses[item.student_id] ?? null;
-              const meta = currentStatus ? STATUS_META[currentStatus] : null;
+              const meta = currentStatus ? statusMeta[currentStatus] ?? DEFAULT_STATUS_META.present : null;
               return (
                 <BigAttendanceCard
                   key={item.student_id}
@@ -407,8 +535,9 @@ export default function TeacherAttendanceRosterScreen() {
                   statusLabel={currentStatus ? statusLabel(currentStatus) : null}
                   statusColor={meta?.color}
                   statusSoft={meta?.soft}
-                  onSwipeComplete={(direction) => {
-                    setStatuses((prev) => ({ ...prev, [item.student_id]: SWIPE_TO_STATUS[direction] }));
+                  directionMeta={directionMeta}
+                  onSwipeComplete={(_direction, code) => {
+                    setStatuses((prev) => ({ ...prev, [item.student_id]: code }));
                     setCardIndex((i) => i + 1);
                   }}
                   onPress={() => setDetailStudentId(item.student_id)}
@@ -449,7 +578,7 @@ export default function TeacherAttendanceRosterScreen() {
         </View>
       )}
 
-      {!isLoading && students.length > 0 ? (
+      {!isLoading && students.length > 0 && !locked ? (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.saveButton} activeOpacity={0.85} onPress={handleSave} disabled={isSaving}>
             {isSaving ? (
@@ -466,6 +595,8 @@ export default function TeacherAttendanceRosterScreen() {
         studentName={students.find((s) => s.student_id === detailStudentId)?.student_name ?? ''}
         status={detailStudentId !== null ? statuses[detailStudentId] ?? null : null}
         remarks={detailStudentId !== null ? remarksMap[detailStudentId] ?? '' : ''}
+        statuses={effectiveStatuses}
+        statusMeta={statusMeta}
         onChangeStatus={(status) => {
           if (detailStudentId === null) return;
           setStatuses((prev) => ({ ...prev, [detailStudentId]: status }));
@@ -532,9 +663,15 @@ const styles = StyleSheet.create({
   legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
   legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
 
-  deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'center' },
-  bannerMargin: { marginHorizontal: 16, marginTop: 12 },
-  progressText: { fontSize: 12.5, color: SUBTLE, marginBottom: 14, fontWeight: '600', textAlign: 'center' },
+  // flex-start, not 'center': centering re-balances against whatever space
+  // is left above it, so an error/success banner appearing (shrinking that
+  // space) yanked the progress text and card upward right against the
+  // banner instead of just pushing the deck down - looked like the two were
+  // overlapping. Anchoring to the top keeps the deck's position stable
+  // regardless of whether a banner is showing.
+  deckWrap: { flex: 1, paddingTop: 16, paddingBottom: 16, justifyContent: 'flex-start' },
+  bannerMargin: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
+  progressText: { fontSize: 12.5, color: SUBTLE, marginTop: 8, marginBottom: 14, fontWeight: '600', textAlign: 'center' },
   bigSkeletonCard: {
     width: '100%',
     maxWidth: 500,
@@ -623,6 +760,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   successText: { color: EMERALD, fontSize: 13.5, fontWeight: '700' },
+  lockBanner: { backgroundColor: '#FBF2DE', borderRadius: 12, padding: 14 },
+  lockBannerTitle: { color: '#8A6417', fontSize: 13.5, fontWeight: '800', marginBottom: 4 },
+  lockBannerText: { color: '#8A6417', fontSize: 12.5, lineHeight: 17 },
+
+  lockedListWrap: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  lockedListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: GLASS_SURFACE,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 8,
+    ...SHADOW.level1,
+  },
+  lockedListName: { flex: 1, fontSize: 13.5, fontWeight: '600', color: INK, marginRight: 10 },
+  lockedListPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  lockedListPillText: { fontSize: 11.5, fontWeight: '700' },
 
   footer: {
     padding: 16,

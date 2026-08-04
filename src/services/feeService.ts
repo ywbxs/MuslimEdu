@@ -114,6 +114,7 @@ export async function createFeeInvoice(
 export interface CashierAccount {
   id: number;
   name: string;
+  name_ar?: string | null;
   email: string;
   photo: string | null;
   phone: string | null;
@@ -128,6 +129,7 @@ export async function fetchCashierAccounts(token: string): Promise<CashierAccoun
   return rawList.map((raw) => ({
     id: raw.id,
     name: raw.name ?? '',
+    name_ar: raw.name_ar ?? null,
     email: raw.email ?? '',
     photo: absoluteUrl(raw.photo ?? null),
     phone: raw.phone ?? null,
@@ -139,6 +141,7 @@ export async function fetchCashierAccounts(token: string): Promise<CashierAccoun
 export interface CashierProfile {
   id: number;
   name: string;
+  name_ar?: string | null;
   email: string;
   photo: string | null;
   phone: string | null;
@@ -147,6 +150,9 @@ export interface CashierProfile {
   birthday: string | null;
   designation: string | null;
   code: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  signature?: string | null;
 }
 
 // A cashier's core identity fields - name/email/phone/address/gender/birthday,
@@ -168,6 +174,7 @@ export async function fetchCashierProfile(token: string, cashierId: number): Pro
   return {
     id: data.id,
     name: data.name ?? '',
+    name_ar: data.name_ar ?? null,
     email: data.email ?? '',
     photo: absoluteUrl(data.photo ?? null),
     phone: data.phone ?? null,
@@ -176,6 +183,9 @@ export async function fetchCashierProfile(token: string, cashierId: number): Pro
     birthday: data.birthday ?? null,
     designation: data.designation ?? null,
     code: data.code ?? null,
+    emergency_contact_name: data.emergency_contact_name ?? null,
+    emergency_contact_phone: data.emergency_contact_phone ?? null,
+    signature: data.signature ? absoluteUrl(data.signature) : null,
   };
 }
 
@@ -194,10 +204,13 @@ export async function updateCashierProfile(
 
 export interface AddCashierInput {
   name: string;
+  name_ar?: string;
   email: string;
   password: string;
   phone?: string;
   address?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
 }
 
 export interface AddedCashier {

@@ -1,15 +1,16 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
   FlatList,
-  RefreshControl,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -24,18 +25,16 @@ import {
   repost,
   updatePostPrivacy,
 } from '../../services/postService';
-import PostCard from '../../components/PostCard';
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import FeedDeckCard from '../../components/feed/FeedDeckCard';
+import CaughtUpBadge from '../../components/feed/CaughtUpBadge';
+import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
+import { COLORS, RADIUS } from '../../theme/glass';
 
 const EMERALD = COLORS.emerald;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
-
-const AnimatedFlatList = Animated.createAnimatedComponent(
-  FlatList as new () => FlatList<Post>,
-);
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PlusIcon({ color = '#FFFFFF', size = 24 }: { color?: string; size?: number }) {
@@ -58,7 +57,7 @@ function LeafIcon({ color = EMERALD, size = 15 }: { color?: string; size?: numbe
     </Svg>
   );
 }
-function PhotoIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -72,20 +71,41 @@ function PhotoIcon({ color = EMERALD, size = 20 }: { color?: string; size?: numb
     </Svg>
   );
 }
-function TextIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+function TextIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M5 6h14M12 6v13" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
-function PollIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+function PollIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M6 20V10M12 20V4M18 20v-7" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
+function RefreshIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <Path d="M18 4v4h-4M6 20v-4h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function isToday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+
+const CAUGHT_UP_KEY_PREFIX = '@feed_caught_up';
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -98,16 +118,55 @@ export default function FeedScreen() {
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [headerHeight, setHeaderHeight] = useState(150);
+  const listRef = useRef<FlatList<Post>>(null);
+  const [deckHeight, setDeckHeight] = useState(0);
+  // deckHeight is the wrap's own box height (padding doesn't shrink that) -
+  // subtract its top+bottom padding to get the actual space a card has.
+  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 118 : 0;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
   const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
+
+  const [index, setIndex] = useState(0);
+  const [maxIndex, setMaxIndex] = useState(0);
+  const maxIndexRef = useRef(0);
+  const [caughtUpToday, setCaughtUpToday] = useState(false);
+
+  const caughtUpStorageKey = user ? `${CAUGHT_UP_KEY_PREFIX}:${user.id}` : null;
+
+  // A fresh install/day starts uncaught - seed from AsyncStorage if today
+  // was already fully read in a previous session, so the badge doesn't
+  // reset on every cold start.
+  useEffect(() => {
+    if (!caughtUpStorageKey) return;
+    AsyncStorage.getItem(caughtUpStorageKey).then((value) => {
+      const today = new Date().toDateString();
+      if (value === today) setCaughtUpToday(true);
+    });
+  }, [caughtUpStorageKey]);
+
+  const todayCount = useMemo(() => {
+    let c = 0;
+    for (const p of posts) {
+      if (isToday(p.created_at)) c++;
+      else break;
+    }
+    return c;
+  }, [posts]);
+
+  const caughtUp = caughtUpToday || (todayCount > 0 && maxIndex >= todayCount - 1);
+
+  useEffect(() => {
+    if (!caughtUp || !caughtUpStorageKey) return;
+    setCaughtUpToday(true);
+    AsyncStorage.setItem(caughtUpStorageKey, new Date().toDateString());
+  }, [caughtUp, caughtUpStorageKey]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -116,16 +175,20 @@ export default function FeedScreen() {
       setPosts(res.posts);
       setHasMore(res.hasMore);
       setNextBeforeId(res.nextBeforeId);
+      setIndex(0);
+      setMaxIndex(0);
+      maxIndexRef.current = 0;
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
     } catch (err: any) {
       Alert.alert(
-        t('feed.load_error_title', 'Couldn\u2019t load feed'),
+        t('feed.load_error_title', 'Couldn’t load feed'),
         err?.message ?? t('common.try_again_full', 'Please try again.'),
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -142,8 +205,9 @@ export default function FeedScreen() {
     load();
   };
 
-  const onEndReached = async () => {
-    if (!token || loadingMore || !hasMore || !nextBeforeId) return;
+  const onEndReached = useCallback(async () => {
+    if (!token || loadingMoreRef.current || !hasMore || !nextBeforeId) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const res = await fetchFeed(token, nextBeforeId);
@@ -153,9 +217,27 @@ export default function FeedScreen() {
     } catch {
       // silent - user can pull to refresh or scroll again
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  };
+  }, [token, hasMore, nextBeforeId]);
+
+  // Horizontal onEndReachedThreshold is measured in multiples of the
+  // visible WIDTH, not a fixed distance - 0.4 (fine for a vertical list)
+  // would fire far too late here, so pagination is also driven proactively
+  // from onSettle below once the reader nears the end of what's loaded.
+  const onSettle = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.x / SNAP));
+      setIndex(i);
+      if (i > maxIndexRef.current) {
+        maxIndexRef.current = i;
+        setMaxIndex(i);
+      }
+      if (i >= posts.length - 3) onEndReached();
+    },
+    [posts.length, onEndReached],
+  );
 
   const handleToggleLike = async (post: Post) => {
     if (!token) return;
@@ -181,6 +263,16 @@ export default function FeedScreen() {
     (navigation as any).navigate('PostComments', { postId: post.id });
   };
 
+  // A new post (from posting or reposting) lands at index 0 and shifts
+  // every existing index under the reader's finger - jump the deck back to
+  // the start so what they're looking at doesn't silently change under them.
+  const jumpToStart = () => {
+    setIndex(0);
+    setMaxIndex(0);
+    maxIndexRef.current = 0;
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   const handleRepost = (post: Post) => {
     if (!canPost) {
       Alert.alert(t('feed.repost_title', 'Repost'), t('feed.repost_confirm', 'Repost this to your feed?'), [
@@ -192,9 +284,10 @@ export default function FeedScreen() {
             try {
               const created = await repost(token, post.id);
               setPosts((prev) => [created, ...prev]);
+              jumpToStart();
             } catch (err: any) {
               Alert.alert(
-                t('feed.repost_error_title', 'Couldn\u2019t repost'),
+                t('feed.repost_error_title', 'Couldn’t repost'),
                 err?.message ?? t('common.try_again_full', 'Please try again.'),
               );
             }
@@ -212,9 +305,10 @@ export default function FeedScreen() {
           try {
             const created = await repost(token, post.id);
             setPosts((prev) => [created, ...prev]);
+            jumpToStart();
           } catch (err: any) {
             Alert.alert(
-              t('feed.repost_error_title', 'Couldn\u2019t repost'),
+              t('feed.repost_error_title', 'Couldn’t repost'),
               err?.message ?? t('common.try_again_full', 'Please try again.'),
             );
           }
@@ -229,12 +323,19 @@ export default function FeedScreen() {
 
   const handleDelete = async (post: Post) => {
     if (!token) return;
+    const deletedIndex = posts.findIndex((p) => p.id === post.id);
     setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    // Clamp the deck to the new (shorter) end so it doesn't strand past it.
+    const newLast = posts.length - 2;
+    if (deletedIndex !== -1 && deletedIndex <= index && newLast >= 0) {
+      const target = Math.max(0, Math.min(index, newLast));
+      listRef.current?.scrollToIndex({ index: target, animated: true });
+    }
     try {
       await deletePost(token, post.id);
     } catch (err: any) {
       Alert.alert(
-        t('feed.delete_error_title', 'Couldn\u2019t delete'),
+        t('feed.delete_error_title', 'Couldn’t delete'),
         err?.message ?? t('common.try_again_full', 'Please try again.'),
       );
       load();
@@ -256,70 +357,17 @@ export default function FeedScreen() {
         prev.map((p) => (p.id === post.id ? { ...p, privacy: previousPrivacy } : p)),
       );
       Alert.alert(
-        t('feed.privacy_error_title', 'Couldn\u2019t update privacy'),
+        t('feed.privacy_error_title', 'Couldn’t update privacy'),
         err?.message ?? t('common.try_again_full', 'Please try again.'),
       );
     }
   };
 
-  // --- Parallax: the header is FIXED behind the feed. It never translates.
-  // As the feed scrolls up, opaque cards slide over the header, covering it.
-  // We fade the header out over the first stretch so it never peeks between
-  // cards. Native driver keeps it buttery with no flicker.
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, headerHeight * 0.75, headerHeight],
-    outputRange: [1, 0.35, 0],
-    extrapolate: 'clamp',
-  });
-
   const openCompose = () => (navigation as any).navigate('CreatePost');
-
-  // Composer card + top spacer, sits at the top of the scrolling feed.
-  // Admin-only - teachers/students never see a way to start a new post.
-  const ListHeader = (
-    <View>
-      {/* Transparent spacer that reveals the fixed header underneath at rest */}
-      <View style={{ height: headerHeight }} />
-      {canPost && (
-        <TouchableOpacity
-          style={styles.composer}
-          activeOpacity={0.9}
-          onPress={openCompose}
-        >
-          <View style={styles.composerTop}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={52} />
-            <Text style={styles.composerPlaceholder}>{t('feed.composer_placeholder', "What's on your mind?")}</Text>
-          </View>
-          <View style={styles.composerDivider} />
-          <View style={styles.composerActions}>
-            <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
-              <PhotoIcon />
-              <Text style={styles.composerActionText}>{t('feed.composer_photo', 'Photo')}</Text>
-            </TouchableOpacity>
-            <View style={styles.composerSep} />
-            <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
-              <TextIcon />
-              <Text style={styles.composerActionText}>{t('feed.composer_text', 'Text')}</Text>
-            </TouchableOpacity>
-            <View style={styles.composerSep} />
-            <TouchableOpacity style={styles.composerAction} activeOpacity={0.7} onPress={openCompose}>
-              <PollIcon />
-              <Text style={styles.composerActionText}>{t('feed.composer_poll', 'Poll')}</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
 
   return (
     <View style={styles.flex}>
-      {/* FIXED background header - does not scroll, gets covered by the feed */}
-      <Animated.View
-        style={[styles.header, { paddingTop: insets.top + 12, opacity: headerOpacity }]}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        pointerEvents="box-none"
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTextCol}>
           <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
           <Text style={styles.headerGreeting}>{t('feed.header_greeting', 'Assalamu Alaykum,')}</Text>
@@ -331,59 +379,93 @@ export default function FeedScreen() {
           </View>
         </View>
         <View style={styles.headerButtons}>
+          <CaughtUpBadge visible={caughtUp} />
+          <TouchableOpacity style={styles.refreshButton} activeOpacity={0.85} onPress={onRefresh} disabled={refreshing}>
+            {refreshing ? <ActivityIndicator size="small" color={EMERALD} /> : <RefreshIcon />}
+          </TouchableOpacity>
           {canPost && (
             <TouchableOpacity style={styles.composeButton} activeOpacity={0.85} onPress={openCompose}>
               <PlusIcon />
             </TouchableOpacity>
           )}
         </View>
-      </Animated.View>
+      </View>
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator color={EMERALD} />
-        </View>
-      ) : (
-        <AnimatedFlatList
-          data={posts}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              onToggleLike={handleToggleLike}
-              onPressComment={handleComment}
-              onPressRepost={handleRepost}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-              onChangePrivacy={handleChangePrivacy}
-              onPressAuthor={setProfileUserId}
-              onPressImage={(images, index) =>
-                (navigation as any).navigate('ImageViewer', { images, initialIndex: index })
-              }
-            />
-          )}
-          ListHeaderComponent={ListHeader}
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-            useNativeDriver: true,
-          })}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />
-          }
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color={EMERALD} /> : null
-          }
-          ListEmptyComponent={
-            <View style={styles.centerFill}>
-              <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
-            </View>
-          }
-          contentContainerStyle={{ paddingBottom: 130 }}
-          showsVerticalScrollIndicator={false}
-        />
+      {canPost && (
+        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+          <Text style={styles.composerPlaceholder} numberOfLines={1}>
+            {t('feed.composer_placeholder', "What's on your mind?")}
+          </Text>
+          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+            <PhotoIcon />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+            <TextIcon />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+            <PollIcon />
+          </TouchableOpacity>
+        </TouchableOpacity>
       )}
+
+      <View style={styles.deckWrap} onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}>
+        {loading ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator color={EMERALD} />
+          </View>
+        ) : cardHeight <= 0 ? null : (
+          <FlatList
+            ref={listRef}
+            data={posts}
+            keyExtractor={(item) => String(item.id)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={SNAP}
+            snapToAlignment="start"
+            disableIntervalMomentum
+            contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
+            getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
+            removeClippedSubviews={false}
+            initialNumToRender={2}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            onMomentumScrollEnd={onSettle}
+            onScrollEndDrag={onSettle}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={1.5}
+            renderItem={({ item }) => (
+              <FeedDeckCard
+                post={item}
+                height={cardHeight}
+                onToggleLike={handleToggleLike}
+                onPressComment={handleComment}
+                onPressRepost={handleRepost}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onChangePrivacy={handleChangePrivacy}
+                onPressAuthor={setProfileUserId}
+                onPressImage={(images, imgIndex) =>
+                  (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
+                }
+              />
+            )}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={[styles.footerLoading, { height: cardHeight }]}>
+                  <ActivityIndicator color={EMERALD} />
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <View style={[styles.centerFill, { width: CARD_W }]}>
+                <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
+              </View>
+            }
+          />
+        )}
+      </View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -402,11 +484,6 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -418,7 +495,15 @@ const styles = StyleSheet.create({
   headerGreeting: { fontSize: 14, color: SUBTLE, marginTop: 2 },
   headerNameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
   headerName: { fontSize: 20, fontWeight: '800', color: EMERALD },
-  headerButtons: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.emeraldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   composeButton: {
     width: 48,
     height: 48,
@@ -426,38 +511,35 @@ const styles = StyleSheet.create({
     backgroundColor: EMERALD,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOW.glow,
   },
 
   composer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
     marginHorizontal: 16,
+    marginBottom: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 6,
-    ...SHADOW.level2,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
   },
-  composerTop: { flexDirection: 'row', alignItems: 'center' },
-  composerPlaceholder: { marginLeft: 16, fontSize: 17, color: COLORS.faint, flex: 1 },
-  composerDivider: { height: 1, backgroundColor: COLORS.border, marginTop: 16 },
-  composerActions: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  composerAction: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composerActionText: { marginLeft: 8, fontSize: 14, fontWeight: '600', color: INK },
-  composerSep: { width: 1, height: 22, backgroundColor: COLORS.border },
+  composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
+  composerIconBtn: { padding: 4 },
+
+  // paddingBottom reserves space below the deck for the bottom tab bar -
+  // cards must not render underneath it (unlike the old vertical list,
+  // where scrolling could reveal content past that point).
+  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118 },
+
+  footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
 
   centerFill: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 120,
     paddingHorizontal: 30,
   },
   emptyText: { color: SUBTLE, fontSize: 14, textAlign: 'center' },

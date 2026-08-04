@@ -91,3 +91,40 @@ export async function fetchAttendanceAnalytics(
     daily_trend: data.daily_trend ?? [],
   };
 }
+
+// --- Admin: attendance lock/unlock ---
+
+export interface AttendanceLockRow {
+  section_id: number;
+  section_name: string | null;
+  class_name: string | null;
+  subject_id: number;
+  subject_name: string | null;
+  date: string;
+  locked_at: string;
+  locked_by_name: string | null;
+}
+
+/** POST /admin_attendance_locks_list - every currently-locked roster in the admin's school. */
+export async function fetchAttendanceLocks(token: string): Promise<AttendanceLockRow[]> {
+  const data = await authedPost('/admin_attendance_locks_list', token);
+  return data.locks ?? [];
+}
+
+/**
+ * POST /admin_attendance_unlock - admin-only override so a teacher can fix
+ * a mistake in an already-submitted roster. Confirmed with the user:
+ * teachers cannot unlock their own submissions, only an admin can.
+ */
+export async function unlockAttendance(
+  token: string,
+  sectionId: number,
+  subjectId: number,
+  date: string,
+): Promise<{ message: string; unlocked_at: string }> {
+  return authedPost('/admin_attendance_unlock', token, {
+    section_id: sectionId,
+    subject_id: subjectId,
+    date,
+  });
+}

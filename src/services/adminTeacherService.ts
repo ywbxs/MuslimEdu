@@ -30,6 +30,7 @@ export interface TeacherReport {
 export interface TeacherProfile {
   id: number;
   name: string;
+  name_ar?: string | null;
   email: string;
   photo: string | null;
   phone: string | null;
@@ -38,6 +39,34 @@ export interface TeacherProfile {
   birthday: string | null;
   designation: string | null;
   code: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  signature?: string | null;
+}
+
+export interface StaffSummary {
+  id: number;
+  name: string;
+  email: string;
+  photo: string | null;
+  phone: string | null;
+  code: string | null;
+  status: number;
+}
+
+/** POST /admin_teacher_list - every teacher in the school, for the Staff ID Cards browser. */
+export async function fetchTeacherList(token: string): Promise<StaffSummary[]> {
+  const data = await authedPost('/admin_teacher_list', token, {});
+  const rawList: any[] = data.teachers ?? data.data?.teachers ?? data.data ?? [];
+  return rawList.map((r) => ({
+    id: r.id,
+    name: r.name ?? '',
+    email: r.email ?? '',
+    photo: absoluteUrl(r.photo ?? null),
+    phone: r.phone ?? null,
+    code: r.code ?? null,
+    status: r.status ?? 1,
+  }));
 }
 
 // A teacher's core identity fields - name/email/phone/address/gender/birthday,
@@ -123,12 +152,15 @@ function normalizeTeacher(raw: any): TeacherOverview {
 
 export interface AddTeacherInput {
   name: string;
+  name_ar?: string;
   email: string;
   password: string;
   phone?: string;
   address?: string;
   gender?: string;
   designation?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
 }
 
 export interface AddedTeacher {
@@ -208,6 +240,7 @@ export async function fetchTeacherProfile(token: string, teacherId: number): Pro
   return {
     id: data.id,
     name: data.name ?? '',
+    name_ar: data.name_ar ?? null,
     email: data.email ?? '',
     photo: absoluteUrl(data.photo ?? null),
     phone: data.phone ?? null,
@@ -216,6 +249,9 @@ export async function fetchTeacherProfile(token: string, teacherId: number): Pro
     birthday: data.birthday ?? null,
     designation: data.designation ?? null,
     code: data.code ?? null,
+    emergency_contact_name: data.emergency_contact_name ?? null,
+    emergency_contact_phone: data.emergency_contact_phone ?? null,
+    signature: data.signature ? absoluteUrl(data.signature) : null,
   };
 }
 

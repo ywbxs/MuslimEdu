@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, absoluteUrl } from '../config/api';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -40,8 +40,10 @@ async function authedPost(path: string, token: string, body: FormData | Record<s
 export interface RegistrarAccount {
   id: number;
   name: string;
+  name_ar?: string | null;
   email: string;
   phone: string | null;
+  photo?: string | null;
   code: string | null;
   status: number;
 }
@@ -52,12 +54,53 @@ export async function fetchRegistrarAccounts(token: string): Promise<RegistrarAc
   return (data.registrars ?? []) as RegistrarAccount[];
 }
 
+export interface RegistrarProfile {
+  id: number;
+  name: string;
+  name_ar?: string | null;
+  email: string;
+  photo: string | null;
+  phone: string | null;
+  address: string | null;
+  gender: string | null;
+  birthday: string | null;
+  designation: string | null;
+  code: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  signature?: string | null;
+}
+
+/** POST /admin_registrar_profile - a single registrar's full profile info. */
+export async function fetchRegistrarProfile(token: string, registrarId: number): Promise<RegistrarProfile> {
+  const data = await authedPost('/admin_registrar_profile', token, { registrar_id: registrarId });
+  return {
+    id: data.id,
+    name: data.name ?? '',
+    name_ar: data.name_ar ?? null,
+    email: data.email ?? '',
+    photo: absoluteUrl(data.photo ?? null),
+    phone: data.phone ?? null,
+    address: data.address ?? null,
+    gender: data.gender ?? null,
+    birthday: data.birthday ?? null,
+    designation: data.designation ?? null,
+    code: data.code ?? null,
+    emergency_contact_name: data.emergency_contact_name ?? null,
+    emergency_contact_phone: data.emergency_contact_phone ?? null,
+    signature: data.signature ? absoluteUrl(data.signature) : null,
+  };
+}
+
 export interface AddRegistrarInput {
   name: string;
+  name_ar?: string;
   email: string;
   password: string;
   phone?: string;
   address?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
 }
 
 export interface AddedRegistrar {

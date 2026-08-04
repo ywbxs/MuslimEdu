@@ -8,7 +8,6 @@ import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
-import SchoolCodeSetupScreen from '../admin/SchoolCodeSetupScreen';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
 import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser, isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
@@ -236,7 +235,6 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   'assessmentReview',
   'assessmentGrades',
   'materialsReview',
-  'studentNumbers',
   'academicSchedule', // duplicate of classSchedule - same screen
   'academicCalendar',
   'academicAnalytics',
@@ -245,7 +243,6 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   'promotionPolicy',
   'documentTemplates',
   'gradeRelease',
-  'studentIdRules',
   'studentLifecycle',
   'timetableConflicts',
   'permissions',
@@ -391,6 +388,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'staffIdCards',
+      title: t('admin_dashboard.staff_id_cards_title', 'Staff ID Cards'),
+      desc: t('admin_dashboard.staff_id_cards_desc', 'View and export teacher, cashier, and registrar ID cards'),
+      variant: 'soft',
+      route: 'StaffIdCards',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'classes',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),
@@ -516,20 +521,24 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <ReportDocIcon color={c} />,
     },
     {
+      // Deliberately visible for every school type, including orphan
+      // schools - unlike the academic tiles filtered out above, this isn't
+      // gated by ACADEMIC_ADMIN_TILE_KEYS since orphan children and staff
+      // both need a code format too. See StudentStaffCodeSetupScreen.
+      key: 'studentStaffCodes',
+      title: t('admin_dashboard.student_staff_codes_title', 'Student & Staff Codes'),
+      desc: t('admin_dashboard.student_staff_codes_desc', 'Set the code format for new students and staff'),
+      variant: 'soft',
+      route: 'StudentStaffCodeSetup',
+      icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
       key: 'programsSubjects',
       title: t('admin_dashboard.programs_subjects_title', 'Programs & Subjects'),
       desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's program and subject catalog"),
       variant: 'soft',
       route: 'ProgramsCatalog',
       icon: (c) => <CatalogIcon color={c} />,
-    },
-    {
-      key: 'studentNumbers',
-      title: t('admin_dashboard.student_numbers_title', 'Student Numbers'),
-      desc: t('admin_dashboard.student_numbers_desc', 'Set how student numbers are built and previewed'),
-      variant: 'soft',
-      route: 'StudentNumberConfig',
-      icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'academicFacilities',
@@ -602,14 +611,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'GradeRelease',
       icon: (c) => <GradebookIcon color={c} />,
-    },
-    {
-      key: 'studentIdRules',
-      title: t('admin_dashboard.student_id_rules_title', 'Student ID Rules'),
-      desc: t('admin_dashboard.student_id_rules_desc', 'Configure the student ID format and preview'),
-      variant: 'soft',
-      route: 'StudentIdConfig',
-      icon: (c) => <IdCardIcon color={c} />,
     },
     {
       key: 'studentLifecycle',
@@ -792,13 +793,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // legacy schools. See AcademicSetupWizardScreen + AuthContext.updateUser.
   if (user?.academic_setup_completed === false) {
     return <AcademicSetupWizardScreen />;
-  }
-
-  // A fresh orphan school has no student code prefix yet. Show only the
-  // one-time setup step - no Teachers/Children/Reports cards - until it's
-  // saved (see SchoolCodeSetupScreen + AuthContext.updateUser).
-  if (isOrphanSchool && !user?.school_code) {
-    return <SchoolCodeSetupScreen />;
   }
 
   return (

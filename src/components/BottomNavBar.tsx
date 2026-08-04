@@ -4,6 +4,7 @@ import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { isOrphanSchoolUser } from '../utils/orphanSchool';
 import { COLORS, BRAND } from '../theme/glass';
 
 // Mirrors MainTabs.tsx's TabBar (same icons/labels/order/colors) so screens
@@ -92,8 +93,10 @@ export default function BottomNavBar() {
   const { user } = useAuth();
   const activeName = useActiveTabName();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
+  // Reports only has real content on orphan schools - see MainTabs.tsx.
+  const showReports = isOrphanSchoolUser(user);
 
-  const tabs = ['Home', ...(isAdminRole ? ['Admission'] : []), 'Reports', 'Chat', 'Menu'];
+  const tabs = ['Home', ...(isAdminRole ? ['Admission'] : []), ...(showReports ? ['Reports'] : []), 'Chat', 'Menu'];
 
   return (
     <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
