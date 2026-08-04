@@ -66,6 +66,9 @@ export interface AdmissionInput {
   section_id?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
+  address?: string;
+  gender?: string;
+  birthday?: string; // 'YYYY-MM-DD'
   // Orphan-profile fields. The backend only persists these when the admin's
   // school is orphanage-type (a school-level setting - see AuthUser.is_orphan),
   // but it's harmless to send them either way.

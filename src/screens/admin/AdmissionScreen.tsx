@@ -11,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { BlurView } from '@react-native-community/blur';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -38,22 +39,29 @@ import {
 import { PickedPhoto } from '../../services/orphanService';
 
 // Plain text fields, grouped by which step they belong to. Class + Section
-// are ID pickers and the photo is its own step, both handled separately below.
+// are ID pickers, gender/birthday get their own dedicated pickers, and the
+// photo/signature are their own steps - all handled separately below. Every
+// field here is required - a student's record shouldn't have gaps.
 const BASE_FIELDS: {
   key: keyof AdmissionInput;
   label: string;
   required?: boolean;
-  requiredWhenOrphan?: boolean;
   keyboard?: 'default' | 'email-address' | 'phone-pad';
   secure?: boolean;
 }[] = [
   { key: 'name', label: 'Full name', required: true },
-  { key: 'name_ar', label: 'Arabic name' },
-  { key: 'email', label: 'Email', keyboard: 'email-address', requiredWhenOrphan: true },
+  { key: 'name_ar', label: 'Arabic name', required: true },
+  { key: 'email', label: 'Email', keyboard: 'email-address', required: true },
   { key: 'password', label: 'Password', required: true, secure: true },
-  { key: 'phone', label: 'Phone', keyboard: 'phone-pad', requiredWhenOrphan: true },
-  { key: 'emergency_contact_name', label: 'Emergency contact name' },
-  { key: 'emergency_contact_phone', label: 'Emergency contact phone', keyboard: 'phone-pad' },
+  { key: 'phone', label: 'Phone', keyboard: 'phone-pad', required: true },
+  { key: 'address', label: 'Address', required: true },
+  { key: 'emergency_contact_name', label: 'Emergency contact name', required: true },
+  { key: 'emergency_contact_phone', label: 'Emergency contact phone', keyboard: 'phone-pad', required: true },
+];
+
+const GENDER_OPTIONS = [
+  { id: 'male', name: 'Male' },
+  { id: 'female', name: 'Female' },
 ];
 
 // Orphan-profile fields. These only ever get saved on the backend when the
@@ -79,6 +87,111 @@ const ORPHAN_FIELDS: {
 
 type StepKey = 'basic' | 'photo' | 'signature' | 'class' | 'orphan';
 type FieldErrors = Partial<Record<string, string>>;
+
+function parseDateValue(value: string): Date {
+  const parsed = value ? new Date(value) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function formatDateValue(date: Date): string {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD - matches what the backend expects
+}
+
+// Native date picker for birthday - Android's is a self-dismissing dialog,
+// iOS's spinner stays open until "Done" is tapped. Styled with the wizard's
+// own md3 tokens so it sits next to FormField/ChipGroup without looking
+// like a different component set.
+function AdmissionDateField({
+  label,
+  value,
+  onChange,
+  required,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  error?: string | null;
+}) {
+  const [show, setShow] = useState(false);
+
+  const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShow(false);
+      if (event.type === 'set' && selectedDate) onChange(formatDateValue(selectedDate));
+      return;
+    }
+    if (selectedDate) onChange(formatDateValue(selectedDate));
+  };
+
+  return (
+    <View style={dateFieldStyles.wrap}>
+      <Text style={[dateFieldStyles.label, error && dateFieldStyles.labelError]}>
+        {label}
+        {required ? <Text style={dateFieldStyles.required}> *</Text> : null}
+      </Text>
+      <TouchableOpacity
+        style={[dateFieldStyles.inputRow, error && dateFieldStyles.inputRowError]}
+        onPress={() => setShow(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={value ? dateFieldStyles.value : dateFieldStyles.placeholder}>
+          {value || 'Select date'}
+        </Text>
+      </TouchableOpacity>
+      {show ? (
+        <View style={Platform.OS === 'ios' ? dateFieldStyles.iosPickerWrap : undefined}>
+          <DateTimePicker
+            value={parseDateValue(value)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={handleChange}
+          />
+          {Platform.OS === 'ios' ? (
+            <TouchableOpacity style={dateFieldStyles.iosPickerDone} onPress={() => setShow(false)} activeOpacity={0.85}>
+              <Text style={dateFieldStyles.iosPickerDoneText}>Done</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      {error ? <Text style={dateFieldStyles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+const dateFieldStyles = StyleSheet.create({
+  wrap: { marginBottom: 18 },
+  label: {
+    fontSize: md3.type.labelMedium.fontSize,
+    fontWeight: md3.type.labelMedium.fontWeight,
+    color: md3.color.onSurfaceVariant,
+    marginBottom: 6,
+  },
+  labelError: { color: md3.color.error },
+  required: { color: md3.color.error },
+  inputRow: {
+    backgroundColor: md3.color.surfaceContainerLow,
+    borderRadius: md3.shape.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: md3.color.outlineVariant,
+  },
+  inputRowError: { borderColor: md3.color.error, borderWidth: 2 },
+  value: { fontSize: md3.type.bodyLarge.fontSize, color: md3.color.onSurface },
+  placeholder: { fontSize: md3.type.bodyLarge.fontSize, color: md3.color.onSurfaceVariant },
+  iosPickerWrap: { backgroundColor: md3.color.surfaceContainerLowest, borderRadius: md3.shape.sm, marginTop: 8, paddingBottom: 8 },
+  iosPickerDone: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 6 },
+  iosPickerDoneText: { color: md3.color.primary, fontWeight: '700', fontSize: 14 },
+  errorText: {
+    fontSize: md3.type.bodyMedium.fontSize,
+    color: md3.color.error,
+    marginTop: 6,
+    marginLeft: 2,
+  },
+});
 
 function ChevronLeft({ size = 20 }: { size?: number }) {
   return (
@@ -190,10 +303,16 @@ export default function AdmissionScreen() {
 
   const validateBasic = (): FieldErrors => {
     const errs: FieldErrors = {};
-    if (!form.name?.trim()) errs.name = t('admission.error_name_required', 'A student needs at least a full name.');
-    if (!form.password || form.password.length < 6) errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
-    if (isOrphanSchool && !form.email?.trim()) errs.email = t('admission.error_email_required', 'Email is required for orphan admission.');
-    if (isOrphanSchool && !form.phone?.trim()) errs.phone = t('admission.error_phone_required', 'Phone is required for orphan admission.');
+    BASE_FIELDS.forEach((f) => {
+      if (f.required && !(form[f.key] as string)?.trim()) {
+        errs[f.key as string] = t('admission.error_field_required', '{field} is required.').replace('{field}', fieldLabel(f));
+      }
+    });
+    if (form.password && form.password.length < 6) {
+      errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
+    }
+    if (!form.gender) errs.gender = t('admission.error_gender_required', 'Gender is required.');
+    if (!form.birthday?.trim()) errs.birthday = t('admission.error_birthday_required', 'Birthday is required.');
     return errs;
   };
 
@@ -292,23 +411,36 @@ export default function AdmissionScreen() {
       case 'basic':
         return (
           <>
-            {BASE_FIELDS.map((f) => {
-              const requiredWhenOrphan = !!f.requiredWhenOrphan;
-              const required = !!f.required || (requiredWhenOrphan && isOrphanSchool);
-              return (
-                <FormField
-                  key={f.key}
-                  label={fieldLabel(f)}
-                  value={(form[f.key] as string) ?? ''}
-                  onChangeText={(value) => set(f.key, value)}
-                  required={required}
-                  error={fieldErrors[f.key]}
-                  keyboardType={f.keyboard ?? 'default'}
-                  secure={f.secure}
-                  autoCapitalize={f.key === 'email' || f.secure ? 'none' : 'words'}
-                />
-              );
-            })}
+            {BASE_FIELDS.map((f) => (
+              <FormField
+                key={f.key}
+                label={fieldLabel(f)}
+                value={(form[f.key] as string) ?? ''}
+                onChangeText={(value) => set(f.key, value)}
+                required={f.required}
+                error={fieldErrors[f.key]}
+                keyboardType={f.keyboard ?? 'default'}
+                secure={f.secure}
+                autoCapitalize={f.key === 'email' || f.secure ? 'none' : 'words'}
+              />
+            ))}
+
+            <ChipGroup
+              label={t('admission.field_gender', 'Gender')}
+              options={GENDER_OPTIONS}
+              selectedId={form.gender}
+              onSelect={(id) => set('gender', id)}
+              required
+              error={fieldErrors.gender}
+            />
+
+            <AdmissionDateField
+              label={t('admission.field_birthday', 'Birthday')}
+              value={form.birthday ?? ''}
+              onChange={(v) => set('birthday', v)}
+              required
+              error={fieldErrors.birthday}
+            />
 
             <View style={styles.wrap}>
               <Text style={styles.helperText}>

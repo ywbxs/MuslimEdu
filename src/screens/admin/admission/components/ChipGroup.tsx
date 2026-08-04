@@ -4,7 +4,7 @@ import { md3 } from '../theme';
 import { useLocale } from '../../../../context/LocaleContext';
 
 export interface ChipOption {
-  id: number;
+  id: number | string;
   name: string;
 }
 
