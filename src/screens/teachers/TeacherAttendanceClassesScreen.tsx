@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
@@ -32,6 +32,18 @@ const GLASS_BORDER = GLASS.borderOnLight;
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const DAY_INDEX_TO_KEY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function toMinutes(hhmm?: string | null): number | null {
+  if (!hhmm) return null;
+  const parts = hhmm.split(':');
+  if (parts.length < 2) return null;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
 }
 
 function IconChevronLeft({ color }: { color: string }) {
@@ -128,6 +140,57 @@ export default function TeacherAttendanceClassesScreen() {
     load({ silent: true });
   };
 
+  // Groups classes around the teacher's schedule: whatever period is
+  // happening right now floats to the top, then the rest of today's
+  // periods, then everything else - nothing is hidden, just reordered.
+  const sections = useMemo(() => {
+    const todayKey = DAY_INDEX_TO_KEY[new Date().getDay()];
+    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+    const nowGroup: AttendanceClassOption[] = [];
+    const todayGroup: AttendanceClassOption[] = [];
+    const otherGroup: AttendanceClassOption[] = [];
+
+    classes.forEach((item) => {
+      if (item.role === 'homeroom') {
+        todayGroup.push(item);
+        return;
+      }
+      if (item.day_of_week !== todayKey) {
+        otherGroup.push(item);
+        return;
+      }
+      const start = toMinutes(item.start_time);
+      const end = toMinutes(item.end_time);
+      if (start !== null && end !== null && nowMinutes >= start && nowMinutes < end) {
+        nowGroup.push(item);
+      } else {
+        todayGroup.push(item);
+      }
+    });
+
+    todayGroup.sort((a, b) => {
+      const aMin = toMinutes(a.start_time);
+      const bMin = toMinutes(b.start_time);
+      if (aMin === null && bMin === null) return 0;
+      if (aMin === null) return -1;
+      if (bMin === null) return 1;
+      return aMin - bMin;
+    });
+
+    const groups: { key: string; title: string; data: AttendanceClassOption[] }[] = [];
+    if (nowGroup.length) {
+      groups.push({ key: 'now', title: t('teacher_attendance_classes.section_now', 'Happening now'), data: nowGroup });
+    }
+    if (todayGroup.length) {
+      groups.push({ key: 'today', title: t('teacher_attendance_classes.section_today', 'Later today'), data: todayGroup });
+    }
+    if (otherGroup.length) {
+      groups.push({ key: 'other', title: t('teacher_attendance_classes.section_other', 'Other classes'), data: otherGroup });
+    }
+    return groups;
+  }, [classes, t]);
+
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
@@ -146,10 +209,11 @@ export default function TeacherAttendanceClassesScreen() {
           <ClassCardSkeleton />
         </View>
       ) : (
-        <FlatList
-          data={classes}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => `${item.section_id}-${item.subject_id}`}
           contentContainerStyle={styles.listContent}
+          stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           ListEmptyComponent={
             !error ? (
@@ -168,6 +232,7 @@ export default function TeacherAttendanceClassesScreen() {
               </View>
             ) : null
           }
+          renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
           renderItem={({ item }) => {
             const isHomeroom = item.role === 'homeroom';
             return (
@@ -234,6 +299,15 @@ const styles = StyleSheet.create({
   backButton: { width: 32 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
   listContent: { padding: 16 },
+  sectionHeader: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: SUBTLE,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+    marginTop: 4,
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
