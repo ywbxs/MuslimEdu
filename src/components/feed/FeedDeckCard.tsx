@@ -2,8 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import PostCard from '../PostCard';
 import { Post } from '../../services/postService';
-import { COLORS, RADIUS } from '../../theme/glass';
-import { CARD_W, CARD_CONTENT_W, GAP } from './deckMetrics';
+import { CARD_W, CARD_CONTENT_W } from './deckMetrics';
 
 interface Props {
   post: Post;
@@ -20,10 +19,10 @@ interface Props {
 
 /**
  * Fixed-footprint wrapper around PostCard for the feed's horizontal
- * "peeking card" pager. The radius/clip/border live on this outer View
- * (not inside PostCard) - PostCard renders as plain transparent content
- * via containerStyle. Border only, no shadow - matches the classic post
- * card's own flat look instead of a floating/elevated one.
+ * full-screen pager. No card chrome at all here (no margin, radius,
+ * border, or background) - the post's photo bleeds edge-to-edge like
+ * Instagram, with only the header/caption/action-bar rows keeping their
+ * own white background from PostCard itself.
  *
  * Every card is the exact same height, and there's no inner scroll -
  * navigating between posts is swipe-only, side to side. A long post's
@@ -42,12 +41,7 @@ export default function FeedDeckCard({ post, height, ...handlers }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    marginRight: GAP,
-    borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   postCard: {
     flex: 1,
