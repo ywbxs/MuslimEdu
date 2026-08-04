@@ -14,7 +14,6 @@ import AdminTeacherListScreen from '../screens/teachers/AdminTeacherListScreen';
 import AdminTeacherReportDetailScreen from '../screens/teachers/AdminTeacherReportDetailScreen';
 import AdminTeacherProfileScreen from '../screens/teachers/AdminTeacherProfileScreen';
 import AdminUserDocumentsScreen from '../screens/teachers/AdminUserDocumentsScreen';
-import TeacherMyClassesScreen from '../screens/teachers/TeacherMyClassesScreen';
 import TeacherMyScheduleScreen from '../screens/teachers/TeacherMyScheduleScreen';
 import TeacherClassStudentsScreen from '../screens/teachers/TeacherClassStudentsScreen';
 import AdminClassTeacherAssignScreen from '../screens/teachers/AdminClassTeacherAssignScreen';
@@ -251,11 +250,6 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="AdminTeacherProfile"
                 component={AdminTeacherProfileScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
-              <Stack.Screen
-                name="TeacherMyClasses"
-                component={TeacherMyClassesScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen

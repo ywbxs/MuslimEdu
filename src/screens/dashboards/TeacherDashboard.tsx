@@ -157,15 +157,6 @@ function CalendarIcon({ color = EMERALD, size = 22 }: { color?: string; size?: n
     </Svg>
   );
 }
-function ProgressBarsIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={20} x2={6} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={12} y1={20} x2={12} y2={8} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={18} y1={20} x2={18} y2={15} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 function BellIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -556,12 +547,6 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
               (no classes/subjects/grading/curriculum there). */}
           {!isOrphan && (
             <>
-              <QuickActionCard
-                icon={<ProgressBarsIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.my_classes_title', 'My Classes')}
-                description={t('teacher_dashboard.my_classes_desc', 'View and manage your assigned classes')}
-                onPress={() => (navigation as any).navigate('TeacherMyClasses')}
-              />
               <QuickActionCard
                 icon={<CalendarIcon color={EMERALD} size={20} />}
                 title={t('teacher_dashboard.my_schedule_title', 'My Schedule')}
