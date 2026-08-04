@@ -21,6 +21,11 @@ interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean; // true while checking for a saved token on launch
+  // Set as soon as the on-launch check finds a saved token (well before the
+  // /me call that follows finishes) - lets the launch skeleton switch to a
+  // dashboard shape instead of the login shape whenever a session is likely
+  // about to be restored.
+  hasStoredSession: boolean;
   isSubmitting: boolean; // true while a login request is in flight
   error: string | null;
   // True once the server has said "this account needs a 2FA code" for the
@@ -43,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasStoredSession, setHasStoredSession] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false);
           return;
         }
+        setHasStoredSession(true);
         const me = await fetchMe(storedToken);
         setToken(storedToken);
         setUser(me);
@@ -134,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         isLoading,
+        hasStoredSession,
         isSubmitting,
         error,
         requiresTwoFactor,
