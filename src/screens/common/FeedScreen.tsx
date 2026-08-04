@@ -58,13 +58,6 @@ function TextIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numbe
     </Svg>
   );
 }
-function PollIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 20V10M12 20V4M18 20v-7" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the deck - reached the same way every other card is, by swiping to
@@ -318,9 +311,6 @@ export default function FeedScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
             <TextIcon />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PollIcon />
           </TouchableOpacity>
         </TouchableOpacity>
       )}

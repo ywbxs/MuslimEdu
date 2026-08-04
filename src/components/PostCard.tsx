@@ -137,21 +137,6 @@ function CheckIcon({ color }: { color: string }) {
   );
 }
 
-// Solid, opaque version of RoleTag's soft-tint pill - needed for legibility
-// sitting on top of a photo/gradient hero instead of a plain white card.
-// Same quiet-by-default rule as RoleTag: no pill for students/parents/etc.
-function heroPillConfig(role?: string | null): { label: string; color: string; bg: string } | null {
-  switch (role) {
-    case 'admin':
-    case 'superadmin':
-      return { label: 'Admin', color: '#FFFFFF', bg: BRAND.gold };
-    case 'teacher':
-      return { label: 'Teacher', color: '#FFFFFF', bg: BRAND.emeraldDeep };
-    default:
-      return null;
-  }
-}
-
 function timeAgo(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
@@ -267,58 +252,53 @@ export default function PostCard({
   // always "big", just filled with a photo or a color instead of blank space.
   const heroImage = post.images.length > 0 ? post.images[0] : quoted && quoted.images.length > 0 ? quoted.images[0] : null;
   const headlineText = post.content || quoted?.content || '';
-  const heroPill = heroPillConfig(post.author?.role);
 
   return (
     <>
     <View style={[styles.card, containerStyle, clipContent && styles.cardMagazine]}>
       {clipContent ? (
         <>
-          {/* Magazine hero - feed deck only: a big photo (or a plain color
-              for a text-only post) with the post's own text overlaid at the
-              bottom, instead of a small header + plain text card. */}
-          <View style={styles.hero}>
-            {heroImage ? (
-              <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-            ) : (
-              <LinearGradient
-                colors={[BRAND.emeraldDeep, BRAND.emerald]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-            )}
-            {heroImage && (
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.82)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-            )}
-
-            <View style={styles.heroTopRow}>
-              {heroPill ? (
-                <View style={[styles.heroPill, { backgroundColor: heroPill.bg }]}>
-                  <Text style={[styles.heroPillText, { color: heroPill.color }]}>{heroPill.label}</Text>
+          {/* Header - same shape as the classic card's header (avatar,
+              name, role tag, time, privacy, more-options), sitting on top
+              like a normal post instead of the byline moving below the
+              photo. */}
+          <View style={[styles.header, styles.headerMagazine]}>
+            <TouchableOpacity
+              style={styles.headerLeft}
+              onPress={() => post.author?.id && onPressAuthor?.(post.author.id)}
+              activeOpacity={0.85}
+            >
+              <UserAvatar name={post.author?.name ?? ''} photo={post.author?.photo} size={40} />
+              <View style={styles.headerText}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{post.author?.name ?? 'Unknown'}</Text>
+                  <RoleTag role={post.author?.role} />
                 </View>
-              ) : (
-                <View />
-              )}
-              {post.is_mine && (onEdit || onDelete || onChangePrivacy) && (
-                <TouchableOpacity style={styles.heroMoreBtn} onPress={openPostMenu} hitSlop={8}>
-                  <MoreIcon color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
-            </View>
+                <View style={styles.metaRow}>
+                  <Text style={styles.time}>{timeAgo(post.created_at)}</Text>
+                  <Text style={styles.dot}>  </Text>
+                  <PrivacyIcon privacy={post.privacy} />
+                </View>
+              </View>
+            </TouchableOpacity>
 
-            {!!headlineText && (
-              <Text style={styles.headline} numberOfLines={bodyNumberOfLines ?? 3}>
-                {headlineText}
-              </Text>
+            {post.is_mine && (onEdit || onDelete || onChangePrivacy) && (
+              <TouchableOpacity style={styles.moreButton} onPress={openPostMenu} hitSlop={8}>
+                <MoreIcon />
+              </TouchableOpacity>
             )}
           </View>
 
-          {/* Compact attribution for the original post, when this is a
-              repost - the footer below already credits whoever reshared it. */}
+          {/* A caption only shows here when there's both a photo and text -
+              a text-only post shows its text centered in the hero below
+              instead, so it isn't duplicated. */}
+          {heroImage && !!headlineText && (
+            <Text style={styles.caption} numberOfLines={2}>
+              {headlineText}
+            </Text>
+          )}
+
+          {/* Compact attribution for the original post, when this is a repost. */}
           {quoted && (
             <TouchableOpacity
               style={styles.quoteCompact}
@@ -332,25 +312,29 @@ export default function PostCard({
             </TouchableOpacity>
           )}
 
-          {/* Footer - who shared this, matching the reference card's byline
-              row sitting below the hero instead of above it. */}
-          <TouchableOpacity
-            style={styles.footerRow}
-            activeOpacity={0.85}
-            onPress={() => post.author?.id && onPressAuthor?.(post.author.id)}
-          >
-            <UserAvatar name={post.author?.name ?? ''} photo={post.author?.photo} size={34} />
-            <View style={styles.footerTextCol}>
-              <Text style={styles.footerName} numberOfLines={1}>
-                {post.author?.name ?? 'Unknown'}
-              </Text>
-              <View style={styles.metaRow}>
-                <Text style={styles.time}>{timeAgo(post.created_at)}</Text>
-                <Text style={styles.dot}>  </Text>
-                <PrivacyIcon privacy={post.privacy} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          {/* Hero - fills the rest of the fixed-height card: the post's own
+              photo if it has one, otherwise an auto-generated gradient with
+              the post's text centered in it, so a text-only post is still
+              "big" instead of a blank/mostly-empty card. */}
+          <View style={styles.hero}>
+            {heroImage ? (
+              <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            ) : (
+              <>
+                <LinearGradient
+                  colors={[BRAND.emeraldDeep, BRAND.emerald]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                {!!headlineText && (
+                  <Text style={styles.headlineCentered} numberOfLines={bodyNumberOfLines ?? 6}>
+                    {headlineText}
+                  </Text>
+                )}
+              </>
+            )}
+          </View>
         </>
       ) : (
         <>
@@ -543,35 +527,29 @@ const styles = StyleSheet.create({
   // hero photo/color bleeds edge to edge, matching the outer FeedDeckCard
   // wrapper's own rounded corners instead of sitting inside a white margin.
   cardMagazine: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
-  // Majority of the fixed-height card (flex:1 absorbs whatever's left after
-  // the footer/action bar below), always filled with either a photo or a
-  // plain color - never blank, unlike a plain top-aligned text block would be.
-  // backgroundColor is a guaranteed solid fallback underneath the
-  // LinearGradient/Image - without it, any failure to paint those (a slow
-  // image load, a gradient render hiccup) leaves a blank white hero with
-  // invisible white headline text on top of it, instead of just a plainer
-  // green while the nicer layer finishes loading.
-  hero: { flex: 1, overflow: 'hidden', justifyContent: 'flex-end', padding: 16, backgroundColor: BRAND.emeraldDeep },
-  heroTopRow: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    right: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroPill: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: RADIUS.pill },
-  heroPillText: { fontSize: 11.5, fontWeight: '800' },
-  heroMoreBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  // Majority of the fixed-height card (flex:1 absorbs whatever's left below
+  // the header/caption above and the action bar below), always filled with
+  // either a photo or a plain color - never blank. backgroundColor is a
+  // guaranteed solid fallback underneath the LinearGradient/Image - without
+  // it, any failure to paint those (a slow image load, a gradient render
+  // hiccup) leaves a blank white hero with invisible white text on top of
+  // it, instead of just a plainer green while the nicer layer loads.
+  hero: {
+    flex: 1,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20,
+    backgroundColor: BRAND.emeraldDeep,
   },
-  headline: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', lineHeight: 27 },
+  // Only shown for a text-only post (no image) - the auto-generated
+  // gradient behind it is the entire point of the card, so the text is
+  // centered in it rather than pinned to a corner.
+  headlineCentered: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', lineHeight: 25, textAlign: 'center' },
+  // Only shown when a post has BOTH a photo and text, between the header
+  // and the hero image - a text-only post shows its text centered in the
+  // hero instead, so it's never shown twice.
+  caption: { fontSize: 13.5, color: INK, lineHeight: 18, paddingHorizontal: 16, paddingTop: 8 },
   quoteCompact: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -580,14 +558,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   quoteCompactText: { flex: 1, fontSize: 12.5, color: SUBTLE, fontWeight: '600' },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  footerTextCol: { marginLeft: 10, flex: 1 },
-  footerName: { fontSize: 15, fontWeight: '700', color: INK },
   repostBanner: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 },
   repostBannerText: { fontSize: 12, color: SUBTLE, marginLeft: 6, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center' },
@@ -625,6 +595,10 @@ const styles = StyleSheet.create({
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.
   actionBarMagazine: { paddingHorizontal: 16, paddingBottom: 12 },
+  // Same reasoning - the header needs its own horizontal padding once the
+  // card itself has none, plus a bit of top padding since there's no card
+  // padding above it either.
+  headerMagazine: { paddingHorizontal: 16, paddingTop: 14 },
   action: { flexDirection: 'row', alignItems: 'center', marginRight: 28 },
   actionLast: { flexDirection: 'row', alignItems: 'center' },
   actionCount: { fontSize: 13.5, color: SUBTLE, marginLeft: 8, fontWeight: '600', minWidth: 10 },
