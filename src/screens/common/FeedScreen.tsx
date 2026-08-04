@@ -55,8 +55,12 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the deck - reached the same way every other card is, by swiping to
-// it - rather than a pill overlaid on top of the last post.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+// it - rather than a pill overlaid on top of the last post. Shop and Charity
+// are sample preview cards appended after it (real posts -> caught up ->
+// Shop -> Charity), rendered through the same FeedDeckCard/PostCard as a
+// real post so they look and feel identical - just with fabricated content
+// and no live backend behind them yet.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' } | { kind: 'shop' } | { kind: 'charity' };
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -73,7 +77,7 @@ export default function FeedScreen() {
   const [deckHeight, setDeckHeight] = useState(0);
   // deckHeight is the wrap's own box height (padding doesn't shrink that) -
   // subtract its top+bottom padding to get the actual space a card has.
-  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 118 : 0;
+  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 20 : 0;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,11 +90,75 @@ export default function FeedScreen() {
 
   const [index, setIndex] = useState(0);
 
+  // Fake Post objects for the Shop/Charity sample cards - negative ids so
+  // they can never collide with a real post id, no images (renders through
+  // the same gradient hero as a text-only post), is_mine false so no
+  // edit/delete menu shows. Not persisted or backed by any real feature yet.
+  const shopPost: Post = useMemo(
+    () => ({
+      id: -1,
+      content: t('feed.shop_sample_caption', 'Browse school merch, books, and supplies - right from the app. Coming soon!'),
+      privacy: 'public',
+      created_at: new Date().toISOString(),
+      author: { id: -1, name: t('feed.shop_sample_name', 'Manhaje Shop'), photo: null, role: 'shop' },
+      images: [],
+      likes_count: 128,
+      comments_count: 12,
+      reposts_count: 4,
+      is_liked: false,
+      is_mine: false,
+      repost_of: null,
+    }),
+    [t],
+  );
+  const charityPost: Post = useMemo(
+    () => ({
+      id: -2,
+      content: t('feed.charity_sample_caption', 'Give back and support causes in your community. Coming soon!'),
+      privacy: 'public',
+      created_at: new Date().toISOString(),
+      author: { id: -2, name: t('feed.charity_sample_name', 'Manhaje Charity'), photo: null, role: 'charity' },
+      images: [],
+      likes_count: 246,
+      comments_count: 31,
+      reposts_count: 9,
+      is_liked: false,
+      is_mine: false,
+      repost_of: null,
+    }),
+    [t],
+  );
+  // Sample cards ignore taps instead of hitting the real like/comment/repost/
+  // profile endpoints with a fake negative id.
+  const noopSampleHandlers = useMemo(
+    () => ({
+      onToggleLike: () => {},
+      onPressComment: () => {},
+      onPressRepost: () => {},
+      onPressAuthor: () => {},
+    }),
+    [],
+  );
+
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
-    if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
+    if (posts.length > 0 && !hasMore) {
+      items.push({ kind: 'caughtUp' });
+      items.push({ kind: 'shop' });
+      items.push({ kind: 'charity' });
+    }
     return items;
   }, [posts, hasMore]);
+
+  // Drives the header title - swiping onto the Shop/Charity sample cards
+  // relabels "Home" to match, same way a category tab would.
+  const activeDeckKind = deckData[index]?.kind;
+  const headerTitleText =
+    activeDeckKind === 'shop'
+      ? t('feed.header_shop', 'Shop')
+      : activeDeckKind === 'charity'
+      ? t('feed.header_charity', 'Charity')
+      : t('feed.header_home', 'Home');
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -291,7 +359,7 @@ export default function FeedScreen() {
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
+        <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <CurrencyBalanceButton />
       </View>
 
@@ -316,7 +384,7 @@ export default function FeedScreen() {
           <FlatList
             ref={listRef}
             data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind)}
             horizontal
             showsHorizontalScrollIndicator={false}
             decelerationRate="fast"
@@ -337,6 +405,10 @@ export default function FeedScreen() {
             renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
                 <CaughtUpCard height={cardHeight} active={itemIndex === index} />
+              ) : item.kind === 'shop' ? (
+                <FeedDeckCard post={shopPost} height={cardHeight} {...noopSampleHandlers} />
+              ) : item.kind === 'charity' ? (
+                <FeedDeckCard post={charityPost} height={cardHeight} {...noopSampleHandlers} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
@@ -411,10 +483,13 @@ const styles = StyleSheet.create({
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
 
-  // paddingBottom reserves space below the deck for the bottom tab bar -
-  // cards must not render underneath it (unlike the old vertical list,
-  // where scrolling could reveal content past that point).
-  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118 },
+  // The bottom tab bar is a normal docked element (MainTabs' custom TabBar
+  // has no position:'absolute'), so it already gets its own space outside
+  // this screen - deckWrap's flex:1 naturally stops above it with no manual
+  // clearance needed. Just a small breathing gap below the card instead of
+  // the much bigger reservation this used to carry, so each post's photo
+  // gets nearly the full remaining height instead of rendering squarish.
+  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 20 },
 
   footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
 
