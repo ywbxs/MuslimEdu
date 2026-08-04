@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -94,6 +93,23 @@ function BuildingIcon() {
       <Rect x="4" y="3" width="16" height="18" rx="1.5" stroke={EMERALD} strokeWidth={1.8} />
       <Path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" stroke={EMERALD} strokeWidth={1.8} strokeLinecap="round" />
     </Svg>
+  );
+}
+
+// Bento-style selectable tile - replaces a vertical list of radio rows with
+// a 2-column grid of big, tappable cards. Same selection state/handler as
+// before (onPress just flips whichever useState the caller passes in) -
+// only the visual presentation changed.
+function OptionTile({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.tile, selected && styles.tileSelected]} onPress={onPress} activeOpacity={0.85}>
+      <View style={[styles.tileCheck, selected && styles.tileCheckSelected]}>
+        {selected ? <CheckIcon /> : null}
+      </View>
+      <Text style={[styles.tileLabel, selected && styles.tileLabelSelected]} numberOfLines={2}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -336,14 +352,18 @@ export default function AcademicSetupWizardScreen() {
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.iconWrap}>
-            <BuildingIcon />
+        <View style={styles.content}>
+          <View style={styles.headerRow}>
+            <View style={styles.iconWrap}>
+              <BuildingIcon />
+            </View>
+            <View style={styles.flex1}>
+              <Text style={styles.title}>{t('academic_setup_wizard.title', 'Set up your school')}</Text>
+              <Text style={styles.subtitle}>
+                {t('academic_setup_wizard.subtitle', 'A few quick steps before your Admin, Teacher, and Student portals go live.')}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.title}>{t('academic_setup_wizard.title', 'Set up your school')}</Text>
-          <Text style={styles.subtitle}>
-            {t('academic_setup_wizard.subtitle', 'A few quick steps before your Admin, Teacher, and Student portals go live.')}
-          </Text>
 
           <View style={styles.stepper}>
             {STEP_LABELS.map((step_, i) => (
@@ -363,19 +383,16 @@ export default function AcademicSetupWizardScreen() {
                 <Text style={styles.stepHint}>
                   {t('academic_setup_wizard.institution_type_hint', 'This only picks editable starting defaults - everything can be renamed or changed later.')}
                 </Text>
-                {status.institution_types.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.optionRow, institutionType === type && styles.optionRowSelected]}
-                    onPress={() => setInstitutionType(type)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.radio, institutionType === type && styles.radioSelected]}>
-                      {institutionType === type ? <View style={styles.radioDot} /> : null}
-                    </View>
-                    <Text style={styles.optionLabel}>{t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}</Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.tileGrid}>
+                  {status.institution_types.map((type) => (
+                    <OptionTile
+                      key={type}
+                      label={t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}
+                      selected={institutionType === type}
+                      onPress={() => setInstitutionType(type)}
+                    />
+                  ))}
+                </View>
 
                 {institutionType === 'markaz' ? (
                   <View style={styles.programDurationWrap}>
@@ -383,21 +400,16 @@ export default function AcademicSetupWizardScreen() {
                     <Text style={styles.stepHint}>
                       {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
                     </Text>
-                    {status.program_durations.map((duration) => (
-                      <TouchableOpacity
-                        key={duration}
-                        style={[styles.optionRow, programDuration === duration && styles.optionRowSelected]}
-                        onPress={() => setProgramDuration(duration)}
-                        activeOpacity={0.8}
-                      >
-                        <View style={[styles.radio, programDuration === duration && styles.radioSelected]}>
-                          {programDuration === duration ? <View style={styles.radioDot} /> : null}
-                        </View>
-                        <Text style={styles.optionLabel}>
-                          {t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    <View style={styles.tileGrid}>
+                      {status.program_durations.map((duration) => (
+                        <OptionTile
+                          key={duration}
+                          label={t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
+                          selected={programDuration === duration}
+                          onPress={() => setProgramDuration(duration)}
+                        />
+                      ))}
+                    </View>
                   </View>
                 ) : null}
               </View>
@@ -406,14 +418,26 @@ export default function AcademicSetupWizardScreen() {
             {stepKey === 'profile' && (
               <View>
                 <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
-                <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
-                <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
-                <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
-                <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
-                <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
-                <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
-                <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
-                <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
+                <View style={styles.fieldRow}>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
+                    <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
+                    <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
+                  </View>
+                </View>
+                <View style={styles.fieldRow}>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
+                    <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
+                    <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
+                  </View>
+                </View>
               </View>
             )}
 
@@ -423,12 +447,18 @@ export default function AcademicSetupWizardScreen() {
                 <Text style={styles.stepHint}>
                   {t('academic_setup_wizard.admin_info_hint', 'A quick confirmation of your own contact details as the school admin.')}
                 </Text>
-                <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
-                <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
+                <View style={styles.fieldRow}>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
+                    <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
+                    <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
+                  </View>
+                </View>
                 <Text style={styles.label}>{t('academic_setup_wizard.admin_email_label', 'Email')}</Text>
                 <GlassInput value={user?.email ?? ''} editable={false} style={[styles.input, styles.inputDisabled]} />
-                <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
-                <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
               </View>
             )}
 
@@ -457,19 +487,16 @@ export default function AcademicSetupWizardScreen() {
                 <Text style={styles.label}>{t('academic_setup_wizard.grading_name_label', 'Name')}</Text>
                 <GlassInput value={gradingName} onChangeText={setGradingName} placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')} style={styles.input} />
                 <Text style={styles.label}>{t('academic_setup_wizard.grading_type_label', 'Type')}</Text>
-                {GRADING_TYPE_QUICK_PICKS.map((gt) => (
-                  <TouchableOpacity
-                    key={gt}
-                    style={[styles.optionRow, gradingType === gt && styles.optionRowSelected]}
-                    onPress={() => setGradingType(gt)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.radio, gradingType === gt && styles.radioSelected]}>
-                      {gradingType === gt ? <View style={styles.radioDot} /> : null}
-                    </View>
-                    <Text style={styles.optionLabel}>{t(`academic_setup_wizard.grading_type_${gt}`, GRADING_TYPE_LABELS[gt] ?? gt)}</Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.tileGrid}>
+                  {GRADING_TYPE_QUICK_PICKS.map((gt) => (
+                    <OptionTile
+                      key={gt}
+                      label={t(`academic_setup_wizard.grading_type_${gt}`, GRADING_TYPE_LABELS[gt] ?? gt)}
+                      selected={gradingType === gt}
+                      onPress={() => setGradingType(gt)}
+                    />
+                  ))}
+                </View>
               </View>
             )}
 
@@ -479,10 +506,16 @@ export default function AcademicSetupWizardScreen() {
                 <Text style={styles.stepHint}>
                   {t('academic_setup_wizard.enrollment_hint', 'You can build out a full multi-stage pipeline later from Enrollment in the admin menu.')}
                 </Text>
-                <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
-                <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
-                <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
-                <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
+                <View style={styles.fieldRow}>
+                  <View style={[styles.field, { flex: 2 }]}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
+                    <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
+                    <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
+                  </View>
+                </View>
                 <Text style={styles.label}>{t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}</Text>
                 <GlassInput
                   value={stageInstructions}
@@ -490,7 +523,7 @@ export default function AcademicSetupWizardScreen() {
                   placeholder={t('academic_setup_wizard.stage_instructions_placeholder', 'Shown to the student at this stage')}
                   style={[styles.input, styles.textArea]}
                   multiline
-                  numberOfLines={3}
+                  numberOfLines={2}
                 />
                 <View style={styles.switchRow}>
                   <View style={{ flex: 1 }}>
@@ -518,7 +551,7 @@ export default function AcademicSetupWizardScreen() {
               style={styles.nextButton}
             />
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -527,75 +560,98 @@ export default function AcademicSetupWizardScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#EFF7F1' },
   flexInner: { flex: 1 },
+  flex1: { flex: 1 },
   centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { flexGrow: 1, padding: 24, paddingTop: 70, alignItems: 'stretch' },
+  // flex (not flexGrow) + no ScrollView - the whole wizard is one screen's
+  // worth of content per step, sized to fit without scrolling.
+  content: { flex: 1, padding: 20, paddingTop: 56 },
+
+  // Icon + title/subtitle side by side instead of stacked and centered -
+  // a big, clear header that costs less vertical space than the old
+  // centered icon-above-title layout, which matters now that nothing
+  // scrolls.
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 20,
+    marginRight: 14,
   },
-  title: { fontSize: 22, fontWeight: '800', color: INK, textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 20, marginBottom: 26 },
+  title: { fontSize: 20, fontWeight: '800', color: INK },
+  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 18, marginTop: 3 },
 
-  stepper: { flexDirection: 'row', justifyContent: 'center', gap: 28, marginBottom: 24 },
-  stepperItem: { alignItems: 'center', gap: 6 },
+  stepper: { flexDirection: 'row', justifyContent: 'center', gap: 22, marginBottom: 18 },
+  stepperItem: { alignItems: 'center', gap: 5 },
   stepDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDotActive: { backgroundColor: EMERALD },
   stepDotDone: { backgroundColor: BRAND.emeraldDeep },
-  stepDotText: { fontSize: 12, fontWeight: '700', color: SUBTLE },
+  stepDotText: { fontSize: 11.5, fontWeight: '700', color: SUBTLE },
   stepDotTextActive: { color: '#fff' },
-  stepLabel: { fontSize: 11, color: SUBTLE, fontWeight: '600' },
+  stepLabel: { fontSize: 10.5, color: SUBTLE, fontWeight: '600' },
   stepLabelActive: { color: EMERALD },
 
-  stepCard: { marginBottom: 20 },
-  stepHeading: { fontSize: 16, fontWeight: '700', color: INK, marginBottom: 6 },
+  // flex:1 - the step card fills whatever vertical space is left between
+  // the stepper above and the action buttons below, instead of sizing to
+  // its own content and relying on a ScrollView for anything taller.
+  stepCard: { flex: 1, marginBottom: 16, justifyContent: 'center' },
+  stepHeading: { fontSize: 17, fontWeight: '700', color: INK, marginBottom: 6 },
   stepHint: { fontSize: 12.5, color: SUBTLE, lineHeight: 18, marginBottom: 14 },
 
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EDEEF0',
+  // Bento grid: big, self-contained selectable tiles (2 per row) instead
+  // of a vertical list of plain radio rows - fewer, taller rows means the
+  // same set of options takes less total height while looking "bigger".
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  tile: {
+    width: '48%',
+    minHeight: 76,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    justifyContent: 'space-between',
   },
-  optionRowSelected: {},
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  tileSelected: { borderColor: EMERALD, backgroundColor: EMERALD_SOFT },
+  tileCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-end',
   },
-  radioSelected: { borderColor: EMERALD },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: EMERALD },
-  optionLabel: { fontSize: 15, color: INK, fontWeight: '600' },
-  programDurationWrap: { marginTop: 20, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEEF0' },
+  tileCheckSelected: { borderColor: EMERALD, backgroundColor: EMERALD },
+  tileLabel: { fontSize: 14.5, color: INK, fontWeight: '700', marginTop: 10 },
+  tileLabelSelected: { color: BRAND.emeraldDeep },
+  programDurationWrap: { marginTop: 18, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEEF0' },
 
-  label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 6, marginTop: 12 },
+  // Two labeled fields side by side - a "bento" pairing that halves the
+  // vertical space a set of short fields (name/phone, address/phone, etc.)
+  // would otherwise take stacked one per row.
+  fieldRow: { flexDirection: 'row', gap: 12 },
+  field: { flex: 1 },
+
+  label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 6, marginTop: 10 },
   input: {},
   inputDisabled: { opacity: 0.6 },
-  textArea: { minHeight: 84, paddingTop: 12 },
+  textArea: { minHeight: 64, paddingTop: 12 },
 
-  switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, paddingVertical: 4, gap: 12 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingVertical: 4, gap: 12 },
   switchLabel: { fontSize: 14.5, fontWeight: '600', color: INK, marginBottom: 3 },
 
-  errorText: { color: ERROR, fontSize: 13.5, marginBottom: 14, textAlign: 'center' },
+  errorText: { color: ERROR, fontSize: 13.5, marginBottom: 12, textAlign: 'center' },
 
   actions: { flexDirection: 'row', gap: 12 },
   backButton: { flex: 1 },
