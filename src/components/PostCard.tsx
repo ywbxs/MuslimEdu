@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, StyleProp, ViewStyle } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
 import ExpandableText from './ExpandableText';
 import { Post } from '../services/postService';
-import { COLORS, RADIUS, SHADOW } from '../theme/glass';
+import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -136,6 +137,21 @@ function CheckIcon({ color }: { color: string }) {
   );
 }
 
+// Solid, opaque version of RoleTag's soft-tint pill - needed for legibility
+// sitting on top of a photo/gradient hero instead of a plain white card.
+// Same quiet-by-default rule as RoleTag: no pill for students/parents/etc.
+function heroPillConfig(role?: string | null): { label: string; color: string; bg: string } | null {
+  switch (role) {
+    case 'admin':
+    case 'superadmin':
+      return { label: 'Admin', color: '#FFFFFF', bg: BRAND.gold };
+    case 'teacher':
+      return { label: 'Teacher', color: '#FFFFFF', bg: BRAND.emeraldDeep };
+    default:
+      return null;
+  }
+}
+
 function timeAgo(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
@@ -167,19 +183,17 @@ interface Props {
   // Forwarded to PostImageGrid (own + quoted images) - omit to keep the
   // default full-width image grid sizing.
   contentWidth?: number;
-  // Used by the feed deck card (fixed-height, swipe-only pager): body text,
-  // own images, and the quoted-repost box render inside a flex:1,
-  // overflow:hidden region instead of the card's normal auto-height flow,
-  // so a long post's excess content clips instead of growing the card or
-  // needing its own scroll - the header and action bar (like/comment/
-  // repost) stay put and always visible either way. Omit to keep the
-  // default unclipped, auto-height card used everywhere else (moderation
-  // queue, profile modal).
+  // Used by the feed deck card (fixed-height, swipe-only pager): switches
+  // to a big magazine-style card - a photo (or a plain color for a
+  // text-only post) fills most of the fixed height with the post's text
+  // overlaid at the bottom, and the author moves to a footer row below it.
+  // Omit to keep the classic header-then-text card used everywhere else
+  // (moderation queue, profile modal).
   clipContent?: boolean;
-  // Only meaningful with clipContent - caps the body text with a plain
-  // numberOfLines instead of ExpandableText's interactive "See more"
-  // (expanding in place would just get clipped again in a fixed-height
-  // card, so there's nothing useful for it to do there).
+  // Only meaningful with clipContent - caps the headline text overlaid on
+  // the hero to this many lines instead of the classic card's interactive
+  // ExpandableText "See more" (expanding in place wouldn't fit over a
+  // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
 }
 
@@ -246,107 +260,176 @@ export default function PostCard({
 
   const quoted = post.repost_of;
   const heartColor = post.is_liked ? HEART_RED : SUBTLE;
-  // A short text-only post in a fixed-height clipped card (see clipContent)
-  // would otherwise leave a big blank gap below it, since the clipped
-  // region is flex:1 and top-aligned by default. Centering only kicks in
-  // when there's no image/quote to naturally fill that space - a post with
-  // an image already has something to occupy the rest of the card.
-  const isTextOnly = clipContent && !quoted && post.images.length === 0;
+
+  // Magazine-style hero (feed deck only, see clipContent below): prefers this
+  // post's own attached image, then falls back to the reposted post's image,
+  // then to a plain color background for a text-only post - the card is
+  // always "big", just filled with a photo or a color instead of blank space.
+  const heroImage = post.images.length > 0 ? post.images[0] : quoted && quoted.images.length > 0 ? quoted.images[0] : null;
+  const headlineText = post.content || quoted?.content || '';
+  const heroPill = heroPillConfig(post.author?.role);
 
   return (
     <>
-    <View style={[styles.card, containerStyle]}>
-      {/* Repost banner */}
-      {quoted && (
-        <View style={styles.repostBanner}>
-          <RepostIcon color={SUBTLE} size={14} />
-          <Text style={styles.repostBannerText}>{post.author?.name ?? 'Someone'} reposted</Text>
-        </View>
-      )}
+    <View style={[styles.card, containerStyle, clipContent && styles.cardMagazine]}>
+      {clipContent ? (
+        <>
+          {/* Magazine hero - feed deck only: a big photo (or a plain color
+              for a text-only post) with the post's own text overlaid at the
+              bottom, instead of a small header + plain text card. */}
+          <View style={styles.hero}>
+            {heroImage ? (
+              <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            ) : (
+              <LinearGradient
+                colors={[BRAND.emeraldDeep, BRAND.emerald]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+            )}
+            {heroImage && (
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.82)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+            )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerLeft}
-          onPress={() => post.author?.id && onPressAuthor?.(post.author.id)}
-          activeOpacity={0.85}
-        >
-          <UserAvatar name={post.author?.name ?? ''} photo={post.author?.photo} size={48} />
-          <View style={styles.headerText}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{post.author?.name ?? 'Unknown'}</Text>
-              <RoleTag role={post.author?.role} />
+            <View style={styles.heroTopRow}>
+              {heroPill ? (
+                <View style={[styles.heroPill, { backgroundColor: heroPill.bg }]}>
+                  <Text style={[styles.heroPillText, { color: heroPill.color }]}>{heroPill.label}</Text>
+                </View>
+              ) : (
+                <View />
+              )}
+              {post.is_mine && (onEdit || onDelete || onChangePrivacy) && (
+                <TouchableOpacity style={styles.heroMoreBtn} onPress={openPostMenu} hitSlop={8}>
+                  <MoreIcon color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.time}>{timeAgo(post.created_at)}</Text>
-              <Text style={styles.dot}>  </Text>
-              <PrivacyIcon privacy={post.privacy} />
-            </View>
-          </View>
-        </TouchableOpacity>
 
-        {post.is_mine && (onEdit || onDelete || onChangePrivacy) && (
-          <TouchableOpacity style={styles.moreButton} onPress={openPostMenu} hitSlop={8}>
-            <MoreIcon />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Body text + images + quoted post - wrapped so clipContent can clip
-          this region alone (flex:1, overflow:hidden) without affecting the
-          header above or the action bar below, which always stay fully
-          visible in a fixed-height card. */}
-      <View style={[clipContent && styles.clippedContent, isTextOnly && styles.clippedContentCentered]}>
-        {/* Body text */}
-        {!!post.content &&
-          (clipContent ? (
-            <Text style={styles.content} numberOfLines={bodyNumberOfLines ?? 4}>
-              {post.content}
-            </Text>
-          ) : (
-            <ExpandableText text={post.content} style={styles.content} />
-          ))}
-
-        {/* Own images */}
-        {!quoted && post.images.length > 0 && (
-          <View style={styles.imageWrap}>
-            <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
-          </View>
-        )}
-
-        {/* Quoted original post */}
-        {quoted && (
-          <TouchableOpacity
-            style={styles.quoteBox}
-            activeOpacity={0.85}
-            onPress={() => quoted.author?.id && onPressAuthor?.(quoted.author.id)}
-          >
-            <View style={styles.quoteHeader}>
-              <UserAvatar name={quoted.author?.name ?? ''} photo={quoted.author?.photo} size={22} />
-              <Text style={styles.quoteName}>{quoted.author?.name ?? 'Unknown'}</Text>
-              <RoleTag role={quoted.author?.role} />
-              <Text style={styles.time}>· {timeAgo(quoted.created_at)}</Text>
-            </View>
-            {!!quoted.content && (
-              <Text style={styles.quoteContent} numberOfLines={clipContent ? 3 : undefined}>
-                {quoted.content}
+            {!!headlineText && (
+              <Text style={styles.headline} numberOfLines={bodyNumberOfLines ?? 3}>
+                {headlineText}
               </Text>
             )}
-            {quoted.images.length > 0 && (
-              <View style={{ marginTop: 8 }}>
-                <PostImageGrid
-                  images={quoted.images}
-                  width={contentWidth != null ? contentWidth - 28 : undefined}
-                  onPressImage={(i) => onPressImage?.(quoted.images, i)}
-                />
+          </View>
+
+          {/* Compact attribution for the original post, when this is a
+              repost - the footer below already credits whoever reshared it. */}
+          {quoted && (
+            <TouchableOpacity
+              style={styles.quoteCompact}
+              activeOpacity={0.85}
+              onPress={() => quoted.author?.id && onPressAuthor?.(quoted.author.id)}
+            >
+              <RepostIcon color={EMERALD} size={13} />
+              <Text style={styles.quoteCompactText} numberOfLines={1}>
+                {quoted.author?.name ?? 'Unknown'} · {quoted.content || 'shared a post'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Footer - who shared this, matching the reference card's byline
+              row sitting below the hero instead of above it. */}
+          <TouchableOpacity
+            style={styles.footerRow}
+            activeOpacity={0.85}
+            onPress={() => post.author?.id && onPressAuthor?.(post.author.id)}
+          >
+            <UserAvatar name={post.author?.name ?? ''} photo={post.author?.photo} size={34} />
+            <View style={styles.footerTextCol}>
+              <Text style={styles.footerName} numberOfLines={1}>
+                {post.author?.name ?? 'Unknown'}
+              </Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.time}>{timeAgo(post.created_at)}</Text>
+                <Text style={styles.dot}>  </Text>
+                <PrivacyIcon privacy={post.privacy} />
               </View>
-            )}
+            </View>
           </TouchableOpacity>
-        )}
-      </View>
+        </>
+      ) : (
+        <>
+          {/* Repost banner */}
+          {quoted && (
+            <View style={styles.repostBanner}>
+              <RepostIcon color={SUBTLE} size={14} />
+              <Text style={styles.repostBannerText}>{post.author?.name ?? 'Someone'} reposted</Text>
+            </View>
+          )}
+
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.headerLeft}
+              onPress={() => post.author?.id && onPressAuthor?.(post.author.id)}
+              activeOpacity={0.85}
+            >
+              <UserAvatar name={post.author?.name ?? ''} photo={post.author?.photo} size={48} />
+              <View style={styles.headerText}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{post.author?.name ?? 'Unknown'}</Text>
+                  <RoleTag role={post.author?.role} />
+                </View>
+                <View style={styles.metaRow}>
+                  <Text style={styles.time}>{timeAgo(post.created_at)}</Text>
+                  <Text style={styles.dot}>  </Text>
+                  <PrivacyIcon privacy={post.privacy} />
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {post.is_mine && (onEdit || onDelete || onChangePrivacy) && (
+              <TouchableOpacity style={styles.moreButton} onPress={openPostMenu} hitSlop={8}>
+                <MoreIcon />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Body text */}
+          {!!post.content && <ExpandableText text={post.content} style={styles.content} />}
+
+          {/* Own images */}
+          {!quoted && post.images.length > 0 && (
+            <View style={styles.imageWrap}>
+              <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
+            </View>
+          )}
+
+          {/* Quoted original post */}
+          {quoted && (
+            <TouchableOpacity
+              style={styles.quoteBox}
+              activeOpacity={0.85}
+              onPress={() => quoted.author?.id && onPressAuthor?.(quoted.author.id)}
+            >
+              <View style={styles.quoteHeader}>
+                <UserAvatar name={quoted.author?.name ?? ''} photo={quoted.author?.photo} size={22} />
+                <Text style={styles.quoteName}>{quoted.author?.name ?? 'Unknown'}</Text>
+                <RoleTag role={quoted.author?.role} />
+                <Text style={styles.time}>· {timeAgo(quoted.created_at)}</Text>
+              </View>
+              {!!quoted.content && <Text style={styles.quoteContent}>{quoted.content}</Text>}
+              {quoted.images.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <PostImageGrid
+                    images={quoted.images}
+                    width={contentWidth != null ? contentWidth - 28 : undefined}
+                    onPressImage={(i) => onPressImage?.(quoted.images, i)}
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+        </>
+      )}
 
       {/* Action bar - grouped on the right side of the divider */}
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, clipContent && styles.actionBarMagazine]}>
         <TouchableOpacity style={styles.action} onPress={() => onPressRepost(post)} activeOpacity={0.7}>
           <RepostIcon color={EMERALD} />
           <Text style={[styles.actionCount, { color: EMERALD }]}>
@@ -456,14 +539,50 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: RADIUS.lg,
   },
-  // flex:1 + overflow:hidden - only applied when clipContent is set (via
-  // the wrapping View in the render above), so the header/action bar
-  // (siblings, not flexed) keep their own natural size and this region
-  // alone absorbs and clips whatever's left in the fixed-height card.
-  clippedContent: { flex: 1, overflow: 'hidden' },
-  // A text-only post has nothing else to fill the clipped region, so it's
-  // centered vertically instead of pinned to the top with blank space below.
-  clippedContentCentered: { justifyContent: 'center' },
+  // clipContent (feed deck) drops the base card's padding entirely - the
+  // hero photo/color bleeds edge to edge, matching the outer FeedDeckCard
+  // wrapper's own rounded corners instead of sitting inside a white margin.
+  cardMagazine: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
+  // Majority of the fixed-height card (flex:1 absorbs whatever's left after
+  // the footer/action bar below), always filled with either a photo or a
+  // plain color - never blank, unlike a plain top-aligned text block would be.
+  hero: { flex: 1, overflow: 'hidden', justifyContent: 'flex-end', padding: 16 },
+  heroTopRow: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroPill: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: RADIUS.pill },
+  heroPillText: { fontSize: 11.5, fontWeight: '800' },
+  heroMoreBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headline: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', lineHeight: 27 },
+  quoteCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  quoteCompactText: { flex: 1, fontSize: 12.5, color: SUBTLE, fontWeight: '600' },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  footerTextCol: { marginLeft: 10, flex: 1 },
+  footerName: { fontSize: 15, fontWeight: '700', color: INK },
   repostBanner: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 },
   repostBannerText: { fontSize: 12, color: SUBTLE, marginLeft: 6, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center' },
@@ -498,6 +617,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  // cardMagazine drops the base card's own paddingHorizontal (see above),
+  // so the action bar needs its own to stay clear of the rounded corners.
+  actionBarMagazine: { paddingHorizontal: 16, paddingBottom: 12 },
   action: { flexDirection: 'row', alignItems: 'center', marginRight: 28 },
   actionLast: { flexDirection: 'row', alignItems: 'center' },
   actionCount: { fontSize: 13.5, color: SUBTLE, marginLeft: 8, fontWeight: '600', minWidth: 10 },
