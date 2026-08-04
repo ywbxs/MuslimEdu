@@ -249,12 +249,16 @@ const styles = StyleSheet.create({
     gap: SPACING.sm - 2,
     marginTop: SPACING.md,
   },
+  // No shadow/elevation here on purpose: Android renders `elevation`
+  // combined with a translucent (rgba) backgroundColor as a visibly offset
+  // ghost/duplicate box instead of a normal soft shadow - these tiles sit
+  // inside an already-shadowed card (see `card` above), so they don't need
+  // their own anyway.
   tile: {
     width: '48%',
     borderRadius: RADIUS.md,
     padding: SPACING.sm,
     borderWidth: 1,
-    ...SHADOW.level1,
   },
   tileOk: { backgroundColor: EMERALD_SOFT, borderColor: 'rgba(34,197,94,0.18)' },
   tilePending: { backgroundColor: AMBER_SOFT, borderColor: 'rgba(180,83,9,0.16)' },
