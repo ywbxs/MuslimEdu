@@ -437,6 +437,11 @@ export default function EnrollmentWorkflowDetailScreen() {
                           .join(' · ')}
                       </Text>
                     ) : null}
+                    {payment.recordedBy?.name ? (
+                      <Text style={styles.feeMeta}>
+                        {t('enrollment_workflow_detail.recorded_by_prefix', 'Recorded by')} {payment.recordedBy.name}
+                      </Text>
+                    ) : null}
                   </View>
                   <Text style={[styles.feeStatusBadge, { color: statusColors.color, backgroundColor: statusColors.bg }]}>
                     {t(`enrollment_workflow_detail.payment_status_${payment.status}`, payment.status)}
