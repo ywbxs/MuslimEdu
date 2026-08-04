@@ -13,18 +13,19 @@ export type Capability =
   | 'view_fees'
   | 'record_fee_payments'
   | 'manage_fees'
-  | 'manage_enrollment_progress';
+  | 'manage_enrollment_progress'
+  | 'manage_teacher_schedule';
 
 const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   superadmin: [
     'view_students', 'manage_students', 'manage_academic_setup',
     'manage_academic_catalog', 'manage_grading', 'manage_enrollment',
-    'view_fees', 'record_fee_payments', 'manage_fees',
+    'view_fees', 'record_fee_payments', 'manage_fees', 'manage_teacher_schedule',
   ],
   admin: [
     'view_students', 'manage_students', 'manage_academic_setup',
     'manage_academic_catalog', 'manage_grading', 'manage_enrollment',
-    'view_fees', 'record_fee_payments', 'manage_fees',
+    'view_fees', 'record_fee_payments', 'manage_fees', 'manage_teacher_schedule',
   ],
   teacher: ['view_students', 'teach'],
   // Cashier. Deliberately no 'manage_fees' - deciding what a student owes
@@ -44,8 +45,15 @@ const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   // shared requireApprover guard on the backend, scoped to registrar-
   // assigned stages). Deliberately no 'manage_enrollment' - stage
   // configuration and starting/withdrawing a student's workflow stay
-  // admin-only, matching those endpoints' guards.
-  registrar: ['manage_enrollment_progress', 'view_students'],
+  // admin-only, matching those endpoints' guards. 'manage_teacher_schedule'
+  // matches AcademicScheduleController's store/update/status/delete/list/
+  // check/audit guards, now admin-or-registrar - registrar builds each
+  // teacher's timetable once a student clears enrollment. Placing a
+  // completed enrollment record into a class/section
+  // (admin_enrollment_workflow_place_in_section) is also now admin-or-
+  // registrar server-side, but needs no capability here - that button has
+  // no can() gate today, only a record.status === 'completed' check.
+  registrar: ['manage_enrollment_progress', 'view_students', 'manage_teacher_schedule'],
   librarian: [],
   parent: [],
   student: ['submit_student_work', 'view_own_records'],

@@ -95,6 +95,13 @@ export default function EnrollmentWorkflowDetailScreen() {
   const canWithdraw = can(user, 'manage_enrollment');
   const workflowStatusLabel = (s: string) => t(`enrollment_workflow_detail.status_${s}`, WORKFLOW_STATUS_FALLBACKS[s] ?? s.replace('_', ' '));
 
+  // A cashier's job on this workflow is collecting payment and handing the
+  // student off to the registrar - the backend now rejects any other
+  // target stage for them (admin_enrollment_workflow_advance's cashier
+  // gate), so only offer the registrar-owned stage(s) in the picker
+  // instead of letting them pick something the server will just reject.
+  const isCashier = user?.role === 'accountant';
+
   const recordId: number = route.params?.recordId;
 
   const [record, setRecord] = useState<WorkflowRecord | null>(null);
@@ -154,6 +161,11 @@ export default function EnrollmentWorkflowDetailScreen() {
     useCallback(() => {
       load();
     }, [load])
+  );
+
+  const visibleStages = useMemo(
+    () => (isCashier ? stages.filter((s) => s.approver_role === 'registrar') : stages),
+    [stages, isCashier]
   );
 
   const onAdvance = async (stage: WorkflowStage) => {
@@ -503,10 +515,22 @@ export default function EnrollmentWorkflowDetailScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{t('enrollment_workflow_detail.move_to_stage_title', 'Move to Stage')}</Text>
+            {isCashier ? (
+              <Text style={styles.cashierHint}>
+                {t('enrollment_workflow_detail.cashier_hint', 'As cashier, you can only hand this student off to the registrar once their required fees are settled.')}
+              </Text>
+            ) : null}
             <FlatList
-              data={stages}
+              data={visibleStages}
               keyExtractor={(s) => s.id.toString()}
               style={{ maxHeight: 320 }}
+              ListEmptyComponent={
+                isCashier ? (
+                  <Text style={styles.modalEmptyText}>
+                    {t('enrollment_workflow_detail.no_registrar_stage', 'No registrar stage is configured for this school yet.')}
+                  </Text>
+                ) : null
+              }
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
@@ -801,6 +825,8 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderBottomColor: theme.border,
     },
     modalItemText: { fontSize: 15, color: theme.textPrimary },
+    cashierHint: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18, marginBottom: 12 },
+    modalEmptyText: { fontSize: 13.5, color: theme.textMuted, textAlign: 'center', paddingVertical: 20 },
     modalCloseButton: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
     modalCloseText: { fontSize: 14.5, fontWeight: '600', color: theme.textSecondary },
 
