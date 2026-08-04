@@ -5,6 +5,16 @@ import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
 import { fetchMySchedule, AcademicSchedule, Day } from '../services/academicScheduleService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 
+function formatTime12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.slice(0, 5).split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr ?? '00';
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${suffix}`;
+}
+
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#E7F5EC';
 const INK = '#1C1C1E';
@@ -45,6 +55,14 @@ function PersonIcon({ color = SUBTLE, size = 13 }: { color?: string; size?: numb
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
       <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function ClockIcon({ color = EMERALD, size = 13 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
+      <Path d="M12 7v5l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -136,12 +154,13 @@ export default function UpcomingClassesCard({ token }: { token: string }) {
         <View style={styles.rows}>
           {preview.map((item) => (
             <View key={item.id} style={styles.row}>
-              <View style={styles.timeCol}>
-                <Text style={styles.timeText}>{item.starts_at.slice(0, 5)}</Text>
-                <Text style={styles.timeSub}>{item.ends_at.slice(0, 5)}</Text>
-              </View>
-              <View style={styles.divider} />
               <View style={{ flex: 1 }}>
+                <View style={styles.timeBadge}>
+                  <ClockIcon />
+                  <Text style={styles.timeText}>
+                    {formatTime12h(item.starts_at)} - {formatTime12h(item.ends_at)}
+                  </Text>
+                </View>
                 <Text style={styles.subjectText}>{item.subject_name ?? item.code}</Text>
                 <View style={styles.metaRow}>
                   {item.teacher_name ? (
@@ -201,11 +220,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, color: SUBTLE, marginTop: 16, lineHeight: 18 },
 
   rows: { marginTop: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: HAIRLINE },
-  timeCol: { width: 50 },
-  timeText: { fontSize: 13, fontWeight: '800', color: INK },
-  timeSub: { fontSize: 11, color: SUBTLE, marginTop: 1 },
-  divider: { width: 1, height: 32, backgroundColor: HAIRLINE, marginHorizontal: 12 },
+  row: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: HAIRLINE },
+  timeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
+  timeText: { fontSize: 12, fontWeight: '700', color: EMERALD },
   subjectText: { fontSize: 14.5, fontWeight: '700', color: INK },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
