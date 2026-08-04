@@ -36,13 +36,6 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 
 // ---- Inline icons (react-native-svg) --------------------------------------
-function PlusIcon({ color = '#FFFFFF', size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
-}
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -71,20 +64,6 @@ function PollIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numbe
     </Svg>
   );
 }
-function RefreshIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-      <Path d="M18 4v4h-4M6 20v-4h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
 export default function FeedScreen() {
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -104,7 +83,6 @@ export default function FeedScreen() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
@@ -139,7 +117,6 @@ export default function FeedScreen() {
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [token, t]);
 
@@ -147,16 +124,14 @@ export default function FeedScreen() {
     load();
   }, [load]);
 
+  // No manual refresh button anymore - the feed reloads automatically every
+  // time this screen regains focus (e.g. switching back to the Home tab),
+  // which covers the same "see anything new" need.
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
 
   const onEndReached = useCallback(async () => {
     if (!token || loadingMoreRef.current || !hasMore || !nextBeforeId) return;
@@ -321,19 +296,7 @@ export default function FeedScreen() {
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerTextCol}>
-          <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
-        </View>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.refreshButton} activeOpacity={0.85} onPress={onRefresh} disabled={refreshing}>
-            {refreshing ? <ActivityIndicator size="small" color={EMERALD} /> : <RefreshIcon />}
-          </TouchableOpacity>
-          {canPost && (
-            <TouchableOpacity style={styles.composeButton} activeOpacity={0.85} onPress={openCompose}>
-              <PlusIcon />
-            </TouchableOpacity>
-          )}
-        </View>
+        <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
       </View>
 
       {canPost && (
@@ -435,31 +398,10 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  headerTextCol: { flex: 1 },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
-  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.emeraldSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composeButton: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.pill,
-    backgroundColor: EMERALD,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   composer: {
     flexDirection: 'row',
