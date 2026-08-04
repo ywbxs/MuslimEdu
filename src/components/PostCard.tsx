@@ -346,7 +346,7 @@ export default function PostCard({
                     {headlineText}
                   </Text>
                 )}
-                {heroImageFailed && !headlineText && (
+                {!headlineText && (
                   <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
                 )}
               </>
