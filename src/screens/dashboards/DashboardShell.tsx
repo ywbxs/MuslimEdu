@@ -103,7 +103,7 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#FFFFFF' },
-  balanceRow: { paddingHorizontal: 20, paddingTop: 56 },
+  balanceRow: { paddingHorizontal: 20, paddingTop: 56, alignItems: 'flex-end' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { useLocale } from '../context/LocaleContext';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
@@ -9,15 +9,6 @@ const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 
-function WalletIcon({ color = EMERALD, size = 15 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={6} width={18} height={13} rx={2.5} stroke={color} strokeWidth={2} />
-      <Path d="M3 10h18" stroke={color} strokeWidth={2} />
-      <Circle cx={16} cy={14.5} r={1.4} fill={color} />
-    </Svg>
-  );
-}
 function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -39,7 +30,7 @@ function SparkleIcon({ color = EMERALD, size = 30 }: { color?: string; size?: nu
 }
 
 /**
- * Wallet/balance pill shown at the top of every role's dashboard - the
+ * Plain-text balance shown top-right on every role's dashboard - the
  * balance itself isn't wired to anything yet (no ledger/wallet backend
  * exists), so tapping it just opens a "Coming soon" sheet rather than
  * pretending a real number. Self-contained: owns its own modal state, so
@@ -50,10 +41,10 @@ export default function CurrencyBalanceButton({
   variant = 'light',
 }: {
   style?: object;
-  // 'light' (default) - emerald-on-soft-green, for a white/light page
-  // background. 'dark' - translucent white, for sitting on top of a dark
-  // hero (StudentDashboard/TeacherDashboard/AdminDashboard's gradient
-  // header) where the light variant's soft-green would have no contrast.
+  // 'light' (default) - dark ink text, for a white/light page background.
+  // 'dark' - white text, for sitting on top of a dark hero
+  // (StudentDashboard/TeacherDashboard/AdminDashboard's gradient header)
+  // where the light variant's ink text would have no contrast.
   variant?: 'light' | 'dark';
 }) {
   const { t } = useLocale();
@@ -63,12 +54,11 @@ export default function CurrencyBalanceButton({
   return (
     <>
       <TouchableOpacity
-        style={[styles.pill, isDark && styles.pillDark, style]}
-        activeOpacity={0.8}
+        style={[styles.pill, style]}
+        activeOpacity={0.6}
         onPress={() => setVisible(true)}
       >
-        <WalletIcon color={isDark ? '#FFFFFF' : EMERALD} />
-        <Text style={[styles.pillText, isDark && styles.pillTextDark]}>{t('currency_balance.label', '₱0.00')}</Text>
+        <Text style={[styles.pillText, isDark && styles.pillTextDark]}>{t('currency_balance.label', '₱0')}</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
@@ -100,17 +90,11 @@ export default function CurrencyBalanceButton({
 
 const styles = StyleSheet.create({
   pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: EMERALD_SOFT,
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
-  pillText: { fontSize: 13, fontWeight: '800', color: EMERALD },
-  pillDark: { backgroundColor: 'rgba(255,255,255,0.16)' },
+  pillText: { fontSize: 15, fontWeight: '800', color: INK },
   pillTextDark: { color: '#FFFFFF' },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
