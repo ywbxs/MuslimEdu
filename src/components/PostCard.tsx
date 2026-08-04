@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, StyleProp, ViewStyle } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, StyleProp, ViewStyle } from 'react-native';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
@@ -9,8 +9,12 @@ import { Post } from '../services/postService';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
 const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
+const HAIRLINE = COLORS.border;
+const CANVAS = COLORS.canvas;
+const DANGER = COLORS.danger;
 const HEART_RED = '#E0245E';
 
 function HeartIcon({ filled, color, size = 22 }: { filled: boolean; color: string; size?: number }) {
@@ -95,6 +99,43 @@ function PrivacyIcon({ privacy }: { privacy: string }) {
   );
 }
 
+function PencilIcon({ color }: { color: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
+function TrashIcon({ color }: { color: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function ChevronRightIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 5l6 7-6 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function CloseIcon({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Line x1={5} y1={5} x2={17} y2={17} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Line x1={17} y1={5} x2={5} y2={17} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function CheckIcon({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12.5l5 5L20 6.5" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 function timeAgo(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
@@ -164,6 +205,8 @@ export default function PostCard({
   bodyNumberOfLines,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
 
   const handleHeart = () => {
     Animated.sequence([
@@ -173,41 +216,39 @@ export default function PostCard({
     onToggleLike(post);
   };
 
-  const openPrivacyMenu = () => {
-    if (!onChangePrivacy) return;
-    Alert.alert('Who can see this?', undefined, [
-      ...PRIVACY_MENU_OPTIONS.filter((opt) => opt.key !== post.privacy).map((opt) => ({
-        text: opt.label,
-        onPress: () => onChangePrivacy(post, opt.key),
-      })),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
-  };
-
   const openPostMenu = () => {
     if (!post.is_mine) return;
-    const buttons: any[] = [];
-    if (onEdit) buttons.push({ text: 'Edit post', onPress: () => onEdit(post) });
-    if (onChangePrivacy) buttons.push({ text: 'Change privacy', onPress: openPrivacyMenu });
-    if (onDelete) {
-      buttons.push({
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert('Delete post?', 'This cannot be undone.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: () => onDelete(post) },
-          ]),
-      });
-    }
-    buttons.push({ text: 'Cancel', style: 'cancel' as const });
-    Alert.alert('Post options', undefined, buttons);
+    setMenuVisible(true);
+  };
+
+  const handleEditPress = () => {
+    setMenuVisible(false);
+    onEdit?.(post);
+  };
+
+  const handleChangePrivacyPress = () => {
+    setMenuVisible(false);
+    setPrivacyVisible(true);
+  };
+
+  const handlePrivacyPick = (privacy: Post['privacy']) => {
+    setPrivacyVisible(false);
+    onChangePrivacy?.(post, privacy);
+  };
+
+  const handleDeletePress = () => {
+    setMenuVisible(false);
+    Alert.alert('Delete post?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => onDelete?.(post) },
+    ]);
   };
 
   const quoted = post.repost_of;
   const heartColor = post.is_liked ? HEART_RED : SUBTLE;
 
   return (
+    <>
     <View style={[styles.card, containerStyle]}>
       {/* Repost banner */}
       {quoted && (
@@ -322,6 +363,80 @@ export default function PostCard({
         </TouchableOpacity>
       </View>
     </View>
+
+    {/* Post options - modern bottom sheet, replacing the old system Alert.alert
+        dialog box. */}
+    <Modal visible={menuVisible} transparent animationType="slide" onRequestClose={() => setMenuVisible(false)}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={styles.sheetBackdropTouch} activeOpacity={1} onPress={() => setMenuVisible(false)} />
+        <View style={styles.actionSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeaderRow}>
+            <Text style={styles.sheetTitle}>Post options</Text>
+            <TouchableOpacity onPress={() => setMenuVisible(false)} hitSlop={12} style={styles.sheetCloseBtn}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
+          </View>
+
+          {onEdit && (
+            <TouchableOpacity style={styles.sheetRow} activeOpacity={0.7} onPress={handleEditPress}>
+              <View style={styles.sheetRowIconWrap}>
+                <PencilIcon color={EMERALD} />
+              </View>
+              <Text style={styles.sheetRowLabel}>Edit post</Text>
+              <ChevronRightIcon color="#C4C9CF" />
+            </TouchableOpacity>
+          )}
+          {onChangePrivacy && (
+            <TouchableOpacity style={styles.sheetRow} activeOpacity={0.7} onPress={handleChangePrivacyPress}>
+              <View style={styles.sheetRowIconWrap}>
+                <PrivacyIcon privacy={post.privacy} />
+              </View>
+              <Text style={styles.sheetRowLabel}>Change privacy</Text>
+              <ChevronRightIcon color="#C4C9CF" />
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity style={styles.sheetRow} activeOpacity={0.7} onPress={handleDeletePress}>
+              <View style={[styles.sheetRowIconWrap, styles.sheetRowIconWrapDanger]}>
+                <TrashIcon color={DANGER} />
+              </View>
+              <Text style={[styles.sheetRowLabel, { color: DANGER }]}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+
+    {/* Who can see this - own bottom sheet, opened from Post options above. */}
+    <Modal visible={privacyVisible} transparent animationType="slide" onRequestClose={() => setPrivacyVisible(false)}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={styles.sheetBackdropTouch} activeOpacity={1} onPress={() => setPrivacyVisible(false)} />
+        <View style={styles.actionSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeaderRow}>
+            <Text style={styles.sheetTitle}>Who can see this?</Text>
+            <TouchableOpacity onPress={() => setPrivacyVisible(false)} hitSlop={12} style={styles.sheetCloseBtn}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
+          </View>
+
+          {PRIVACY_MENU_OPTIONS.map((opt) => {
+            const active = opt.key === post.privacy;
+            return (
+              <TouchableOpacity key={opt.key} style={styles.sheetRow} activeOpacity={0.7} onPress={() => handlePrivacyPick(opt.key)}>
+                <View style={styles.sheetRowIconWrap}>
+                  <PrivacyIcon privacy={opt.key} />
+                </View>
+                <Text style={styles.sheetRowLabel}>{opt.label}</Text>
+                {active && <CheckIcon color={EMERALD} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -377,4 +492,58 @@ const styles = StyleSheet.create({
   action: { flexDirection: 'row', alignItems: 'center', marginRight: 28 },
   actionLast: { flexDirection: 'row', alignItems: 'center' },
   actionCount: { fontSize: 13.5, color: SUBTLE, marginLeft: 8, fontWeight: '600', minWidth: 10 },
+
+  // Post options / privacy bottom sheets - same visual language as the rest
+  // of the app's action sheets (see ChildActionModal in ChildProfileSheet.tsx).
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
+  sheetBackdropTouch: { flex: 1 },
+  actionSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#DADDE1',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: INK },
+  sheetCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: CANVAS,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: HAIRLINE,
+    gap: 12,
+  },
+  sheetRowIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetRowIconWrapDanger: { backgroundColor: 'rgba(239,68,68,0.1)' },
+  sheetRowLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: INK },
 });

@@ -73,7 +73,6 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'SectionList',
   'SectionForm',
   'SectionStudents',
-  'TeacherMyClasses',
   'TeacherClassStudents',
   'DepartmentList',
   'DepartmentForm',
