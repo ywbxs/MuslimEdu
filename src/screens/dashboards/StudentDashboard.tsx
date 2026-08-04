@@ -18,7 +18,6 @@ import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import EnrollmentStatusCard from '../../components/EnrollmentStatusCard';
 import UserAvatar from '../../components/UserAvatar';
-import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -383,8 +382,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
           }}
         >
-          <CurrencyBalanceButton variant="dark" style={styles.balanceButton} />
-
           {/* Greeting */}
           <View style={styles.headerRow}>
             <View>
@@ -647,7 +644,6 @@ const styles = StyleSheet.create({
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 130 },
 
-  balanceButton: { marginBottom: 14 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

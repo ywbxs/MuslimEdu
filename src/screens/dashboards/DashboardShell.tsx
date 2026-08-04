@@ -4,7 +4,6 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 
 const EMERALD = '#0F9D58';
 const EMERALD_SOFT = '#EAF7EF';
@@ -59,9 +58,6 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
 
   return (
     <View style={styles.flex}>
-      <View style={styles.balanceRow}>
-        <CurrencyBalanceButton />
-      </View>
       <View style={styles.header}>
         <View>
           <Text style={styles.greetingSmall}>{t('dashboard_shell.greeting', 'Assalamu Alaykum,')}</Text>
@@ -103,13 +99,12 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#FFFFFF' },
-  balanceRow: { paddingHorizontal: 20, paddingTop: 56, alignItems: 'flex-end' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 60,
     paddingBottom: 20,
   },
   greetingSmall: { fontSize: 14, color: SUBTLE },
