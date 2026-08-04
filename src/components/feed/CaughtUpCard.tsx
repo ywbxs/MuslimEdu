@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useLocale } from '../../context/LocaleContext';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
@@ -21,19 +21,65 @@ function CheckIcon() {
  * The deck's own end-of-feed card - appended as the last item once pagination
  * is exhausted (see FeedScreen.tsx's deckData), instead of a pill overlaid on
  * top of the last post. Reached the same way every other card is: swipe to it.
+ *
+ * `active` (whether this card is the one currently snapped into view) drives
+ * a one-shot entrance animation each time the reader swipes onto it, instead
+ * of the card just sitting there fully drawn from the first frame.
  */
-export default function CaughtUpCard({ height }: { height: number }) {
+export default function CaughtUpCard({ height, active }: { height: number; active?: boolean }) {
   const { t } = useLocale();
+
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.9)).current;
+  const iconScale = useRef(new Animated.Value(0)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const textTranslateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    if (!active) {
+      cardOpacity.setValue(0);
+      cardScale.setValue(0.9);
+      iconScale.setValue(0);
+      textOpacity.setValue(0);
+      textTranslateY.setValue(10);
+      return;
+    }
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(cardOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(cardScale, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.back(1.4)),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.spring(iconScale, { toValue: 1, friction: 4.5, tension: 90, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(textOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(textTranslateY, { toValue: 0, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]),
+    ]).start();
+  }, [active, cardOpacity, cardScale, iconScale, textOpacity, textTranslateY]);
+
   return (
-    <View style={[styles.card, { width: CARD_W, height }]}>
-      <View style={styles.iconWrap}>
+    <Animated.View
+      style={[
+        styles.card,
+        { width: CARD_W, height, opacity: cardOpacity, transform: [{ scale: cardScale }] },
+      ]}
+    >
+      <Animated.View style={[styles.iconWrap, { transform: [{ scale: iconScale }] }]}>
         <CheckIcon />
-      </View>
-      <Text style={styles.title}>{t('feed.caught_up', 'All caught up')}</Text>
-      <Text style={styles.subtitle}>
+      </Animated.View>
+      <Animated.Text style={[styles.title, { opacity: textOpacity, transform: [{ translateY: textTranslateY }] }]}>
+        {t('feed.caught_up', 'All caught up')}
+      </Animated.Text>
+      <Animated.Text style={[styles.subtitle, { opacity: textOpacity, transform: [{ translateY: textTranslateY }] }]}>
         {t('feed.caught_up_desc', "You've seen every post for now - check back later for more.")}
-      </Text>
-    </View>
+      </Animated.Text>
+    </Animated.View>
   );
 }
 

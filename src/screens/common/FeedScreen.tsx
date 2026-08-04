@@ -342,9 +342,9 @@ export default function FeedScreen() {
             onScrollEndDrag={onSettle}
             onEndReached={onEndReached}
             onEndReachedThreshold={1.5}
-            renderItem={({ item }) =>
+            renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
-                <CaughtUpCard height={cardHeight} />
+                <CaughtUpCard height={cardHeight} active={itemIndex === index} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
