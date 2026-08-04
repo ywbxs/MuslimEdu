@@ -546,7 +546,12 @@ const styles = StyleSheet.create({
   // Majority of the fixed-height card (flex:1 absorbs whatever's left after
   // the footer/action bar below), always filled with either a photo or a
   // plain color - never blank, unlike a plain top-aligned text block would be.
-  hero: { flex: 1, overflow: 'hidden', justifyContent: 'flex-end', padding: 16 },
+  // backgroundColor is a guaranteed solid fallback underneath the
+  // LinearGradient/Image - without it, any failure to paint those (a slow
+  // image load, a gradient render hiccup) leaves a blank white hero with
+  // invisible white headline text on top of it, instead of just a plainer
+  // green while the nicer layer finishes loading.
+  hero: { flex: 1, overflow: 'hidden', justifyContent: 'flex-end', padding: 16, backgroundColor: BRAND.emeraldDeep },
   heroTopRow: {
     position: 'absolute',
     top: 14,

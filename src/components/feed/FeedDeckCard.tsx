@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import PostCard from '../PostCard';
 import { Post } from '../../services/postService';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import { CARD_W, CARD_CONTENT_W, GAP } from './deckMetrics';
 
 interface Props {
@@ -20,9 +20,10 @@ interface Props {
 
 /**
  * Fixed-footprint wrapper around PostCard for the feed's horizontal
- * "peeking card" pager. The radius/clip/shadow live on this outer View
- * (not inside PostCard) so Android doesn't clip the shadow - PostCard
- * renders as plain transparent content via containerStyle.
+ * "peeking card" pager. The radius/clip/border live on this outer View
+ * (not inside PostCard) - PostCard renders as plain transparent content
+ * via containerStyle. Border only, no shadow - matches the classic post
+ * card's own flat look instead of a floating/elevated one.
  *
  * Every card is the exact same height, and there's no inner scroll -
  * navigating between posts is swipe-only, side to side. A long post's
@@ -47,7 +48,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    ...SHADOW.level2,
   },
   postCard: {
     flex: 1,
