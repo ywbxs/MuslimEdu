@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import {
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
-import CaughtUpBadge from '../../components/feed/CaughtUpBadge';
+import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -64,6 +64,12 @@ function PollIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numbe
     </Svg>
   );
 }
+
+// Once pagination is exhausted, "All caught up" becomes its own card at the
+// end of the deck - reached the same way every other card is, by swiping to
+// it - rather than a pill overlaid on top of the last post.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+
 export default function FeedScreen() {
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -75,7 +81,7 @@ export default function FeedScreen() {
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  const listRef = useRef<FlatList<Post>>(null);
+  const listRef = useRef<FlatList<DeckItem>>(null);
   const [deckHeight, setDeckHeight] = useState(0);
   // deckHeight is the wrap's own box height (padding doesn't shrink that) -
   // subtract its top+bottom padding to get the actual space a card has.
@@ -90,14 +96,12 @@ export default function FeedScreen() {
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
   const [index, setIndex] = useState(0);
-  const [maxIndex, setMaxIndex] = useState(0);
-  const maxIndexRef = useRef(0);
 
-  // "All caught up" now means exactly what it says on the last swipe: the
-  // reader has reached the last loaded post and there's nothing more to
-  // paginate in. Shown as an overlay on the deck itself (see deckWrap
-  // below) rather than a persistent header pill.
-  const caughtUp = posts.length > 0 && !hasMore && !loadingMore && maxIndex >= posts.length - 1;
+  const deckData: DeckItem[] = useMemo(() => {
+    const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
+    if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
+    return items;
+  }, [posts, hasMore]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -107,8 +111,6 @@ export default function FeedScreen() {
       setHasMore(res.hasMore);
       setNextBeforeId(res.nextBeforeId);
       setIndex(0);
-      setMaxIndex(0);
-      maxIndexRef.current = 0;
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
     } catch (err: any) {
       Alert.alert(
@@ -158,10 +160,6 @@ export default function FeedScreen() {
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.x / SNAP));
       setIndex(i);
-      if (i > maxIndexRef.current) {
-        maxIndexRef.current = i;
-        setMaxIndex(i);
-      }
       if (i >= posts.length - 3) onEndReached();
     },
     [posts.length, onEndReached],
@@ -196,8 +194,6 @@ export default function FeedScreen() {
   // the start so what they're looking at doesn't silently change under them.
   const jumpToStart = () => {
     setIndex(0);
-    setMaxIndex(0);
-    maxIndexRef.current = 0;
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
@@ -325,8 +321,8 @@ export default function FeedScreen() {
         ) : cardHeight <= 0 ? null : (
           <FlatList
             ref={listRef}
-            data={posts}
-            keyExtractor={(item) => String(item.id)}
+            data={deckData}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
             horizontal
             showsHorizontalScrollIndicator={false}
             decelerationRate="fast"
@@ -343,22 +339,26 @@ export default function FeedScreen() {
             onScrollEndDrag={onSettle}
             onEndReached={onEndReached}
             onEndReachedThreshold={1.5}
-            renderItem={({ item }) => (
-              <FeedDeckCard
-                post={item}
-                height={cardHeight}
-                onToggleLike={handleToggleLike}
-                onPressComment={handleComment}
-                onPressRepost={handleRepost}
-                onDelete={handleDelete}
-                onEdit={handleEdit}
-                onChangePrivacy={handleChangePrivacy}
-                onPressAuthor={setProfileUserId}
-                onPressImage={(images, imgIndex) =>
-                  (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
-                }
-              />
-            )}
+            renderItem={({ item }) =>
+              item.kind === 'caughtUp' ? (
+                <CaughtUpCard height={cardHeight} />
+              ) : (
+                <FeedDeckCard
+                  post={item.post}
+                  height={cardHeight}
+                  onToggleLike={handleToggleLike}
+                  onPressComment={handleComment}
+                  onPressRepost={handleRepost}
+                  onDelete={handleDelete}
+                  onEdit={handleEdit}
+                  onChangePrivacy={handleChangePrivacy}
+                  onPressAuthor={setProfileUserId}
+                  onPressImage={(images, imgIndex) =>
+                    (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
+                  }
+                />
+              )
+            }
             ListFooterComponent={
               loadingMore ? (
                 <View style={[styles.footerLoading, { height: cardHeight }]}>
@@ -373,12 +373,6 @@ export default function FeedScreen() {
             }
           />
         )}
-
-        {/* Shown once the reader swipes to the last loaded post - "on the
-            last swipe of post", not tied to the header anymore. */}
-        <View style={styles.caughtUpOverlay} pointerEvents="none">
-          <CaughtUpBadge visible={caughtUp} />
-        </View>
       </View>
 
       <UserProfileModal
@@ -422,20 +416,9 @@ const styles = StyleSheet.create({
   // paddingBottom reserves space below the deck for the bottom tab bar -
   // cards must not render underneath it (unlike the old vertical list,
   // where scrolling could reveal content past that point).
-  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118, position: 'relative' },
+  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118 },
 
   footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
-
-  // Centered over the bottom of the deck, above the reserved tab-bar
-  // padding - pointerEvents: 'none' on the parent (see JSX) keeps it from
-  // blocking swipes on the card underneath.
-  caughtUpOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 132,
-    alignItems: 'center',
-  },
 
   centerFill: {
     flex: 1,
