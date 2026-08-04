@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -41,19 +40,6 @@ function PlusIcon({ color = '#FFFFFF', size = 24 }: { color?: string; size?: num
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function LeafIcon({ color = EMERALD, size = 15 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M20 4C9 4 4 10 4 18c0 0 5-1 8-4s6-8 8-10zM4 20c4-6 8-8 12-9"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </Svg>
   );
 }
@@ -99,14 +85,6 @@ function RefreshIcon({ color = EMERALD, size = 20 }: { color?: string; size?: nu
   );
 }
 
-function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr);
-  const n = new Date();
-  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-}
-
-const CAUGHT_UP_KEY_PREFIX = '@feed_caught_up';
-
 export default function FeedScreen() {
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -136,37 +114,12 @@ export default function FeedScreen() {
   const [index, setIndex] = useState(0);
   const [maxIndex, setMaxIndex] = useState(0);
   const maxIndexRef = useRef(0);
-  const [caughtUpToday, setCaughtUpToday] = useState(false);
 
-  const caughtUpStorageKey = user ? `${CAUGHT_UP_KEY_PREFIX}:${user.id}` : null;
-
-  // A fresh install/day starts uncaught - seed from AsyncStorage if today
-  // was already fully read in a previous session, so the badge doesn't
-  // reset on every cold start.
-  useEffect(() => {
-    if (!caughtUpStorageKey) return;
-    AsyncStorage.getItem(caughtUpStorageKey).then((value) => {
-      const today = new Date().toDateString();
-      if (value === today) setCaughtUpToday(true);
-    });
-  }, [caughtUpStorageKey]);
-
-  const todayCount = useMemo(() => {
-    let c = 0;
-    for (const p of posts) {
-      if (isToday(p.created_at)) c++;
-      else break;
-    }
-    return c;
-  }, [posts]);
-
-  const caughtUp = caughtUpToday || (todayCount > 0 && maxIndex >= todayCount - 1);
-
-  useEffect(() => {
-    if (!caughtUp || !caughtUpStorageKey) return;
-    setCaughtUpToday(true);
-    AsyncStorage.setItem(caughtUpStorageKey, new Date().toDateString());
-  }, [caughtUp, caughtUpStorageKey]);
+  // "All caught up" now means exactly what it says on the last swipe: the
+  // reader has reached the last loaded post and there's nothing more to
+  // paginate in. Shown as an overlay on the deck itself (see deckWrap
+  // below) rather than a persistent header pill.
+  const caughtUp = posts.length > 0 && !hasMore && !loadingMore && maxIndex >= posts.length - 1;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -370,16 +323,8 @@ export default function FeedScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTextCol}>
           <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
-          <Text style={styles.headerGreeting}>{t('feed.header_greeting', 'Assalamu Alaykum,')}</Text>
-          <View style={styles.headerNameRow}>
-            <Text style={styles.headerName}>{user?.name ?? ''}</Text>
-            <View style={{ marginLeft: 6 }}>
-              <LeafIcon />
-            </View>
-          </View>
         </View>
         <View style={styles.headerButtons}>
-          <CaughtUpBadge visible={caughtUp} />
           <TouchableOpacity style={styles.refreshButton} activeOpacity={0.85} onPress={onRefresh} disabled={refreshing}>
             {refreshing ? <ActivityIndicator size="small" color={EMERALD} /> : <RefreshIcon />}
           </TouchableOpacity>
@@ -465,6 +410,12 @@ export default function FeedScreen() {
             }
           />
         )}
+
+        {/* Shown once the reader swipes to the last loaded post - "on the
+            last swipe of post", not tied to the header anymore. */}
+        <View style={styles.caughtUpOverlay} pointerEvents="none">
+          <CaughtUpBadge visible={caughtUp} />
+        </View>
       </View>
 
       <UserProfileModal
@@ -492,9 +443,6 @@ const styles = StyleSheet.create({
   },
   headerTextCol: { flex: 1 },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
-  headerGreeting: { fontSize: 14, color: SUBTLE, marginTop: 2 },
-  headerNameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
-  headerName: { fontSize: 20, fontWeight: '800', color: EMERALD },
   headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
   refreshButton: {
     width: 40,
@@ -532,9 +480,20 @@ const styles = StyleSheet.create({
   // paddingBottom reserves space below the deck for the bottom tab bar -
   // cards must not render underneath it (unlike the old vertical list,
   // where scrolling could reveal content past that point).
-  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118 },
+  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 118, position: 'relative' },
 
   footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
+
+  // Centered over the bottom of the deck, above the reserved tab-bar
+  // padding - pointerEvents: 'none' on the parent (see JSX) keeps it from
+  // blocking swipes on the card underneath.
+  caughtUpOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 132,
+    alignItems: 'center',
+  },
 
   centerFill: {
     flex: 1,

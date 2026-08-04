@@ -234,6 +234,12 @@ export default function EnrollmentWorkflowDetailScreen() {
     try {
       await placeEnrollmentWorkflowInSection(token, record.id, selectedClass.id, section.id);
       setPlaceModalVisible(false);
+      // The success alert used to be the only thing that happened here -
+      // `record` (and its class_name/section_name) never got refreshed, so
+      // the screen kept showing "Not placed"/"Needs section" until the
+      // admin navigated away and back. Reload the record so the newly
+      // placed class/section shows up immediately.
+      await load();
       Alert.alert(
         t('enrollment_workflow_detail.placed_title', 'Student Placed'),
         t('enrollment_workflow_detail.placed_message', '{name} has been added to {class} - {section}.')
