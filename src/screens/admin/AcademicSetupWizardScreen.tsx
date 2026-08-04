@@ -563,14 +563,17 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // flex (not flexGrow) + no ScrollView - the whole wizard is one screen's
-  // worth of content per step, sized to fit without scrolling.
-  content: { flex: 1, padding: 20, paddingTop: 56 },
+  // worth of content per step, sized to fit without scrolling. No
+  // horizontal padding here anymore - the step card goes edge-to-edge
+  // (see stepCard below); every other row gets its own horizontal padding
+  // instead of inheriting one blanket inset.
+  content: { flex: 1, paddingTop: 56 },
 
   // Icon + title/subtitle side by side instead of stacked and centered -
   // a big, clear header that costs less vertical space than the old
   // centered icon-above-title layout, which matters now that nothing
   // scrolls.
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, paddingHorizontal: 20 },
   iconWrap: {
     width: 56,
     height: 56,
@@ -583,7 +586,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: INK },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 18, marginTop: 3 },
 
-  stepper: { flexDirection: 'row', justifyContent: 'center', gap: 22, marginBottom: 18 },
+  stepper: { flexDirection: 'row', justifyContent: 'center', gap: 22, marginBottom: 18, paddingHorizontal: 20 },
   stepperItem: { alignItems: 'center', gap: 5 },
   stepDot: {
     width: 26,
@@ -651,9 +654,9 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingVertical: 4, gap: 12 },
   switchLabel: { fontSize: 14.5, fontWeight: '600', color: INK, marginBottom: 3 },
 
-  errorText: { color: ERROR, fontSize: 13.5, marginBottom: 12, textAlign: 'center' },
+  errorText: { color: ERROR, fontSize: 13.5, marginBottom: 12, textAlign: 'center', paddingHorizontal: 20 },
 
-  actions: { flexDirection: 'row', gap: 12 },
+  actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingBottom: 4 },
   backButton: { flex: 1 },
   nextButton: { flex: 2 },
 });

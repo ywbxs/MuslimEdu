@@ -32,6 +32,24 @@ function PencilIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: n
   );
 }
 
+function GearIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+        stroke={color}
+        strokeWidth={1.8}
+      />
+      <Path
+        d="M19.4 13a7.5 7.5 0 000-2l1.9-1.5-2-3.4-2.2.9a7.6 7.6 0 00-1.7-1L15 3.8h-4l-.4 2.2a7.6 7.6 0 00-1.7 1l-2.2-.9-2 3.4L6.6 11a7.5 7.5 0 000 2l-1.9 1.5 2 3.4 2.2-.9c.5.4 1.1.8 1.7 1l.4 2.2h4l.4-2.2c.6-.2 1.2-.6 1.7-1l2.2.9 2-3.4L19.4 13z"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 interface DashboardShellProps {
   title: string;
   children?: React.ReactNode;
@@ -67,7 +85,16 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => (navigation as any).navigate('AccountSettings')}
+            hitSlop={10}
+          >
+            <GearIcon />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
           {showPhoto ? (
             <Image
               source={{ uri: user!.photo! }}
@@ -86,7 +113,8 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
           >
             <PencilIcon color={EMERALD} size={11} />
           </TouchableOpacity>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -118,6 +146,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   roleBadgeText: { fontSize: 11, fontWeight: '700', color: EMERALD, textTransform: 'uppercase', letterSpacing: 0.5 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingsBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#F2F2F7' },
   avatarFallback: {
     width: 52,

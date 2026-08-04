@@ -254,7 +254,8 @@ export default function PostCard({
   // post's own attached image, then falls back to the reposted post's image,
   // then to a plain color background for a text-only post - the card is
   // always "big", just filled with a photo or a color instead of blank space.
-  const heroImage = post.images.length > 0 ? post.images[0] : quoted && quoted.images.length > 0 ? quoted.images[0] : null;
+  const heroImages = post.images.length > 0 ? post.images : quoted && quoted.images.length > 0 ? quoted.images : [];
+  const heroImage = heroImages.length > 0 ? heroImages[0] : null;
   const showHeroImage = !!heroImage && !heroImageFailed;
   const headlineText = post.content || quoted?.content || '';
 
@@ -327,12 +328,18 @@ export default function PostCard({
               "big" instead of a blank/mostly-empty card. */}
           <View style={styles.hero}>
             {showHeroImage ? (
-              <Image
-                source={{ uri: heroImage as string }}
+              <TouchableOpacity
                 style={StyleSheet.absoluteFillObject}
-                resizeMode="cover"
-                onError={() => setHeroImageFailed(true)}
-              />
+                activeOpacity={0.9}
+                onPress={() => onPressImage?.(heroImages, 0)}
+              >
+                <Image
+                  source={{ uri: heroImage as string }}
+                  style={StyleSheet.absoluteFillObject}
+                  resizeMode="cover"
+                  onError={() => setHeroImageFailed(true)}
+                />
+              </TouchableOpacity>
             ) : (
               <>
                 <LinearGradient
@@ -346,7 +353,7 @@ export default function PostCard({
                     {headlineText}
                   </Text>
                 )}
-                {heroImageFailed && !headlineText && (
+                {!headlineText && (
                   <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
                 )}
               </>
