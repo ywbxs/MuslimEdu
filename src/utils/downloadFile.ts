@@ -124,3 +124,27 @@ export async function saveLocalFileToDevice(sourcePath: string, fileName: string
     await RNFS.copyFile(cleanSource, destPath);
   });
 }
+
+/**
+ * Saves raw text content (e.g. a hand-built PDF from pdfExport.ts) to the
+ * same public/permanent location the other two save helpers use - same
+ * permission handling and directory fallback, just RNFS.writeFile instead
+ * of downloading or copying. 'ascii' is the right encoding for a PDF
+ * built from Latin-1/WinAnsi-only text - writing it as 'utf8' would
+ * re-encode any byte above 127 as multiple bytes and corrupt the file's
+ * byte-offset xref table.
+ *
+ * Returns the saved file's local path.
+ */
+export async function saveTextFileToDevice(content: string, fileName: string, encoding: 'utf8' | 'ascii' = 'utf8'): Promise<string> {
+  const hasPermission = await ensureAndroidWritePermission();
+  if (!hasPermission) {
+    throw new Error('Storage permission was denied, so the file could not be saved.');
+  }
+
+  const dirs = Platform.OS === 'android' ? androidDirCandidates() : [RNFS.DocumentDirectoryPath];
+
+  return writeWithFallback(dirs, fileName, async (destPath) => {
+    await RNFS.writeFile(destPath, content, encoding);
+  });
+}
