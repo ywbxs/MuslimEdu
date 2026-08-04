@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import PostCard from '../PostCard';
 import { Post } from '../../services/postService';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
@@ -24,24 +24,17 @@ interface Props {
  * (not inside PostCard) so Android doesn't clip the shadow - PostCard
  * renders as plain transparent content via containerStyle.
  *
- * A long post (lots of text + a full image grid) can exceed the deck's
- * fixed card height on small devices, so the content scrolls vertically
- * inside the card - directionalLockEnabled keeps a diagonal drag from
- * stealing the pager's horizontal swipe.
+ * Every card is the exact same height, and there's no inner scroll -
+ * navigating between posts is swipe-only, side to side. A long post's
+ * body text is capped (see PostCard's clipContent/bodyNumberOfLines) and
+ * its content area clips instead of scrolling, so a short post and a long
+ * post look like the same card, not a variable-height one that sometimes
+ * needs its own scrollbar.
  */
 export default function FeedDeckCard({ post, height, ...handlers }: Props) {
   return (
     <View style={[styles.card, { width: CARD_W, height }]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        directionalLockEnabled
-        nestedScrollEnabled
-        bounces={false}
-      >
-        <PostCard post={post} containerStyle={styles.postCard} contentWidth={CARD_CONTENT_W} {...handlers} />
-      </ScrollView>
+      <PostCard post={post} containerStyle={styles.postCard} contentWidth={CARD_CONTENT_W} clipContent bodyNumberOfLines={4} {...handlers} />
     </View>
   );
 }
@@ -56,9 +49,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     ...SHADOW.level2,
   },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 4 },
   postCard: {
+    flex: 1,
     marginHorizontal: 0,
     marginTop: 0,
     borderRadius: 0,

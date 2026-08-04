@@ -126,6 +126,20 @@ interface Props {
   // Forwarded to PostImageGrid (own + quoted images) - omit to keep the
   // default full-width image grid sizing.
   contentWidth?: number;
+  // Used by the feed deck card (fixed-height, swipe-only pager): body text,
+  // own images, and the quoted-repost box render inside a flex:1,
+  // overflow:hidden region instead of the card's normal auto-height flow,
+  // so a long post's excess content clips instead of growing the card or
+  // needing its own scroll - the header and action bar (like/comment/
+  // repost) stay put and always visible either way. Omit to keep the
+  // default unclipped, auto-height card used everywhere else (moderation
+  // queue, profile modal).
+  clipContent?: boolean;
+  // Only meaningful with clipContent - caps the body text with a plain
+  // numberOfLines instead of ExpandableText's interactive "See more"
+  // (expanding in place would just get clipped again in a fixed-height
+  // card, so there's nothing useful for it to do there).
+  bodyNumberOfLines?: number;
 }
 
 const PRIVACY_MENU_OPTIONS: { key: Post['privacy']; label: string }[] = [
@@ -146,6 +160,8 @@ export default function PostCard({
   onPressAuthor,
   containerStyle,
   contentWidth,
+  clipContent,
+  bodyNumberOfLines,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -229,41 +245,58 @@ export default function PostCard({
         )}
       </View>
 
-      {/* Body text */}
-      {!!post.content && <ExpandableText text={post.content} style={styles.content} />}
+      {/* Body text + images + quoted post - wrapped so clipContent can clip
+          this region alone (flex:1, overflow:hidden) without affecting the
+          header above or the action bar below, which always stay fully
+          visible in a fixed-height card. */}
+      <View style={clipContent ? styles.clippedContent : undefined}>
+        {/* Body text */}
+        {!!post.content &&
+          (clipContent ? (
+            <Text style={styles.content} numberOfLines={bodyNumberOfLines ?? 4}>
+              {post.content}
+            </Text>
+          ) : (
+            <ExpandableText text={post.content} style={styles.content} />
+          ))}
 
-      {/* Own images */}
-      {!quoted && post.images.length > 0 && (
-        <View style={styles.imageWrap}>
-          <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
-        </View>
-      )}
-
-      {/* Quoted original post */}
-      {quoted && (
-        <TouchableOpacity
-          style={styles.quoteBox}
-          activeOpacity={0.85}
-          onPress={() => quoted.author?.id && onPressAuthor?.(quoted.author.id)}
-        >
-          <View style={styles.quoteHeader}>
-            <UserAvatar name={quoted.author?.name ?? ''} photo={quoted.author?.photo} size={22} />
-            <Text style={styles.quoteName}>{quoted.author?.name ?? 'Unknown'}</Text>
-            <RoleTag role={quoted.author?.role} />
-            <Text style={styles.time}>· {timeAgo(quoted.created_at)}</Text>
+        {/* Own images */}
+        {!quoted && post.images.length > 0 && (
+          <View style={styles.imageWrap}>
+            <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
           </View>
-          {!!quoted.content && <Text style={styles.quoteContent}>{quoted.content}</Text>}
-          {quoted.images.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              <PostImageGrid
-                images={quoted.images}
-                width={contentWidth != null ? contentWidth - 28 : undefined}
-                onPressImage={(i) => onPressImage?.(quoted.images, i)}
-              />
+        )}
+
+        {/* Quoted original post */}
+        {quoted && (
+          <TouchableOpacity
+            style={styles.quoteBox}
+            activeOpacity={0.85}
+            onPress={() => quoted.author?.id && onPressAuthor?.(quoted.author.id)}
+          >
+            <View style={styles.quoteHeader}>
+              <UserAvatar name={quoted.author?.name ?? ''} photo={quoted.author?.photo} size={22} />
+              <Text style={styles.quoteName}>{quoted.author?.name ?? 'Unknown'}</Text>
+              <RoleTag role={quoted.author?.role} />
+              <Text style={styles.time}>· {timeAgo(quoted.created_at)}</Text>
             </View>
-          )}
-        </TouchableOpacity>
-      )}
+            {!!quoted.content && (
+              <Text style={styles.quoteContent} numberOfLines={clipContent ? 3 : undefined}>
+                {quoted.content}
+              </Text>
+            )}
+            {quoted.images.length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                <PostImageGrid
+                  images={quoted.images}
+                  width={contentWidth != null ? contentWidth - 28 : undefined}
+                  onPressImage={(i) => onPressImage?.(quoted.images, i)}
+                />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Action bar - grouped on the right side of the divider */}
       <View style={styles.actionBar}>
@@ -302,6 +335,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: RADIUS.lg,
   },
+  // flex:1 + overflow:hidden - only applied when clipContent is set (via
+  // the wrapping View in the render above), so the header/action bar
+  // (siblings, not flexed) keep their own natural size and this region
+  // alone absorbs and clips whatever's left in the fixed-height card.
+  clippedContent: { flex: 1, overflow: 'hidden' },
   repostBanner: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 },
   repostBannerText: { fontSize: 12, color: SUBTLE, marginLeft: 6, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center' },
