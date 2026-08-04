@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Rect, Path, Line, Circle } from 'react-native-svg';
+import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { can } from '../../services/permissions';
 import DashboardShell, { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 
 // --- Inline icons (matches the app's existing inline-SVG style) ---
@@ -47,6 +49,16 @@ function GearIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function CalendarIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
+      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
+      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 function ArrowRightIcon({ color }: { color: string }) {
   return (
     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -84,17 +96,23 @@ interface RegistrarDashboardProps {
 }
 
 /**
- * Registrar (role_id 12) dashboard - scoped to the enrollment pipeline only.
- * Built on the shared DashboardShell, same pattern as CashierDashboard: no
- * monthly-report concept or stats to justify a custom hero.
+ * Registrar (role_id 12) dashboard - scoped to the enrollment pipeline plus
+ * the teacher timetable. Built on the shared DashboardShell, same pattern
+ * as CashierDashboard: no monthly-report concept or stats to justify a
+ * custom hero.
  *
  * Reuses the existing admin EnrollmentWorkflowList/Detail screens rather
  * than forking them - those screens already hide the admin-only "+ Start"
  * and "Withdraw" actions when the signed-in user lacks the
- * 'manage_enrollment' capability, which Registrar doesn't have.
+ * 'manage_enrollment' capability, which Registrar doesn't have. Same for
+ * AdminClassScheduleScreen (the "Class Schedule" tile below) - once a
+ * student clears enrollment, Registrar builds that section's timetable
+ * (day/time/room/teacher), matching AcademicScheduleController's
+ * store/update/status/delete guards being admin-or-registrar now.
  */
 export default function RegistrarDashboard({ footer }: RegistrarDashboardProps = {}) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const { t } = useLocale();
 
   return (
@@ -107,6 +125,14 @@ export default function RegistrarDashboard({ footer }: RegistrarDashboardProps =
           desc={t('registrar_dashboard.pipeline_desc', 'View students and advance them to the next stage')}
           onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}
         />
+        {can(user, 'manage_teacher_schedule') ? (
+          <RegistrarCard
+            icon={<CalendarIcon color={EMERALD} />}
+            title={t('registrar_dashboard.schedule_title', 'Class Schedule')}
+            desc={t('registrar_dashboard.schedule_desc', "Build each teacher's weekly timetable")}
+            onPress={() => (navigation as any).navigate('AdminSchedule')}
+          />
+        ) : null}
         <RegistrarCard
           icon={<BellIcon color={EMERALD} />}
           title={t('registrar_dashboard.notifications_title', 'Notifications')}
