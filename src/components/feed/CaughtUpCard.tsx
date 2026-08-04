@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useLocale } from '../../context/LocaleContext';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { COLORS } from '../../theme/glass';
 import { CARD_W, GAP } from './deckMetrics';
 
 const EMERALD = COLORS.emerald;
@@ -84,16 +84,14 @@ export default function CaughtUpCard({ height, active }: { height: number; activ
 }
 
 const styles = StyleSheet.create({
+  // No card chrome (background/border/shadow) on purpose - this is the end
+  // of the deck, not another post, so it reads as a plain state message
+  // sitting on the canvas rather than one more card in the stack.
   card: {
     marginRight: GAP,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    ...SHADOW.level2,
   },
   iconWrap: {
     width: 68,
