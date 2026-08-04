@@ -16,7 +16,6 @@ import { fetchTeacherReportStatus, TeacherReportStatus } from '../../services/te
 import { isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
-import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
@@ -427,10 +426,8 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
           }}
         >
-          <CurrencyBalanceButton variant="dark" style={[styles.balanceButton, { marginTop: insets.top + 12 }]} />
-
           {/* Greeting */}
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
             <View>
               <Text style={styles.greetingSmall}>{t('teacher_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name}</Text>
@@ -739,7 +736,6 @@ const styles = StyleSheet.create({
   },
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 130 },
-  balanceButton: { marginBottom: 14 },
 
   headerRow: {
     flexDirection: 'row',

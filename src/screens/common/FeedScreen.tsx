@@ -29,6 +29,7 @@ import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
+import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -291,6 +292,7 @@ export default function FeedScreen() {
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{t('feed.header_home', 'Home')}</Text>
+        <CurrencyBalanceButton />
       </View>
 
       {canPost && (
@@ -385,6 +387,9 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
