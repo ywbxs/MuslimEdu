@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, StyleProp, ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
@@ -206,6 +206,10 @@ export default function PostCard({
   const scale = useRef(new Animated.Value(1)).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
+  // If the hero photo fails to load (broken/stale URL, upload that never
+  // finished server-side), falling through to the gradient+text treatment
+  // beats leaving a blank colored box with nothing on it at all.
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
 
   const handleHeart = () => {
     Animated.sequence([
@@ -251,7 +255,12 @@ export default function PostCard({
   // then to a plain color background for a text-only post - the card is
   // always "big", just filled with a photo or a color instead of blank space.
   const heroImage = post.images.length > 0 ? post.images[0] : quoted && quoted.images.length > 0 ? quoted.images[0] : null;
+  const showHeroImage = !!heroImage && !heroImageFailed;
   const headlineText = post.content || quoted?.content || '';
+
+  useEffect(() => {
+    setHeroImageFailed(false);
+  }, [heroImage]);
 
   return (
     <>
@@ -317,8 +326,13 @@ export default function PostCard({
               the post's text centered in it, so a text-only post is still
               "big" instead of a blank/mostly-empty card. */}
           <View style={styles.hero}>
-            {heroImage ? (
-              <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            {showHeroImage ? (
+              <Image
+                source={{ uri: heroImage as string }}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode="cover"
+                onError={() => setHeroImageFailed(true)}
+              />
             ) : (
               <>
                 <LinearGradient
@@ -331,6 +345,9 @@ export default function PostCard({
                   <Text style={styles.headlineCentered} numberOfLines={bodyNumberOfLines ?? 6}>
                     {headlineText}
                   </Text>
+                )}
+                {heroImageFailed && !headlineText && (
+                  <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
                 )}
               </>
             )}
