@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
+import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
@@ -834,8 +835,10 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
           }}
         >
+          <CurrencyBalanceButton variant="dark" style={[styles.balanceButton, { marginTop: insets.top + 12 }]} />
+
           {/* Greeting + avatar (foreground, scrolls at normal speed over the bg) */}
-          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
@@ -933,6 +936,7 @@ const styles = StyleSheet.create({
   },
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
   scrollContent: { paddingBottom: 40 },
+  balanceButton: { marginHorizontal: 20, marginBottom: 14 },
 
   headerRow: {
     flexDirection: 'row',

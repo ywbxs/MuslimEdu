@@ -99,6 +99,7 @@ import PostCommentsScreen from '../screens/common/PostCommentsScreen';
 import ImageViewerScreen from '../screens/common/ImageViewerScreen';
 import MainTabs from './MainTabs';
 import AppLaunchSkeleton from '../components/AppLaunchSkeleton';
+import DashboardLaunchSkeleton from '../components/DashboardLaunchSkeleton';
 
 // SUBJECT_LOADING_ROUTES imports
 import SubjectLoadingQueueScreen from '../screens/admin/SubjectLoadingQueueScreen';
@@ -158,7 +159,7 @@ import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasStoredSession } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // While the saved-session check runs, show a skeleton shell instead of a
@@ -172,7 +173,10 @@ export default function RootNavigator() {
   }, [isLoading, fadeAnim]);
 
   if (isLoading) {
-    return <AppLaunchSkeleton />;
+    // A saved token means this launch is almost certainly headed to a
+    // dashboard, not the login screen - show the matching skeleton shape
+    // so there's no jump once the /me check resolves.
+    return hasStoredSession ? <DashboardLaunchSkeleton /> : <AppLaunchSkeleton />;
   }
 
   // Orphan schools have no academic subsystem at all. The dashboards already

@@ -369,6 +369,10 @@ export interface WorkflowPayment {
   paid_at: string | null;
   notes: string | null;
   feeType?: FeeType;
+  // Who last recorded/updated this fee's payment status - admin-visible
+  // audit trail, set server-side from the caller's own account.
+  recorded_by?: number | null;
+  recordedBy?: { id: number; name: string } | null;
 }
 
 export async function fetchWorkflowPayments(token: string, recordId: number): Promise<WorkflowPayment[]> {

@@ -52,6 +52,10 @@ export interface FeeInvoice {
   payment_method: string | null;
   status: string; // 'unpaid' | 'partial' | 'paid' - backend-defined, not a fixed enum
   timestamp: number;
+  // Who created this invoice, or most recently recorded a payment against
+  // it - lets admin see which cashier collected a given payment.
+  recorded_by: number | null;
+  recorded_by_name: string | null;
 }
 
 /**

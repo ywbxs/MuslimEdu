@@ -106,6 +106,11 @@ const InvoiceRow = React.memo(function InvoiceRow({
             {money(item.paid_amount)} / {money(item.total_amount)}
           </Text>
         </View>
+        {item.recorded_by_name ? (
+          <Text style={styles.rowRecordedBy} numberOfLines={1}>
+            {t('admin_fee_reports.recorded_by_prefix', 'Recorded by')} {item.recorded_by_name}
+          </Text>
+        ) : null}
       </View>
       <ChevronRightIcon color="#C4C9CF" />
     </TouchableOpacity>
@@ -352,6 +357,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 15, fontWeight: '700', color: INK },
   rowStudent: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+  rowRecordedBy: { fontSize: 11, color: SUBTLE, marginTop: 4 },
   statusPill: {
     alignSelf: 'flex-start',
     borderRadius: RADIUS.pill,

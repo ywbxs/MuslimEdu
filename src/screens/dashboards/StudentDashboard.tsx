@@ -17,6 +17,8 @@ import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import EnrollmentStatusCard from '../../components/EnrollmentStatusCard';
+import UserAvatar from '../../components/UserAvatar';
+import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -275,7 +277,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
   const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
 
   const isOrphan = isOrphanSchoolUser(user);
-  const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? '?';
 
   const [status, setStatus] = useState<ReportStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(isOrphan);
@@ -382,6 +383,8 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
           }}
         >
+          <CurrencyBalanceButton variant="dark" style={styles.balanceButton} />
+
           {/* Greeting */}
           <View style={styles.headerRow}>
             <View>
@@ -389,12 +392,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               <Text style={styles.greetingName}>{user?.name}</Text>
             </View>
             <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-              <View style={styles.avatarRing}>
-                <View style={styles.avatarInner}>
-                  <Text style={styles.avatarInitial}>{initial}</Text>
-                </View>
-                <View style={styles.avatarDot} />
-              </View>
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} fillColor={EMERALD} />
             </TouchableOpacity>
           </View>
 
@@ -402,9 +400,15 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
           <View style={styles.glassCard}>
             <View style={styles.glassHeaderRow}>
               <View style={styles.glassHeaderLeft}>
-                <View style={styles.glassIconCircle}>
-                  <PersonIcon color={PALE_GREEN} size={22} />
-                </View>
+                <UserAvatar
+                  name={user?.name ?? ''}
+                  photo={user?.photo}
+                  size={44}
+                  ringColor={GLASS_BORDER}
+                  fillColor={GLASS_ICON_BG}
+                  dotColor={null}
+                  style={styles.profileAvatarSpacing}
+                />
                 <View>
                   <Text style={styles.glassTitle}>{t('student_dashboard.profile_title', 'Profile')}</Text>
                   <Text style={styles.glassSubtitle}>
@@ -643,6 +647,7 @@ const styles = StyleSheet.create({
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 130 },
 
+  balanceButton: { marginBottom: 14 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -652,36 +657,6 @@ const styles = StyleSheet.create({
   },
   greetingSmall: { fontSize: 14, color: PALE_GREEN },
   greetingName: { fontSize: 26, fontWeight: '800', color: '#FFFFFF', marginTop: 4 },
-  avatarRing: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: EMERALD,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  avatarDot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#5FE38A',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-
   glassCard: {
     backgroundColor: GLASS_BG,
     borderWidth: 1,
@@ -692,15 +667,7 @@ const styles = StyleSheet.create({
   },
   glassHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   glassHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  glassIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: GLASS_ICON_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
+  profileAvatarSpacing: { marginRight: 12 },
   glassTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   glassSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
   editButton: {

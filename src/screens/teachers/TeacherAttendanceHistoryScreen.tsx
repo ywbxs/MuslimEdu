@@ -10,7 +10,8 @@ import {
   HistoryRecord,
   AttendanceStatus,
 } from '../../services/teacherAttendanceService';
-import { Skeleton } from '../../components/Skeleton';
+import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
+import UserAvatar from '../../components/UserAvatar';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
@@ -72,7 +73,10 @@ function IconChevronLeft({ color }: { color: string }) {
 function RowSkeleton() {
   return (
     <View style={styles.row}>
-      <Skeleton width="50%" height={13} borderRadius={4} />
+      <View style={styles.rowLeft}>
+        <SkeletonCircle size={32} />
+        <Skeleton width="50%" height={13} borderRadius={4} />
+      </View>
       <Skeleton width={70} height={22} borderRadius={8} />
     </View>
   );
@@ -94,6 +98,7 @@ export default function TeacherAttendanceHistoryScreen() {
   const [rangeKey, setRangeKey] = useState('30d');
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [nameById, setNameById] = useState<Record<number, string>>({});
+  const [photoById, setPhotoById] = useState<Record<number, string | null>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,10 +121,13 @@ export default function TeacherAttendanceHistoryScreen() {
       ]);
       setRecords(historyData);
       const map: Record<number, string> = {};
+      const photoMap: Record<number, string | null> = {};
       rosterData.students.forEach((s) => {
         map[s.student_id] = s.student_name;
+        photoMap[s.student_id] = s.photo;
       });
       setNameById(map);
+      setPhotoById(photoMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teacher_attendance_history.load_error', 'Could not load attendance history.'));
     } finally {
@@ -201,11 +209,15 @@ export default function TeacherAttendanceHistoryScreen() {
           )}
           renderItem={({ item }) => {
             const meta = STATUS_META[item.status];
+            const name = nameById[item.student_id] ?? `${t('teacher_attendance_history.student_hash', 'Student #')}${item.student_id}`;
             return (
               <View style={styles.row}>
-                <Text style={styles.rowName} numberOfLines={1}>
-                  {nameById[item.student_id] ?? `${t('teacher_attendance_history.student_hash', 'Student #')}${item.student_id}`}
-                </Text>
+                <View style={styles.rowLeft}>
+                  <UserAvatar name={name} photo={photoById[item.student_id]} size={32} dotColor={null} />
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {name}
+                  </Text>
+                </View>
                 <View style={[styles.statusPill, { backgroundColor: meta.soft }]}>
                   <Text style={[styles.statusPillText, { color: meta.color }]}>{t(`teacher_attendance_history.status_${STATUS_LABEL_KEYS[item.status]}`, meta.label)}</Text>
                 </View>
@@ -265,7 +277,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   ...SHADOW.level1,
   },
-  rowName: { flex: 1, fontSize: 13.5, fontWeight: '600', color: INK, marginRight: 10 },
+  rowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 10 },
+  rowName: { flex: 1, fontSize: 13.5, fontWeight: '600', color: INK },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusPillText: { fontSize: 11.5, fontWeight: '700' },
 
