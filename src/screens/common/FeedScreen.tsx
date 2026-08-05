@@ -30,7 +30,7 @@ import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
-import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
+import { CARD_W } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
 const EMERALD = COLORS.emerald;
@@ -219,17 +219,18 @@ export default function FeedScreen() {
     }
   }, [token, hasMore, nextBeforeId]);
 
-  // Horizontal onEndReachedThreshold is measured in multiples of the
-  // visible WIDTH, not a fixed distance - 0.4 (fine for a vertical list)
-  // would fire far too late here, so pagination is also driven proactively
-  // from onSettle below once the reader nears the end of what's loaded.
+  // Each card is a fixed height (cardHeight, the deck wrap's own measured
+  // height) and the list snaps to it, so scrolling down always lands on
+  // exactly one post at a time - same "one card fills the screen" feel as
+  // before, just top-to-bottom instead of left-to-right.
   const onSettle = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.x / SNAP));
+      if (cardHeight <= 0) return;
+      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.y / cardHeight));
       setIndex(i);
       if (i >= posts.length - 3) onEndReached();
     },
-    [posts.length, onEndReached],
+    [posts.length, onEndReached, cardHeight],
   );
 
   const handleToggleLike = async (post: Post) => {
@@ -385,14 +386,12 @@ export default function FeedScreen() {
             ref={listRef}
             data={deckData}
             keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
             decelerationRate="fast"
-            snapToInterval={SNAP}
+            snapToInterval={cardHeight}
             snapToAlignment="start"
             disableIntervalMomentum
-            contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
-            getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
+            getItemLayout={(_, i) => ({ length: cardHeight, offset: i * cardHeight, index: i })}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             removeClippedSubviews={false}
             initialNumToRender={2}

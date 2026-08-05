@@ -1,5 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, StyleProp, ViewStyle } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Alert,
+  Modal,
+  Image,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
@@ -137,6 +151,59 @@ function CheckIcon({ color }: { color: string }) {
   );
 }
 
+// A post with more than one photo gets its own horizontal swipe-through
+// carousel inside the hero - separate from the vertical feed's own
+// top-to-bottom scroll between posts (FeedScreen.tsx), the same way
+// Instagram's multi-photo posts work. Sized off its own measured width
+// rather than importing the deck's CARD_W, since PostCard is also used
+// outside the deck (contentWidth prop) with a different width.
+function HeroCarousel({
+  images,
+  onPressImage,
+}: {
+  images: string[];
+  onPressImage?: (images: string[], index: number) => void;
+}) {
+  const [width, setWidth] = useState(0);
+  const [active, setActive] = useState(0);
+
+  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!width) return;
+    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    setActive(Math.max(0, Math.min(images.length - 1, i)));
+  };
+
+  return (
+    <View style={StyleSheet.absoluteFillObject} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScrollEnd}
+          scrollEventThrottle={16}
+        >
+          {images.map((uri, i) => (
+            <TouchableOpacity
+              key={`${uri}-${i}`}
+              activeOpacity={0.9}
+              style={{ width }}
+              onPress={() => onPressImage?.(images, i)}
+            >
+              <Image source={{ uri }} style={{ width, height: '100%' }} resizeMode="cover" />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      <View style={styles.carouselDots} pointerEvents="none">
+        {images.map((_, i) => (
+          <View key={i} style={[styles.carouselDot, i === active && styles.carouselDotActive]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function timeAgo(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
@@ -256,7 +323,9 @@ export default function PostCard({
   // always "big", just filled with a photo or a color instead of blank space.
   const heroImages = post.images.length > 0 ? post.images : quoted && quoted.images.length > 0 ? quoted.images : [];
   const heroImage = heroImages.length > 0 ? heroImages[0] : null;
-  const showHeroImage = !!heroImage && !heroImageFailed;
+  const showHeroCarousel = heroImages.length > 1;
+  const showHeroSingle = heroImages.length === 1 && !heroImageFailed;
+  const showHeroImage = showHeroCarousel || showHeroSingle;
   const headlineText = post.content || quoted?.content || '';
 
   useEffect(() => {
@@ -327,7 +396,9 @@ export default function PostCard({
               the post's text centered in it, so a text-only post is still
               "big" instead of a blank/mostly-empty card. */}
           <View style={styles.hero}>
-            {showHeroImage ? (
+            {showHeroCarousel ? (
+              <HeroCarousel images={heroImages} onPressImage={onPressImage} />
+            ) : showHeroSingle ? (
               <TouchableOpacity
                 style={StyleSheet.absoluteFillObject}
                 activeOpacity={0.9}
@@ -570,6 +641,19 @@ const styles = StyleSheet.create({
   // gradient behind it is the entire point of the card, so the text is
   // centered in it rather than pinned to a corner.
   headlineCentered: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', lineHeight: 25, textAlign: 'center' },
+  // Page dots for a multi-photo post's HeroCarousel, bottom-center of the
+  // hero - matches the classic Instagram carousel-post indicator.
+  carouselDots: {
+    position: 'absolute',
+    bottom: 14,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  carouselDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
+  carouselDotActive: { backgroundColor: '#FFFFFF', width: 16 },
   // Only shown when a post has BOTH a photo and text, between the header
   // and the hero image - a text-only post shows its text centered in the
   // hero instead, so it's never shown twice.
