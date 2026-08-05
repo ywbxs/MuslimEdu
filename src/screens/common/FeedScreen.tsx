@@ -30,7 +30,7 @@ import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
-import { CARD_W } from '../../components/feed/deckMetrics';
+import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
 const EMERALD = COLORS.emerald;
@@ -54,13 +54,18 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 }
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
-// end of the deck - reached the same way every other card is, by swiping to
-// it - rather than a pill overlaid on top of the last post. Shop and Charity
-// are sample preview cards appended after it (real posts -> caught up ->
-// Shop -> Charity), rendered through the same FeedDeckCard/PostCard as a
-// real post so they look and feel identical - just with fabricated content
-// and no live backend behind them yet.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' } | { kind: 'shop' } | { kind: 'charity' };
+// end of the Home deck - reached the same way every other post is, by
+// swiping to it - rather than a pill overlaid on top of the last post.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+
+// The screen itself has 3 sections stacked vertically - Home, Shop, Charity -
+// scroll DOWN to move between them, one full screen at a time. Home's own
+// content (the actual posts) is a separate, nested HORIZONTAL deck - swipe
+// LEFT-RIGHT to move between posts, same as before. Two different gestures
+// for two different things: vertical = which section, horizontal = which
+// post within Home.
+type Section = 'home' | 'shop' | 'charity';
+const SECTIONS: Section[] = ['home', 'shop', 'charity'];
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -73,22 +78,25 @@ export default function FeedScreen() {
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  const listRef = useRef<FlatList<DeckItem>>(null);
-  const [deckHeight, setDeckHeight] = useState(0);
-  // deckHeight is the wrap's own box height (padding doesn't shrink that) -
-  // subtract its top+bottom padding to get the actual space a card has.
-  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 20 : 0;
+  // --- Outer section pager (Home / Shop / Charity), vertical -------------
+  const [outerHeight, setOuterHeight] = useState(0);
+  const [sectionIndex, setSectionIndex] = useState(0);
+  const activeSection: Section = SECTIONS[sectionIndex] ?? 'home';
+  const headerTitleText =
+    activeSection === 'shop'
+      ? t('feed.header_shop', 'Shop')
+      : activeSection === 'charity'
+      ? t('feed.header_charity', 'Charity')
+      : t('feed.header_home', 'Home');
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
-  const [profileUserId, setProfileUserId] = useState<number | null>(null);
-
-  const [index, setIndex] = useState(0);
+  const onOuterSettle = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (outerHeight <= 0) return;
+      const i = Math.max(0, Math.min(SECTIONS.length - 1, Math.round(e.nativeEvent.contentOffset.y / outerHeight)));
+      setSectionIndex(i);
+    },
+    [outerHeight],
+  );
 
   // Fake Post objects for the Shop/Charity sample cards - negative ids so
   // they can never collide with a real post id, no images (renders through
@@ -140,25 +148,29 @@ export default function FeedScreen() {
     [],
   );
 
+  // --- Inner Home deck (the actual posts), horizontal --------------------
+  const listRef = useRef<FlatList<DeckItem>>(null);
+  const [deckHeight, setDeckHeight] = useState(0);
+  // deckHeight is the wrap's own box height (padding doesn't shrink that) -
+  // subtract its top+bottom padding to get the actual space a card has.
+  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 20 : 0;
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
+
+  const [index, setIndex] = useState(0);
+
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
-    if (posts.length > 0 && !hasMore) {
-      items.push({ kind: 'caughtUp' });
-      items.push({ kind: 'shop' });
-      items.push({ kind: 'charity' });
-    }
+    if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
-
-  // Drives the header title - swiping onto the Shop/Charity sample cards
-  // relabels "Home" to match, same way a category tab would.
-  const activeDeckKind = deckData[index]?.kind;
-  const headerTitleText =
-    activeDeckKind === 'shop'
-      ? t('feed.header_shop', 'Shop')
-      : activeDeckKind === 'charity'
-      ? t('feed.header_charity', 'Charity')
-      : t('feed.header_home', 'Home');
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -219,18 +231,17 @@ export default function FeedScreen() {
     }
   }, [token, hasMore, nextBeforeId]);
 
-  // Each card is a fixed height (cardHeight, the deck wrap's own measured
-  // height) and the list snaps to it, so scrolling down always lands on
-  // exactly one post at a time - same "one card fills the screen" feel as
-  // before, just top-to-bottom instead of left-to-right.
+  // Horizontal onEndReachedThreshold is measured in multiples of the
+  // visible WIDTH, not a fixed distance - 0.4 (fine for a vertical list)
+  // would fire far too late here, so pagination is also driven proactively
+  // from onSettle below once the reader nears the end of what's loaded.
   const onSettle = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (cardHeight <= 0) return;
-      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.y / cardHeight));
+      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.x / SNAP));
       setIndex(i);
       if (i >= posts.length - 3) onEndReached();
     },
-    [posts.length, onEndReached, cardHeight],
+    [posts.length, onEndReached],
   );
 
   const handleToggleLike = async (post: Post) => {
@@ -357,13 +368,8 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
-  return (
-    <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>{headerTitleText}</Text>
-        <CurrencyBalanceButton />
-      </View>
-
+  const homeContent = (
+    <>
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
@@ -385,13 +391,15 @@ export default function FeedScreen() {
           <FlatList
             ref={listRef}
             data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind)}
-            showsVerticalScrollIndicator={false}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
+            horizontal
+            showsHorizontalScrollIndicator={false}
             decelerationRate="fast"
-            snapToInterval={cardHeight}
+            snapToInterval={SNAP}
             snapToAlignment="start"
             disableIntervalMomentum
-            getItemLayout={(_, i) => ({ length: cardHeight, offset: i * cardHeight, index: i })}
+            contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
+            getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             removeClippedSubviews={false}
             initialNumToRender={2}
@@ -404,10 +412,6 @@ export default function FeedScreen() {
             renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
                 <CaughtUpCard height={cardHeight} active={itemIndex === index} />
-              ) : item.kind === 'shop' ? (
-                <FeedDeckCard post={shopPost} height={cardHeight} {...noopSampleHandlers} />
-              ) : item.kind === 'charity' ? (
-                <FeedDeckCard post={charityPost} height={cardHeight} {...noopSampleHandlers} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
@@ -440,6 +444,43 @@ export default function FeedScreen() {
           />
         )}
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.flex}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.headerTitle}>{headerTitleText}</Text>
+        <CurrencyBalanceButton />
+      </View>
+
+      <View style={styles.outerWrap} onLayout={(e) => setOuterHeight(e.nativeEvent.layout.height)}>
+        {outerHeight <= 0 ? null : (
+          <FlatList
+            data={SECTIONS}
+            keyExtractor={(s) => s}
+            showsVerticalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={outerHeight}
+            snapToAlignment="start"
+            disableIntervalMomentum
+            getItemLayout={(_, i) => ({ length: outerHeight, offset: i * outerHeight, index: i })}
+            onMomentumScrollEnd={onOuterSettle}
+            onScrollEndDrag={onOuterSettle}
+            renderItem={({ item }) => (
+              <View style={{ height: outerHeight }}>
+                {item === 'home' ? (
+                  homeContent
+                ) : item === 'shop' ? (
+                  <FeedDeckCard post={shopPost} height={outerHeight} {...noopSampleHandlers} />
+                ) : (
+                  <FeedDeckCard post={charityPost} height={outerHeight} {...noopSampleHandlers} />
+                )}
+              </View>
+            )}
+          />
+        )}
+      </View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -466,6 +507,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
 
+  // Wraps the Home/Shop/Charity vertical pager - fills whatever's left
+  // below the header.
+  outerWrap: { flex: 1 },
+
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -486,8 +531,8 @@ const styles = StyleSheet.create({
   // has no position:'absolute'), so it already gets its own space outside
   // this screen - deckWrap's flex:1 naturally stops above it with no manual
   // clearance needed. Just a small breathing gap below the card instead of
-  // the much bigger reservation this used to carry, so each post's photo
-  // gets nearly the full remaining height instead of rendering squarish.
+  // a much bigger reservation, so each post's photo gets nearly the full
+  // remaining height instead of rendering squarish.
   deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 20 },
 
   footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
