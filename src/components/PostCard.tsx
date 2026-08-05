@@ -439,20 +439,20 @@ export default function PostCard({
       {/* Action bar - grouped on the right side of the divider */}
       <View style={[styles.actionBar, clipContent && styles.actionBarMagazine]}>
         <TouchableOpacity style={styles.action} onPress={() => onPressRepost(post)} activeOpacity={0.7}>
-          <RepostIcon color={EMERALD} />
+          <RepostIcon color={EMERALD} size={26} />
           <Text style={[styles.actionCount, { color: EMERALD }]}>
             {post.reposts_count > 0 ? post.reposts_count : ''}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.action} onPress={() => onPressComment(post)} activeOpacity={0.7}>
-          <CommentIcon color={SUBTLE} />
+          <CommentIcon color={SUBTLE} size={26} />
           <Text style={styles.actionCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionLast} onPress={handleHeart} activeOpacity={0.7}>
           <Animated.View style={{ transform: [{ scale }] }}>
-            <HeartIcon filled={post.is_liked} color={heartColor} />
+            <HeartIcon filled={post.is_liked} color={heartColor} size={28} />
           </Animated.View>
           <Text style={[styles.actionCount, post.is_liked && { color: HEART_RED }]}>
             {post.likes_count > 0 ? post.likes_count : ''}
@@ -623,9 +623,9 @@ const styles = StyleSheet.create({
   // card itself has none, plus a bit of top padding since there's no card
   // padding above it either.
   headerMagazine: { paddingHorizontal: 16, paddingTop: 14 },
-  action: { flexDirection: 'row', alignItems: 'center', marginRight: 28 },
+  action: { flexDirection: 'row', alignItems: 'center', marginRight: 30 },
   actionLast: { flexDirection: 'row', alignItems: 'center' },
-  actionCount: { fontSize: 13.5, color: SUBTLE, marginLeft: 8, fontWeight: '600', minWidth: 10 },
+  actionCount: { fontSize: 14.5, color: SUBTLE, marginLeft: 8, fontWeight: '700', minWidth: 12 },
 
   // Post options / privacy bottom sheets - same visual language as the rest
   // of the app's action sheets (see ChildActionModal in ChildProfileSheet.tsx).
