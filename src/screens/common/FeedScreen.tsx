@@ -29,6 +29,8 @@ import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
+import ShopSection from '../../components/feed/ShopSection';
+import CharitySection from '../../components/feed/CharitySection';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
@@ -55,12 +57,20 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the deck - reached the same way every other card is, by swiping to
-// it - rather than a pill overlaid on top of the last post. Shop and Charity
-// are sample preview cards appended after it (real posts -> caught up ->
-// Shop -> Charity), rendered through the same FeedDeckCard/PostCard as a
-// real post so they look and feel identical - just with fabricated content
-// and no live backend behind them yet.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' } | { kind: 'shop' } | { kind: 'charity' };
+// it - rather than a pill overlaid on top of the last post.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+
+// Home / Shop / Charity are three separate top-level sections, switched by
+// tapping the segmented control below the header - not one combined swipe.
+// Each has its own independent scroll: Home keeps its horizontal post deck,
+// Shop and Charity are their own vertical lists (ShopSection/CharitySection)
+// with sample/preview content, since neither has a real backend yet.
+type Section = 'home' | 'shop' | 'charity';
+const SECTIONS: { key: Section; labelKey: string; labelFallback: string }[] = [
+  { key: 'home', labelKey: 'feed.header_home', labelFallback: 'Home' },
+  { key: 'shop', labelKey: 'feed.header_shop', labelFallback: 'Shop' },
+  { key: 'charity', labelKey: 'feed.header_charity', labelFallback: 'Charity' },
+];
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -89,76 +99,13 @@ export default function FeedScreen() {
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
   const [index, setIndex] = useState(0);
-
-  // Fake Post objects for the Shop/Charity sample cards - negative ids so
-  // they can never collide with a real post id, no images (renders through
-  // the same gradient hero as a text-only post), is_mine false so no
-  // edit/delete menu shows. Not persisted or backed by any real feature yet.
-  const shopPost: Post = useMemo(
-    () => ({
-      id: -1,
-      content: t('feed.shop_sample_caption', 'Browse school merch, books, and supplies - right from the app. Coming soon!'),
-      privacy: 'public',
-      created_at: new Date().toISOString(),
-      author: { id: -1, name: t('feed.shop_sample_name', 'Manhaje Shop'), photo: null, role: 'shop' },
-      images: [],
-      likes_count: 128,
-      comments_count: 12,
-      reposts_count: 4,
-      is_liked: false,
-      is_mine: false,
-      repost_of: null,
-    }),
-    [t],
-  );
-  const charityPost: Post = useMemo(
-    () => ({
-      id: -2,
-      content: t('feed.charity_sample_caption', 'Give back and support causes in your community. Coming soon!'),
-      privacy: 'public',
-      created_at: new Date().toISOString(),
-      author: { id: -2, name: t('feed.charity_sample_name', 'Manhaje Charity'), photo: null, role: 'charity' },
-      images: [],
-      likes_count: 246,
-      comments_count: 31,
-      reposts_count: 9,
-      is_liked: false,
-      is_mine: false,
-      repost_of: null,
-    }),
-    [t],
-  );
-  // Sample cards ignore taps instead of hitting the real like/comment/repost/
-  // profile endpoints with a fake negative id.
-  const noopSampleHandlers = useMemo(
-    () => ({
-      onToggleLike: () => {},
-      onPressComment: () => {},
-      onPressRepost: () => {},
-      onPressAuthor: () => {},
-    }),
-    [],
-  );
+  const [activeSection, setActiveSection] = useState<Section>('home');
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
-    if (posts.length > 0 && !hasMore) {
-      items.push({ kind: 'caughtUp' });
-      items.push({ kind: 'shop' });
-      items.push({ kind: 'charity' });
-    }
+    if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
-
-  // Drives the header title - swiping onto the Shop/Charity sample cards
-  // relabels "Home" to match, same way a category tab would.
-  const activeDeckKind = deckData[index]?.kind;
-  const headerTitleText =
-    activeDeckKind === 'shop'
-      ? t('feed.header_shop', 'Shop')
-      : activeDeckKind === 'charity'
-      ? t('feed.header_charity', 'Charity')
-      : t('feed.header_home', 'Home');
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -355,25 +302,53 @@ export default function FeedScreen() {
   };
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
+  const activeSectionMeta = SECTIONS.find((s) => s.key === activeSection) ?? SECTIONS[0];
 
   return (
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>{headerTitleText}</Text>
+        <Text style={styles.headerTitle}>{t(activeSectionMeta.labelKey, activeSectionMeta.labelFallback)}</Text>
         <CurrencyBalanceButton />
       </View>
 
-      {canPost && (
-        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-          <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', 'Share a photo...')}
-          </Text>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PhotoIcon />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+      {/* Home / Shop / Charity - three separate sections switched by tap,
+          each with its own independent scroll below (not one combined
+          swipe-through-everything deck). */}
+      <View style={styles.sectionTabs}>
+        {SECTIONS.map((s) => {
+          const active = s.key === activeSection;
+          return (
+            <TouchableOpacity
+              key={s.key}
+              style={[styles.sectionTab, active && styles.sectionTabActive]}
+              activeOpacity={0.8}
+              onPress={() => setActiveSection(s.key)}
+            >
+              <Text style={[styles.sectionTabText, active && styles.sectionTabTextActive]}>
+                {t(s.labelKey, s.labelFallback)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {activeSection === 'shop' ? (
+        <ShopSection />
+      ) : activeSection === 'charity' ? (
+        <CharitySection />
+      ) : (
+        <>
+          {canPost && (
+            <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+              <Text style={styles.composerPlaceholder} numberOfLines={1}>
+                {t('feed.composer_placeholder', 'Share a photo...')}
+              </Text>
+              <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+                <PhotoIcon />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
       <View style={styles.deckWrap} onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}>
         {loading ? (
@@ -405,10 +380,6 @@ export default function FeedScreen() {
             renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
                 <CaughtUpCard height={cardHeight} active={itemIndex === index} />
-              ) : item.kind === 'shop' ? (
-                <FeedDeckCard post={shopPost} height={cardHeight} {...noopSampleHandlers} />
-              ) : item.kind === 'charity' ? (
-                <FeedDeckCard post={charityPost} height={cardHeight} {...noopSampleHandlers} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
@@ -441,6 +412,8 @@ export default function FeedScreen() {
           />
         )}
       </View>
+        </>
+      )}
 
       <UserProfileModal
         userId={profileUserId}
@@ -466,6 +439,21 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
+
+  sectionTabs: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 20,
+    marginBottom: 14,
+    borderRadius: RADIUS.pill,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  sectionTab: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: RADIUS.pill },
+  sectionTabActive: { backgroundColor: EMERALD },
+  sectionTabText: { fontSize: 13.5, fontWeight: '700', color: SUBTLE },
+  sectionTabTextActive: { color: '#FFFFFF' },
 
   composer: {
     flexDirection: 'row',

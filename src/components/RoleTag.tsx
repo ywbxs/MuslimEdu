@@ -28,10 +28,6 @@ function roleConfig(role?: string | null): { label: string; color: string; bg: s
       return { label: 'Admin', color: BRAND.gold, bg: 'rgba(212,166,74,0.16)' };
     case 'teacher':
       return { label: 'Teacher', color: BRAND.emerald, bg: 'rgba(34,197,94,0.14)' };
-    case 'shop':
-      return { label: 'Shop', color: BRAND.gold, bg: 'rgba(212,166,74,0.16)' };
-    case 'charity':
-      return { label: 'Charity', color: '#DB4C77', bg: 'rgba(219,76,119,0.14)' };
     default:
       return null;
   }
