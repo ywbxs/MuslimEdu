@@ -67,6 +67,37 @@ type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
 type Section = 'home' | 'shop' | 'charity';
 const SECTIONS: Section[] = ['home', 'shop', 'charity'];
 
+// Sample cards ignore taps instead of hitting the real like/comment/repost/
+// profile endpoints with a fake negative id. Static, so it's hoisted once
+// instead of recreated per render.
+const noopSampleHandlers = {
+  onToggleLike: () => {},
+  onPressComment: () => {},
+  onPressRepost: () => {},
+  onPressAuthor: () => {},
+};
+
+// Shop and Charity are each their own small horizontal deck of sample
+// cards - same swipe-through-cards mechanic as Home's real posts, just a
+// fixed array instead of a paginated fetch.
+function SampleDeck({ posts, height }: { posts: Post[]; height: number }) {
+  return (
+    <FlatList
+      data={posts}
+      keyExtractor={(p) => String(p.id)}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      decelerationRate="fast"
+      snapToInterval={SNAP}
+      snapToAlignment="start"
+      disableIntervalMomentum
+      contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
+      getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
+      renderItem={({ item }) => <FeedDeckCard post={item} height={height} {...noopSampleHandlers} />}
+    />
+  );
+}
+
 export default function FeedScreen() {
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -98,54 +129,136 @@ export default function FeedScreen() {
     [outerHeight],
   );
 
-  // Fake Post objects for the Shop/Charity sample cards - negative ids so
+  // Fake Post objects for the Shop/Charity sample decks - negative ids so
   // they can never collide with a real post id, no images (renders through
   // the same gradient hero as a text-only post), is_mine false so no
   // edit/delete menu shows. Not persisted or backed by any real feature yet.
-  const shopPost: Post = useMemo(
-    () => ({
-      id: -1,
-      content: t('feed.shop_sample_caption', 'Browse school merch, books, and supplies - right from the app. Coming soon!'),
-      privacy: 'public',
-      created_at: new Date().toISOString(),
-      author: { id: -1, name: t('feed.shop_sample_name', 'Manhaje Shop'), photo: null, role: 'shop' },
-      images: [],
-      likes_count: 128,
-      comments_count: 12,
-      reposts_count: 4,
-      is_liked: false,
-      is_mine: false,
-      repost_of: null,
-    }),
-    [t],
+  // Several per section instead of just one, so each section is its own
+  // swipeable deck too, same as Home.
+  const shopAuthor = useMemo(() => ({ id: -1, name: t('feed.shop_sample_name', 'Manhaje Shop'), photo: null, role: 'shop' }), [t]);
+  const shopPosts: Post[] = useMemo(
+    () => [
+      {
+        id: -1,
+        content: t('shop.item_uniform_post', 'School Uniform Set - complete bundle, all grade levels. ₱850'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: shopAuthor,
+        images: [],
+        likes_count: 64,
+        comments_count: 5,
+        reposts_count: 1,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -2,
+        content: t('shop.item_books_post', "Islamic Studies Textbooks - Qur'an, Hadith & Fiqh, this term. ₱450"),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: shopAuthor,
+        images: [],
+        likes_count: 41,
+        comments_count: 3,
+        reposts_count: 0,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -3,
+        content: t('shop.item_supplies_post', 'School Supplies Kit - notebooks, pens & essentials. ₱250'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: shopAuthor,
+        images: [],
+        likes_count: 37,
+        comments_count: 2,
+        reposts_count: 0,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -4,
+        content: t('shop.item_bottle_post', 'Water Bottle & Lunch Bag Set - branded reusable set. ₱180'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: shopAuthor,
+        images: [],
+        likes_count: 28,
+        comments_count: 1,
+        reposts_count: 0,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+    ],
+    [t, shopAuthor],
   );
-  const charityPost: Post = useMemo(
-    () => ({
-      id: -2,
-      content: t('feed.charity_sample_caption', 'Give back and support causes in your community. Coming soon!'),
-      privacy: 'public',
-      created_at: new Date().toISOString(),
-      author: { id: -2, name: t('feed.charity_sample_name', 'Manhaje Charity'), photo: null, role: 'charity' },
-      images: [],
-      likes_count: 246,
-      comments_count: 31,
-      reposts_count: 9,
-      is_liked: false,
-      is_mine: false,
-      repost_of: null,
-    }),
-    [t],
-  );
-  // Sample cards ignore taps instead of hitting the real like/comment/repost/
-  // profile endpoints with a fake negative id.
-  const noopSampleHandlers = useMemo(
-    () => ({
-      onToggleLike: () => {},
-      onPressComment: () => {},
-      onPressRepost: () => {},
-      onPressAuthor: () => {},
-    }),
-    [],
+
+  const charityAuthor = useMemo(() => ({ id: -101, name: t('feed.charity_sample_name', 'Manhaje Charity'), photo: null, role: 'charity' }), [t]);
+  const charityPosts: Post[] = useMemo(
+    () => [
+      {
+        id: -101,
+        content: t('charity.cause_orphan_post', "Orphan Sponsorship Fund - support a child's education and daily needs."),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: charityAuthor,
+        images: [],
+        likes_count: 246,
+        comments_count: 31,
+        reposts_count: 9,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -102,
+        content: t('charity.cause_iftar_post', 'Ramadan Food Drive - provide iftar meals to families in need.'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: charityAuthor,
+        images: [],
+        likes_count: 189,
+        comments_count: 22,
+        reposts_count: 6,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -103,
+        content: t('charity.cause_building_post', 'School Building Fund - help expand classrooms for growing enrollment.'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: charityAuthor,
+        images: [],
+        likes_count: 152,
+        comments_count: 14,
+        reposts_count: 4,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+      {
+        id: -104,
+        content: t('charity.cause_scholarship_post', 'Scholarship Fund - fund tuition for deserving students.'),
+        privacy: 'public',
+        created_at: new Date().toISOString(),
+        author: charityAuthor,
+        images: [],
+        likes_count: 97,
+        comments_count: 9,
+        reposts_count: 2,
+        is_liked: false,
+        is_mine: false,
+        repost_of: null,
+      },
+    ],
+    [t, charityAuthor],
   );
 
   // --- Inner Home deck (the actual posts), horizontal --------------------
@@ -472,9 +585,9 @@ export default function FeedScreen() {
                 {item === 'home' ? (
                   homeContent
                 ) : item === 'shop' ? (
-                  <FeedDeckCard post={shopPost} height={outerHeight} {...noopSampleHandlers} />
+                  <SampleDeck posts={shopPosts} height={outerHeight} />
                 ) : (
-                  <FeedDeckCard post={charityPost} height={outerHeight} {...noopSampleHandlers} />
+                  <SampleDeck posts={charityPosts} height={outerHeight} />
                 )}
               </View>
             )}
