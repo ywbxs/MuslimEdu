@@ -286,11 +286,14 @@ export default function PostCard({
     setHeroImageLoading(!!heroImage);
   }, [heroImage]);
 
+  // Armed only while a load is actually in flight - heroImageLoading has to
+  // be a dependency, not just an initial condition, or a photo that loads
+  // fine keeps the timer running and gets pointlessly re-fetched every 8s
+  // until the attempts run out and it's declared unavailable.
   useEffect(() => {
-    if (!heroImage || heroImageFailed) return;
+    if (!heroImage || heroImageFailed || !heroImageLoading) return;
     const timeout = setTimeout(() => {
       if (heroImageAttempt + 1 < MAX_HERO_IMAGE_ATTEMPTS) {
-        setHeroImageLoading(true);
         setHeroImageAttempt((n) => n + 1);
       } else {
         setHeroImageLoading(false);
@@ -298,7 +301,7 @@ export default function PostCard({
       }
     }, 8000);
     return () => clearTimeout(timeout);
-  }, [heroImage, heroImageAttempt, heroImageFailed]);
+  }, [heroImage, heroImageAttempt, heroImageFailed, heroImageLoading]);
 
   return (
     <>
@@ -366,14 +369,14 @@ export default function PostCard({
           <View style={styles.hero}>
             {showHeroImage ? (
               <TouchableOpacity
-                style={StyleSheet.absoluteFillObject}
+                style={styles.heroFill}
                 activeOpacity={0.9}
                 onPress={() => onPressImage?.(heroImages, 0)}
               >
                 <Image
                   key={heroImageAttempt}
-                  source={{ uri: heroImageUri as string, cache: 'reload' }}
-                  style={StyleSheet.absoluteFillObject}
+                  source={{ uri: heroImageUri as string }}
+                  style={styles.heroFill}
                   resizeMode="cover"
                   onLoad={() => setHeroImageLoading(false)}
                   onError={() => {
@@ -385,22 +388,14 @@ export default function PostCard({
                     }
                   }}
                 />
-                {heroImageLoading && (
-                  <ActivityIndicator style={StyleSheet.absoluteFillObject} color={EMERALD} />
-                )}
+                {heroImageLoading && <ActivityIndicator style={styles.heroSpinner} color={EMERALD} />}
               </TouchableOpacity>
             ) : (
-              <>
-                <View style={[StyleSheet.absoluteFillObject, styles.heroPlaceholder]} />
-                {!!headlineText && (
-                  <Text style={styles.headlineCentered} numberOfLines={bodyNumberOfLines ?? 6}>
-                    {headlineText}
-                  </Text>
-                )}
-                {!headlineText && (
-                  <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
-                )}
-              </>
+              <View style={styles.heroCenter}>
+                <Text style={styles.headlineCentered} numberOfLines={bodyNumberOfLines ?? 6}>
+                  {headlineText || 'Photo unavailable'}
+                </Text>
+              </View>
             )}
           </View>
         </>
@@ -598,22 +593,27 @@ const styles = StyleSheet.create({
   // Majority of the fixed-height card (flex:1 absorbs whatever's left below
   // the header/caption above and the action bar below), always filled with
   // either a photo or a neutral placeholder - never blank. backgroundColor
-  // is the guaranteed fallback underneath the Image: a photo that's still
-  // loading (or never paints at all) shows this quiet grey rather than a
-  // saturated brand fill, which read as a deliberate "green card" and made
-  // a broken photo look like real content.
+  // is the guaranteed fallback underneath the photo, so one that's still
+  // loading shows this quiet grey rather than a saturated brand fill.
+  //
+  // Deliberately carries NO padding/alignItems/justifyContent: the photo
+  // below sizes itself with width/height 100% in normal flow, and an
+  // absolutely-positioned child inside a centering, padded parent collapses
+  // to zero size in Yoga - which is what made the photo decode fine (onLoad
+  // fired) but paint nothing at all. Centering for the text-only case lives
+  // on heroCenter instead.
   hero: {
     flex: 1,
     overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
     backgroundColor: PLACEHOLDER,
   },
-  // Sits behind a text-only post's headline (and the "Photo unavailable"
-  // fallback) - same neutral as the hero base, kept as its own style so the
-  // fill stays in one place if it changes again.
-  heroPlaceholder: { backgroundColor: PLACEHOLDER },
+  // Same geometry PostImageGrid uses for its own tiles, which have always
+  // rendered correctly - explicit 100%/100% in normal flow, never absolute.
+  heroFill: { width: '100%', height: '100%', position: 'relative' },
+  heroSpinner: { ...StyleSheet.absoluteFillObject },
+  // Centering box for a text-only post (and the "Photo unavailable"
+  // fallback) - the padding/centering the hero itself used to carry.
+  heroCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   // Only shown for a text-only post (no image) - dark ink, since the
   // placeholder behind it is light (white text here was invisible once the
   // green fill went away).
