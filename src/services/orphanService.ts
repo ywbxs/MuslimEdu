@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@orphan_cache_v1';
 
 export interface ReportPhoto {
   url: string;
@@ -70,16 +73,18 @@ export function normalizeReportPhotos<T extends { photos?: string[] | null }>(re
 
 /** POST /orphan_report_status - current month status + full history */
 export async function fetchReportStatus(token: string): Promise<ReportStatus> {
-  const data = (await authedPost('/orphan_report_status', token, {})) as ReportStatus;
-  return {
-    ...data,
-    current_report: data.current_report ? normalizeReportPhotos(data.current_report) : null,
-    history: (data.history ?? []).map(normalizeReportPhotos),
-    timeline: (data.timeline ?? []).map((entry) => ({
-      ...entry,
-      report: entry.report ? normalizeReportPhotos(entry.report) : null,
-    })),
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'status'), async () => {
+    const data = (await authedPost('/orphan_report_status', token, {})) as ReportStatus;
+    return {
+      ...data,
+      current_report: data.current_report ? normalizeReportPhotos(data.current_report) : null,
+      history: (data.history ?? []).map(normalizeReportPhotos),
+      timeline: (data.timeline ?? []).map((entry) => ({
+        ...entry,
+        report: entry.report ? normalizeReportPhotos(entry.report) : null,
+      })),
+    };
+  });
 }
 
 /**

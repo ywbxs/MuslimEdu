@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@assessment_cache_v1';
 
 // --- Shared fetch helpers (same pattern as announcementService.ts/lessonPlanService.ts) ---
 
@@ -203,19 +206,24 @@ function mapSubmission(s: any): AssessmentSubmission {
 export async function fetchAssessmentTargets(
   token: string
 ): Promise<{ targets: AssessmentTarget[]; examCategories: AssessmentExamCategory[] }> {
-  const data = await authedPost('/teacher_assessment_targets', token);
-  return {
-    targets: data.targets ?? [],
-    examCategories: data.exam_categories ?? [],
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'targets'), async () => {
+    const data = await authedPost('/teacher_assessment_targets', token);
+    return {
+      targets: data.targets ?? [],
+      examCategories: data.exam_categories ?? [],
+    };
+  });
 }
 
 export async function fetchTeacherAssessments(
   token: string,
   filters: { status?: AssessmentStatus; section_id?: number; subject_id?: number; type?: AssessmentType } = {}
 ): Promise<Assessment[]> {
-  const data = await authedPost('/teacher_assessment_list', token, filters);
-  return (data.assessments ?? []).map(mapAssessment);
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'teacherList', JSON.stringify(filters));
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/teacher_assessment_list', token, filters);
+    return (data.assessments ?? []).map(mapAssessment);
+  });
 }
 
 export async function createAssessment(token: string, input: NewAssessmentInput): Promise<Assessment> {
@@ -266,11 +274,13 @@ export async function fetchAssessmentSubmissions(
   token: string,
   assessmentId: number
 ): Promise<{ assessment: Assessment; submissions: AssessmentSubmission[] }> {
-  const data = await authedPost('/teacher_assessment_submissions', token, { assessment_id: assessmentId });
-  return {
-    assessment: mapAssessment(data.assessment),
-    submissions: (data.submissions ?? []).map(mapSubmission),
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'submissions', assessmentId), async () => {
+    const data = await authedPost('/teacher_assessment_submissions', token, { assessment_id: assessmentId });
+    return {
+      assessment: mapAssessment(data.assessment),
+      submissions: (data.submissions ?? []).map(mapSubmission),
+    };
+  });
 }
 
 export async function gradeSubmission(
@@ -288,26 +298,32 @@ export async function fetchTeacherAssessmentGrades(
   sectionId: number,
   subjectId: number
 ): Promise<AssessmentStudentGradeRow[]> {
-  const data = await authedPost('/teacher_assessment_grades', token, {
-    section_id: sectionId,
-    subject_id: subjectId,
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'teacherGrades', sectionId, subjectId), async () => {
+    const data = await authedPost('/teacher_assessment_grades', token, {
+      section_id: sectionId,
+      subject_id: subjectId,
+    });
+    return data.students ?? [];
   });
-  return data.students ?? [];
 }
 
 // --- Student ---
 
 export async function fetchStudentAssessments(token: string): Promise<Assessment[]> {
-  const data = await authedPost('/student_assessment_list', token);
-  return (data.assessments ?? []).map(mapAssessment);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'studentList'), async () => {
+    const data = await authedPost('/student_assessment_list', token);
+    return (data.assessments ?? []).map(mapAssessment);
+  });
 }
 
 // The student's own weighted grade for every subject with at least one
 // published assessment in their current section — powers a "My Grades"
 // view without needing a section/subject picker first.
 export async function fetchStudentAssessmentGrades(token: string): Promise<AssessmentSubjectGrade[]> {
-  const data = await authedPost('/student_assessment_grades', token);
-  return data.subjects ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'studentGrades'), async () => {
+    const data = await authedPost('/student_assessment_grades', token);
+    return data.subjects ?? [];
+  });
 }
 
 export async function submitAssessmentWork(
@@ -342,19 +358,24 @@ export async function fetchAdminAssessmentReview(
   token: string,
   filters: { section_id?: number; status?: AssessmentStatus; type?: AssessmentType } = {}
 ): Promise<Assessment[]> {
-  const data = await authedPost('/admin_assessment_review', token, filters);
-  return (data.assessments ?? []).map(mapAssessment);
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'adminReview', JSON.stringify(filters));
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/admin_assessment_review', token, filters);
+    return (data.assessments ?? []).map(mapAssessment);
+  });
 }
 
 export async function fetchAdminAssessmentSubmissions(
   token: string,
   assessmentId: number
 ): Promise<{ assessment: Assessment; submissions: AssessmentSubmission[] }> {
-  const data = await authedPost('/admin_assessment_submissions', token, { assessment_id: assessmentId });
-  return {
-    assessment: mapAssessment(data.assessment),
-    submissions: (data.submissions ?? []).map(mapSubmission),
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'adminSubmissions', assessmentId), async () => {
+    const data = await authedPost('/admin_assessment_submissions', token, { assessment_id: assessmentId });
+    return {
+      assessment: mapAssessment(data.assessment),
+      submissions: (data.submissions ?? []).map(mapSubmission),
+    };
+  });
 }
 
 // Read-only counterpart to fetchTeacherAssessmentGrades, for admin
@@ -364,9 +385,12 @@ export async function fetchAdminAssessmentGrades(
   sectionId: number,
   subjectId: number
 ): Promise<AssessmentStudentGradeRow[]> {
-  const data = await authedPost('/admin_assessment_grades', token, {
-    section_id: sectionId,
-    subject_id: subjectId,
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'adminGrades', sectionId, subjectId);
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/admin_assessment_grades', token, {
+      section_id: sectionId,
+      subject_id: subjectId,
+    });
+    return data.students ?? [];
   });
-  return data.students ?? [];
 }

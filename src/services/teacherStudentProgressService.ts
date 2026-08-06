@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@teacher_student_progress_cache_v1';
 
 /**
  * M4 progress & risk indicators — the TEACHER/ADMIN-facing view of a
@@ -79,5 +82,7 @@ export async function fetchTeacherStudentProgressSummary(
   token: string,
   studentId: number
 ): Promise<TeacherStudentProgressSummary> {
-  return authedPost('/teacher_student_progress_summary', token, { student_id: studentId });
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, studentId), () =>
+    authedPost('/teacher_student_progress_summary', token, { student_id: studentId }),
+  );
 }

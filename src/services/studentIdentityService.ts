@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@student_identity_cache_v1';
 
 export interface StudentIdentity {
   student_id: number;
@@ -24,21 +27,26 @@ function messageOf(data: any): string {
   return data?.message ?? data?.error ?? `Request failed`;
 }
 
+// Cache-then-network: the digital ID card needs to render (QR code included)
+// even with no signal, e.g. showing it at a gate - a network failure falls
+// back to the last-fetched identity instead of leaving the screen blank.
 export async function fetchStudentIdentity(token: string): Promise<StudentIdentity> {
-  const response = await fetch(`${API_BASE_URL}/student_identity`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token), async () => {
+    const response = await fetch(`${API_BASE_URL}/student_identity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(messageOf(data));
+    const identity = data.identity as StudentIdentity;
+    return {
+      ...identity,
+      photo: absoluteUrl(identity.photo),
+      school: { ...identity.school, logo: absoluteUrl(identity.school?.logo) },
+    };
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(messageOf(data));
-  const identity = data.identity as StudentIdentity;
-  return {
-    ...identity,
-    photo: absoluteUrl(identity.photo),
-    school: { ...identity.school, logo: absoluteUrl(identity.school?.logo) },
-  };
 }

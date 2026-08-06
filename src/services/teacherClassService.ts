@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@teacher_class_cache_v1';
 
 // --- Shared fetch helper (same pattern as adminService.ts / adminTeacherService.ts) ---
 
@@ -116,16 +119,18 @@ export interface DashboardStats {
 }
 
 export async function fetchAcademicDashboardStats(token: string): Promise<DashboardStats> {
-  const data = await authedPost('/admin_academic_dashboard_stats', token);
-  return {
-    departments: data.departments ?? 0,
-    curricula: data.curricula ?? 0,
-    classes: data.classes ?? 0,
-    sections: data.sections ?? 0,
-    teachers: data.teachers ?? 0,
-    subjects: data.subjects ?? 0,
-    students: data.students ?? 0,
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'dashboardStats'), async () => {
+    const data = await authedPost('/admin_academic_dashboard_stats', token);
+    return {
+      departments: data.departments ?? 0,
+      curricula: data.curricula ?? 0,
+      classes: data.classes ?? 0,
+      sections: data.sections ?? 0,
+      teachers: data.teachers ?? 0,
+      subjects: data.subjects ?? 0,
+      students: data.students ?? 0,
+    };
+  });
 }
 
 // --- Admin: class teacher assignment ---
@@ -133,11 +138,13 @@ export async function fetchAcademicDashboardStats(token: string): Promise<Dashbo
 export async function fetchClassTeacherAssignments(
   token: string
 ): Promise<{ sections: ClassSection[]; teachers: AssignableTeacher[] }> {
-  const data = await authedPost('/admin_class_teacher_list', token);
-  return {
-    sections: data.sections ?? [],
-    teachers: data.teachers ?? [],
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'teacherAssignments'), async () => {
+    const data = await authedPost('/admin_class_teacher_list', token);
+    return {
+      sections: data.sections ?? [],
+      teachers: data.teachers ?? [],
+    };
+  });
 }
 
 export async function assignClassTeacher(
@@ -154,22 +161,26 @@ export async function assignClassTeacher(
 // --- Teacher: my classes & roster ---
 
 export async function fetchMyClasses(token: string): Promise<ClassSection[]> {
-  const data = await authedPost('/teacher_my_classes', token);
-  return data.classes ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'myClasses'), async () => {
+    const data = await authedPost('/teacher_my_classes', token);
+    return data.classes ?? [];
+  });
 }
 
 export async function fetchClassStudents(token: string, sectionId: number): Promise<ClassRoster> {
-  const data = await authedPost('/teacher_class_students', token, { section_id: sectionId });
-  const students: any[] = data.students ?? [];
-  return {
-    section_id: data.section_id,
-    section_name: data.section_name,
-    class_name: data.class_name ?? null,
-    students: students.map((s) => ({
-      ...s,
-      photo: absoluteUrl(s.photo ?? null),
-    })),
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'classStudents', sectionId), async () => {
+    const data = await authedPost('/teacher_class_students', token, { section_id: sectionId });
+    const students: any[] = data.students ?? [];
+    return {
+      section_id: data.section_id,
+      section_name: data.section_name,
+      class_name: data.class_name ?? null,
+      students: students.map((s) => ({
+        ...s,
+        photo: absoluteUrl(s.photo ?? null),
+      })),
+    };
+  });
 }
 
 // --- Admin: section enrollment (roster management) ---
@@ -207,18 +218,20 @@ export interface EligibleStudent {
 }
 
 export async function fetchSectionRoster(token: string, sectionId: number): Promise<SectionRoster> {
-  const data = await authedPost('/admin_section_students', token, { section_id: sectionId });
-  const students: any[] = data.students ?? [];
-  return {
-    section_id: data.section_id,
-    section_name: data.section_name,
-    class_id: data.class_id,
-    class_name: data.class_name ?? null,
-    capacity: data.capacity ?? null,
-    current_enrollment: data.current_enrollment ?? students.length,
-    available_slots: data.available_slots ?? null,
-    students: students.map((s) => ({ ...s, photo: absoluteUrl(s.photo ?? null) })),
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'sectionRoster', sectionId), async () => {
+    const data = await authedPost('/admin_section_students', token, { section_id: sectionId });
+    const students: any[] = data.students ?? [];
+    return {
+      section_id: data.section_id,
+      section_name: data.section_name,
+      class_id: data.class_id,
+      class_name: data.class_name ?? null,
+      capacity: data.capacity ?? null,
+      current_enrollment: data.current_enrollment ?? students.length,
+      available_slots: data.available_slots ?? null,
+      students: students.map((s) => ({ ...s, photo: absoluteUrl(s.photo ?? null) })),
+    };
+  });
 }
 
 export async function fetchEligibleStudents(
@@ -267,16 +280,18 @@ export interface SectionOption {
 // All active sections, for the "transfer to..." picker - a lighter-weight read
 // than SectionListScreen's own admin_sections_list call (no status/search filters).
 export async function fetchAllSections(token: string): Promise<SectionOption[]> {
-  const data = await authedPost('/admin_sections_list', token, { status: 'active' });
-  const sections: any[] = data.sections ?? [];
-  return sections.map((s) => ({
-    id: s.id,
-    name: s.name,
-    class_id: s.class_id,
-    class_name: s.class_name ?? null,
-    capacity: s.capacity ?? null,
-    current_enrollment: s.current_enrollment ?? 0,
-  }));
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'allSections'), async () => {
+    const data = await authedPost('/admin_sections_list', token, { status: 'active' });
+    const sections: any[] = data.sections ?? [];
+    return sections.map((s) => ({
+      id: s.id,
+      name: s.name,
+      class_id: s.class_id,
+      class_name: s.class_name ?? null,
+      capacity: s.capacity ?? null,
+      current_enrollment: s.current_enrollment ?? 0,
+    }));
+  });
 }
 
 // --- Admin: subjects & schedule per class ---
@@ -292,15 +307,17 @@ export async function fetchClassSubjects(
   rooms: RoomOption[];
   semesterTerms: SemesterTermOption[];
 }> {
-  const data = await authedPost('/admin_class_subjects_list', token, { section_id: sectionId });
-  return {
-    sectionName: data.section_name ?? null,
-    classSubjects: data.class_subjects ?? [],
-    subjects: data.subjects ?? [],
-    teachers: data.teachers ?? [],
-    rooms: data.rooms ?? [],
-    semesterTerms: data.semester_terms ?? [],
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'classSubjects', sectionId), async () => {
+    const data = await authedPost('/admin_class_subjects_list', token, { section_id: sectionId });
+    return {
+      sectionName: data.section_name ?? null,
+      classSubjects: data.class_subjects ?? [],
+      subjects: data.subjects ?? [],
+      teachers: data.teachers ?? [],
+      rooms: data.rooms ?? [],
+      semesterTerms: data.semester_terms ?? [],
+    };
+  });
 }
 
 export async function createSubject(token: string, sectionId: number, name: string): Promise<SubjectOption> {

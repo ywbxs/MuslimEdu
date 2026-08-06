@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@material_cache_v1';
 
 // --- Shared fetch helpers (same pattern as announcementService.ts/assessmentService.ts) ---
 
@@ -121,11 +124,14 @@ export async function fetchTeacherMaterials(
   sectionId?: number | null,
   subjectId?: number | null
 ): Promise<Material[]> {
-  const data = await authedPost('/teacher_material_list', token, {
-    section_id: sectionId ?? undefined,
-    subject_id: subjectId ?? undefined,
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'teacher', sectionId ?? 'all', subjectId ?? 'all');
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/teacher_material_list', token, {
+      section_id: sectionId ?? undefined,
+      subject_id: subjectId ?? undefined,
+    });
+    return (data.materials ?? []).map(mapMaterial);
   });
-  return (data.materials ?? []).map(mapMaterial);
 }
 
 export async function uploadMaterial(token: string, input: NewMaterialInput): Promise<Material> {
@@ -152,10 +158,12 @@ export async function fetchStudentMaterials(
   token: string,
   subjectId?: number | null
 ): Promise<Material[]> {
-  const data = await authedPost('/student_material_list', token, {
-    subject_id: subjectId ?? undefined,
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'student', subjectId ?? 'all'), async () => {
+    const data = await authedPost('/student_material_list', token, {
+      subject_id: subjectId ?? undefined,
+    });
+    return (data.materials ?? []).map(mapMaterial);
   });
-  return (data.materials ?? []).map(mapMaterial);
 }
 
 // --- Admin ---
@@ -164,8 +172,10 @@ export async function fetchAdminMaterialReview(
   token: string,
   sectionId?: number | null
 ): Promise<Material[]> {
-  const data = await authedPost('/admin_material_review', token, {
-    section_id: sectionId ?? undefined,
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'adminReview', sectionId ?? 'all'), async () => {
+    const data = await authedPost('/admin_material_review', token, {
+      section_id: sectionId ?? undefined,
+    });
+    return (data.materials ?? []).map(mapMaterial);
   });
-  return (data.materials ?? []).map(mapMaterial);
 }

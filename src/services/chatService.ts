@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@chat_cache_v1';
 
 export interface ChatThread {
   thread_id: number;
@@ -74,9 +77,11 @@ function normalizeThread(raw: any): ChatThread {
 
 /** POST /message_thread_list - every conversation the current user is in */
 export async function fetchThreadList(token: string): Promise<ChatThread[]> {
-  const data = await authedPost('/message_thread_list', token, {});
-  const rawList: any[] = data.threads ?? [];
-  return rawList.map(normalizeThread);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'threads'), async () => {
+    const data = await authedPost('/message_thread_list', token, {});
+    const rawList: any[] = data.threads ?? [];
+    return rawList.map(normalizeThread);
+  });
 }
 
 /** POST /message_thread_start - find-or-create a thread without sending yet */
@@ -89,16 +94,23 @@ export async function startThread(token: string, userId: number): Promise<number
  * POST /message_chat_list - full history, or only messages newer than
  * afterId when polling. Also marks anything addressed to me as read.
  */
+// Only the full history load (no afterId) is cache-then-network - a polling
+// delta fetch (afterId set) that fails offline should just no-op/retry next
+// poll, not get served a stale delta pretending to be the newest messages.
 export async function fetchChatMessages(
   token: string,
   threadId: number,
   afterId?: number,
 ): Promise<ChatMessage[]> {
-  const data = await authedPost('/message_chat_list', token, {
-    thread_id: threadId,
-    ...(afterId ? { after_id: afterId } : {}),
-  });
-  return data.chats ?? [];
+  const load = async () => {
+    const data = await authedPost('/message_chat_list', token, {
+      thread_id: threadId,
+      ...(afterId ? { after_id: afterId } : {}),
+    });
+    return data.chats ?? [];
+  };
+  if (afterId) return load();
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'messages', threadId), load);
 }
 
 /**

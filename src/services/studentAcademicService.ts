@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@student_academic_cache_v1';
 
 /**
  * Student-facing reads for spec §6 "Enrollment and academics" /
@@ -71,16 +74,21 @@ export interface ScheduleResponse {
 
 // Backend returns 400 with a message when there's no routine yet - treat
 // that as an empty list rather than an error the screen has to special-case.
+// Cache-then-network: a genuine network failure falls back to the last
+// successful response instead of throwing, so the schedule tab keeps
+// showing real data while offline.
 export async function fetchStudentSchedule(token: string): Promise<ScheduleResponse> {
-  try {
-    return await authedPost<ScheduleResponse>('/routine', token);
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return { class_id: 0, class_name: '', section_id: 0, section_name: '', routines: [] };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'schedule'), async () => {
+    try {
+      return await authedPost<ScheduleResponse>('/routine', token);
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return { class_id: 0, class_name: '', section_id: 0, section_name: '', routines: [] };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- Subjects (/subjects) ------------------------------------------------
@@ -97,15 +105,17 @@ export interface SubjectsResponse {
 }
 
 export async function fetchStudentSubjects(token: string): Promise<SubjectsResponse> {
-  try {
-    return await authedPost<SubjectsResponse>('/subjects', token);
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return { class_id: 0, class_name: '', subjects: [] };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'subjects'), async () => {
+    try {
+      return await authedPost<SubjectsResponse>('/subjects', token);
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return { class_id: 0, class_name: '', subjects: [] };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- Attendance (/attendance) --------------------------------------------
@@ -133,15 +143,17 @@ export async function fetchStudentAttendance(
   month: number,
   year: number
 ): Promise<AttendanceResponse> {
-  try {
-    return await authedPost<AttendanceResponse>('/attendance', token, { month, year });
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return { class_id: 0, class_name: '', section_id: 0, section_name: '', attedances: [] };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'attendance', month, year), async () => {
+    try {
+      return await authedPost<AttendanceResponse>('/attendance', token, { month, year });
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return { class_id: 0, class_name: '', section_id: 0, section_name: '', attedances: [] };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- Grades (/marks) ------------------------------------------------------
@@ -176,19 +188,21 @@ export async function fetchStudentGrades(
   token: string,
   examCategoryId?: number
 ): Promise<GradesResponse> {
-  try {
-    return await authedPost<GradesResponse>(
-      '/marks',
-      token,
-      examCategoryId ? { exam_category_id: examCategoryId } : {}
-    );
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return { class_id: 0, class_name: '', exam_marks: [], exam_categories: [] };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'grades', examCategoryId ?? 'all'), async () => {
+    try {
+      return await authedPost<GradesResponse>(
+        '/marks',
+        token,
+        examCategoryId ? { exam_category_id: examCategoryId } : {}
+      );
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return { class_id: 0, class_name: '', exam_marks: [], exam_categories: [] };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- Grade bands (/student_subject_grade_bands) ---------------------------
@@ -238,23 +252,26 @@ export async function fetchStudentSubjectGradeBands(
   examCategoryId?: number,
   termId?: number
 ): Promise<SubjectGradeBandsResult> {
-  try {
-    const res = await authedPost<SubjectGradeBandsResponse>('/student_subject_grade_bands', token, {
-      ...(examCategoryId ? { exam_category_id: examCategoryId } : {}),
-      ...(termId ? { term_id: termId } : {}),
-    });
-    return {
-      bands: res.subject_grades ?? [],
-      termId: res.term_id ?? null,
-      termsAvailable: res.terms_available ?? [],
-    };
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return { bands: [], termId: termId ?? null, termsAvailable: [] };
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'gradeBands', examCategoryId ?? 'all', termId ?? 'all');
+  return cacheThenNetwork(cacheKey, async () => {
+    try {
+      const res = await authedPost<SubjectGradeBandsResponse>('/student_subject_grade_bands', token, {
+        ...(examCategoryId ? { exam_category_id: examCategoryId } : {}),
+        ...(termId ? { term_id: termId } : {}),
+      });
+      return {
+        bands: res.subject_grades ?? [],
+        termId: res.term_id ?? null,
+        termsAvailable: res.terms_available ?? [],
+      };
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return { bands: [], termId: termId ?? null, termsAvailable: [] };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- GPA summary (/student_gpa_summary) ------------------------------------
@@ -299,23 +316,25 @@ export interface GpaSummaryResponse {
 // entry's timestamp). Omitted or undefined returns the whole running
 // session, same as before term-awareness existed.
 export async function fetchStudentGpaSummary(token: string, termId?: number): Promise<GpaSummaryResponse> {
-  try {
-    return await authedPost<GpaSummaryResponse>('/student_gpa_summary', token, termId ? { term_id: termId } : {});
-  } catch (e) {
-    const err = e as ApiError;
-    if (err.status === 400) {
-      return {
-        gpa: null,
-        total_weight: 0,
-        subjects_with_grade: 0,
-        subjects_total: 0,
-        subjects: [],
-        term_id: termId ?? null,
-        terms_available: [],
-      };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'gpaSummary', termId ?? 'all'), async () => {
+    try {
+      return await authedPost<GpaSummaryResponse>('/student_gpa_summary', token, termId ? { term_id: termId } : {});
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 400) {
+        return {
+          gpa: null,
+          total_weight: 0,
+          subjects_with_grade: 0,
+          subjects_total: 0,
+          subjects: [],
+          term_id: termId ?? null,
+          terms_available: [],
+        };
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // --- Progress (client-side aggregation over the above) --------------------

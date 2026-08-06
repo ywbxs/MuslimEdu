@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@memorization_cache_v1';
 
 /**
  * M4 memorization progress tracking. Backend: MemorizationController
@@ -93,12 +96,17 @@ export async function fetchMemorizationRecords(
   token: string,
   filters: { studentId?: number | null; sectionId?: number | null; status?: MemorizationStatus | null } = {}
 ): Promise<MemorizationRecord[]> {
-  const data = await authedPost('/memorization_record_list', token, {
-    student_id: filters.studentId ?? null,
-    section_id: filters.sectionId ?? null,
-    status: filters.status ?? null,
+  const cacheKey = cacheKeyFor(
+    CACHE_PREFIX, token, filters.studentId ?? 'all', filters.sectionId ?? 'all', filters.status ?? 'all',
+  );
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/memorization_record_list', token, {
+      student_id: filters.studentId ?? null,
+      section_id: filters.sectionId ?? null,
+      status: filters.status ?? null,
+    });
+    return data.records ?? [];
   });
-  return data.records ?? [];
 }
 
 export async function saveMemorizationRecord(token: string, draft: MemorizationDraft): Promise<MemorizationRecord> {

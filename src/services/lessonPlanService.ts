@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@lesson_plan_cache_v1';
 
 // Shared fetch helpers — same pattern as announcementService.ts /
 // teacherGradebookService.ts.
@@ -131,16 +134,21 @@ function mapPlan(p: any): LessonPlan {
 // --- Teacher ---
 
 export async function fetchLessonPlanTargets(token: string): Promise<LessonPlanTarget[]> {
-  const data = await authedPost('/teacher_lesson_plan_targets', token);
-  return data.targets ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'targets'), async () => {
+    const data = await authedPost('/teacher_lesson_plan_targets', token);
+    return data.targets ?? [];
+  });
 }
 
 export async function fetchTeacherLessonPlans(
   token: string,
   filters: { status?: LessonPlanStatus; section_id?: number; subject_id?: number } = {}
 ): Promise<LessonPlan[]> {
-  const data = await authedPost('/teacher_lesson_plan_list', token, filters);
-  return (data.plans ?? []).map(mapPlan);
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'teacherList', JSON.stringify(filters));
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/teacher_lesson_plan_list', token, filters);
+    return (data.plans ?? []).map(mapPlan);
+  });
 }
 
 export async function createLessonPlan(token: string, input: NewLessonPlanInput): Promise<LessonPlan> {
@@ -197,8 +205,11 @@ export async function fetchAdminLessonPlanReview(
   token: string,
   filters: { section_id?: number; status?: LessonPlanStatus } = {}
 ): Promise<LessonPlan[]> {
-  const data = await authedPost('/admin_lesson_plan_review', token, filters);
-  return (data.plans ?? []).map(mapPlan);
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'adminReview', JSON.stringify(filters));
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/admin_lesson_plan_review', token, filters);
+    return (data.plans ?? []).map(mapPlan);
+  });
 }
 
 export async function decideLessonPlan(

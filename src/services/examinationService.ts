@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@examination_cache_v1';
 
 /**
  * M4 dedicated examinations module. Backend: ExaminationController — the
@@ -130,8 +133,10 @@ export interface ResultDraft {
 // --- Assignments (picker support) ---
 
 export async function fetchMyExamAssignments(token: string): Promise<ExaminationAssignment[]> {
-  const data = await authedPost('/examination_my_assignments', token);
-  return data.assignments ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'myAssignments'), async () => {
+    const data = await authedPost('/examination_my_assignments', token);
+    return data.assignments ?? [];
+  });
 }
 
 // --- Examinations ---
@@ -140,12 +145,18 @@ export async function fetchExaminations(
   token: string,
   filters: { sectionId?: number | null; subjectId?: number | null; status?: ExaminationStatus | null } = {}
 ): Promise<Examination[]> {
-  const data = await authedPost('/examination_list', token, {
-    section_id: filters.sectionId ?? null,
-    subject_id: filters.subjectId ?? null,
-    status: filters.status ?? null,
+  const cacheKey = cacheKeyFor(
+    CACHE_PREFIX, token, 'list',
+    filters.sectionId ?? 'all', filters.subjectId ?? 'all', filters.status ?? 'all',
+  );
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/examination_list', token, {
+      section_id: filters.sectionId ?? null,
+      subject_id: filters.subjectId ?? null,
+      status: filters.status ?? null,
+    });
+    return data.examinations ?? [];
   });
-  return data.examinations ?? [];
 }
 
 export async function saveExamination(token: string, draft: ExaminationDraft): Promise<Examination> {
@@ -165,8 +176,10 @@ export async function deleteExamination(token: string, id: number): Promise<void
 // --- Results ---
 
 export async function fetchExaminationResults(token: string, examinationId: number): Promise<ExaminationResult[]> {
-  const data = await authedPost('/examination_results_list', token, { examination_id: examinationId });
-  return data.results ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'results', examinationId), async () => {
+    const data = await authedPost('/examination_results_list', token, { examination_id: examinationId });
+    return data.results ?? [];
+  });
 }
 
 export async function saveExaminationResults(
