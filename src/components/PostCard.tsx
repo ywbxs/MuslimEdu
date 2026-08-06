@@ -216,11 +216,14 @@ export default function PostCard({
   // we can show a spinner instead, and give up after a timeout so a hung
   // request still falls through to the gradient+text treatment eventually.
   const [heroImageLoading, setHeroImageLoading] = useState(true);
-  // TEMPORARY diagnostic: the exact reason/URL for a failed hero photo,
-  // surfaced on-screen so a broken post's real cause is visible without
-  // server/API access - remove once the underlying image pipeline is
-  // confirmed fixed.
-  const [heroImageError, setHeroImageError] = useState<string | null>(null);
+  // A stuck/hung request (confirmed: the same URL loads fine in a browser,
+  // so the file and server are fine - it's RN's own networking that stalls,
+  // most likely a wedged connection reused from an earlier failed request)
+  // usually clears up on a fresh connection. Re-issuing the request with a
+  // cache-busting query param forces a brand-new one instead of whatever got
+  // stuck, so retry a couple of times before actually giving up.
+  const [heroImageAttempt, setHeroImageAttempt] = useState(0);
+  const MAX_HERO_IMAGE_ATTEMPTS = 3;
 
   const handleHeart = () => {
     Animated.sequence([
@@ -267,21 +270,32 @@ export default function PostCard({
   // always "big", just filled with a photo or a color instead of blank space.
   const heroImages = post.images.length > 0 ? post.images : quoted && quoted.images.length > 0 ? quoted.images : [];
   const heroImage = heroImages.length > 0 ? heroImages[0] : null;
+  // A cache-busting query param on every retry past the first forces a
+  // genuinely new request instead of RN reusing whatever connection/cache
+  // entry got stuck the first time.
+  const heroImageUri = heroImage && heroImageAttempt > 0 ? `${heroImage}${heroImage.includes('?') ? '&' : '?'}retry=${heroImageAttempt}` : heroImage;
   const showHeroImage = !!heroImage && !heroImageFailed;
   const headlineText = post.content || quoted?.content || '';
 
   useEffect(() => {
     setHeroImageFailed(false);
-    setHeroImageError(null);
+    setHeroImageAttempt(0);
     setHeroImageLoading(!!heroImage);
-    if (!heroImage) return;
-    const timeout = setTimeout(() => {
-      setHeroImageLoading(false);
-      setHeroImageFailed(true);
-      setHeroImageError('Timed out waiting for image to load');
-    }, 10000);
-    return () => clearTimeout(timeout);
   }, [heroImage]);
+
+  useEffect(() => {
+    if (!heroImage || heroImageFailed) return;
+    const timeout = setTimeout(() => {
+      if (heroImageAttempt + 1 < MAX_HERO_IMAGE_ATTEMPTS) {
+        setHeroImageLoading(true);
+        setHeroImageAttempt((n) => n + 1);
+      } else {
+        setHeroImageLoading(false);
+        setHeroImageFailed(true);
+      }
+    }, 8000);
+    return () => clearTimeout(timeout);
+  }, [heroImage, heroImageAttempt, heroImageFailed]);
 
   return (
     <>
@@ -354,14 +368,18 @@ export default function PostCard({
                 onPress={() => onPressImage?.(heroImages, 0)}
               >
                 <Image
-                  source={{ uri: heroImage as string }}
+                  key={heroImageAttempt}
+                  source={{ uri: heroImageUri as string, cache: 'reload' }}
                   style={StyleSheet.absoluteFillObject}
                   resizeMode="cover"
                   onLoad={() => setHeroImageLoading(false)}
-                  onError={(e) => {
-                    setHeroImageLoading(false);
-                    setHeroImageFailed(true);
-                    setHeroImageError(e.nativeEvent?.error ?? 'Unknown error');
+                  onError={() => {
+                    if (heroImageAttempt + 1 < MAX_HERO_IMAGE_ATTEMPTS) {
+                      setHeroImageAttempt((n) => n + 1);
+                    } else {
+                      setHeroImageLoading(false);
+                      setHeroImageFailed(true);
+                    }
                   }}
                 />
                 {heroImageLoading && (
@@ -383,13 +401,6 @@ export default function PostCard({
                 )}
                 {!headlineText && (
                   <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
-                )}
-                {/* TEMPORARY diagnostic - see heroImageError above */}
-                {!!heroImage && (
-                  <Text style={styles.debugUrl} selectable numberOfLines={4}>
-                    {heroImage}
-                    {heroImageError ? `\n${heroImageError}` : ''}
-                  </Text>
                 )}
               </>
             )}
@@ -605,8 +616,6 @@ const styles = StyleSheet.create({
   // gradient behind it is the entire point of the card, so the text is
   // centered in it rather than pinned to a corner.
   headlineCentered: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', lineHeight: 25, textAlign: 'center' },
-  // TEMPORARY diagnostic style - remove alongside heroImageError above.
-  debugUrl: { fontSize: 11, color: '#FFFFFF', opacity: 0.85, textAlign: 'center', marginTop: 10, paddingHorizontal: 12 },
   // Only shown when a post has BOTH a photo and text, between the header
   // and the hero image - a text-only post shows its text centered in the
   // hero instead, so it's never shown twice.
