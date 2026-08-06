@@ -58,45 +58,18 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 // swiping to it - rather than a pill overlaid on top of the last post.
 type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
 
-// The screen itself has 3 sections stacked vertically - Home, Shop, Charity -
-// scroll DOWN to move between them, one full screen at a time. Home's own
-// content (the actual posts) is a separate, nested HORIZONTAL deck - swipe
-// LEFT-RIGHT to move between posts, same as before. Two different gestures
-// for two different things: vertical = which section, horizontal = which
-// post within Home.
+// The screen is a vertical pager of full-screen sections - scroll DOWN to
+// move between them, one full screen at a time. Home's own content (the
+// actual posts) is a separate, nested HORIZONTAL deck - swipe LEFT-RIGHT to
+// move between posts. Two different gestures for two different things:
+// vertical = which section, horizontal = which post within Home.
+//
+// Shop and Charity are TEMPORARILY disabled - they were placeholder decks of
+// hardcoded sample cards with no real feature behind them yet. The pager is
+// left in place (rather than unwound back to a plain Home screen) so putting
+// them back is just re-adding their entries here and their sample data.
 type Section = 'home' | 'shop' | 'charity';
-const SECTIONS: Section[] = ['home', 'shop', 'charity'];
-
-// Sample cards ignore taps instead of hitting the real like/comment/repost/
-// profile endpoints with a fake negative id. Static, so it's hoisted once
-// instead of recreated per render.
-const noopSampleHandlers = {
-  onToggleLike: () => {},
-  onPressComment: () => {},
-  onPressRepost: () => {},
-  onPressAuthor: () => {},
-};
-
-// Shop and Charity are each their own small horizontal deck of sample
-// cards - same swipe-through-cards mechanic as Home's real posts, just a
-// fixed array instead of a paginated fetch.
-function SampleDeck({ posts, height }: { posts: Post[]; height: number }) {
-  return (
-    <FlatList
-      data={posts}
-      keyExtractor={(p) => String(p.id)}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      decelerationRate="fast"
-      snapToInterval={SNAP}
-      snapToAlignment="start"
-      disableIntervalMomentum
-      contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
-      getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
-      renderItem={({ item }) => <FeedDeckCard post={item} height={height} {...noopSampleHandlers} />}
-    />
-  );
-}
+const SECTIONS: Section[] = ['home'];
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -127,138 +100,6 @@ export default function FeedScreen() {
       setSectionIndex(i);
     },
     [outerHeight],
-  );
-
-  // Fake Post objects for the Shop/Charity sample decks - negative ids so
-  // they can never collide with a real post id, no images (renders through
-  // the same gradient hero as a text-only post), is_mine false so no
-  // edit/delete menu shows. Not persisted or backed by any real feature yet.
-  // Several per section instead of just one, so each section is its own
-  // swipeable deck too, same as Home.
-  const shopAuthor = useMemo(() => ({ id: -1, name: t('feed.shop_sample_name', 'Manhaje Shop'), photo: null, role: 'shop' }), [t]);
-  const shopPosts: Post[] = useMemo(
-    () => [
-      {
-        id: -1,
-        content: t('shop.item_uniform_post', 'School Uniform Set - complete bundle, all grade levels. ₱850'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: shopAuthor,
-        images: [],
-        likes_count: 64,
-        comments_count: 5,
-        reposts_count: 1,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -2,
-        content: t('shop.item_books_post', "Islamic Studies Textbooks - Qur'an, Hadith & Fiqh, this term. ₱450"),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: shopAuthor,
-        images: [],
-        likes_count: 41,
-        comments_count: 3,
-        reposts_count: 0,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -3,
-        content: t('shop.item_supplies_post', 'School Supplies Kit - notebooks, pens & essentials. ₱250'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: shopAuthor,
-        images: [],
-        likes_count: 37,
-        comments_count: 2,
-        reposts_count: 0,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -4,
-        content: t('shop.item_bottle_post', 'Water Bottle & Lunch Bag Set - branded reusable set. ₱180'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: shopAuthor,
-        images: [],
-        likes_count: 28,
-        comments_count: 1,
-        reposts_count: 0,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-    ],
-    [t, shopAuthor],
-  );
-
-  const charityAuthor = useMemo(() => ({ id: -101, name: t('feed.charity_sample_name', 'Manhaje Charity'), photo: null, role: 'charity' }), [t]);
-  const charityPosts: Post[] = useMemo(
-    () => [
-      {
-        id: -101,
-        content: t('charity.cause_orphan_post', "Orphan Sponsorship Fund - support a child's education and daily needs."),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: charityAuthor,
-        images: [],
-        likes_count: 246,
-        comments_count: 31,
-        reposts_count: 9,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -102,
-        content: t('charity.cause_iftar_post', 'Ramadan Food Drive - provide iftar meals to families in need.'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: charityAuthor,
-        images: [],
-        likes_count: 189,
-        comments_count: 22,
-        reposts_count: 6,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -103,
-        content: t('charity.cause_building_post', 'School Building Fund - help expand classrooms for growing enrollment.'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: charityAuthor,
-        images: [],
-        likes_count: 152,
-        comments_count: 14,
-        reposts_count: 4,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-      {
-        id: -104,
-        content: t('charity.cause_scholarship_post', 'Scholarship Fund - fund tuition for deserving students.'),
-        privacy: 'public',
-        created_at: new Date().toISOString(),
-        author: charityAuthor,
-        images: [],
-        likes_count: 97,
-        comments_count: 9,
-        reposts_count: 2,
-        is_liked: false,
-        is_mine: false,
-        repost_of: null,
-      },
-    ],
-    [t, charityAuthor],
   );
 
   // --- Inner Home deck (the actual posts), horizontal --------------------
@@ -580,17 +421,7 @@ export default function FeedScreen() {
             getItemLayout={(_, i) => ({ length: outerHeight, offset: i * outerHeight, index: i })}
             onMomentumScrollEnd={onOuterSettle}
             onScrollEndDrag={onOuterSettle}
-            renderItem={({ item }) => (
-              <View style={{ height: outerHeight }}>
-                {item === 'home' ? (
-                  homeContent
-                ) : item === 'shop' ? (
-                  <SampleDeck posts={shopPosts} height={outerHeight} />
-                ) : (
-                  <SampleDeck posts={charityPosts} height={outerHeight} />
-                )}
-              </View>
-            )}
+            renderItem={() => <View style={{ height: outerHeight }}>{homeContent}</View>}
           />
         )}
       </View>

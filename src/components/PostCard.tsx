@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
 import ExpandableText from './ExpandableText';
 import { Post } from '../services/postService';
-import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
+import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -17,6 +16,10 @@ const HAIRLINE = COLORS.border;
 const CANVAS = COLORS.canvas;
 const DANGER = COLORS.danger;
 const HEART_RED = '#E0245E';
+// Neutral fill behind a hero photo while it loads, and behind a text-only
+// post's headline - matches PostImageGrid's own image placeholder so a
+// loading/blank hero reads as "nothing here yet" instead of a green card.
+const PLACEHOLDER = '#EDEFF2';
 
 function HeartIcon({ filled, color, size = 22 }: { filled: boolean; color: string; size?: number }) {
   return (
@@ -357,8 +360,8 @@ export default function PostCard({
           )}
 
           {/* Hero - fills the rest of the fixed-height card: the post's own
-              photo if it has one, otherwise an auto-generated gradient with
-              the post's text centered in it, so a text-only post is still
+              photo if it has one, otherwise a neutral placeholder with the
+              post's text centered in it, so a text-only post is still
               "big" instead of a blank/mostly-empty card. */}
           <View style={styles.hero}>
             {showHeroImage ? (
@@ -383,17 +386,12 @@ export default function PostCard({
                   }}
                 />
                 {heroImageLoading && (
-                  <ActivityIndicator style={StyleSheet.absoluteFillObject} color="#FFFFFF" />
+                  <ActivityIndicator style={StyleSheet.absoluteFillObject} color={EMERALD} />
                 )}
               </TouchableOpacity>
             ) : (
               <>
-                <LinearGradient
-                  colors={[BRAND.emeraldDeep, BRAND.emerald]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
+                <View style={[StyleSheet.absoluteFillObject, styles.heroPlaceholder]} />
                 {!!headlineText && (
                   <Text style={styles.headlineCentered} numberOfLines={bodyNumberOfLines ?? 6}>
                     {headlineText}
@@ -599,23 +597,27 @@ const styles = StyleSheet.create({
   cardMagazine: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
   // Majority of the fixed-height card (flex:1 absorbs whatever's left below
   // the header/caption above and the action bar below), always filled with
-  // either a photo or a plain color - never blank. backgroundColor is a
-  // guaranteed solid fallback underneath the LinearGradient/Image - without
-  // it, any failure to paint those (a slow image load, a gradient render
-  // hiccup) leaves a blank white hero with invisible white text on top of
-  // it, instead of just a plainer green while the nicer layer loads.
+  // either a photo or a neutral placeholder - never blank. backgroundColor
+  // is the guaranteed fallback underneath the Image: a photo that's still
+  // loading (or never paints at all) shows this quiet grey rather than a
+  // saturated brand fill, which read as a deliberate "green card" and made
+  // a broken photo look like real content.
   hero: {
     flex: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: BRAND.emeraldDeep,
+    backgroundColor: PLACEHOLDER,
   },
-  // Only shown for a text-only post (no image) - the auto-generated
-  // gradient behind it is the entire point of the card, so the text is
-  // centered in it rather than pinned to a corner.
-  headlineCentered: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', lineHeight: 25, textAlign: 'center' },
+  // Sits behind a text-only post's headline (and the "Photo unavailable"
+  // fallback) - same neutral as the hero base, kept as its own style so the
+  // fill stays in one place if it changes again.
+  heroPlaceholder: { backgroundColor: PLACEHOLDER },
+  // Only shown for a text-only post (no image) - dark ink, since the
+  // placeholder behind it is light (white text here was invisible once the
+  // green fill went away).
+  headlineCentered: { fontSize: 19, fontWeight: '800', color: INK, lineHeight: 25, textAlign: 'center' },
   // Only shown when a post has BOTH a photo and text, between the header
   // and the hero image - a text-only post shows its text centered in the
   // hero instead, so it's never shown twice.
