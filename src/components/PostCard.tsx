@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
@@ -210,6 +210,12 @@ export default function PostCard({
   // finished server-side), falling through to the gradient+text treatment
   // beats leaving a blank colored box with nothing on it at all.
   const [heroImageFailed, setHeroImageFailed] = useState(false);
+  // Some broken/blocked URLs never actually fire onError - the request just
+  // hangs - which used to leave the hero stuck on its flat green base color
+  // forever, indistinguishable from "still loading". Track loading state so
+  // we can show a spinner instead, and give up after a timeout so a hung
+  // request still falls through to the gradient+text treatment eventually.
+  const [heroImageLoading, setHeroImageLoading] = useState(true);
 
   const handleHeart = () => {
     Animated.sequence([
@@ -261,6 +267,13 @@ export default function PostCard({
 
   useEffect(() => {
     setHeroImageFailed(false);
+    setHeroImageLoading(!!heroImage);
+    if (!heroImage) return;
+    const timeout = setTimeout(() => {
+      setHeroImageLoading(false);
+      setHeroImageFailed(true);
+    }, 10000);
+    return () => clearTimeout(timeout);
   }, [heroImage]);
 
   return (
@@ -337,8 +350,15 @@ export default function PostCard({
                   source={{ uri: heroImage as string }}
                   style={StyleSheet.absoluteFillObject}
                   resizeMode="cover"
-                  onError={() => setHeroImageFailed(true)}
+                  onLoad={() => setHeroImageLoading(false)}
+                  onError={() => {
+                    setHeroImageLoading(false);
+                    setHeroImageFailed(true);
+                  }}
                 />
+                {heroImageLoading && (
+                  <ActivityIndicator style={StyleSheet.absoluteFillObject} color="#FFFFFF" />
+                )}
               </TouchableOpacity>
             ) : (
               <>
