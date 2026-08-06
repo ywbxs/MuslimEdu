@@ -27,6 +27,7 @@ const EMERALD = '#0F9D58';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';
+const PLACEHOLDER = '#EDEFF2';
 const MAX_IMAGES = 6;
 
 function CloseIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
@@ -40,6 +41,13 @@ function BackIcon() {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function PlusIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -62,6 +70,7 @@ export default function CreatePostScreen() {
   const [content, setContent] = useState(editPost?.content ?? '');
   const [privacy, setPrivacy] = useState<PostPrivacy>(editPost?.privacy ?? 'school');
   const [images, setImages] = useState<PickedImage[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [compressing, setCompressing] = useState(false);
 
@@ -84,23 +93,21 @@ export default function CreatePostScreen() {
   // deep-linked/back-nav edge case, since the feed hides every entry point
   // for them - bounce them out defensively rather than trust the UI alone.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
-  useEffect(() => {
-    if (!canPost) {
-      Alert.alert(t('create_post.not_allowed_title', 'Not allowed'), t('create_post.not_allowed_message', 'Only admins and teachers can create or edit posts.'));
-      navigation.goBack();
-    }
-  }, [canPost, navigation, t]);
 
-  if (!canPost) return null;
-
-  const pickImages = async () => {
+  const pickImages = async (opts: { initial?: boolean } = {}) => {
     if (images.length >= MAX_IMAGES) return;
     const result = await launchImageLibrary({
       mediaType: 'photo',
       selectionLimit: MAX_IMAGES - images.length,
       quality: 0.9,
     });
-    if (result.didCancel || result.errorCode || !result.assets) return;
+    if (result.didCancel || result.errorCode || !result.assets) {
+      // Backing out of the very first picker means the post was abandoned
+      // before it ever existed - close the composer rather than strand the
+      // user on an empty screen with nothing they're allowed to post.
+      if (opts.initial && images.length === 0) navigation.goBack();
+      return;
+    }
 
     setCompressing(true);
     try {
@@ -120,12 +127,39 @@ export default function CreatePostScreen() {
         }
       }
       setImages((prev) => [...prev, ...picked].slice(0, MAX_IMAGES));
+      if (opts.initial && picked.length === 0) navigation.goBack();
     } finally {
       setCompressing(false);
     }
   };
 
-  const removeImage = (uri: string) => setImages((prev) => prev.filter((p) => p.uri !== uri));
+  const removeImage = (uri: string) => {
+    const next = images.filter((p) => p.uri !== uri);
+    setImages(next);
+    // Keep the big preview pointing at something that still exists.
+    setPreviewIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
+  };
+
+  useEffect(() => {
+    if (!canPost) {
+      Alert.alert(t('create_post.not_allowed_title', 'Not allowed'), t('create_post.not_allowed_message', 'Only admins and teachers can create or edit posts.'));
+      navigation.goBack();
+    }
+  }, [canPost, navigation, t]);
+
+  // A new post opens straight into the photo library, the way Instagram's
+  // "New post" does - the photo IS the post, so there's nothing worth
+  // showing until one is chosen. Edits and reposts skip this: they're built
+  // around existing content and their text is the point.
+  const [pickerOpened, setPickerOpened] = useState(false);
+  useEffect(() => {
+    if (!canPost || pickerOpened || !isNewPost) return;
+    setPickerOpened(true);
+    pickImages({ initial: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canPost, pickerOpened, isNewPost]);
+
+  if (!canPost) return null;
 
   const submit = async () => {
     if (!token || !canSubmit) return;
@@ -140,12 +174,131 @@ export default function CreatePostScreen() {
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert(t('create_post.error_title', 'Couldn\u2019t post'), err?.message ?? t('common.try_again_full', 'Please try again.'));
+      Alert.alert(t('create_post.error_title', 'Couldn’t post'), err?.message ?? t('common.try_again_full', 'Please try again.'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const privacyPicker = (
+    <View style={styles.privacyRow}>
+      <Text style={styles.privacyLabel}>{t('create_post.who_can_see', 'Who can see this?')}</Text>
+      <View style={styles.segmented}>
+        {PRIVACY_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[styles.segment, privacy === opt.key && styles.segmentActive]}
+            onPress={() => setPrivacy(opt.key)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.segmentText, privacy === opt.key && styles.segmentTextActive]}>
+              {t(`create_post.privacy_${opt.labelKey}`, opt.label)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
+  // --- New post: photo-first composer ------------------------------------
+  // The chosen photo is the subject of the screen (big preview up top, the
+  // rest of the picked set as a strip under it), with the caption beneath
+  // it and a single Share action pinned to the bottom - rather than a text
+  // box with thumbnails tacked on underneath, which buried the photo that's
+  // actually required.
+  if (isNewPost) {
+    const preview = images[previewIndex] ?? images[0];
+    return (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+      >
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
+            <BackIcon />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('create_post.new_title', 'New Post')}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.newBody} keyboardShouldPersistTaps="handled">
+          <View style={styles.previewWrap}>
+            {preview ? (
+              <Image source={{ uri: preview.uri }} style={styles.preview} resizeMode="cover" />
+            ) : (
+              <View style={[styles.preview, styles.previewEmpty]}>
+                {compressing ? <ActivityIndicator color={EMERALD} /> : null}
+              </View>
+            )}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.strip}
+            keyboardShouldPersistTaps="handled"
+          >
+            {images.map((img, i) => (
+              <TouchableOpacity
+                key={img.uri}
+                style={[styles.thumbWrap, i === previewIndex && styles.thumbWrapActive]}
+                activeOpacity={0.85}
+                onPress={() => setPreviewIndex(i)}
+              >
+                <Image source={{ uri: img.uri }} style={styles.thumb} />
+                <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(img.uri)} hitSlop={8}>
+                  <CloseIcon />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+
+            {images.length < MAX_IMAGES ? (
+              <TouchableOpacity
+                style={styles.addTile}
+                onPress={() => pickImages()}
+                disabled={compressing}
+                activeOpacity={0.8}
+              >
+                {compressing ? <ActivityIndicator size="small" color={EMERALD} /> : <PlusIcon />}
+              </TouchableOpacity>
+            ) : null}
+          </ScrollView>
+
+          <TextInput
+            style={styles.captionInput}
+            placeholder={t('create_post.caption_placeholder', 'Add a caption (optional)...')}
+            placeholderTextColor={SUBTLE}
+            value={content}
+            onChangeText={setContent}
+            multiline
+            maxLength={2000}
+          />
+
+          {privacyPicker}
+        </ScrollView>
+
+        <View style={[styles.shareFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <TouchableOpacity
+            style={[styles.shareButton, !canSubmit && styles.shareButtonDisabled]}
+            onPress={submit}
+            disabled={!canSubmit}
+            activeOpacity={0.85}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.shareButtonText}>{t('create_post.share', 'Share')}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // --- Edit / repost: text-first, unchanged -------------------------------
+  // Neither one picks photos, and their text is the whole point of the
+  // screen, so they keep the classic composer layout.
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -156,7 +309,7 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{editPost ? t('create_post.edit_title', 'Edit Post') : repostOfId ? t('create_post.repost_title', 'Repost') : t('create_post.new_title', 'New Post')}</Text>
+        <Text style={styles.headerTitle}>{editPost ? t('create_post.edit_title', 'Edit Post') : t('create_post.repost_title', 'Repost')}</Text>
         <TouchableOpacity
           style={[styles.postButton, !canSubmit && styles.postButtonDisabled]}
           onPress={submit}
@@ -166,7 +319,7 @@ export default function CreatePostScreen() {
           {submitting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.postButtonText}>{editPost ? t('create_post.save', 'Save') : repostOfId ? t('create_post.repost_button', 'Repost') : t('create_post.post_button', 'Post')}</Text>
+            <Text style={styles.postButtonText}>{editPost ? t('create_post.save', 'Save') : t('create_post.repost_button', 'Repost')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -179,8 +332,6 @@ export default function CreatePostScreen() {
             placeholder={
               repostOfId
                 ? t('create_post.comment_placeholder', 'Add a comment (optional)...')
-                : isNewPost
-                ? t('create_post.caption_placeholder', 'Add a caption (optional)...')
                 : t('create_post.mind_placeholder', "What's on your mind?")
             }
             placeholderTextColor={SUBTLE}
@@ -195,68 +346,15 @@ export default function CreatePostScreen() {
         {hasExistingImages && (
           <View style={styles.imageGrid}>
             {editPost!.images.map((uri) => (
-              <View key={uri} style={styles.thumbWrap}>
+              <View key={uri} style={styles.gridThumbWrap}>
                 <Image source={{ uri }} style={styles.thumb} />
               </View>
             ))}
           </View>
         )}
 
-        {!repostOfId && !editPost && images.length > 0 && (
-          <View style={styles.imageGrid}>
-            {images.map((img) => (
-              <View key={img.uri} style={styles.thumbWrap}>
-                <Image source={{ uri: img.uri }} style={styles.thumb} />
-                <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(img.uri)} hitSlop={8}>
-                  <CloseIcon />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.privacyRow}>
-          <Text style={styles.privacyLabel}>{t('create_post.who_can_see', 'Who can see this?')}</Text>
-          <View style={styles.segmented}>
-            {PRIVACY_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.segment, privacy === opt.key && styles.segmentActive]}
-                onPress={() => setPrivacy(opt.key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.segmentText, privacy === opt.key && styles.segmentTextActive]}>
-                  {t(`create_post.privacy_${opt.labelKey}`, opt.label)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {privacyPicker}
       </ScrollView>
-
-      {!repostOfId && !editPost && (
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.addPhotoBtn, (images.length >= MAX_IMAGES || compressing) && styles.addPhotoBtnDisabled]}
-            onPress={pickImages}
-            disabled={images.length >= MAX_IMAGES || compressing}
-            activeOpacity={0.8}
-          >
-            {compressing ? (
-              <ActivityIndicator size="small" color={EMERALD} />
-            ) : (
-              <Text style={styles.addPhotoText}>
-                {images.length > 0 ? `${t('create_post.add_photos', 'Add photos')} (${images.length}/${MAX_IMAGES})` : t('create_post.add_photos', 'Add photos')}
-              </Text>
-            )}
-          </TouchableOpacity>
-          {images.length === 0 && (
-            <Text style={styles.photoRequiredHint}>
-              {t('create_post.photo_required_hint', 'A photo is required to post - text-only posts aren’t allowed.')}
-            </Text>
-          )}
-        </View>
-      )}
     </KeyboardAvoidingView>
   );
 }
@@ -271,17 +369,66 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
+    backgroundColor: '#FFFFFF',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
+  // Balances the back arrow so the title stays optically centered now that
+  // the primary action lives in the footer instead of the header.
+  headerSpacer: { width: 22 },
   postButton: { backgroundColor: EMERALD, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, minWidth: 64, alignItems: 'center' },
   postButtonDisabled: { backgroundColor: '#B9E0C8' },
   postButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
   body: { padding: 20, paddingBottom: 40 },
   composerRow: { flexDirection: 'row' },
   input: { flex: 1, marginLeft: 12, fontSize: 16, color: INK, minHeight: 90, textAlignVertical: 'top', paddingTop: 8 },
   imageGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 },
-  thumbWrap: { width: '31%', aspectRatio: 1, marginRight: '3.5%', marginBottom: 10, position: 'relative' },
-  thumb: { width: '100%', height: '100%', borderRadius: 10, backgroundColor: '#F0F1F2' },
+  gridThumbWrap: { width: '31%', aspectRatio: 1, marginRight: '3.5%', marginBottom: 10 },
+
+  // --- New-post (photo-first) layout ---
+  newBody: { paddingBottom: 24 },
+  previewWrap: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
+  preview: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: PLACEHOLDER },
+  previewEmpty: { alignItems: 'center', justifyContent: 'center' },
+  strip: { paddingHorizontal: 16, paddingBottom: 16, gap: 10, backgroundColor: '#FFFFFF' },
+  thumbWrap: { width: 62, height: 62, borderRadius: 10, borderWidth: 2, borderColor: 'transparent' },
+  thumbWrapActive: { borderColor: EMERALD },
+  thumb: { width: '100%', height: '100%', borderRadius: 8, backgroundColor: PLACEHOLDER },
+  addTile: {
+    width: 62,
+    height: 62,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: HAIRLINE,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  captionInput: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: INK,
+    minHeight: 96,
+    textAlignVertical: 'top',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: HAIRLINE,
+  },
+  shareFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: HAIRLINE,
+    backgroundColor: '#FFFFFF',
+  },
+  shareButton: { backgroundColor: EMERALD, borderRadius: 26, paddingVertical: 15, alignItems: 'center' },
+  shareButtonDisabled: { backgroundColor: '#B9E0C8' },
+  shareButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+
   removeBtn: {
     position: 'absolute',
     top: -6,
@@ -293,16 +440,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  privacyRow: { marginTop: 26 },
+  privacyRow: { marginTop: 20, paddingHorizontal: 20 },
   privacyLabel: { fontSize: 13, fontWeight: '600', color: SUBTLE, marginBottom: 10 },
   segmented: { flexDirection: 'row', backgroundColor: '#F5F6F7', borderRadius: 12, padding: 4 },
   segment: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 9 },
   segmentActive: { backgroundColor: EMERALD },
   segmentText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
   segmentTextActive: { color: '#FFFFFF' },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: HAIRLINE },
-  addPhotoBtn: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#EAF7EF' },
-  addPhotoBtnDisabled: { opacity: 0.5 },
-  addPhotoText: { color: EMERALD, fontWeight: '700', fontSize: 14 },
-  photoRequiredHint: { marginTop: 8, fontSize: 12, color: SUBTLE },
 });
