@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Polyline, Circle, Rect, Line } from 'react-native-svg';
+import Svg, { Polyline } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { AcademicSchedule, Day, fetchMySchedule } from '../../services/academicScheduleService';
@@ -15,22 +15,21 @@ const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
 const CANVAS = '#F6F7F9';
+const STRIPE = '#FAFBFC';
 const DANGER_SOFT = '#FCEDED';
 const DANGER = '#E5484D';
 
 /**
  * Student: read-only weekly timetable, scoped by the backend to this
  * student's enrolled section (AcademicScheduleController::mine, routed as
- * POST /my_schedules). A responsive "bento" card per class (no horizontal
- * scroll / cut-off columns on a phone-width screen) - a header (day, time,
- * subject) plus a 2-column grid of detail tiles carrying every field the
- * old wide registrar-style table had (Code, Room, Campus, Section, Unit,
- * Instructor), so nothing from that design is lost, just laid out to fit a
- * phone. The backend returns one row per single day a class meets (so a
- * class held Mon/Wed/Fri is 3 separate rows with the same subject/section/
- * time); groupIntoRows below merges same-class rows across days into one
- * card with a combined day code ("MWF"), sorted by the earliest day + start
- * time it occurs.
+ * POST /my_schedules). A registrar-style table, same shape as the PDF
+ * export below (Day, Time, Code, Subject, Room, Campus, Section, Unit,
+ * Instructor) - scrolls horizontally on a phone-width screen instead of
+ * cutting off or wrapping columns. The backend returns one row per single
+ * day a class meets (so a class held Mon/Wed/Fri is 3 separate rows with
+ * the same subject/section/time); groupIntoRows below merges same-class
+ * rows across days into one row with a combined day code ("MWF"), sorted
+ * by the earliest day + start time it occurs.
  */
 
 const DAY_ORDER: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -116,137 +115,59 @@ function IconChevronLeft({ color }: { color: string }) {
     </Svg>
   );
 }
-function IconClock({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="12 7 12 12 15 14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function IconTag({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M20 12.5L12.5 20 4 11.5V4h7.5L20 12.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Circle cx={8} cy={8} r={1.4} stroke={color} strokeWidth={1.6} />
-    </Svg>
-  );
-}
-function IconPin({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Circle cx={12} cy={9.5} r={2.4} stroke={color} strokeWidth={1.8} />
-    </Svg>
-  );
-}
-function IconBuilding({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Rect x={5} y={3} width={14} height={18} rx={1.5} stroke={color} strokeWidth={1.8} />
-      <Line x1={8.5} y1={7} x2={8.5} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={12} y1={7} x2={12} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={15.5} y1={7} x2={15.5} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={8.5} y1={11} x2={8.5} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={12} y1={11} x2={12} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={15.5} y1={11} x2={15.5} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M9.5 21v-4h5v4" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function IconLayers({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l9 5-9 5-9-5 9-5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function IconHash({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Line x1={9} y1={3} x2={7} y2={21} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={17} y1={3} x2={15} y2={21} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={3} y1={15} x2={19} y2={15} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function IconUser({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={1.8} />
-      <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
 function IconExport({ color }: { color: string }) {
   return (
     <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3v12" stroke={color} strokeWidth={2} strokeLinecap="round" />
       <Polyline points="7 8 12 3 17 8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
 
-function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <View style={styles.tile}>
-      <View style={styles.tileTopRow}>
-        {icon}
-        <Text style={styles.tileLabel}>{label}</Text>
-      </View>
-      <Text style={styles.tileValue} numberOfLines={1}>{value}</Text>
-    </View>
-  );
+// Column order/labels are shared with the PDF export below, but the widths
+// aren't: on-screen widths are sized in dp for touch/legibility, while the
+// PDF's hand-rolled writer (see buildTablePdf) lays out in points on a fixed
+// ~532pt-wide Letter page - reusing the on-screen widths there would run
+// columns off the page, so each column carries both.
+interface Column {
+  key: keyof Pick<ScheduleRow, 'dayCode' | 'time' | 'code' | 'subject' | 'room' | 'campus' | 'section' | 'unit' | 'instructor'>;
+  labelKey: string;
+  fallback: string;
+  width: number;
+  pdfWidth: number;
 }
 
-function ScheduleCard({ row }: { row: ScheduleRow }) {
+const COLUMNS: Column[] = [
+  { key: 'dayCode', labelKey: 'student_schedule.col_day', fallback: 'Day', width: 52, pdfWidth: 32 },
+  { key: 'time', labelKey: 'student_schedule.col_time', fallback: 'Time', width: 128, pdfWidth: 68 },
+  { key: 'code', labelKey: 'student_schedule.col_code', fallback: 'Code', width: 76, pdfWidth: 45 },
+  { key: 'subject', labelKey: 'student_schedule.col_subject', fallback: 'Subject', width: 150, pdfWidth: 110 },
+  { key: 'room', labelKey: 'student_schedule.col_room', fallback: 'Room', width: 84, pdfWidth: 50 },
+  { key: 'campus', labelKey: 'student_schedule.col_campus', fallback: 'Campus', width: 100, pdfWidth: 65 },
+  { key: 'section', labelKey: 'student_schedule.col_section', fallback: 'Section', width: 76, pdfWidth: 40 },
+  { key: 'unit', labelKey: 'student_schedule.col_unit', fallback: 'Unit', width: 60, pdfWidth: 28 },
+  { key: 'instructor', labelKey: 'student_schedule.col_instructor', fallback: 'Instructor', width: 140, pdfWidth: 80 },
+];
+const TABLE_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+
+function TableSkeleton() {
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <View style={styles.dayPill}>
-          <Text style={styles.dayPillText}>{row.dayCode || '—'}</Text>
-        </View>
-        <View style={styles.cardHeaderText}>
-          <View style={styles.timeRow}>
-            <IconClock color={EMERALD} />
-            <Text style={styles.timeText}>{row.time}</Text>
+    <View style={styles.table}>
+      <View style={styles.headerRow}>
+        {COLUMNS.map((c) => (
+          <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
+            <Skeleton width="70%" height={11} borderRadius={4} />
           </View>
-          <Text style={styles.subjectText} numberOfLines={2}>{row.subject}</Text>
-        </View>
-      </View>
-
-      {/* Bento grid: every field the old wide table had, laid out as
-          self-contained tiles instead of cut-off table columns. */}
-      <View style={styles.grid}>
-        <DetailTile icon={<IconTag color={SUBTLE} />} label="Code" value={row.code} />
-        <DetailTile icon={<IconPin color={SUBTLE} />} label="Room" value={row.room} />
-        <DetailTile icon={<IconBuilding color={SUBTLE} />} label="Campus" value={row.campus} />
-        <DetailTile icon={<IconLayers color={SUBTLE} />} label="Section" value={row.section} />
-        <DetailTile icon={<IconHash color={SUBTLE} />} label="Unit" value={row.unit} />
-        <DetailTile icon={<IconUser color={SUBTLE} />} label="Instructor" value={row.instructor} />
-      </View>
-    </View>
-  );
-}
-
-function CardSkeleton() {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <Skeleton width={46} height={46} borderRadius={13} />
-        <View style={{ flex: 1, marginLeft: 14 }}>
-          <Skeleton width="40%" height={12} borderRadius={4} />
-          <Skeleton width="70%" height={16} borderRadius={4} style={{ marginTop: 10 }} />
-        </View>
-      </View>
-      <View style={styles.grid}>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} width="48%" height={54} borderRadius={12} />
         ))}
       </View>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={styles.dataRow}>
+          {COLUMNS.map((c) => (
+            <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
+              <Skeleton width="80%" height={13} borderRadius={4} />
+            </View>
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
@@ -298,18 +219,8 @@ export default function StudentScheduleScreen() {
     try {
       const pdf = buildTablePdf(
         t('student_schedule.title', 'My Schedule'),
-        [
-          { label: t('student_schedule.col_day', 'Day'), width: 32 },
-          { label: t('student_schedule.col_time', 'Time'), width: 68 },
-          { label: t('student_schedule.col_code', 'Code'), width: 45 },
-          { label: t('student_schedule.col_subject', 'Subject'), width: 110 },
-          { label: t('student_schedule.col_room', 'Room'), width: 50 },
-          { label: t('student_schedule.col_campus', 'Campus'), width: 65 },
-          { label: t('student_schedule.col_section', 'Section'), width: 40 },
-          { label: t('student_schedule.col_unit', 'Unit'), width: 28 },
-          { label: t('student_schedule.col_instructor', 'Instructor'), width: 80 },
-        ],
-        scheduleRows.map((r) => [r.dayCode, r.time, r.code, r.subject, r.room, r.campus, r.section, r.unit, r.instructor])
+        COLUMNS.map((c) => ({ label: t(c.labelKey, c.fallback), width: c.pdfWidth })),
+        scheduleRows.map((r) => COLUMNS.map((c) => r[c.key]))
       );
       const fileName = `my-schedule-${Date.now()}.pdf`;
       await saveTextFileToDevice(pdf, fileName, 'ascii');
@@ -343,10 +254,9 @@ export default function StudentScheduleScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.outerScroll}>
-          <CardSkeleton />
-          <CardSkeleton />
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.outerScroll}>
+          <TableSkeleton />
+        </ScrollView>
       ) : (
         <ScrollView
           contentContainerStyle={styles.outerScroll}
@@ -362,9 +272,42 @@ export default function StudentScheduleScreen() {
             <Text style={styles.empty}>{t('student_schedule.empty', 'No published schedule yet.')}</Text>
           ) : null}
 
-          {scheduleRows.map((row) => (
-            <ScheduleCard key={row.key} row={row} />
-          ))}
+          {scheduleRows.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator>
+              <View style={styles.table}>
+                <View style={styles.headerRow}>
+                  {COLUMNS.map((c) => (
+                    <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
+                      <Text style={styles.headerCellText} numberOfLines={1}>
+                        {t(c.labelKey, c.fallback)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {scheduleRows.map((row, i) => (
+                  <View key={row.key} style={[styles.dataRow, i % 2 === 1 && styles.dataRowStripe]}>
+                    {COLUMNS.map((c) => (
+                      <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
+                        {c.key === 'dayCode' ? (
+                          <View style={styles.dayPill}>
+                            <Text style={styles.dayPillText}>{row.dayCode || '—'}</Text>
+                          </View>
+                        ) : (
+                          <Text
+                            style={[styles.dataCellText, c.key === 'subject' && styles.dataCellTextStrong]}
+                            numberOfLines={2}
+                          >
+                            {row[c.key]}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          ) : null}
         </ScrollView>
       )}
     </View>
@@ -389,45 +332,44 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
   exportBtn: { minWidth: 60, alignItems: 'flex-end', padding: 4 },
 
-  outerScroll: { padding: 16, paddingBottom: 32 },
+  outerScroll: { padding: 16, paddingBottom: 32, flexGrow: 1 },
 
-  card: {
+  // --- Registrar-style table: scrolls horizontally so every column (Day,
+  // Time, Code, Subject, Room, Campus, Section, Unit, Instructor) stays
+  // legible instead of getting cut off or wrapped on a narrow phone. ---
+  table: {
+    width: TABLE_WIDTH,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: HAIRLINE,
-    padding: 14,
-    marginBottom: 12,
+    overflow: 'hidden',
   },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  dayPill: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
+  headerRow: {
+    flexDirection: 'row',
     backgroundColor: EMERALD_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
   },
-  dayPillText: { fontSize: 13, fontWeight: '800', color: EMERALD, letterSpacing: 0.3 },
-  cardHeaderText: { flex: 1, marginLeft: 14 },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeText: { fontSize: 12, fontWeight: '700', color: EMERALD },
-  subjectText: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 4 },
-
-  // --- Bento grid: 6 self-contained detail tiles, 2 per row ---
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-  tile: {
-    width: '48%',
-    backgroundColor: CANVAS,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  headerCell: { paddingHorizontal: 10, paddingVertical: 10, justifyContent: 'center' },
+  headerCellText: { fontSize: 11, fontWeight: '800', color: EMERALD, textTransform: 'uppercase', letterSpacing: 0.4 },
+  dataRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
   },
-  tileTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  tileLabel: { fontSize: 10, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.4 },
-  tileValue: { fontSize: 13, fontWeight: '700', color: INK, marginTop: 4 },
+  dataRowStripe: { backgroundColor: STRIPE },
+  dataCell: { paddingHorizontal: 10, paddingVertical: 12, justifyContent: 'center' },
+  dataCellText: { fontSize: 13, color: INK },
+  dataCellTextStrong: { fontWeight: '700' },
+  dayPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: EMERALD_SOFT,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  dayPillText: { fontSize: 11.5, fontWeight: '800', color: EMERALD, letterSpacing: 0.3 },
 
   empty: { textAlign: 'center', color: SUBTLE, marginTop: 36 },
   errorBanner: { backgroundColor: DANGER_SOFT, borderRadius: 14, padding: 16, marginBottom: 12 },
