@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
   Switch,
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
@@ -376,166 +377,172 @@ export default function AcademicSetupWizardScreen() {
             ))}
           </View>
 
-          <GlassCard surface="light" radius={RADIUS.lg} style={styles.stepCard}>
-            {stepKey === 'institution' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.institution_type_heading', 'What type of institution is this?')}</Text>
-                <Text style={styles.stepHint}>
-                  {t('academic_setup_wizard.institution_type_hint', 'This only picks editable starting defaults - everything can be renamed or changed later.')}
-                </Text>
-                <View style={styles.tileGrid}>
-                  {status.institution_types.map((type) => (
-                    <OptionTile
-                      key={type}
-                      label={t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}
-                      selected={institutionType === type}
-                      onPress={() => setInstitutionType(type)}
-                    />
-                  ))}
-                </View>
+          <GlassCard surface="light" radius={RADIUS.lg} style={styles.stepCard} contentStyle={styles.stepCardContent}>
+            <ScrollView
+              contentContainerStyle={styles.stepScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {stepKey === 'institution' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.institution_type_heading', 'What type of institution is this?')}</Text>
+                  <Text style={styles.stepHint}>
+                    {t('academic_setup_wizard.institution_type_hint', 'This only picks editable starting defaults - everything can be renamed or changed later.')}
+                  </Text>
+                  <View style={styles.tileGrid}>
+                    {status.institution_types.map((type) => (
+                      <OptionTile
+                        key={type}
+                        label={t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}
+                        selected={institutionType === type}
+                        onPress={() => setInstitutionType(type)}
+                      />
+                    ))}
+                  </View>
 
-                {institutionType === 'markaz' ? (
-                  <View style={styles.programDurationWrap}>
-                    <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
-                    <Text style={styles.stepHint}>
-                      {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
-                    </Text>
-                    <View style={styles.tileGrid}>
-                      {status.program_durations.map((duration) => (
-                        <OptionTile
-                          key={duration}
-                          label={t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
-                          selected={programDuration === duration}
-                          onPress={() => setProgramDuration(duration)}
-                        />
-                      ))}
+                  {institutionType === 'markaz' ? (
+                    <View style={styles.programDurationWrap}>
+                      <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
+                      <Text style={styles.stepHint}>
+                        {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
+                      </Text>
+                      <View style={styles.tileGrid}>
+                        {status.program_durations.map((duration) => (
+                          <OptionTile
+                            key={duration}
+                            label={t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
+                            selected={programDuration === duration}
+                            onPress={() => setProgramDuration(duration)}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+
+              {stepKey === 'profile' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
+                  <View style={styles.fieldRow}>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
+                      <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
+                    </View>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
+                      <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
                     </View>
                   </View>
-                ) : null}
-              </View>
-            )}
+                  <View style={styles.fieldRow}>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
+                      <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
+                    </View>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
+                      <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
+                    </View>
+                  </View>
+                </View>
+              )}
 
-            {stepKey === 'profile' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
-                <View style={styles.fieldRow}>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
-                    <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
+              {stepKey === 'admin_info' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.admin_info_heading', 'Your info')}</Text>
+                  <Text style={styles.stepHint}>
+                    {t('academic_setup_wizard.admin_info_hint', 'A quick confirmation of your own contact details as the school admin.')}
+                  </Text>
+                  <View style={styles.fieldRow}>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
+                      <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
+                    </View>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
+                      <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
+                    </View>
                   </View>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
-                    <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
-                  </View>
+                  <Text style={styles.label}>{t('academic_setup_wizard.admin_email_label', 'Email')}</Text>
+                  <GlassInput value={user?.email ?? ''} editable={false} style={[styles.input, styles.inputDisabled]} />
                 </View>
-                <View style={styles.fieldRow}>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
-                    <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
-                  </View>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
-                    <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
-                  </View>
-                </View>
-              </View>
-            )}
+              )}
 
-            {stepKey === 'admin_info' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.admin_info_heading', 'Your info')}</Text>
-                <Text style={styles.stepHint}>
-                  {t('academic_setup_wizard.admin_info_hint', 'A quick confirmation of your own contact details as the school admin.')}
-                </Text>
-                <View style={styles.fieldRow}>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
-                    <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
-                  </View>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
-                    <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
-                  </View>
+              {stepKey === 'academic_year' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.year_heading', 'Your first academic year')}</Text>
+                  <Text style={styles.stepHint}>
+                    {t('academic_setup_wizard.year_hint', 'You can add more academic years and terms later from Academic Setup in the admin menu.')}
+                  </Text>
+                  <Text style={styles.label}>{t('academic_setup_wizard.year_title_label', 'Academic year title')}</Text>
+                  <GlassInput
+                    value={yearTitle}
+                    onChangeText={setYearTitle}
+                    placeholder="e.g. 2026-2027"
+                    style={styles.input}
+                  />
                 </View>
-                <Text style={styles.label}>{t('academic_setup_wizard.admin_email_label', 'Email')}</Text>
-                <GlassInput value={user?.email ?? ''} editable={false} style={[styles.input, styles.inputDisabled]} />
-              </View>
-            )}
+              )}
 
-            {stepKey === 'academic_year' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.year_heading', 'Your first academic year')}</Text>
-                <Text style={styles.stepHint}>
-                  {t('academic_setup_wizard.year_hint', 'You can add more academic years and terms later from Academic Setup in the admin menu.')}
-                </Text>
-                <Text style={styles.label}>{t('academic_setup_wizard.year_title_label', 'Academic year title')}</Text>
-                <GlassInput
-                  value={yearTitle}
-                  onChangeText={setYearTitle}
-                  placeholder="e.g. 2026-2027"
-                  style={styles.input}
-                />
-              </View>
-            )}
+              {stepKey === 'grading' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.grading_heading', 'Your first grading system')}</Text>
+                  <Text style={styles.stepHint}>
+                    {t('academic_setup_wizard.grading_hint', 'You can add more grading systems and build out grade scales later from Academic Setup.')}
+                  </Text>
+                  <Text style={styles.label}>{t('academic_setup_wizard.grading_name_label', 'Name')}</Text>
+                  <GlassInput value={gradingName} onChangeText={setGradingName} placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')} style={styles.input} />
+                  <Text style={styles.label}>{t('academic_setup_wizard.grading_type_label', 'Type')}</Text>
+                  <View style={styles.tileGrid}>
+                    {GRADING_TYPE_QUICK_PICKS.map((gt) => (
+                      <OptionTile
+                        key={gt}
+                        label={t(`academic_setup_wizard.grading_type_${gt}`, GRADING_TYPE_LABELS[gt] ?? gt)}
+                        selected={gradingType === gt}
+                        onPress={() => setGradingType(gt)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
 
-            {stepKey === 'grading' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.grading_heading', 'Your first grading system')}</Text>
-                <Text style={styles.stepHint}>
-                  {t('academic_setup_wizard.grading_hint', 'You can add more grading systems and build out grade scales later from Academic Setup.')}
-                </Text>
-                <Text style={styles.label}>{t('academic_setup_wizard.grading_name_label', 'Name')}</Text>
-                <GlassInput value={gradingName} onChangeText={setGradingName} placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')} style={styles.input} />
-                <Text style={styles.label}>{t('academic_setup_wizard.grading_type_label', 'Type')}</Text>
-                <View style={styles.tileGrid}>
-                  {GRADING_TYPE_QUICK_PICKS.map((gt) => (
-                    <OptionTile
-                      key={gt}
-                      label={t(`academic_setup_wizard.grading_type_${gt}`, GRADING_TYPE_LABELS[gt] ?? gt)}
-                      selected={gradingType === gt}
-                      onPress={() => setGradingType(gt)}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {stepKey === 'enrollment' && (
-              <View>
-                <Text style={styles.stepHeading}>{t('academic_setup_wizard.enrollment_heading', 'Your first enrollment stage')}</Text>
-                <Text style={styles.stepHint}>
-                  {t('academic_setup_wizard.enrollment_hint', 'You can build out a full multi-stage pipeline later from Enrollment in the admin menu.')}
-                </Text>
-                <View style={styles.fieldRow}>
-                  <View style={[styles.field, { flex: 2 }]}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
-                    <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
+              {stepKey === 'enrollment' && (
+                <View>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.enrollment_heading', 'Your first enrollment stage')}</Text>
+                  <Text style={styles.stepHint}>
+                    {t('academic_setup_wizard.enrollment_hint', 'You can build out a full multi-stage pipeline later from Enrollment in the admin menu.')}
+                  </Text>
+                  <View style={styles.fieldRow}>
+                    <View style={[styles.field, { flex: 2 }]}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
+                      <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
+                    </View>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
+                      <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
+                    </View>
                   </View>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
-                    <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
+                  <Text style={styles.label}>{t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}</Text>
+                  <GlassInput
+                    value={stageInstructions}
+                    onChangeText={setStageInstructions}
+                    placeholder={t('academic_setup_wizard.stage_instructions_placeholder', 'Shown to the student at this stage')}
+                    style={[styles.input, styles.textArea]}
+                    multiline
+                    numberOfLines={2}
+                  />
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.switchLabel}>{t('academic_setup_wizard.stage_final_label', 'Final stage')}</Text>
+                      <Text style={styles.stepHint}>
+                        {t('academic_setup_wizard.stage_final_hint', "Reaching this stage marks the student's enrollment as complete. A new school usually starts with just one.")}
+                      </Text>
+                    </View>
+                    <Switch value={stageIsTerminal} onValueChange={setStageIsTerminal} trackColor={{ true: EMERALD }} />
                   </View>
                 </View>
-                <Text style={styles.label}>{t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}</Text>
-                <GlassInput
-                  value={stageInstructions}
-                  onChangeText={setStageInstructions}
-                  placeholder={t('academic_setup_wizard.stage_instructions_placeholder', 'Shown to the student at this stage')}
-                  style={[styles.input, styles.textArea]}
-                  multiline
-                  numberOfLines={2}
-                />
-                <View style={styles.switchRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.switchLabel}>{t('academic_setup_wizard.stage_final_label', 'Final stage')}</Text>
-                    <Text style={styles.stepHint}>
-                      {t('academic_setup_wizard.stage_final_hint', "Reaching this stage marks the student's enrollment as complete. A new school usually starts with just one.")}
-                    </Text>
-                  </View>
-                  <Switch value={stageIsTerminal} onValueChange={setStageIsTerminal} trackColor={{ true: EMERALD }} />
-                </View>
-              </View>
-            )}
+              )}
+            </ScrollView>
           </GlassCard>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -562,11 +569,11 @@ const styles = StyleSheet.create({
   flexInner: { flex: 1 },
   flex1: { flex: 1 },
   centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // flex (not flexGrow) + no ScrollView - the whole wizard is one screen's
-  // worth of content per step, sized to fit without scrolling. No
-  // horizontal padding here anymore - the step card goes edge-to-edge
-  // (see stepCard below); every other row gets its own horizontal padding
-  // instead of inheriting one blanket inset.
+  // flex (not flexGrow) - the header, stepper and action buttons stay put
+  // as a fixed frame; only the step card's own content scrolls (see
+  // stepCard/stepScroll below). No horizontal padding here anymore - the
+  // step card goes edge-to-edge; every other row gets its own horizontal
+  // padding instead of inheriting one blanket inset.
   content: { flex: 1, paddingTop: 56 },
 
   // Icon + title/subtitle side by side instead of stacked and centered -
@@ -604,9 +611,20 @@ const styles = StyleSheet.create({
   stepLabelActive: { color: EMERALD },
 
   // flex:1 - the step card fills whatever vertical space is left between
-  // the stepper above and the action buttons below, instead of sizing to
-  // its own content and relying on a ScrollView for anything taller.
-  stepCard: { flex: 1, marginBottom: 16, justifyContent: 'center' },
+  // the stepper above and the action buttons below.
+  //
+  // Its content scrolls rather than being clipped: most steps do fit, but
+  // some don't - picking Markaz reveals an extra "Program duration" section,
+  // and a short screen squeezes the taller steps regardless. The card used
+  // to center its content with no ScrollView, so anything too tall
+  // overflowed and got cut off at BOTH ends (the heading above and the last
+  // options below simply disappeared). stepScroll keeps that centered look
+  // while content still fits, and scrolls once it doesn't.
+  stepCard: { flex: 1, marginBottom: 16 },
+  // flex:1 so the ScrollView inside the card gets a bounded height - without
+  // it the card's inner wrapper sizes to content and nothing ever scrolls.
+  stepCardContent: { flex: 1 },
+  stepScroll: { flexGrow: 1, justifyContent: 'center' },
   stepHeading: { fontSize: 17, fontWeight: '700', color: INK, marginBottom: 6 },
   stepHint: { fontSize: 12.5, color: SUBTLE, lineHeight: 18, marginBottom: 14 },
 
