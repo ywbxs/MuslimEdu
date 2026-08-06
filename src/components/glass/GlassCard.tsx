@@ -12,6 +12,13 @@ interface GlassCardProps {
   radius?: number;
   padded?: boolean;
   elevated?: boolean;
+  /**
+   * Style for the inner wrapper the children actually sit in. Only needed
+   * when that wrapper has to stretch rather than size to its content - e.g.
+   * `{ flex: 1 }` so a ScrollView child gets a bounded height and can
+   * actually scroll. Omit for the normal content-sized card.
+   */
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -28,6 +35,7 @@ export default function GlassCard({
   radius = RADIUS.lg,
   padded = true,
   elevated = true,
+  contentStyle,
 }: GlassCardProps) {
   const isHero = surface === 'hero';
   const border = isHero ? GLASS.border : COLORS.border;
@@ -54,7 +62,7 @@ export default function GlassCard({
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.surface }]} />
       )}
-      <View style={padded ? styles.padded : undefined}>{children}</View>
+      <View style={[padded && styles.padded, contentStyle]}>{children}</View>
     </View>
   );
 }
