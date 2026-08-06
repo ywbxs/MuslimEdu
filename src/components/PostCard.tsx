@@ -216,6 +216,11 @@ export default function PostCard({
   // we can show a spinner instead, and give up after a timeout so a hung
   // request still falls through to the gradient+text treatment eventually.
   const [heroImageLoading, setHeroImageLoading] = useState(true);
+  // TEMPORARY diagnostic: the exact reason/URL for a failed hero photo,
+  // surfaced on-screen so a broken post's real cause is visible without
+  // server/API access - remove once the underlying image pipeline is
+  // confirmed fixed.
+  const [heroImageError, setHeroImageError] = useState<string | null>(null);
 
   const handleHeart = () => {
     Animated.sequence([
@@ -267,11 +272,13 @@ export default function PostCard({
 
   useEffect(() => {
     setHeroImageFailed(false);
+    setHeroImageError(null);
     setHeroImageLoading(!!heroImage);
     if (!heroImage) return;
     const timeout = setTimeout(() => {
       setHeroImageLoading(false);
       setHeroImageFailed(true);
+      setHeroImageError('Timed out waiting for image to load');
     }, 10000);
     return () => clearTimeout(timeout);
   }, [heroImage]);
@@ -351,9 +358,10 @@ export default function PostCard({
                   style={StyleSheet.absoluteFillObject}
                   resizeMode="cover"
                   onLoad={() => setHeroImageLoading(false)}
-                  onError={() => {
+                  onError={(e) => {
                     setHeroImageLoading(false);
                     setHeroImageFailed(true);
+                    setHeroImageError(e.nativeEvent?.error ?? 'Unknown error');
                   }}
                 />
                 {heroImageLoading && (
@@ -375,6 +383,13 @@ export default function PostCard({
                 )}
                 {!headlineText && (
                   <Text style={styles.headlineCentered}>{'Photo unavailable'}</Text>
+                )}
+                {/* TEMPORARY diagnostic - see heroImageError above */}
+                {!!heroImage && (
+                  <Text style={styles.debugUrl} selectable numberOfLines={4}>
+                    {heroImage}
+                    {heroImageError ? `\n${heroImageError}` : ''}
+                  </Text>
                 )}
               </>
             )}
@@ -590,6 +605,8 @@ const styles = StyleSheet.create({
   // gradient behind it is the entire point of the card, so the text is
   // centered in it rather than pinned to a corner.
   headlineCentered: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', lineHeight: 25, textAlign: 'center' },
+  // TEMPORARY diagnostic style - remove alongside heroImageError above.
+  debugUrl: { fontSize: 11, color: '#FFFFFF', opacity: 0.85, textAlign: 'center', marginTop: 10, paddingHorizontal: 12 },
   // Only shown when a post has BOTH a photo and text, between the header
   // and the hero image - a text-only post shows its text centered in the
   // hero instead, so it's never shown twice.
