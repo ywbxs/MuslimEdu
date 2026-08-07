@@ -24,6 +24,8 @@ export interface ChatUser {
   user_id: number;
   name: string;
   photo: string | null;
+  /** Present when the backend includes it; drives gender-segregated messaging (see genderGuard.ts). */
+  gender?: string | null;
 }
 
 // Same shape as the other admin*Service.ts files - JSON POST, longer
@@ -128,7 +130,12 @@ export async function sendMessage(
   return authedPost('/message_chat_send', token, body);
 }
 
-/** POST /message_user_search - find someone in your school to message */
+/**
+ * POST /message_user_search - find someone in your school to message.
+ * Backend should include each result's `gender` (same field already used
+ * elsewhere for student/teacher records) so ChatListScreen can filter out
+ * opposite-gender results before they're ever shown as an option.
+ */
 export async function searchUsers(token: string, query: string): Promise<ChatUser[]> {
   const data = await authedPost('/message_user_search', token, { query });
   const rawList: any[] = data.users ?? [];
@@ -136,5 +143,6 @@ export async function searchUsers(token: string, query: string): Promise<ChatUse
     user_id: u.user_id,
     name: u.name ?? '',
     photo: absoluteUrl(u.photo ?? null),
+    gender: u.gender ?? null,
   }));
 }

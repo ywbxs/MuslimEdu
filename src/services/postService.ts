@@ -11,6 +11,8 @@ export interface PostAuthor {
   photo: string | null;
   /** Present when the backend includes it; drives the Teacher/Admin tag next to the name. */
   role?: string | null;
+  /** Present when the backend includes it; drives gender-segregated comment visibility (see genderGuard.ts). */
+  gender?: string | null;
 }
 
 export interface PostComment {

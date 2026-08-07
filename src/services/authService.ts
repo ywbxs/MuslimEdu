@@ -54,6 +54,13 @@ export interface AuthUser {
   // SchoolProfile) - set via the "Your Info" onboarding wizard step or
   // userProfileService.updateOwnProfile.
   phone?: string | null;
+  // Drives gender-segregated comment visibility and messaging (see
+  // src/utils/genderGuard.ts) - expected to already exist on the backend's
+  // user record (other admin-side screens already manage a `gender` field
+  // per student/teacher), just needs to be included in /login and /me's
+  // own-user response. Undefined/null means segregation doesn't apply to
+  // that account yet (fails open rather than hiding everything).
+  gender?: 'male' | 'female' | string | null;
 }
 
 export interface LoginResponse {
