@@ -552,8 +552,6 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
-          <Circle cx="85%" cy="12%" r="90" fill="rgba(255,255,255,0.04)" />
-          <Circle cx="15%" cy="30%" r="60" fill="rgba(255,255,255,0.03)" />
         </Svg>
       </Animated.View>
 

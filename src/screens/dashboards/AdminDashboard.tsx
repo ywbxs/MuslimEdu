@@ -813,8 +813,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
-          <Circle cx="88%" cy="14%" r="80" fill="rgba(255,255,255,0.05)" />
-          <Circle cx="70%" cy="-2%" r="46" fill="rgba(255,255,255,0.04)" />
         </Svg>
       </Animated.View>
 

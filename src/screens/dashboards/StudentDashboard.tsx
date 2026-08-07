@@ -18,6 +18,7 @@ import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import EnrollmentStatusCard from '../../components/EnrollmentStatusCard';
 import UserAvatar from '../../components/UserAvatar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -280,6 +281,7 @@ interface StudentDashboardProps {
 }
 
 export default function StudentDashboard({ footer }: StudentDashboardProps = {}) {
+  const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const { t } = useLocale();
   const navigation = useNavigation();
@@ -473,8 +475,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
-          <Circle cx="85%" cy="12%" r="90" fill="rgba(255,255,255,0.04)" />
-          <Circle cx="15%" cy="30%" r="60" fill="rgba(255,255,255,0.03)" />
         </Svg>
       </Animated.View>
 
@@ -498,7 +498,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
           }}
         >
           {/* Greeting */}
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
             <View>
               <Text style={styles.greetingSmall}>{t('student_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name}</Text>
@@ -715,7 +715,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingTop: 60,
     paddingBottom: 24,
   },
   greetingSmall: { fontSize: 14, color: PALE_GREEN },
