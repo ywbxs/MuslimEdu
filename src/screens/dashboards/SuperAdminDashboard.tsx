@@ -73,6 +73,15 @@ function ImageStackIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ClipboardCheckIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x={5} y={4} width={14} height={17} rx={2} stroke={color} strokeWidth={2} />
+      <Path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M8.5 13l2.2 2.2L15.5 10.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 function SuperAdminCard({
   icon,
@@ -199,6 +208,12 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           title={t('superadmin_dashboard.announcements_title', 'Feed Widget Announcements')}
           desc={t('superadmin_dashboard.announcements_desc', 'Upload image cards shown to every role in the Home feed')}
           onPress={() => (navigation as any).navigate('SuperAdminAnnouncementUpload')}
+        />
+        <SuperAdminCard
+          icon={<ClipboardCheckIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.pending_registrations_title', 'Pending Registrations')}
+          desc={t('superadmin_dashboard.pending_registrations_desc', 'Review and approve self-service school signups')}
+          onPress={() => (navigation as any).navigate('SuperAdminPendingRegistrations')}
         />
       </View>
     </DashboardShell>

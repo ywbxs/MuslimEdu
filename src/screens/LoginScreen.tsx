@@ -664,7 +664,7 @@ export default function LoginScreen() {
         onClose={() => setSheetOpen(false)}
         onSchool={() => {
           setSheetOpen(false);
-          // navigation.navigate('SchoolRegistration');
+          (navigation as any).navigate('SchoolRegistration');
         }}
         onAlumni={() => {
           setSheetOpen(false);
