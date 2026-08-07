@@ -6,6 +6,7 @@ import TeacherDashboard from '../screens/dashboards/TeacherDashboard';
 import CashierDashboard from '../screens/dashboards/CashierDashboard';
 import RegistrarDashboard from '../screens/dashboards/RegistrarDashboard';
 import PlaceholderDashboard from '../screens/dashboards/PlaceholderDashboard';
+import AlumniDashboard from '../screens/dashboards/AlumniDashboard';
 import SuperAdminDashboard from '../screens/dashboards/SuperAdminDashboard';
 
 /**
@@ -52,7 +53,7 @@ export function getDashboardForRole(role: UserRole, footer?: React.ReactNode): R
       return <PlaceholderDashboard roleLabel="Warden" footer={footer} />;
 
     case 'alumni':
-      return <PlaceholderDashboard roleLabel="Alumni" footer={footer} />;
+      return <AlumniDashboard footer={footer} />;
 
     default:
       // Covers any future role_id/role added on the backend that the app
