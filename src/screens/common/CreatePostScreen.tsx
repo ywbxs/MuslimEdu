@@ -20,6 +20,7 @@ import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import { PickedImage, Post, PostPrivacy, createPost, repost, updatePost } from '../../services/postService';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../../utils/imagePrep';
+import { checkImageModeration, ModeratedContentError } from '../../services/contentModerationService';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
@@ -119,10 +120,19 @@ export default function CreatePostScreen() {
           // the composer preview or the upload - keeps posts light on data
           // and server storage regardless of the original camera resolution.
           const prepared = await preparePostPhoto(a.uri, a.fileName, a.type, a.fileSize);
-          picked.push({ uri: prepared.uri, fileName: prepared.fileName, type: prepared.type });
+          const candidate: PickedImage = { uri: prepared.uri, fileName: prepared.fileName, type: prepared.type };
+
+          // Nudity/violence screening before the photo is ever added to the
+          // composer - blocked photos never make it into the preview strip,
+          // let alone get posted. See contentModerationService.ts.
+          if (token) await checkImageModeration(token, candidate);
+
+          picked.push(candidate);
         } catch (err) {
           if (err instanceof InvalidPhotoTypeError) {
             Alert.alert(t('create_post.unsupported_photo', 'Unsupported photo'), err.message);
+          } else if (err instanceof ModeratedContentError) {
+            Alert.alert(t('create_post.moderation_title', "Photo can't be posted"), err.message);
           }
         }
       }
