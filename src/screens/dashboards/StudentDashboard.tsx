@@ -383,6 +383,13 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             icon: (c: string) => <IdCardIcon color={c} size={20} />,
             onPress: () => (navigation as any).navigate('StudentIdCard'),
           },
+          {
+            key: 'myGrades',
+            title: t('student_dashboard.my_grades_title', 'My Grades'),
+            description: t('student_dashboard.my_grades_desc', 'See your grades and GPA by subject'),
+            icon: (c: string) => <StarIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('AcademicHub', { initialTab: 'grades' }),
+          },
         ]
       : []),
     {
