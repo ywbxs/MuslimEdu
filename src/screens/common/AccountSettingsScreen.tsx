@@ -13,7 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { useLocale } from '../../context/LocaleContext';
+import { useLocale, RTL_LOCALES } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
@@ -42,11 +42,19 @@ function labelize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
 }
 
+// Proper display names for language codes (labelize() alone would show
+// Arabic as "Ar") - falls back to labelize() for any other code the
+// backend adds later.
+const LANGUAGE_LABELS: Record<string, string> = { en: 'English', ar: 'العربية' };
+function languageLabel(code: string) {
+  return LANGUAGE_LABELS[code] ?? labelize(code);
+}
+
 export default function AccountSettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { t, refresh: refreshLocale } = useLocale();
+  const { t, isRTL, refresh: refreshLocale } = useLocale();
   const { scale, setScale } = useDisplayScale();
 
   const [loading, setLoading] = useState(true);
@@ -87,9 +95,26 @@ export default function AccountSettingsScreen() {
     if (!token || !settings) return;
     setSaving(true);
     try {
+      // Capture RTL-ness before the switch - I18nManager only takes full
+      // visual effect on the next app launch (see LocaleContext.refresh),
+      // so a flip needs its own "restart to apply" message rather than
+      // the normal saved alert alone.
+      const wasRTL = isRTL;
       await saveUserSettings(token, settings);
       await refreshLocale(settings.language);
-      Alert.alert(t('account_settings.saved_title', 'Saved'), t('account_settings.saved_message', 'Your settings have been updated.'));
+      const willBeRTL = RTL_LOCALES.has(settings.language);
+
+      if (willBeRTL !== wasRTL) {
+        Alert.alert(
+          t('account_settings.restart_required_title', 'Restart required'),
+          t(
+            'account_settings.restart_required_message',
+            'Your language was saved. Restart the app for the right-to-left layout to fully apply.',
+          ),
+        );
+      } else {
+        Alert.alert(t('account_settings.saved_title', 'Saved'), t('account_settings.saved_message', 'Your settings have been updated.'));
+      }
     } catch (e: any) {
       Alert.alert(
         t('account_settings.save_error_title', 'Could not save'),
@@ -161,10 +186,12 @@ export default function AccountSettingsScreen() {
     optionsList,
     value,
     onSelect,
+    labelFor = labelize,
   }: {
     optionsList: string[];
     value: string;
     onSelect: (v: string) => void;
+    labelFor?: (opt: string) => string;
   }) => (
     <View style={styles.chipRow}>
       {optionsList.map((opt) => (
@@ -173,11 +200,17 @@ export default function AccountSettingsScreen() {
           style={[styles.chip, value === opt && styles.chipActive]}
           onPress={() => onSelect(opt)}
         >
-          <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{labelize(opt)}</Text>
+          <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{labelFor(opt)}</Text>
         </TouchableOpacity>
       ))}
     </View>
   );
+
+  // Arabic is always offered here even if the backend's own options list
+  // hasn't been updated to include it yet - same "ship ahead, backend
+  // catches up" convention used elsewhere in this app, and a missing
+  // 'ar' here would otherwise silently mean no RTL option ever appears.
+  const languageOptions = Array.from(new Set([...options.languages, 'en', 'ar']));
 
   return (
     <View style={[styles.flex, { paddingTop: insets.top }]}>
@@ -218,7 +251,7 @@ export default function AccountSettingsScreen() {
         <Text style={styles.sectionTitle}>{t('account_settings.language_appearance_section', 'Language & appearance')}</Text>
         <View style={styles.card}>
           <Text style={styles.label}>{t('account_settings.language_label', 'Language')}</Text>
-          <ChipGroup optionsList={options.languages} value={settings.language} onSelect={(v) => patch({ language: v })} />
+          <ChipGroup optionsList={languageOptions} value={settings.language} onSelect={(v) => patch({ language: v })} labelFor={languageLabel} />
 
           <Text style={styles.label}>{t('account_settings.theme_label', 'Theme')}</Text>
           <ChipGroup optionsList={options.themes} value={settings.theme} onSelect={(v) => patch({ theme: v })} />
