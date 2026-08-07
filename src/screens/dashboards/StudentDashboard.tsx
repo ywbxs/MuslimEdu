@@ -593,6 +593,12 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
           </TouchableOpacity>
         ) : null}
 
+        {/* Today's class schedule preview - regular schools only; orphan
+            schools have no class/schedule concept (same gating as the "My
+            Schedule" Quick Action tile below). Shown above Quick Actions so
+            "what's happening today" is the first thing a student sees. */}
+        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
+
         {/* Quick Actions */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{t('student_dashboard.quick_actions', 'Quick Actions')}</Text>
@@ -618,11 +624,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             />
           ))}
         </View>
-
-        {/* Today's class schedule preview - regular schools only; orphan
-            schools have no class/schedule concept (same gating as the "My
-            Schedule" Quick Action tile above). */}
-        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
         {/* Enrollment status - has the school assigned this student a
             teacher/subject/room/schedule yet? Same gating as above. */}

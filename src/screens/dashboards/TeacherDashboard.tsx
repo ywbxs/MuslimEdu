@@ -672,6 +672,15 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           </TouchableOpacity>
         ) : null}
 
+        {/* Today's class schedule preview - a quick reminder of what the
+            teacher is teaching today, without leaving Home. Regular schools
+            only - orphan schools have no class/schedule concept (same
+            gating as the academic Quick Action tiles below). fetchMySchedule
+            already resolves "mine" server-side by role, so this same
+            component works unchanged for a teacher. Shown above Quick
+            Actions so "what's happening today" is the first thing seen. */}
+        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
+
         {/* Quick Actions */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{t('teacher_dashboard.quick_actions', 'Quick Actions')}</Text>
@@ -697,14 +706,6 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             />
           ))}
         </View>
-
-        {/* Today's class schedule preview - a quick reminder of what the
-            teacher is teaching today, without leaving Home. Regular schools
-            only - orphan schools have no class/schedule concept (same
-            gating as the academic Quick Action tiles above). fetchMySchedule
-            already resolves "mine" server-side by role, so this same
-            component works unchanged for a teacher. */}
-        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
         {/* This Month Overview - orphan students only (it's report-backed) */}
         {isOrphan ? (
