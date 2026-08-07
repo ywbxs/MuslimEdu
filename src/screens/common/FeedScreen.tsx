@@ -31,7 +31,6 @@ import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
-import TodayAttendanceCard from '../../components/TodayAttendanceCard';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
@@ -94,9 +93,9 @@ export default function FeedScreen() {
 
   // A student on a regular (non-orphan) school has no composer here at
   // all - that empty space at the top of Home is put to use instead with
-  // two glanceable cards (today's attendance, today's classes) rather than
-  // adding yet another menu entry for them. Orphan schools have no
-  // class/attendance concept, same gating as these cards' dashboard use.
+  // a glanceable "Today's Classes" card rather than adding yet another
+  // menu entry for them. Orphan schools have no class concept, same
+  // gating as this card's dashboard use.
   const showStudentCards = user?.role === 'student' && !isOrphanSchoolUser(user) && !!token;
 
   // --- Outer section pager (Home / Shop / Charity), vertical -------------
@@ -356,7 +355,6 @@ export default function FeedScreen() {
 
       {showStudentCards && (
         <View style={styles.studentCardsWrap}>
-          <TodayAttendanceCard token={token!} />
           <UpcomingClassesCard token={token!} />
         </View>
       )}
