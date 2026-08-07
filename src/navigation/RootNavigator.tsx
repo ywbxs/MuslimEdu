@@ -139,6 +139,10 @@ import StudentDocumentsScreen from '../screens/student/StudentDocumentsScreen';
 import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
+// Orphan-school children upload their own documents (ID, guardian consent,
+// etc.) instead of requesting official school documents - see
+// StudentUploadDocumentsScreen's own docblock and studentDocumentUploadService.ts.
+import StudentUploadDocumentsScreen from '../screens/student/StudentUploadDocumentsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
 import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
@@ -663,6 +667,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Notifications" component={CommunicationScreen} />
       <Stack.Screen name="StudentPortalHome" component={StudentPortalHomeScreen} />
       <Stack.Screen name="StudentDocuments" component={StudentDocumentsScreen} />
+      <Stack.Screen name="StudentUploadDocuments" component={StudentUploadDocumentsScreen} />
       <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
       <Stack.Screen name="AdminStudentDocuments" component={StudentDocumentRequestsScreen} />
       <Stack.Screen name="AdminStudentServices" component={StudentServiceRequestsScreen} />
