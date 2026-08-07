@@ -97,6 +97,7 @@ import ChatBoxScreen from '../screens/chat/ChatBoxScreen';
 import CreatePostScreen from '../screens/common/CreatePostScreen';
 import PostCommentsScreen from '../screens/common/PostCommentsScreen';
 import ImageViewerScreen from '../screens/common/ImageViewerScreen';
+import PrayerTimesDetailScreen from '../screens/common/PrayerTimesDetailScreen';
 import MainTabs from './MainTabs';
 import AppLaunchSkeleton from '../components/AppLaunchSkeleton';
 import DashboardLaunchSkeleton from '../components/DashboardLaunchSkeleton';
@@ -158,6 +159,7 @@ import BackendStatusScreen from '../screens/superadmin/BackendStatusScreen';
 import PostModerationScreen from '../screens/superadmin/PostModerationScreen';
 import TrashScreen from '../screens/superadmin/TrashScreen';
 import ActivityLogScreen from '../screens/superadmin/ActivityLogScreen';
+import AnnouncementUploadScreen from '../screens/superadmin/AnnouncementUploadScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -629,6 +631,11 @@ export default function RootNavigator() {
                 component={ImageViewerScreen}
                 options={{ animation: 'fade', presentation: 'transparentModal' }}
               />
+              <Stack.Screen
+                name="PrayerTimesDetail"
+                component={PrayerTimesDetailScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
             </>
           ) : (
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -689,6 +696,7 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminPostModeration" component={PostModerationScreen} />
       <Stack.Screen name="SuperAdminTrash" component={TrashScreen} />
       <Stack.Screen name="SuperAdminActivityLog" component={ActivityLogScreen} />
+      <Stack.Screen name="SuperAdminAnnouncementUpload" component={AnnouncementUploadScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

@@ -33,6 +33,7 @@ import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import TodayAttendanceCard from '../../components/TodayAttendanceCard';
 import UpcomingClassesCard from '../../components/UpcomingClassesCard';
+import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -59,7 +60,13 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the Home deck - reached the same way every other post is, by
 // swiping to it - rather than a pill overlaid on top of the last post.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+//
+// 'widgets' is a second, evergreen deck item (Prayer Times + superadmin
+// announcement images, see WidgetCarousel.tsx) appended once right after
+// the currently-loaded posts - shown even while pagination is still going,
+// since prayer times are time-sensitive and shouldn't be buried behind
+// loading every older post first.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'widgets' } | { kind: 'caughtUp' };
 
 // The screen is a vertical pager of full-screen sections - scroll DOWN to
 // move between them, one full screen at a time. Home's own content (the
@@ -132,6 +139,7 @@ export default function FeedScreen() {
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
+    if (posts.length > 0) items.push({ kind: 'widgets' });
     if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
@@ -362,7 +370,7 @@ export default function FeedScreen() {
           <FlatList
             ref={listRef}
             data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             horizontal
             showsHorizontalScrollIndicator={false}
             decelerationRate="fast"
@@ -383,6 +391,8 @@ export default function FeedScreen() {
             renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
                 <CaughtUpCard height={cardHeight} active={itemIndex === index} />
+              ) : item.kind === 'widgets' ? (
+                <WidgetCarousel height={cardHeight} active={itemIndex === index} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
