@@ -129,7 +129,12 @@ export default function FeedScreen() {
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
-    if (posts.length > 0) items.push({ kind: 'widgets' });
+    // Fixed position (right after the first post), NOT appended after
+    // every currently-loaded post - pagination keeps adding more posts
+    // onto the end as the reader approaches it, so anchoring the widget
+    // slot to `posts.length` would make it a permanently receding target
+    // on any feed with enough posts to keep triggering onEndReached.
+    if (items.length > 0) items.splice(1, 0, { kind: 'widgets' });
     if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
