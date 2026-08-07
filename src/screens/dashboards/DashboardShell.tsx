@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Line } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 
@@ -23,11 +23,11 @@ export const GLASS_BORDER = GLASS_ENABLED ? 'rgba(255,255,255,0.14)' : '#1B3B2C'
 export const GLASS_DIVIDER = GLASS_ENABLED ? 'rgba(255,255,255,0.12)' : '#1B3B2C';
 export const GLASS_ICON_BG = GLASS_ENABLED ? 'rgba(255,255,255,0.08)' : '#173225';
 
-function PencilIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: number }) {
+function CameraIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2.4} strokeLinejoin="round" />
-      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2.2} />
     </Svg>
   );
 }
@@ -111,7 +111,7 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
             onPress={() => (navigation as any).navigate('EditProfile')}
             hitSlop={8}
           >
-            <PencilIcon color={EMERALD} size={11} />
+            <CameraIcon color={EMERALD} size={11} />
           </TouchableOpacity>
           </TouchableOpacity>
         </View>

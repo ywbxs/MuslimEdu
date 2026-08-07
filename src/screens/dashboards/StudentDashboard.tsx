@@ -63,11 +63,11 @@ function IdCardIcon({ color = PALE_GREEN, size = 18 }: { color?: string; size?: 
     </Svg>
   );
 }
-function PencilIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
+function CameraIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2} />
     </Svg>
   );
 }
@@ -527,7 +527,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               <Text style={styles.greetingName}>{user?.name}</Text>
             </View>
             <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} fillColor={EMERALD} />
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} fillColor={EMERALD} dotColor={null} />
             </TouchableOpacity>
           </View>
 
@@ -556,7 +556,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
                 onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
-                <PencilIcon color={PALE_GREEN} size={16} />
+                <CameraIcon color={PALE_GREEN} size={16} />
               </TouchableOpacity>
             </View>
 
