@@ -1,5 +1,8 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
 import { PickedPhoto } from './orphanService';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@teacher_orphan_cache_v1';
 
 export interface TeacherMonthlyReport {
   id: number;
@@ -73,25 +76,27 @@ function normalizePhotos<T extends { photos?: string[] | null }>(report: T): T {
 
 /** POST /teacher_report_status - current month status + rolling 12-month timeline for the logged-in teacher-orphan */
 export async function fetchTeacherReportStatus(token: string): Promise<TeacherReportStatus> {
-  const data = (await authedPost('/teacher_report_status', token, {})) as {
-    submitted_this_month: boolean;
-    current_report: TeacherMonthlyReport | null;
-    timeline?: TeacherReportTimelineEntry[];
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'status'), async () => {
+    const data = (await authedPost('/teacher_report_status', token, {})) as {
+      submitted_this_month: boolean;
+      current_report: TeacherMonthlyReport | null;
+      timeline?: TeacherReportTimelineEntry[];
+    };
 
-  const timeline = (data.timeline ?? []).map((entry) => ({
-    ...entry,
-    report: entry.report ? normalizePhotos(entry.report) : null,
-  }));
+    const timeline = (data.timeline ?? []).map((entry) => ({
+      ...entry,
+      report: entry.report ? normalizePhotos(entry.report) : null,
+    }));
 
-  return {
-    submitted_this_month: data.submitted_this_month,
-    current_report: data.current_report ? normalizePhotos(data.current_report) : null,
-    timeline,
-    history: timeline
-      .map((entry) => entry.report)
-      .filter((r): r is TeacherMonthlyReport => !!r),
-  };
+    return {
+      submitted_this_month: data.submitted_this_month,
+      current_report: data.current_report ? normalizePhotos(data.current_report) : null,
+      timeline,
+      history: timeline
+        .map((entry) => entry.report)
+        .filter((r): r is TeacherMonthlyReport => !!r),
+    };
+  });
 }
 
 /**

@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@student_portal_cache_v1';
 
 /**
  * M5 student portal — documents, services, and settings.
@@ -120,7 +123,9 @@ export interface UserSettingsOptions {
 export async function fetchStudentDocuments(
   token: string,
 ): Promise<{ documents: StudentDocument[]; document_types: string[]; summary: Record<string, number> }> {
-  return authedPost('/student_document_list', token);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'documents'), () =>
+    authedPost('/student_document_list', token),
+  );
 }
 
 export async function requestStudentDocument(
@@ -143,8 +148,10 @@ export async function cancelStudentDocument(token: string, documentId: number): 
 // --- Documents (admin fulfillment) ---
 
 export async function fetchAdminDocumentRequests(token: string): Promise<AdminDocumentRequest[]> {
-  const data = await authedPost('/admin_student_document_list', token);
-  return data.requests?.data ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'adminDocumentRequests'), async () => {
+    const data = await authedPost('/admin_student_document_list', token);
+    return data.requests?.data ?? [];
+  });
 }
 
 export async function issueAdminDocument(token: string, documentId: number): Promise<{ message: string }> {
@@ -164,7 +171,9 @@ export async function rejectAdminDocument(
 export async function fetchServiceCatalog(
   token: string,
 ): Promise<{ services: ServiceCatalogEntry[]; requests: ServiceRequest[]; summary: Record<string, number> }> {
-  return authedPost('/student_service_catalog', token);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'serviceCatalog'), () =>
+    authedPost('/student_service_catalog', token),
+  );
 }
 
 export async function storeServiceRequest(
@@ -188,8 +197,10 @@ export interface AdminServiceRequest extends ServiceRequest {
 }
 
 export async function fetchAdminServiceRequests(token: string): Promise<AdminServiceRequest[]> {
-  const data = await authedPost('/admin_student_service_request_list', token);
-  return data.requests?.data ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'adminServiceRequests'), async () => {
+    const data = await authedPost('/admin_student_service_request_list', token);
+    return data.requests?.data ?? [];
+  });
 }
 
 export async function updateAdminServiceRequest(
@@ -210,7 +221,9 @@ export async function updateAdminServiceRequest(
 export async function fetchUserSettings(
   token: string,
 ): Promise<{ settings: UserSettings; options: UserSettingsOptions }> {
-  return authedPost('/user_settings_show', token);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'userSettings'), () =>
+    authedPost('/user_settings_show', token),
+  );
 }
 
 export async function saveUserSettings(token: string, settings: Partial<UserSettings>): Promise<{ message: string }> {

@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@announcement_cache_v1';
 
 // --- Shared fetch helpers (same pattern as teacherGradebookService.ts) ---
 
@@ -106,8 +109,10 @@ export async function fetchAnnouncementTargets(token: string): Promise<Announcem
 }
 
 export async function fetchTeacherAnnouncements(token: string): Promise<Announcement[]> {
-  const data = await authedPost('/teacher_announcement_list', token);
-  return (data.announcements ?? []).map(mapAnnouncement);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'teacher'), async () => {
+    const data = await authedPost('/teacher_announcement_list', token);
+    return (data.announcements ?? []).map(mapAnnouncement);
+  });
 }
 
 export async function createAnnouncement(
@@ -147,8 +152,10 @@ export async function deleteAnnouncement(token: string, announcementId: number):
 // --- Student ---
 
 export async function fetchStudentAnnouncements(token: string): Promise<Announcement[]> {
-  const data = await authedPost('/student_announcement_list', token);
-  return (data.announcements ?? []).map(mapAnnouncement);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'student'), async () => {
+    const data = await authedPost('/student_announcement_list', token);
+    return (data.announcements ?? []).map(mapAnnouncement);
+  });
 }
 
 // --- Admin ---
@@ -157,8 +164,10 @@ export async function fetchAdminAnnouncementReview(
   token: string,
   sectionId?: number | null
 ): Promise<Announcement[]> {
-  const data = await authedPost('/admin_announcement_review', token, {
-    section_id: sectionId ?? undefined,
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'adminReview', sectionId ?? 'all'), async () => {
+    const data = await authedPost('/admin_announcement_review', token, {
+      section_id: sectionId ?? undefined,
+    });
+    return (data.announcements ?? []).map(mapAnnouncement);
   });
-  return (data.announcements ?? []).map(mapAnnouncement);
 }

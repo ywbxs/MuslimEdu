@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@fee_cache_v1';
 
 // Requests that use file uploads legitimately take longer than a plain JSON
 // POST - mirrors adminTeacherService.ts's timeout split, even though none of
@@ -68,11 +71,14 @@ export async function fetchAdminFeeList(
   token: string,
   filters?: { studentId?: number; status?: string },
 ): Promise<FeeInvoice[]> {
-  const data = await authedPost('/admin_fee_list', token, {
-    ...(filters?.studentId ? { student_id: filters.studentId } : {}),
-    ...(filters?.status ? { status: filters.status } : {}),
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, 'list', filters?.studentId ?? 'all', filters?.status ?? 'all');
+  return cacheThenNetwork(cacheKey, async () => {
+    const data = await authedPost('/admin_fee_list', token, {
+      ...(filters?.studentId ? { student_id: filters.studentId } : {}),
+      ...(filters?.status ? { status: filters.status } : {}),
+    });
+    return (data.invoices ?? []) as FeeInvoice[];
   });
-  return (data.invoices ?? []) as FeeInvoice[];
 }
 
 /**
@@ -128,18 +134,20 @@ export interface CashierAccount {
 
 /** POST /admin_accountant_list - admin-only: every Cashier account in the school. */
 export async function fetchCashierAccounts(token: string): Promise<CashierAccount[]> {
-  const data = await authedPost('/admin_accountant_list', token);
-  const rawList: any[] = data.accountants ?? [];
-  return rawList.map((raw) => ({
-    id: raw.id,
-    name: raw.name ?? '',
-    name_ar: raw.name_ar ?? null,
-    email: raw.email ?? '',
-    photo: absoluteUrl(raw.photo ?? null),
-    phone: raw.phone ?? null,
-    code: raw.code ?? null,
-    status: raw.status,
-  }));
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'cashiers'), async () => {
+    const data = await authedPost('/admin_accountant_list', token);
+    const rawList: any[] = data.accountants ?? [];
+    return rawList.map((raw) => ({
+      id: raw.id,
+      name: raw.name ?? '',
+      name_ar: raw.name_ar ?? null,
+      email: raw.email ?? '',
+      photo: absoluteUrl(raw.photo ?? null),
+      phone: raw.phone ?? null,
+      code: raw.code ?? null,
+      status: raw.status,
+    }));
+  });
 }
 
 export interface CashierProfile {
@@ -174,23 +182,25 @@ export type CashierBasicProfileFields = Partial<{
 
 /** POST /admin_accountant_profile - a single cashier's basic contact/role info. */
 export async function fetchCashierProfile(token: string, cashierId: number): Promise<CashierProfile> {
-  const data = await authedPost('/admin_accountant_profile', token, { accountant_id: cashierId });
-  return {
-    id: data.id,
-    name: data.name ?? '',
-    name_ar: data.name_ar ?? null,
-    email: data.email ?? '',
-    photo: absoluteUrl(data.photo ?? null),
-    phone: data.phone ?? null,
-    address: data.address ?? null,
-    gender: data.gender ?? null,
-    birthday: data.birthday ?? null,
-    designation: data.designation ?? null,
-    code: data.code ?? null,
-    emergency_contact_name: data.emergency_contact_name ?? null,
-    emergency_contact_phone: data.emergency_contact_phone ?? null,
-    signature: data.signature ? absoluteUrl(data.signature) : null,
-  };
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'cashierProfile', cashierId), async () => {
+    const data = await authedPost('/admin_accountant_profile', token, { accountant_id: cashierId });
+    return {
+      id: data.id,
+      name: data.name ?? '',
+      name_ar: data.name_ar ?? null,
+      email: data.email ?? '',
+      photo: absoluteUrl(data.photo ?? null),
+      phone: data.phone ?? null,
+      address: data.address ?? null,
+      gender: data.gender ?? null,
+      birthday: data.birthday ?? null,
+      designation: data.designation ?? null,
+      code: data.code ?? null,
+      emergency_contact_name: data.emergency_contact_name ?? null,
+      emergency_contact_phone: data.emergency_contact_phone ?? null,
+      signature: data.signature ? absoluteUrl(data.signature) : null,
+    };
+  });
 }
 
 /**

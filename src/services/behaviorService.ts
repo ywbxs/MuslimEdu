@@ -1,4 +1,7 @@
 import { API_BASE_URL } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@behavior_cache_v1';
 
 /**
  * M4 Behavior & discipline module. Backend: BehaviorController (newly
@@ -124,8 +127,10 @@ export interface IncidentFilters {
 // --- Categories ---
 
 export async function fetchBehaviorCategories(token: string): Promise<BehaviorCategory[]> {
-  const data = await authedPost('/admin_behavior_category_list', token);
-  return data.categories ?? [];
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'categories'), async () => {
+    const data = await authedPost('/admin_behavior_category_list', token);
+    return data.categories ?? [];
+  });
 }
 
 export async function saveBehaviorCategory(token: string, draft: CategoryDraft): Promise<BehaviorCategory> {
@@ -140,14 +145,16 @@ export async function deleteBehaviorCategory(token: string, id: number): Promise
 // --- Incidents ---
 
 export async function fetchBehaviorIncidents(token: string, filters: IncidentFilters = {}): Promise<BehaviorIncident[]> {
-  const data = await authedPost('/behavior_incident_list', token, {
-    student_id: filters.studentId ?? null,
-    section_id: filters.sectionId ?? null,
-    status: filters.status ?? null,
-    severity: filters.severity ?? null,
-    category_id: filters.categoryId ?? null,
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'incidents', JSON.stringify(filters)), async () => {
+    const data = await authedPost('/behavior_incident_list', token, {
+      student_id: filters.studentId ?? null,
+      section_id: filters.sectionId ?? null,
+      status: filters.status ?? null,
+      severity: filters.severity ?? null,
+      category_id: filters.categoryId ?? null,
+    });
+    return data.incidents ?? [];
   });
-  return data.incidents ?? [];
 }
 
 export async function saveBehaviorIncident(token: string, draft: IncidentDraft): Promise<BehaviorIncident> {

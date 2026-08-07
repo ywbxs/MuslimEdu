@@ -1,4 +1,7 @@
 import { API_BASE_URL, absoluteUrl } from '../config/api';
+import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
+
+const CACHE_PREFIX = '@post_cache_v1';
 
 export type PostPrivacy = 'public' | 'school' | 'private';
 
@@ -126,17 +129,26 @@ function normalizeComment(raw: any): PostComment {
   };
 }
 
-/** POST /post_feed - pass beforeId to load the next older page */
+/**
+ * POST /post_feed - pass beforeId to load the next older page. Only the
+ * first page (no beforeId) is cache-then-network - older pages loaded while
+ * scrolling aren't cached, so "load more" while offline just fails/retries
+ * rather than silently serving a stale older page as if it were fresh.
+ */
 export async function fetchFeed(
   token: string,
   beforeId?: number,
 ): Promise<{ posts: Post[]; nextBeforeId: number | null; hasMore: boolean }> {
-  const data = await authedPost('/post_feed', token, beforeId ? { before_id: beforeId } : {});
-  return {
-    posts: (data.posts ?? []).map(normalizePost),
-    nextBeforeId: data.next_before_id ?? null,
-    hasMore: !!data.has_more,
+  const load = async () => {
+    const data = await authedPost('/post_feed', token, beforeId ? { before_id: beforeId } : {});
+    return {
+      posts: (data.posts ?? []).map(normalizePost),
+      nextBeforeId: data.next_before_id ?? null,
+      hasMore: !!data.has_more,
+    };
   };
+  if (beforeId) return load();
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'feed'), load);
 }
 
 /** POST /post_create (multipart) - content and/or up to 6 images */
@@ -198,8 +210,10 @@ export async function toggleLike(
 
 /** POST /post_comment_list */
 export async function fetchComments(token: string, postId: number): Promise<PostComment[]> {
-  const data = await authedPost('/post_comment_list', token, { post_id: postId });
-  return (data.comments ?? []).map(normalizeComment);
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'comments', postId), async () => {
+    const data = await authedPost('/post_comment_list', token, { post_id: postId });
+    return (data.comments ?? []).map(normalizeComment);
+  });
 }
 
 /** POST /post_comment_create - pass parentId to reply to a top-level comment */
@@ -245,16 +259,20 @@ export async function fetchUserProfile(
   userId: number,
   beforeId?: number,
 ): Promise<UserProfile> {
-  const data = await authedPost('/profile_feed', token, {
-    user_id: userId,
-    ...(beforeId ? { before_id: beforeId } : {}),
-  });
-  return {
-    profile: data.profile ? { ...data.profile, photo: absoluteUrl(data.profile.photo) } : null,
-    posts: (data.posts ?? []).map(normalizePost),
-    nextBeforeId: data.next_before_id ?? null,
-    hasMore: !!data.has_more,
+  const load = async () => {
+    const data = await authedPost('/profile_feed', token, {
+      user_id: userId,
+      ...(beforeId ? { before_id: beforeId } : {}),
+    });
+    return {
+      profile: data.profile ? { ...data.profile, photo: absoluteUrl(data.profile.photo) } : null,
+      posts: (data.posts ?? []).map(normalizePost),
+      nextBeforeId: data.next_before_id ?? null,
+      hasMore: !!data.has_more,
+    };
   };
+  if (beforeId) return load();
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'profile', userId), load);
 }
 
 /** POST /post_repost - optional quote text + optional privacy override */
