@@ -53,7 +53,8 @@ export default function BentoOptionGrid<T extends BentoOption>({
   onChange: (id: number | null) => void;
   allowNone?: boolean;
   noneLabel?: string;
-  icon: (color: string) => React.ReactNode;
+  /** `option` is null for the "None" tile - lets callers vary the icon per option, or ignore it for one shared icon. */
+  icon: (option: T | null, color: string) => React.ReactNode;
   theme: AcademicGlassTheme;
   tileWidth?: string;
 }) {
@@ -91,7 +92,7 @@ export default function BentoOptionGrid<T extends BentoOption>({
               onPress={() => onChange(opt.id)}
               activeOpacity={0.85}
             >
-              <View style={[styles.iconWrap, active && styles.iconWrapActive]}>{icon(active ? theme.onAccent : theme.accent)}</View>
+              <View style={[styles.iconWrap, active && styles.iconWrapActive]}>{icon(opt, active ? theme.onAccent : theme.accent)}</View>
               <Text style={[styles.tileText, active && styles.tileTextActive]} numberOfLines={2}>
                 {opt.name}
               </Text>

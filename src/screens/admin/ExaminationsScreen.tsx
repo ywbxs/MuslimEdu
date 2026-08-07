@@ -12,9 +12,16 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Polyline, Circle, Line } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
+import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
+import { RADIUS } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+import { BentoGrid } from '../../components/glass/BentoGridCard';
+import BentoOptionGrid from '../../components/glass/BentoOptionGrid';
+import { EmptyState } from '../../components/EmptyState';
 import {
   Examination,
   ExaminationAssignment,
@@ -32,6 +39,7 @@ import {
   saveExaminationResults,
 } from '../../services/examinationService';
 import { ClassStudent, fetchClassStudents } from '../../services/teacherClassService';
+import { enqueueExaminationSave, enqueueExaminationResultsSave } from '../../services/offlineQueue';
 
 /**
  * M4 dedicated examinations module. The `examinations`/`examination_results`
@@ -42,12 +50,24 @@ import { ClassStudent, fetchClassStudents } from '../../services/teacherClassSer
  * (admin_gradebook_exam_categories), so it's skipped here rather than
  * hitting a 403 wall for teachers — exam_category_id stays null.
  *
- * Never executed against a live backend.
+ * Bento/spatial pass: same data + actions as before, reskinned onto the
+ * app's glass design system (GlassBackground + academicGlassTheme) with the
+ * exam list as a wrapping bento grid of tiles (BentoGrid) instead of a flat
+ * column of rows, and the type/section-subject pickers as bento tile grids
+ * (BentoOptionGrid) instead of chip rows/plain lists - same visual language
+ * as EnrollmentStagesScreen and the other bento-migrated admin screens.
+ *
+ * Offline: reads (fetchExaminations/fetchMyExamAssignments/
+ * fetchExaminationResults) already fall back to the last cached response
+ * via cacheThenNetwork - this adds offline *writes* for the two flows
+ * worth doing without connectivity (create/edit an exam, enter grades):
+ * both get queued through the same offline outbox used by attendance
+ * (offlineQueue.ts) and replayed automatically once back online. Publish/
+ * delete/release stay online-only - those are meant to be deliberate,
+ * connected actions - but now surface a clear "you're offline" message
+ * instead of a raw network error when attempted offline.
  */
 
-const BORDER = '#E4E9E5';
-const CANVAS = '#F5F7F6';
-const DANGER = '#BA1A1A';
 const ADMIN_ROLES = [1, 2];
 
 const STATUS_FALLBACKS: Record<ExaminationStatus, string> = {
@@ -58,11 +78,108 @@ const STATUS_FALLBACKS: Record<ExaminationStatus, string> = {
 
 const EXAM_TYPES = ['written', 'oral', 'practical', 'project'];
 
+function IconChevronLeft({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconDocument({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M14 3v4h4M9 13h6M9 16.5h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconMic({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke={color} strokeWidth={1.8} />
+      <Path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconTool({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M14.7 6.3a3.5 3.5 0 0 0-4.8 4.2L4 16.4V20h3.6l5.9-5.9a3.5 3.5 0 0 0 4.2-4.8l-2.5 2.5-2-2 2.5-2.5Z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+function IconFolder({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconPencil({ color, size = 15 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconStar({ color, size = 15 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3l2.7 5.6 6.3.9-4.5 4.4 1 6.2L12 17l-5.5 3.1 1-6.2L3 9.5l6.3-.9L12 3Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+function IconUpload({ color, size = 15 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 16V4M7 9l5-5 5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconTrash({ color, size = 15 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconWifiOff({ color, size = 16 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M2 8.5a17 17 0 0 1 8-3.9M17 6.4A17 17 0 0 1 22 8.5M5.5 12a11 11 0 0 1 4-2.1M18.5 12a11 11 0 0 0-3-1.7" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M8.5 15.3a6 6 0 0 1 7 0M11 18.4a2 2 0 0 1 2 0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line x1={3} y1={3} x2={21} y2={21} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function examTypeIcon(type: string, color: string) {
+  if (type === 'oral') return <IconMic color={color} />;
+  if (type === 'practical') return <IconTool color={color} />;
+  if (type === 'project') return <IconFolder color={color} />;
+  return <IconDocument color={color} />;
+}
+
 export default function ExaminationsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
   const { t } = useLocale();
+  const { isOnline } = useOfflineQueue();
+  const theme = useAcademicGlassTheme('emerald');
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const isAdmin = !!user && ADMIN_ROLES.includes(user.role_id);
   const statusLabel = (s: ExaminationStatus) => t(`examinations.status_${s}`, STATUS_FALLBACKS[s]);
 
@@ -125,6 +242,27 @@ export default function ExaminationsScreen() {
     });
   }, [assignments]);
 
+  // BentoOptionGrid needs {id, name} options - assignments are keyed by a
+  // composite section:subject string, so index them for the tile grid and
+  // map back to the real key on selection.
+  const assignmentOptions = useMemo(
+    () =>
+      uniqueAssignments.map((a, index) => ({
+        id: index,
+        name: `${a.subject_name ?? t('examinations.subject_fallback', 'Subject {id}').replace('{id}', String(a.subject_id))} — ${t('examinations.section_prefix', 'Section')} ${a.section_id}`,
+      })),
+    [uniqueAssignments, t],
+  );
+  const selectedAssignmentIndex = useMemo(() => {
+    const index = uniqueAssignments.findIndex((a) => `${a.section_id}:${a.subject_id}` === fAssignmentKey);
+    return index >= 0 ? index : null;
+  }, [uniqueAssignments, fAssignmentKey]);
+
+  const examTypeOptions = useMemo(
+    () => EXAM_TYPES.map((examType, index) => ({ id: index, name: t(`examinations.type_${examType}`, examType) })),
+    [t],
+  );
+
   const openNew = () => {
     setEditing(null);
     setFAssignmentKey(null);
@@ -186,6 +324,21 @@ export default function ExaminationsScreen() {
         weight: fWeight.trim() ? Number(fWeight.trim()) : null,
         instructions: fInstructions.trim() || null,
       };
+
+      if (!isOnline) {
+        // Queue it - offlineQueue auto-flushes through this same
+        // saveExamination() the moment connectivity returns. There's no
+        // server-assigned id/response to merge into the list yet, so just
+        // close the form and tell the user it'll sync.
+        enqueueExaminationSave(token, draft);
+        setFormVisible(false);
+        Alert.alert(
+          t('examinations.saved_offline_title', 'Saved offline'),
+          t('examinations.saved_offline_message', "This exam will sync automatically once you're back online."),
+        );
+        return;
+      }
+
       const saved = await saveExamination(token, draft);
       setExams((prev) => {
         const others = prev.filter((x) => x.id !== saved.id);
@@ -199,7 +352,20 @@ export default function ExaminationsScreen() {
     }
   };
 
+  const requireOnline = (message: string): boolean => {
+    if (isOnline) return true;
+    Alert.alert(t('examinations.offline_title', "You're offline"), message);
+    return false;
+  };
+
   const onPublish = (exam: Examination) => {
+    if (
+      !requireOnline(
+        t('examinations.offline_publish_message', 'Connect to the internet to publish this exam.'),
+      )
+    ) {
+      return;
+    }
     Alert.alert(
       t('examinations.publish_title', 'Publish this exam?'),
       t(
@@ -225,6 +391,11 @@ export default function ExaminationsScreen() {
   };
 
   const confirmDelete = (exam: Examination) => {
+    if (
+      !requireOnline(t('examinations.offline_delete_message', 'Connect to the internet to delete this exam.'))
+    ) {
+      return;
+    }
     Alert.alert(t('examinations.delete_title', 'Delete this exam?'), t('examinations.delete_message', 'This cannot be undone.'), [
       { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
@@ -284,6 +455,19 @@ export default function ExaminationsScreen() {
         marks_obtained: marksDraft[s.id]?.marks.trim() ? Number(marksDraft[s.id].marks.trim()) : null,
         is_absent: marksDraft[s.id]?.absent ?? false,
       }));
+
+      if (!isOnline) {
+        enqueueExaminationResultsSave(token, gradingExam.id, results);
+        Alert.alert(
+          t('examinations.saved_offline_title', 'Saved offline'),
+          t(
+            'examinations.grades_saved_offline_message',
+            "These grades will sync automatically once you're back online. Release them afterward so students can see their marks.",
+          ),
+        );
+        return;
+      }
+
       await saveExaminationResults(token, gradingExam.id, results);
       Alert.alert(t('examinations.saved', 'Saved'), t('examinations.saved_message', 'Grades saved. Remember to release them so students can see their marks.'));
     } catch (e: any) {
@@ -295,6 +479,11 @@ export default function ExaminationsScreen() {
 
   const onRelease = () => {
     if (!token || !gradingExam) return;
+    if (
+      !requireOnline(t('examinations.offline_release_message', 'Connect to the internet to release results.'))
+    ) {
+      return;
+    }
     Alert.alert(t('examinations.release_title', 'Release results?'), t('examinations.release_message', 'Students will be able to see their marks for this exam.'), [
       { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
@@ -314,7 +503,8 @@ export default function ExaminationsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={EMERALD} size="large" />
+        <GlassBackground variant="canvas" />
+        <ActivityIndicator color={theme.accent} size="large" />
         <Text style={styles.centerText}>{t('examinations.loading', 'Loading examinations…')}</Text>
       </View>
     );
@@ -323,6 +513,7 @@ export default function ExaminationsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
+        <GlassBackground variant="canvas" />
         <Text style={styles.errorTitle}>{t('examinations.load_failed_title', "Couldn't load this")}</Text>
         <Text style={styles.centerText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load}>
@@ -335,10 +526,11 @@ export default function ExaminationsScreen() {
   const statusOptions: (ExaminationStatus | null)[] = [null, 'draft', 'published', 'archived'];
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChevron}>‹</Text>
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
+          <IconChevronLeft color={theme.accent} />
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>{t('examinations.title', 'Examinations')}</Text>
@@ -348,7 +540,16 @@ export default function ExaminationsScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+      {!isOnline ? (
+        <View style={styles.offlineBanner}>
+          <IconWifiOff color={theme.warning} />
+          <Text style={styles.offlineBannerText}>
+            {t('examinations.offline_banner', "You're offline - showing your last saved exams. New exams and grades will sync automatically.")}
+          </Text>
+        </View>
+      ) : null}
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
         {statusOptions.map((s) => (
           <TouchableOpacity
             key={s ?? 'all'}
@@ -364,53 +565,66 @@ export default function ExaminationsScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {exams.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>{t('examinations.empty', 'No examinations yet.')}</Text>
-          </View>
+          <EmptyState
+            icon="📝"
+            title={t('examinations.empty_title', 'No examinations yet')}
+            subtitle={t('examinations.empty', 'Create one and it stays a draft until you publish it to the section.')}
+            actionLabel={t('examinations.new_examination', '+ New Examination')}
+            onAction={openNew}
+            colors={theme}
+          />
         ) : (
-          exams.map((exam) => {
-            const gradedCount = (exam.results ?? []).filter((r) => r.marks_obtained != null || r.is_absent).length;
-            return (
-              <View key={exam.id} style={styles.card}>
-                <View style={styles.rowBetween}>
-                  <View style={styles.flexCol}>
-                    <Text style={styles.rowTitle}>{exam.title}</Text>
-                    <Text style={styles.rowSub}>
-                      {exam.exam_type} · {exam.total_marks} {t('examinations.marks', 'marks')}
-                      {exam.scheduled_date ? ` · ${exam.scheduled_date.slice(0, 10)}` : ''}
-                      {' · '}
-                      {gradedCount}/{(exam.results ?? []).length || '?'} {t('examinations.graded', 'graded')}
+          <BentoGrid>
+            {exams.map((exam) => {
+              const gradedCount = (exam.results ?? []).filter((r) => r.marks_obtained != null || r.is_absent).length;
+              const totalResults = (exam.results ?? []).length;
+              const isPublished = exam.status === 'published';
+              return (
+                <View key={exam.id} style={styles.tile}>
+                  <View style={styles.tileTop}>
+                    <View style={styles.iconWrap}>{examTypeIcon(exam.exam_type, theme.accent)}</View>
+                    <Text
+                      style={[
+                        styles.statusBadge,
+                        { color: isPublished ? theme.success : theme.textSecondary, backgroundColor: isPublished ? theme.successSoft : theme.surfaceVariant },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {statusLabel(exam.status)}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.statusBadge,
-                      exam.status === 'published' ? styles.statusPublished : styles.statusDraft,
-                    ]}
-                  >
-                    {statusLabel(exam.status)}
-                  </Text>
-                </View>
 
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity onPress={() => openGrading(exam)}>
-                    <Text style={styles.actionLink}>{t('examinations.grade', 'Grade')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => openEdit(exam)}>
-                    <Text style={styles.actionLink}>{t('common.edit', 'Edit')}</Text>
-                  </TouchableOpacity>
-                  {exam.status === 'draft' && (
-                    <TouchableOpacity onPress={() => onPublish(exam)}>
-                      <Text style={styles.actionLink}>{t('examinations.publish', 'Publish')}</Text>
+                  <Text style={styles.tileTitle} numberOfLines={2}>
+                    {exam.title}
+                  </Text>
+                  <Text style={styles.tileMeta} numberOfLines={2}>
+                    {t(`examinations.type_${exam.exam_type}`, exam.exam_type)} · {exam.total_marks} {t('examinations.marks', 'marks')}
+                    {exam.scheduled_date ? ` · ${exam.scheduled_date.slice(0, 10)}` : ''}
+                  </Text>
+                  <Text style={styles.tileMeta}>
+                    {gradedCount}/{totalResults || '?'} {t('examinations.graded', 'graded')}
+                  </Text>
+
+                  <View style={styles.tileActions}>
+                    <TouchableOpacity style={styles.tileActionBtn} onPress={() => openGrading(exam)} hitSlop={6}>
+                      <IconStar color={theme.accent} />
                     </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={() => confirmDelete(exam)}>
-                    <Text style={[styles.actionLink, styles.deleteLink]}>{t('examinations.delete', 'Delete')}</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity style={styles.tileActionBtn} onPress={() => openEdit(exam)} hitSlop={6}>
+                      <IconPencil color={theme.textSecondary} />
+                    </TouchableOpacity>
+                    {exam.status === 'draft' && (
+                      <TouchableOpacity style={styles.tileActionBtn} onPress={() => onPublish(exam)} hitSlop={6}>
+                        <IconUpload color={theme.accent} />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.tileActionBtn} onPress={() => confirmDelete(exam)} hitSlop={6}>
+                      <IconTrash color={theme.danger} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </BentoGrid>
         )}
       </ScrollView>
 
@@ -430,61 +644,44 @@ export default function ExaminationsScreen() {
               </Text>
 
               {!editing && (
-                <>
-                  <Text style={styles.label}>{t('examinations.section_subject_label', 'Section / Subject')}</Text>
-                  <ScrollView style={styles.assignmentList} nestedScrollEnabled>
-                    {uniqueAssignments.map((a) => {
-                      const key = `${a.section_id}:${a.subject_id}`;
-                      return (
-                        <TouchableOpacity
-                          key={key}
-                          style={[styles.assignmentRow, fAssignmentKey === key && styles.assignmentRowActive]}
-                          onPress={() => setFAssignmentKey(key)}
-                        >
-                          <Text style={[styles.assignmentRowText, fAssignmentKey === key && styles.assignmentRowTextActive]}>
-                            {a.subject_name ?? t('examinations.subject_fallback', 'Subject {id}').replace('{id}', String(a.subject_id))}
-                            {' — '}
-                            {t('examinations.section_prefix', 'Section')} {a.section_id}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                    {uniqueAssignments.length === 0 && (
-                      <Text style={styles.emptyText}>{t('examinations.no_assignments', "You're not assigned to teach any subject yet.")}</Text>
-                    )}
-                  </ScrollView>
-                </>
+                <BentoOptionGrid
+                  label={t('examinations.section_subject_label', 'Section / Subject')}
+                  options={assignmentOptions}
+                  value={selectedAssignmentIndex}
+                  onChange={(id) => setFAssignmentKey(id !== null ? `${uniqueAssignments[id].section_id}:${uniqueAssignments[id].subject_id}` : null)}
+                  icon={(_option, color) => <IconDocument color={color} />}
+                  theme={theme}
+                  tileWidth="47%"
+                />
+              )}
+              {!editing && uniqueAssignments.length === 0 && (
+                <Text style={styles.emptyText}>{t('examinations.no_assignments', "You're not assigned to teach any subject yet.")}</Text>
               )}
 
               <Text style={styles.label}>{t('examinations.title_label', 'Title')}</Text>
-              <TextInput style={styles.input} value={fTitle} onChangeText={setFTitle} placeholder={t('examinations.title_placeholder', 'e.g. Midterm Exam')} />
+              <TextInput style={styles.input} value={fTitle} onChangeText={setFTitle} placeholder={t('examinations.title_placeholder', 'e.g. Midterm Exam')} placeholderTextColor={theme.textMuted} />
 
-              <Text style={styles.label}>{t('examinations.type_label', 'Type')}</Text>
-              <View style={styles.chipRow}>
-                {EXAM_TYPES.map((examType) => (
-                  <TouchableOpacity
-                    key={examType}
-                    style={[styles.chip, fExamType === examType && styles.chipActive]}
-                    onPress={() => setFExamType(examType)}
-                  >
-                    <Text style={[styles.chipText, fExamType === examType && styles.chipTextActive]}>
-                      {t(`examinations.type_${examType}`, examType)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <BentoOptionGrid
+                label={t('examinations.type_label', 'Type')}
+                options={examTypeOptions}
+                value={EXAM_TYPES.indexOf(fExamType)}
+                onChange={(id) => id !== null && setFExamType(EXAM_TYPES[id])}
+                icon={(option, color) => examTypeIcon(EXAM_TYPES[option?.id ?? 0], color)}
+                theme={theme}
+                tileWidth="22%"
+              />
 
               <Text style={styles.label}>{t('examinations.scheduled_date_label', 'Scheduled date (YYYY-MM-DD, optional)')}</Text>
-              <TextInput style={styles.input} value={fScheduledDate} onChangeText={setFScheduledDate} placeholder="2026-08-15" />
+              <TextInput style={styles.input} value={fScheduledDate} onChangeText={setFScheduledDate} placeholder="2026-08-15" placeholderTextColor={theme.textMuted} />
 
               <Text style={styles.label}>{t('examinations.total_marks_label', 'Total marks')}</Text>
-              <TextInput style={styles.input} value={fTotalMarks} onChangeText={setFTotalMarks} keyboardType="numeric" />
+              <TextInput style={styles.input} value={fTotalMarks} onChangeText={setFTotalMarks} keyboardType="numeric" placeholderTextColor={theme.textMuted} />
 
               <Text style={styles.label}>{t('examinations.passing_marks_label', 'Passing marks (optional)')}</Text>
-              <TextInput style={styles.input} value={fPassingMarks} onChangeText={setFPassingMarks} keyboardType="numeric" />
+              <TextInput style={styles.input} value={fPassingMarks} onChangeText={setFPassingMarks} keyboardType="numeric" placeholderTextColor={theme.textMuted} />
 
               <Text style={styles.label}>{t('examinations.weight_label', 'Weight % (optional)')}</Text>
-              <TextInput style={styles.input} value={fWeight} onChangeText={setFWeight} keyboardType="numeric" />
+              <TextInput style={styles.input} value={fWeight} onChangeText={setFWeight} keyboardType="numeric" placeholderTextColor={theme.textMuted} />
 
               <Text style={styles.label}>{t('examinations.instructions_label', 'Instructions (optional)')}</Text>
               <TextInput
@@ -492,14 +689,24 @@ export default function ExaminationsScreen() {
                 value={fInstructions}
                 onChangeText={setFInstructions}
                 multiline
+                placeholderTextColor={theme.textMuted}
               />
+
+              {!isOnline && (
+                <View style={styles.offlineNote}>
+                  <IconWifiOff color={theme.warning} size={14} />
+                  <Text style={styles.offlineNoteText}>
+                    {t('examinations.offline_form_note', "You're offline - this will be queued and saved automatically once you're back online.")}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancel} onPress={() => setFormVisible(false)} disabled={saving}>
                   <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSave} onPress={onSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
+                  {saving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>{t('common.save', 'Save')}</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -513,7 +720,7 @@ export default function ExaminationsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{gradingExam?.title ?? t('examinations.grade_exam', 'Grade Exam')}</Text>
             {gradingLoading ? (
-              <ActivityIndicator color={EMERALD} style={{ marginVertical: 20 }} />
+              <ActivityIndicator color={theme.accent} style={{ marginVertical: 20 }} />
             ) : (
               <ScrollView style={styles.rosterList} nestedScrollEnabled>
                 {roster.map((s) => (
@@ -529,6 +736,7 @@ export default function ExaminationsScreen() {
                       }
                       keyboardType="numeric"
                       placeholder="—"
+                      placeholderTextColor={theme.textMuted}
                       editable={!marksDraft[s.id]?.absent}
                     />
                     <TouchableOpacity
@@ -557,6 +765,15 @@ export default function ExaminationsScreen() {
               </ScrollView>
             )}
 
+            {!isOnline && (
+              <View style={styles.offlineNote}>
+                <IconWifiOff color={theme.warning} size={14} />
+                <Text style={styles.offlineNoteText}>
+                  {t('examinations.offline_form_note', "You're offline - this will be queued and saved automatically once you're back online.")}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setGradingVisible(false)}>
                 <Text style={styles.modalCancelText}>{t('common.close', 'Close')}</Text>
@@ -565,7 +782,7 @@ export default function ExaminationsScreen() {
                 <Text style={styles.modalCancelText}>{t('examinations.release', 'Release')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={onSaveGrades} disabled={gradingSaving}>
-                {gradingSaving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('examinations.save_grades', 'Save Grades')}</Text>}
+                {gradingSaving ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.modalSaveText}>{t('examinations.save_grades', 'Save Grades')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -575,89 +792,120 @@ export default function ExaminationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CANVAS },
-  center: { flex: 1, backgroundColor: CANVAS, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  centerText: { marginTop: 12, fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 20 },
-  errorTitle: { fontSize: 18, fontWeight: '700', color: INK },
-  retryBtn: { marginTop: 20, backgroundColor: EMERALD, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
-  retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+const makeStyles = (theme: AcademicGlassTheme) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: theme.background },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+    centerText: { marginTop: 12, fontSize: 14, color: theme.textSecondary, textAlign: 'center', lineHeight: 20 },
+    errorTitle: { fontSize: 18, fontWeight: '700', color: theme.textPrimary },
+    retryBtn: { marginTop: 20, backgroundColor: theme.accent, paddingHorizontal: 26, paddingVertical: 12, borderRadius: RADIUS.pill },
+    retryText: { color: theme.onAccent, fontWeight: '700', fontSize: 14 },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
-  backChevron: { fontSize: 26, lineHeight: 28, color: EMERALD, marginTop: -3 },
-  headerText: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
-  headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 14,
+      backgroundColor: theme.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.accentSoft, marginRight: 12 },
+    headerText: { flex: 1 },
+    headerTitle: { fontSize: 20, fontWeight: '800', color: theme.textPrimary },
+    headerSub: { fontSize: 12.5, color: theme.textSecondary, marginTop: 2 },
 
-  filterRow: { flexGrow: 0, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: '#F1F3F2', marginRight: 8 },
-  filterChipActive: { backgroundColor: EMERALD },
-  filterChipText: { fontSize: 12.5, fontWeight: '700', color: SUBTLE },
-  filterChipTextActive: { color: '#FFFFFF' },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.warningSoft,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    offlineBannerText: { flex: 1, color: theme.warning, fontSize: 12, lineHeight: 16, fontWeight: '600' },
 
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
+    filterRow: { flexGrow: 0, backgroundColor: theme.surface },
+    filterRowContent: { paddingHorizontal: 16, paddingVertical: 10 },
+    filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: theme.surfaceVariant, marginRight: 8 },
+    filterChipActive: { backgroundColor: theme.accent },
+    filterChipText: { fontSize: 12.5, fontWeight: '700', color: theme.textSecondary },
+    filterChipTextActive: { color: theme.onAccent },
 
-  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
-  emptyText: { fontSize: 13.5, color: SUBTLE, lineHeight: 20, textAlign: 'center' },
+    scroll: { flex: 1 },
+    scrollContent: { paddingBottom: 16 },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 12 },
-  rowBetween: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  flexCol: { flex: 1, paddingRight: 10 },
-  rowTitle: { fontSize: 15, fontWeight: '700', color: INK },
-  rowSub: { fontSize: 12, color: SUBTLE, marginTop: 3 },
+    emptyText: { fontSize: 13.5, color: theme.textSecondary, lineHeight: 20, textAlign: 'center', marginTop: 8 },
 
-  statusBadge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, overflow: 'hidden' },
-  statusDraft: { color: '#9A6700', backgroundColor: '#FEF3C7' },
-  statusPublished: { color: '#166534', backgroundColor: '#DCFCE7' },
+    // --- Bento tile: matches BentoGridCard's visual language (icon badge,
+    // status badge top-right, title, meta lines) with its own compact icon
+    // action row instead of text links.
+    tile: {
+      width: '47%',
+      minHeight: 190,
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      ...theme.elevation2,
+    },
+    tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    iconWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: theme.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statusBadge: { fontSize: 10.5, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, overflow: 'hidden' },
+    tileTitle: { fontSize: 15, fontWeight: '700', color: theme.textPrimary, marginBottom: 6 },
+    tileMeta: { fontSize: 11.5, color: theme.textSecondary, lineHeight: 16, marginBottom: 2 },
+    tileActions: { flexDirection: 'row', gap: 8, marginTop: 'auto', paddingTop: 10 },
+    tileActionBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: theme.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  actionsRow: { flexDirection: 'row', gap: 18, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: BORDER, flexWrap: 'wrap' },
-  actionLink: { fontSize: 12.5, fontWeight: '700', color: EMERALD },
-  deleteLink: { color: DANGER },
+    saveBar: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border },
+    addBtn: { backgroundColor: theme.accent, borderRadius: RADIUS.pill, height: 52, alignItems: 'center', justifyContent: 'center', ...theme.elevation1 },
+    addBtnText: { color: theme.onAccent, fontWeight: '800', fontSize: 15 },
 
-  saveBar: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: BORDER },
-  addBtn: { backgroundColor: EMERALD, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
-  addBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalCard: { backgroundColor: theme.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: 20, paddingBottom: 32, maxHeight: '90%' },
+    modalTitle: { fontSize: 17, fontWeight: '800', color: theme.textPrimary, marginBottom: 14 },
+    label: { fontSize: 13.5, fontWeight: '700', color: theme.textPrimary, marginTop: 14, marginBottom: 4 },
+    input: { marginTop: 4, borderWidth: 1, borderColor: theme.border, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: theme.textPrimary, backgroundColor: theme.surfaceVariant },
+    inputMultiline: { minHeight: 70, textAlignVertical: 'top' },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 32, maxHeight: '90%' },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: INK, marginBottom: 14 },
-  label: { fontSize: 13.5, fontWeight: '700', color: INK, marginTop: 12 },
-  input: { marginTop: 8, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: INK, backgroundColor: '#FAFBFA' },
-  inputMultiline: { minHeight: 70, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: BORDER, backgroundColor: '#FAFBFA', marginRight: 8 },
-  chipActive: { backgroundColor: EMERALD, borderColor: EMERALD },
-  chipText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
-  chipTextActive: { color: '#FFFFFF' },
+    offlineNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.warningSoft,
+      borderRadius: RADIUS.md,
+      padding: 12,
+      marginTop: 16,
+    },
+    offlineNoteText: { flex: 1, color: theme.warning, fontSize: 11.5, lineHeight: 16, fontWeight: '600' },
 
-  assignmentList: { marginTop: 8, maxHeight: 140, borderWidth: 1, borderColor: BORDER, borderRadius: 12 },
-  assignmentRow: { paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: BORDER },
-  assignmentRowActive: { backgroundColor: EMERALD_SOFT },
-  assignmentRowText: { fontSize: 13, color: INK },
-  assignmentRowTextActive: { color: EMERALD, fontWeight: '700' },
+    modalActions: { flexDirection: 'row', gap: 10, marginTop: 22 },
+    modalCancel: { flex: 1, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceVariant },
+    modalCancelText: { fontSize: 13.5, fontWeight: '700', color: theme.textSecondary },
+    modalSave: { flex: 1, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.accent },
+    modalSaveText: { fontSize: 13.5, fontWeight: '700', color: theme.onAccent },
 
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 22 },
-  modalCancel: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F3F2' },
-  modalCancelText: { fontSize: 13.5, fontWeight: '700', color: SUBTLE },
-  modalSave: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD },
-  modalSaveText: { fontSize: 13.5, fontWeight: '700', color: '#FFFFFF' },
-
-  rosterList: { maxHeight: 340, marginTop: 8 },
-  rosterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER, gap: 8 },
-  rosterName: { flex: 1, fontSize: 13.5, color: INK },
-  marksInput: { width: 64, borderWidth: 1, borderColor: BORDER, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13.5, color: INK, backgroundColor: '#FAFBFA', textAlign: 'center' },
-  absentToggle: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: BORDER },
-  absentToggleActive: { backgroundColor: '#FEE2E2', borderColor: DANGER },
-  absentToggleText: { fontSize: 11.5, fontWeight: '600', color: SUBTLE },
-  absentToggleTextActive: { color: DANGER },
-});
+    rosterList: { maxHeight: 340, marginTop: 8 },
+    rosterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border, gap: 8 },
+    rosterName: { flex: 1, fontSize: 13.5, color: theme.textPrimary },
+    marksInput: { width: 64, borderWidth: 1, borderColor: theme.border, borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13.5, color: theme.textPrimary, backgroundColor: theme.surfaceVariant, textAlign: 'center' },
+    absentToggle: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: theme.border },
+    absentToggleActive: { backgroundColor: theme.dangerSoft, borderColor: theme.danger },
+    absentToggleText: { fontSize: 11.5, fontWeight: '600', color: theme.textSecondary },
+    absentToggleTextActive: { color: theme.danger },
+  });

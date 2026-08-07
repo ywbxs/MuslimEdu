@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoSubscription } from '@react-native-community/netinfo';
 import { PickedPhoto } from './orphanService';
 import type { AttendanceRecordInput } from './teacherAttendanceService';
+import type { ExaminationDraft, ResultDraft } from './examinationService';
 
 /**
  * Generic offline outbox: the first version of M6's "offline sync" item.
@@ -28,7 +29,9 @@ export type QueuedActionKind =
   | 'orphan_report_submit'
   | 'teacher_orphan_report_submit'
   | 'attendance_submit'
-  | 'attendance_scan';
+  | 'attendance_scan'
+  | 'examination_save'
+  | 'examination_results_save';
 
 interface OrphanReportSubmitPayload {
   fields: { note: string; academic_rating: number; wellbeing_rating: number; report_month?: string };
@@ -60,11 +63,22 @@ interface AttendanceScanPayload {
   code: string;
 }
 
+interface ExaminationSavePayload {
+  draft: ExaminationDraft;
+}
+
+interface ExaminationResultsSavePayload {
+  examinationId: number;
+  results: ResultDraft[];
+}
+
 type QueuedActionPayload =
   | OrphanReportSubmitPayload
   | TeacherOrphanReportSubmitPayload
   | AttendanceSubmitPayload
-  | AttendanceScanPayload;
+  | AttendanceScanPayload
+  | ExaminationSavePayload
+  | ExaminationResultsSavePayload;
 
 export interface QueuedAction {
   id: string;
@@ -157,6 +171,18 @@ async function runAction(action: QueuedAction): Promise<void> {
     const { scanAttendance } = await import('./teacherAttendanceService');
     const payload = action.payload as AttendanceScanPayload;
     await scanAttendance(action.token, payload.sectionId, payload.subjectId, payload.date, payload.code);
+    return;
+  }
+  if (action.kind === 'examination_save') {
+    const { saveExamination } = await import('./examinationService');
+    const payload = action.payload as ExaminationSavePayload;
+    await saveExamination(action.token, payload.draft);
+    return;
+  }
+  if (action.kind === 'examination_results_save') {
+    const { saveExaminationResults } = await import('./examinationService');
+    const payload = action.payload as ExaminationResultsSavePayload;
+    await saveExaminationResults(action.token, payload.examinationId, payload.results);
     return;
   }
   throw new Error(`No offline queue executor registered for "${action.kind}".`);
@@ -268,6 +294,18 @@ export function enqueueAttendanceScan(
   code: string,
 ): QueuedAction {
   return enqueue('attendance_scan', token, { sectionId, subjectId, date, code });
+}
+
+export function enqueueExaminationSave(token: string, draft: ExaminationDraft): QueuedAction {
+  return enqueue('examination_save', token, { draft });
+}
+
+export function enqueueExaminationResultsSave(
+  token: string,
+  examinationId: number,
+  results: ResultDraft[],
+): QueuedAction {
+  return enqueue('examination_results_save', token, { examinationId, results });
 }
 
 export function getPendingCount(): number {
