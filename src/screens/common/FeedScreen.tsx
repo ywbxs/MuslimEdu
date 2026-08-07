@@ -129,12 +129,13 @@ export default function FeedScreen() {
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
-    // Fixed position (right after the first post), NOT appended after
-    // every currently-loaded post - pagination keeps adding more posts
-    // onto the end as the reader approaches it, so anchoring the widget
-    // slot to `posts.length` would make it a permanently receding target
-    // on any feed with enough posts to keep triggering onEndReached.
-    if (items.length > 0) items.splice(1, 0, { kind: 'widgets' });
+    // Widgets (Prayer Times, then superadmin announcements) is the very
+    // FIRST thing in the deck, always - the reader lands on it the moment
+    // the feed opens, and swiping right moves into the posts. This is a
+    // fixed position, NOT appended after posts.length - pagination keeps
+    // adding more posts as the reader scrolls, so anchoring the slot to
+    // any post-count-derived index would make it a moving/receding target.
+    if (posts.length > 0) items.unshift({ kind: 'widgets' });
     if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
