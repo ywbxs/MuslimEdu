@@ -668,7 +668,7 @@ export default function LoginScreen() {
         }}
         onAlumni={() => {
           setSheetOpen(false);
-          // navigation.navigate('AlumniRegistration');
+          (navigation as any).navigate('AlumniRegistration');
         }}
       />
     </View>

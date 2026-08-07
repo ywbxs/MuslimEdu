@@ -51,6 +51,9 @@ export function getDashboardForRole(role: UserRole, footer?: React.ReactNode): R
     case 'warden':
       return <PlaceholderDashboard roleLabel="Warden" footer={footer} />;
 
+    case 'alumni':
+      return <PlaceholderDashboard roleLabel="Alumni" footer={footer} />;
+
     default:
       // Covers any future role_id/role added on the backend that the app
       // doesn't have a specific mapping for yet - shows a generic screen

@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useLocale } from '../context/LocaleContext';
@@ -24,6 +23,13 @@ import BentoOptionGrid, { BentoOption } from '../components/glass/BentoOptionGri
 import { useAcademicGlassTheme } from './teachers/academicGlassTheme';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../utils/imagePrep';
 import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/schoolRegistrationService';
+import {
+  WizardGradientButton as GradientButton,
+  WizardStepHeader,
+  WizardFieldLabel as FieldLabel,
+  CheckCircleIcon,
+  form,
+} from '../components/wizard/WizardKit';
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -89,83 +95,12 @@ function FaceIcon({ color = BRAND.emerald, size = 34 }: { color?: string; size?:
     </Svg>
   );
 }
-function CheckCircleIcon({ color = BRAND.emerald, size = 64 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
-      <Path d="M7.5 12.5l3 3 6-6.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
 function CameraSmallIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
       <Circle cx={12} cy={13} r={3.2} stroke={color} strokeWidth={2} />
     </Svg>
-  );
-}
-
-/* ========================= SHARED BITS ========================= */
-
-function GradientButton({
-  label,
-  onPress,
-  disabled,
-  loading,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  return (
-    <TouchableOpacity activeOpacity={0.88} onPress={onPress} disabled={disabled || loading} style={btn.wrap}>
-      <LinearGradient
-        colors={[BRAND.emeraldLight, BRAND.emeraldDeep]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[btn.gradient, (disabled || loading) && btn.disabled]}
-      >
-        {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={btn.text}>{label}</Text>}
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-}
-
-function StepHeader({ step }: { step: 1 | 2 | 3 | 4 }) {
-  return (
-    <View style={stepHeader.row}>
-      {STEP_LABELS.map((label, i) => {
-        const num = i + 1;
-        const done = num < step;
-        const active = num === step;
-        return (
-          <React.Fragment key={label}>
-            <View style={stepHeader.item}>
-              <View style={[stepHeader.circle, (done || active) && stepHeader.circleActive]}>
-                {done ? (
-                  <CheckCircleIcon color="#FFFFFF" size={16} />
-                ) : (
-                  <Text style={[stepHeader.circleText, active && stepHeader.circleTextActive]}>{num}</Text>
-                )}
-              </View>
-              <Text style={[stepHeader.label, active && stepHeader.labelActive]}>{label}</Text>
-            </View>
-            {i < STEP_LABELS.length - 1 && <View style={[stepHeader.connector, done && stepHeader.connectorActive]} />}
-          </React.Fragment>
-        );
-      })}
-    </View>
-  );
-}
-
-function FieldLabel({ children, required }: { children: string; required?: boolean }) {
-  return (
-    <Text style={form.label}>
-      {children}
-      {required ? <Text style={form.required}> *</Text> : null}
-    </Text>
   );
 }
 
@@ -315,7 +250,7 @@ export default function SchoolRegistrationScreen() {
         </View>
       </View>
 
-      <StepHeader step={step} />
+      <WizardStepHeader step={step} labels={STEP_LABELS} />
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={100}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -558,36 +493,6 @@ const styles = StyleSheet.create({
   pendingBadgeText: { color: BRAND.emeraldDeep, fontWeight: '700', fontSize: 13 },
 });
 
-const stepHeader = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 24, paddingVertical: 14 },
-  item: { alignItems: 'center', width: 56 },
-  circle: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EDEFF0', alignItems: 'center', justifyContent: 'center' },
-  circleActive: { backgroundColor: BRAND.emerald },
-  circleText: { fontSize: 12, fontWeight: '700', color: SUBTLE },
-  circleTextActive: { color: '#FFFFFF' },
-  label: { fontSize: 10.5, color: SUBTLE, marginTop: 4, textAlign: 'center' },
-  labelActive: { color: BRAND.emerald, fontWeight: '700' },
-  connector: { flex: 1, height: 2, backgroundColor: '#EDEFF0', marginTop: 12, marginHorizontal: -6 },
-  connectorActive: { backgroundColor: BRAND.emerald },
-});
-
-const form = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '700', color: INK, marginTop: 16, marginBottom: 8 },
-  required: { color: '#E24C4C' },
-  input: {
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: INK,
-    backgroundColor: COLORS.surface,
-  },
-  inputMultiline: { minHeight: 72, textAlignVertical: 'top' },
-  errorText: { color: '#E24C4C', fontSize: 12.5, marginTop: 8 },
-});
-
 const verify = StyleSheet.create({
   intro: { fontSize: 13.5, color: SUBTLE, lineHeight: 20, marginBottom: 16 },
   sectionTitle: { fontSize: 13.5, fontWeight: '700', color: INK, marginTop: 16, marginBottom: 10 },
@@ -628,21 +533,4 @@ const review = StyleSheet.create({
   rowValue: { fontSize: 13, color: INK, fontWeight: '600', flex: 1, textAlign: 'right' },
   thumbRow: { flexDirection: 'row', gap: 12 },
   thumb: { width: 100, height: 100, borderRadius: RADIUS.sm, backgroundColor: '#EDEFF2' },
-});
-
-const btn = StyleSheet.create({
-  wrap: { borderRadius: 999 },
-  gradient: {
-    height: 54,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: BRAND.emeraldDeep,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  disabled: { opacity: 0.5 },
-  text: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
 });

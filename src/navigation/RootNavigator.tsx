@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SchoolRegistrationScreen from '../screens/SchoolRegistrationScreen';
+import AlumniRegistrationScreen from '../screens/AlumniRegistrationScreen';
 import StudentListScreen from '../screens/students/StudentListScreen';
 import OrphanReportScreen from '../screens/orphan/OrphanReportScreen';
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
@@ -140,6 +141,7 @@ import StudentPortalHomeScreen from '../screens/student/StudentPortalHomeScreen'
 import StudentDocumentsScreen from '../screens/student/StudentDocumentsScreen';
 import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
+import AlumniApplicationsScreen from '../screens/admin/AlumniApplicationsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
 // Orphan-school children upload their own documents (ID, guardian consent,
 // etc.) instead of requesting official school documents - see
@@ -647,6 +649,11 @@ export default function RootNavigator() {
                 component={SchoolRegistrationScreen}
                 options={{ animation: 'slide_from_right' }}
               />
+              <Stack.Screen
+                name="AlumniRegistration"
+                component={AlumniRegistrationScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
             </>
           )}
               {/* SUBJECT_LOADING_ROUTES */}
@@ -686,6 +693,7 @@ export default function RootNavigator() {
       <Stack.Screen name="StudentUploadDocuments" component={StudentUploadDocumentsScreen} />
       <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
       <Stack.Screen name="AdminStudentDocuments" component={StudentDocumentRequestsScreen} />
+      <Stack.Screen name="AdminAlumniApplications" component={AlumniApplicationsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AdminStudentServices" component={StudentServiceRequestsScreen} />
       <Stack.Screen name="AdminFeeReports" component={AdminFeeReportsScreen} />
       <Stack.Screen name="RecordFeePayment" component={RecordFeePaymentScreen} />

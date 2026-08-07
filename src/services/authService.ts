@@ -13,7 +13,8 @@ export type UserRole =
   | 'librarian'
   | 'parent'
   | 'student'
-  | 'warden';
+  | 'warden'
+  | 'alumni';
 
 export interface OrphanProfile {
   orphan_id_number: string | null;
