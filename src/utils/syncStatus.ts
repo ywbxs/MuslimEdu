@@ -47,6 +47,7 @@ const KNOWN_PREFIXES: { prefix: string; label: string }[] = [
   { prefix: '@teacher_orphan_cache_v1', label: 'Teacher Orphan Reports' },
   { prefix: '@orphan_cache_v1', label: 'Orphan Reports' },
   { prefix: '@lesson_plan_cache_v1', label: 'Lesson Plans' },
+  { prefix: '@student_document_upload_cache_v1', label: 'My Uploaded Documents' },
 ];
 
 export async function scanCachedDatasets(token: string): Promise<CachedDataset[]> {

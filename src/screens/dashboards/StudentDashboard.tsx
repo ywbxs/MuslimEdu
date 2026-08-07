@@ -138,6 +138,16 @@ function DocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: n
     </Svg>
   );
 }
+function UploadDocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1={12} y1={19} x2={12} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Polyline points="9.5 14.5 12 12 14.5 14.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function StarIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -533,12 +543,25 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             badge={0}
             onPress={() => (navigation as any).navigate('Notifications')}
           />
-          <QuickActionCard
-            icon={<DocumentIcon color={EMERALD} size={20} />}
-            title={t('student_dashboard.documents_title', 'Documents')}
-            description={t('student_dashboard.documents_desc', 'Request report cards, COR and certificates')}
-            onPress={() => (navigation as any).navigate('StudentDocuments')}
-          />
+          {/* Document requests (report card/COR/certificate) don't apply to
+              an orphan school - there's no class-based academics to issue
+              them from (same gating as My Progress/Schedule/ID Card above).
+              Orphan children instead upload their own documents. */}
+          {!isOrphan ? (
+            <QuickActionCard
+              icon={<DocumentIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.documents_title', 'Documents')}
+              description={t('student_dashboard.documents_desc', 'Request report cards, COR and certificates')}
+              onPress={() => (navigation as any).navigate('StudentDocuments')}
+            />
+          ) : (
+            <QuickActionCard
+              icon={<UploadDocumentIcon color={EMERALD} size={20} />}
+              title={t('student_dashboard.upload_documents_title', 'Upload Documents')}
+              description={t('student_dashboard.upload_documents_desc', 'Submit your ID, guardian consent and other files')}
+              onPress={() => (navigation as any).navigate('StudentUploadDocuments')}
+            />
+          )}
           <QuickActionCard
             icon={<CheckCircleIcon color={EMERALD} size={20} />}
             title={t('student_dashboard.services_title', 'Services')}
