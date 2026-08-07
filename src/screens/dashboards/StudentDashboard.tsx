@@ -63,11 +63,11 @@ function IdCardIcon({ color = PALE_GREEN, size = 18 }: { color?: string; size?: 
     </Svg>
   );
 }
-function PencilIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
+function CameraIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2} />
     </Svg>
   );
 }
@@ -383,6 +383,13 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             icon: (c: string) => <IdCardIcon color={c} size={20} />,
             onPress: () => (navigation as any).navigate('StudentIdCard'),
           },
+          {
+            key: 'myGrades',
+            title: t('student_dashboard.my_grades_title', 'My Grades'),
+            description: t('student_dashboard.my_grades_desc', 'See your grades and GPA by subject'),
+            icon: (c: string) => <StarIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('AcademicHub', { initialTab: 'grades' }),
+          },
         ]
       : []),
     {
@@ -395,26 +402,42 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
     },
     // Document requests (report card/COR/certificate) don't apply to an
     // orphan school - there's no class-based academics to issue them from
-    // (same gating as My Progress/Schedule/ID Card above). Orphan children
-    // instead upload their own documents.
-    !isOrphan
-      ? {
-          key: 'documents',
-          title: t('student_dashboard.documents_title', 'Documents'),
-          description: t('student_dashboard.documents_desc', 'Request report cards, COR and certificates'),
-          icon: (c: string) => <DocumentIcon color={c} size={20} />,
-          onPress: () => (navigation as any).navigate('StudentDocuments'),
-        }
-      : {
-          key: 'uploadDocuments',
-          title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
-          description: t(
-            'student_dashboard.upload_documents_desc',
-            'Submit your ID, guardian consent and other files',
-          ),
-          icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
-          onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
-        },
+    // (same gating as My Progress/Schedule/ID Card above), so orphan
+    // children only get the upload tile. Regular schools get both: request
+    // an official document from the school, or upload one of their own
+    // (ID, medical records, etc.) - the two flows aren't mutually exclusive.
+    ...(!isOrphan
+      ? [
+          {
+            key: 'documents',
+            title: t('student_dashboard.documents_title', 'Documents'),
+            description: t('student_dashboard.documents_desc', 'Request report cards, COR and certificates'),
+            icon: (c: string) => <DocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentDocuments'),
+          },
+          {
+            key: 'uploadDocuments',
+            title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
+            description: t(
+              'student_dashboard.upload_documents_desc',
+              'Submit your ID, medical records and other files',
+            ),
+            icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
+          },
+        ]
+      : [
+          {
+            key: 'uploadDocuments',
+            title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
+            description: t(
+              'student_dashboard.upload_documents_desc_orphan',
+              'Submit your ID, guardian consent and other files',
+            ),
+            icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
+          },
+        ]),
     {
       key: 'services',
       title: t('student_dashboard.services_title', 'Services'),
@@ -504,7 +527,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
               <Text style={styles.greetingName}>{user?.name}</Text>
             </View>
             <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10}>
-              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} fillColor={EMERALD} />
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} fillColor={EMERALD} dotColor={null} />
             </TouchableOpacity>
           </View>
 
@@ -533,7 +556,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
                 onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
-                <PencilIcon color={PALE_GREEN} size={16} />
+                <CameraIcon color={PALE_GREEN} size={16} />
               </TouchableOpacity>
             </View>
 

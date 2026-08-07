@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
@@ -35,11 +36,20 @@ interface PendingPhoto {
   type: string;
 }
 
+function CameraIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2.2} />
+    </Svg>
+  );
+}
+
 /**
  * Generic "edit my own profile" screen, available to every role - name,
- * email, address, and profile photo. Reached from the edit-pencil entry
+ * email, address, and profile photo. Reached from the camera-icon entry
  * point each dashboard shows next to the user's avatar (StudentDashboard/
- * TeacherDashboard's existing glassCard pencil, or the one added to
+ * TeacherDashboard's existing glassCard button, or the one added to
  * DashboardShell/AdminDashboard for every other role).
  *
  * Distinct from AccountSettingsScreen (language/theme/privacy/password)
@@ -142,11 +152,7 @@ export default function EditProfileScreen() {
                 </View>
               )}
               <View style={styles.avatarEditBadge}>
-                {pickingPhoto ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.avatarEditBadgeText}>✎</Text>
-                )}
+                {pickingPhoto ? <ActivityIndicator size="small" color="#FFFFFF" /> : <CameraIcon size={15} />}
               </View>
             </TouchableOpacity>
             <Text style={styles.avatarHint}>
@@ -244,7 +250,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarEditBadgeText: { color: '#FFFFFF', fontSize: 14 },
   avatarHint: { fontSize: 12, color: SUBTLE, textAlign: 'center', marginTop: 12, paddingHorizontal: 24 },
   errorText: { color: '#E5484D', fontSize: 12.5, textAlign: 'center', marginTop: 6, paddingHorizontal: 24 },
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, ScrollView, Platform, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
@@ -20,6 +20,10 @@ const HEART_RED = '#E0245E';
 // post's headline - matches PostImageGrid's own image placeholder so a
 // loading/blank hero reads as "nothing here yet" instead of a green card.
 const PLACEHOLDER = '#EDEFF2';
+// Warm paper tone + serif face for the full-caption modal - reads like a
+// letter rather than another app sheet, distinct from the rest of the UI.
+const LETTER_PAPER = '#FBF6EC';
+const LETTER_FONT = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 
 function HeartIcon({ filled, color, size = 22 }: { filled: boolean; color: string; size?: number }) {
   return (
@@ -139,6 +143,17 @@ function CheckIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+// "Read the full caption" trigger - three lines of decreasing length reads
+// as "text/notes" at a glance, distinct from MoreIcon's three dots.
+function CaptionLinesIcon({ color, size = 20 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Line x1={4} y1={7} x2={20} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={4} y1={17} x2={13} y2={17} stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 function timeAgo(dateStr: string): string {
   const then = new Date(dateStr).getTime();
@@ -209,6 +224,7 @@ export default function PostCard({
   const scale = useRef(new Animated.Value(1)).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
+  const [captionVisible, setCaptionVisible] = useState(false);
   // If the hero photo fails to load (broken/stale URL, upload that never
   // finished server-side), falling through to the gradient+text treatment
   // beats leaving a blank colored box with nothing on it at all.
@@ -475,28 +491,50 @@ export default function PostCard({
         </>
       )}
 
-      {/* Action bar - grouped on the right side of the divider */}
+      {/* Action bar - repost/comment/like grouped on the right of the
+          divider; in magazine mode (feed deck) a "read full caption"
+          trigger sits on the left, since that's the only mode where the
+          caption is ever clipped short. Both sit in the same row (always
+          rendering the left slot when clipContent, even empty) so
+          space-between keeps the right group pinned to the edge either way. */}
       <View style={[styles.actionBar, clipContent && styles.actionBarMagazine]}>
-        <TouchableOpacity style={styles.action} onPress={() => onPressRepost(post)} activeOpacity={0.7}>
-          <RepostIcon color={EMERALD} size={26} />
-          <Text style={[styles.actionCount, { color: EMERALD }]}>
-            {post.reposts_count > 0 ? post.reposts_count : ''}
-          </Text>
-        </TouchableOpacity>
+        {clipContent && (
+          <View style={styles.captionButtonSlot}>
+            {!!headlineText && (
+              <TouchableOpacity
+                style={styles.captionButton}
+                onPress={() => setCaptionVisible(true)}
+                activeOpacity={0.7}
+                hitSlop={8}
+              >
+                <CaptionLinesIcon color={SUBTLE} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
-        <TouchableOpacity style={styles.action} onPress={() => onPressComment(post)} activeOpacity={0.7}>
-          <CommentIcon color={SUBTLE} size={26} />
-          <Text style={styles.actionCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionGroup}>
+          <TouchableOpacity style={styles.action} onPress={() => onPressRepost(post)} activeOpacity={0.7}>
+            <RepostIcon color={EMERALD} size={26} />
+            <Text style={[styles.actionCount, { color: EMERALD }]}>
+              {post.reposts_count > 0 ? post.reposts_count : ''}
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionLast} onPress={handleHeart} activeOpacity={0.7}>
-          <Animated.View style={{ transform: [{ scale }] }}>
-            <HeartIcon filled={post.is_liked} color={heartColor} size={28} />
-          </Animated.View>
-          <Text style={[styles.actionCount, post.is_liked && { color: HEART_RED }]}>
-            {post.likes_count > 0 ? post.likes_count : ''}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.action} onPress={() => onPressComment(post)} activeOpacity={0.7}>
+            <CommentIcon color={SUBTLE} size={26} />
+            <Text style={styles.actionCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionLast} onPress={handleHeart} activeOpacity={0.7}>
+            <Animated.View style={{ transform: [{ scale }] }}>
+              <HeartIcon filled={post.is_liked} color={heartColor} size={28} />
+            </Animated.View>
+            <Text style={[styles.actionCount, post.is_liked && { color: HEART_RED }]}>
+              {post.likes_count > 0 ? post.likes_count : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
 
@@ -569,6 +607,32 @@ export default function PostCard({
               </TouchableOpacity>
             );
           })}
+        </View>
+      </View>
+    </Modal>
+
+    {/* Full caption - centered "letter" modal, opened from the caption-lines
+        button in the feed deck's action bar. Warm paper background + serif
+        face instead of the app's usual sheet chrome, and scrolls once the
+        text runs past what fits so a long post is never cut off. */}
+    <Modal visible={captionVisible} transparent animationType="fade" onRequestClose={() => setCaptionVisible(false)}>
+      <View style={styles.captionBackdrop}>
+        <TouchableOpacity style={styles.captionBackdropTouch} activeOpacity={1} onPress={() => setCaptionVisible(false)} />
+        <View style={styles.captionModal}>
+          <View style={styles.captionModalHeader}>
+            <Text style={styles.captionQuoteMark}>&ldquo;</Text>
+            <TouchableOpacity onPress={() => setCaptionVisible(false)} hitSlop={12} style={styles.sheetCloseBtn}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            style={styles.captionScroll}
+            contentContainerStyle={styles.captionScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.captionFullText}>{headlineText}</Text>
+            <Text style={styles.captionSignature}>— {post.author?.name ?? 'Unknown'}</Text>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -666,11 +730,17 @@ const styles = StyleSheet.create({
   },
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.
-  actionBarMagazine: { paddingHorizontal: 16, paddingBottom: 12 },
+  // space-between (instead of the base flex-end) splits the left caption
+  // slot from the right action group - see the render logic for why the
+  // slot always exists even when empty.
+  actionBarMagazine: { paddingHorizontal: 16, paddingBottom: 12, justifyContent: 'space-between' },
   // Same reasoning - the header needs its own horizontal padding once the
   // card itself has none, plus a bit of top padding since there's no card
   // padding above it either.
   headerMagazine: { paddingHorizontal: 16, paddingTop: 14 },
+  captionButtonSlot: { minWidth: 28 },
+  captionButton: { padding: 4 },
+  actionGroup: { flexDirection: 'row', alignItems: 'center' },
   action: { flexDirection: 'row', alignItems: 'center', marginRight: 30 },
   actionLast: { flexDirection: 'row', alignItems: 'center' },
   actionCount: { fontSize: 14.5, color: SUBTLE, marginLeft: 8, fontWeight: '700', minWidth: 12 },
@@ -728,4 +798,53 @@ const styles = StyleSheet.create({
   },
   sheetRowIconWrapDanger: { backgroundColor: 'rgba(239,68,68,0.1)' },
   sheetRowLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: INK },
+
+  // Full-caption "letter" modal - centered card on a dark scrim, warm paper
+  // tone instead of the app's usual white sheets, deliberately distinct from
+  // the post-options/privacy bottom sheets above.
+  captionBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17,20,23,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  captionBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  captionModal: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '75%',
+    backgroundColor: LETTER_PAPER,
+    borderRadius: RADIUS.xl,
+    padding: 24,
+    ...SHADOW.level3,
+  },
+  captionModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  captionQuoteMark: {
+    fontSize: 52,
+    lineHeight: 52,
+    color: EMERALD_SOFT,
+    fontFamily: LETTER_FONT,
+    fontWeight: '700',
+  },
+  captionScroll: { marginTop: 0 },
+  captionScrollContent: { paddingBottom: 4 },
+  captionFullText: {
+    fontSize: 17,
+    lineHeight: 27,
+    color: INK,
+    fontFamily: LETTER_FONT,
+  },
+  captionSignature: {
+    marginTop: 20,
+    fontSize: 15,
+    color: SUBTLE,
+    fontFamily: LETTER_FONT,
+    fontStyle: 'italic',
+    textAlign: 'right',
+  },
 });

@@ -3,7 +3,6 @@ import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 
 const DEFAULT_RING = '#FFFFFF';
 const DEFAULT_FILL = '#0F9D58';
-const DEFAULT_DOT = '#5FE38A';
 
 /**
  * The one avatar look used everywhere in the app: a ring-bordered circle
@@ -17,8 +16,10 @@ const DEFAULT_DOT = '#5FE38A';
  * straight through keeps every avatar in sync with whatever the backend
  * has on file, with no extra wiring needed here.
  *
- * Pass `dotColor={null}` to hide the status dot entirely (e.g. inside the
- * profile bottom sheet, where a big centered avatar doesn't need one).
+ * No status dot by default - pass an explicit `dotColor` (e.g. an
+ * active/inactive or attendance-status color) where a dot is actually
+ * meaningful. Plain profile avatars (dashboard headers, composers, post
+ * authors) show no dot at all.
  */
 export default function UserAvatar({
   name,
@@ -26,7 +27,7 @@ export default function UserAvatar({
   size = 56,
   ringColor = DEFAULT_RING,
   fillColor = DEFAULT_FILL,
-  dotColor = DEFAULT_DOT,
+  dotColor = null,
   textColor = '#FFFFFF',
   style,
 }: {

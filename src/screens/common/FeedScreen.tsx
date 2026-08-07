@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import {
   Post,
   PostPrivacy,
@@ -30,6 +31,9 @@ import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
+import TodayAttendanceCard from '../../components/TodayAttendanceCard';
+import UpcomingClassesCard from '../../components/UpcomingClassesCard';
+import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -56,7 +60,13 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 // Once pagination is exhausted, "All caught up" becomes its own card at the
 // end of the Home deck - reached the same way every other post is, by
 // swiping to it - rather than a pill overlaid on top of the last post.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+//
+// 'widgets' is a second, evergreen deck item (Prayer Times + superadmin
+// announcement images, see WidgetCarousel.tsx) appended once right after
+// the currently-loaded posts - shown even while pagination is still going,
+// since prayer times are time-sensitive and shouldn't be buried behind
+// loading every older post first.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'widgets' } | { kind: 'caughtUp' };
 
 // The screen is a vertical pager of full-screen sections - scroll DOWN to
 // move between them, one full screen at a time. Home's own content (the
@@ -81,6 +91,13 @@ export default function FeedScreen() {
   // (and other non-staff roles) can still repost from the feed, but never
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
+
+  // A student on a regular (non-orphan) school has no composer here at
+  // all - that empty space at the top of Home is put to use instead with
+  // two glanceable cards (today's attendance, today's classes) rather than
+  // adding yet another menu entry for them. Orphan schools have no
+  // class/attendance concept, same gating as these cards' dashboard use.
+  const showStudentCards = user?.role === 'student' && !isOrphanSchoolUser(user) && !!token;
 
   // --- Outer section pager (Home / Shop / Charity), vertical -------------
   const [outerHeight, setOuterHeight] = useState(0);
@@ -122,6 +139,7 @@ export default function FeedScreen() {
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
+    if (posts.length > 0) items.push({ kind: 'widgets' });
     if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
@@ -336,6 +354,13 @@ export default function FeedScreen() {
         </TouchableOpacity>
       )}
 
+      {showStudentCards && (
+        <View style={styles.studentCardsWrap}>
+          <TodayAttendanceCard token={token!} />
+          <UpcomingClassesCard token={token!} />
+        </View>
+      )}
+
       <View style={styles.deckWrap} onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}>
         {loading ? (
           <View style={styles.centerFill}>
@@ -345,7 +370,7 @@ export default function FeedScreen() {
           <FlatList
             ref={listRef}
             data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             horizontal
             showsHorizontalScrollIndicator={false}
             decelerationRate="fast"
@@ -366,6 +391,8 @@ export default function FeedScreen() {
             renderItem={({ item, index: itemIndex }) =>
               item.kind === 'caughtUp' ? (
                 <CaughtUpCard height={cardHeight} active={itemIndex === index} />
+              ) : item.kind === 'widgets' ? (
+                <WidgetCarousel height={cardHeight} active={itemIndex === index} />
               ) : (
                 <FeedDeckCard
                   post={item.post}
@@ -470,6 +497,8 @@ const styles = StyleSheet.create({
   },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
+
+  studentCardsWrap: { paddingHorizontal: 16, marginBottom: 4 },
 
   // The bottom tab bar is a normal docked element (MainTabs' custom TabBar
   // has no position:'absolute'), so it already gets its own space outside

@@ -198,11 +198,11 @@ function IdCardIcon({ color }: { color: string }) {
     </Svg>
   );
 }
-function PencilIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
+function CameraIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2.4} strokeLinejoin="round" />
-      <Path d="M13 7l4 4" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2.2} />
     </Svg>
   );
 }
@@ -228,7 +228,6 @@ function ArrowRight({ color, size = 18 }: { color: string; size?: number }) {
 // built and reachable by route, just hidden from the menu until the admin
 // asks for it back. To bring one back, remove its key from this set.
 const HIDDEN_FOR_NOW_KEYS = new Set([
-  'examCategories',
   'gradebookReview',
   'announcementReview',
   'lessonPlanReview',
@@ -256,7 +255,6 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   'analyticsExtended',
   'notifications',
   'fees',
-  'studentDocumentRequests',
   'studentServiceRequests',
 ]);
 
@@ -838,13 +836,13 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
               <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
             </View>
             <TouchableOpacity onPress={() => (navigation as any).navigate('Menu')} hitSlop={10} style={styles.avatarWrap}>
-              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} />
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={62} dotColor={null} />
               <TouchableOpacity
                 style={styles.avatarEditBadge}
                 onPress={() => (navigation as any).navigate('EditProfile')}
                 hitSlop={8}
               >
-                <PencilIcon color={EMERALD} size={11} />
+                <CameraIcon color={EMERALD} size={11} />
               </TouchableOpacity>
             </TouchableOpacity>
           </View>

@@ -63,6 +63,16 @@ function ArrowRightIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function ImageStackIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={7} width={15} height={13} rx={2} stroke={color} strokeWidth={2} />
+      <Path d="M7 3h13a1 1 0 0 1 1 1v13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={9} cy={12} r={1.4} fill={color} />
+      <Path d="M5 18l3.5-4 3 3 2-2.5L18 18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 function SuperAdminCard({
   icon,
@@ -183,6 +193,12 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           }
           desc={t('superadmin_dashboard.trash_desc', 'Deleted schools/admins - restore or purge within 30 days')}
           onPress={() => (navigation as any).navigate('SuperAdminTrash')}
+        />
+        <SuperAdminCard
+          icon={<ImageStackIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.announcements_title', 'Feed Widget Announcements')}
+          desc={t('superadmin_dashboard.announcements_desc', 'Upload image cards shown to every role in the Home feed')}
+          onPress={() => (navigation as any).navigate('SuperAdminAnnouncementUpload')}
         />
       </View>
     </DashboardShell>

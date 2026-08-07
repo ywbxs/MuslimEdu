@@ -45,28 +45,30 @@ export default function CaughtUpCard({ height, active }: { height: number; activ
       return;
     }
 
-    // Fixed-duration steps (300 + 350 + 350) instead of a spring for the
-    // icon, so the whole sequence always lands at exactly one second
-    // regardless of device/frame timing.
-    Animated.sequence([
+    // Short staggered overlap (80ms offset, 220ms steps) instead of a
+    // strict sequence - the old 300+350+350 fully-sequential steps took a
+    // full second to finish landing, which read as slow to reach "All
+    // caught up". Staggering keeps the same staged entrance feel (card,
+    // then icon, then text) while the whole thing settles in ~380ms.
+    Animated.stagger(80, [
       Animated.parallel([
-        Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
         Animated.timing(cardScale, {
           toValue: 1,
-          duration: 300,
+          duration: 220,
           easing: Easing.out(Easing.back(1.4)),
           useNativeDriver: true,
         }),
       ]),
       Animated.timing(iconScale, {
         toValue: 1,
-        duration: 350,
+        duration: 220,
         easing: Easing.out(Easing.back(1.7)),
         useNativeDriver: true,
       }),
       Animated.parallel([
-        Animated.timing(textOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(textTranslateY, { toValue: 0, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(textOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(textTranslateY, { toValue: 0, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]),
     ]).start();
   }, [active, cardOpacity, cardScale, iconScale, textOpacity, textTranslateY]);

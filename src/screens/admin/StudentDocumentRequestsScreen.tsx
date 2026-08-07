@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useOfflineQueue } from '../../context/OfflineQueueContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import {
   AdminDocumentRequest,
@@ -21,12 +22,20 @@ import {
   issueAdminDocument,
   rejectAdminDocument,
 } from '../../services/studentPortalService';
+import { enqueueAdminDocumentIssue, enqueueAdminDocumentReject } from '../../services/offlineQueue';
 
 /**
  * M5 student portal — admin fulfillment of student document requests.
  * Backend: StudentPortalController::adminDocumentList/adminDocumentIssue/
  * adminDocumentReject, verified live this session (issue + reject both
  * tested end-to-end against seeded requests).
+ *
+ * Offline: the list already falls back to the last-cached response via
+ * cacheThenNetwork (see fetchAdminDocumentRequests). Issuing/rejecting a
+ * request now also works offline - both are queued through the same
+ * offline outbox exams/attendance use (offlineQueue.ts) and replayed
+ * automatically once back online, so an admin working through a batch of
+ * requests isn't blocked by a flaky connection.
  */
 
 const BORDER = '#E4E9E5';
@@ -47,6 +56,7 @@ export default function StudentDocumentRequestsScreen() {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { t } = useLocale();
+  const { isOnline } = useOfflineQueue();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +106,15 @@ export default function StudentDocumentRequestsScreen() {
             if (!token) return;
             setBusyId(req.id);
             try {
-              await issueAdminDocument(token, req.id);
+              if (!isOnline) {
+                // Queue it - offlineQueue auto-flushes through this same
+                // issueAdminDocument() the moment connectivity returns.
+                // The status is known regardless of the network, so update
+                // it locally now rather than waiting for the sync.
+                enqueueAdminDocumentIssue(token, req.id);
+              } else {
+                await issueAdminDocument(token, req.id);
+              }
               setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'issued' } : r)));
             } catch (e: any) {
               Alert.alert(
@@ -128,7 +146,11 @@ export default function StudentDocumentRequestsScreen() {
     }
     setRejecting(true);
     try {
-      await rejectAdminDocument(token, rejectTarget.id, rejectReason.trim());
+      if (!isOnline) {
+        enqueueAdminDocumentReject(token, rejectTarget.id, rejectReason.trim());
+      } else {
+        await rejectAdminDocument(token, rejectTarget.id, rejectReason.trim());
+      }
       setRequests((prev) =>
         prev.map((r) =>
           r.id === rejectTarget.id ? { ...r, status: 'rejected', rejected_reason: rejectReason.trim() } : r,
@@ -181,6 +203,17 @@ export default function StudentDocumentRequestsScreen() {
           </Text>
         </View>
       </View>
+
+      {!isOnline ? (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            {t(
+              'admin_document_requests.offline_banner',
+              "You're offline - showing your last saved requests. Issuing or rejecting a request will sync automatically once you're back online.",
+            )}
+          </Text>
+        </View>
+      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
         {(['requested', 'issued', 'rejected', 'all'] as Filter[]).map((f) => (
@@ -318,6 +351,9 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+
+  offlineBanner: { backgroundColor: '#FEF3C7', paddingHorizontal: 16, paddingVertical: 10 },
+  offlineBannerText: { color: WARN, fontSize: 12, lineHeight: 16, fontWeight: '600' },
 
   filterRow: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: BORDER },
   filterRowContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },

@@ -27,6 +27,10 @@ const ACTION_LABELS: Record<QueuedActionKind, string> = {
   teacher_orphan_report_submit: 'Teacher Orphan Report',
   attendance_submit: 'Attendance Submission',
   attendance_scan: 'QR Attendance Scan',
+  examination_save: 'Examination',
+  examination_results_save: 'Examination Grades',
+  admin_document_issue: 'Document Issued',
+  admin_document_reject: 'Document Rejected',
 };
 
 function IconChevronLeft({ color }: { color: string }) {

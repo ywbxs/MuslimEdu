@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline, Path } from 'react-native-svg';
+import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -19,24 +19,21 @@ const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const DANGER = COLORS.danger;
 const DANGER_SOFT = 'rgba(239,68,68,0.1)';
-const STRIPE = '#F7FAF8';
 
 /**
  * Student: read-only weekly timetable, scoped by the backend to this
  * student's enrolled section (AcademicScheduleController::mine, routed as
- * POST /my_schedules). A registrar-style table, same shape as the PDF
- * export below (Day, Time, Code, Subject, Room, Campus, Section, Unit,
- * Instructor) - scrolls horizontally on a phone-width screen instead of
- * cutting off or wrapping columns. The backend returns one row per single
- * day a class meets (so a class held Mon/Wed/Fri is 3 separate rows with
- * the same subject/section/time); groupIntoRows below merges same-class
- * rows across days into one row with a combined day code ("MWF"), sorted
- * by the earliest day + start time it occurs.
+ * POST /my_schedules).
  *
- * Spatial/glass design pass: same data + PDF export as before, reskinned
- * onto the app-wide glass design system (GlassBackground canvas + the
- * theme/glass color/radius/shadow tokens) instead of hardcoded hex, plus a
- * stats strip so the level of detail matches the table underneath it.
+ * Bento/spatial card list, grouped by full weekday (mirrors
+ * TeacherMyScheduleScreen's layout exactly) instead of the earlier
+ * registrar-style horizontal-scroll table - the day is a full section
+ * header ("Monday", not a compact "M"/"MWF" pill) and every class is its
+ * own detailed card (time, subject, code, section, room, campus, unit,
+ * instructor), so nothing is summarized down to a badge the way a table
+ * cell or an avatar-style day chip would. PDF export still combines a
+ * class's multiple weekly meeting days into one row (day code column) -
+ * that abbreviation only exists in the exported document, never on screen.
  */
 
 const DAY_ORDER: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -50,12 +47,16 @@ const DAY_ABBREV: Record<Day, string> = {
   saturday: 'S',
 };
 
-interface ScheduleRow {
+function dayLabel(t: (key: string, fallback: string) => string, day: Day): string {
+  return t(`student_schedule.day_${day}`, day.charAt(0).toUpperCase() + day.slice(1));
+}
+
+interface PdfRow {
   key: string;
-  code: string;
   dayCode: string;
   sortDayIndex: number;
   time: string;
+  code: string;
   subject: string;
   room: string;
   campus: string;
@@ -74,17 +75,18 @@ function formatTime12h(hhmm: string): string {
   return `${h}:${m} ${suffix}`;
 }
 
-function formatUnit(units: AcademicSchedule['units']): string {
-  if (units === null || units === undefined || units === '') return '—';
+function formatUnit(units: AcademicSchedule['units']): string | null {
+  if (units === null || units === undefined || units === '') return null;
   const n = Number(units);
   if (Number.isNaN(n)) return String(units);
   return Number.isInteger(n) ? String(n) : String(n).replace(/\.?0+$/, '');
 }
 
-// Groups schedule rows that are the same class meeting on different days
-// (same subject/section/room/teacher/time) into one row with a combined day
-// code, e.g. Mon+Wed+Fri -> "MWF".
-function groupIntoRows(rows: AcademicSchedule[]): ScheduleRow[] {
+// PDF export only - groups the same class meeting on different days (same
+// subject/section/room/teacher/time) into one exported row with a combined
+// day code, e.g. Mon+Wed+Fri -> "MWF". Never used for the on-screen list,
+// which shows every day in full.
+function groupForPdf(rows: AcademicSchedule[]): PdfRow[] {
   const groups = new Map<string, AcademicSchedule[]>();
   rows.forEach((r) => {
     const key = [r.code, r.subject_id, r.section_id, r.room_id, r.teacher_id, r.starts_at, r.ends_at].join('|');
@@ -99,15 +101,15 @@ function groupIntoRows(rows: AcademicSchedule[]): ScheduleRow[] {
     const dayCode = dayIndexes.map((i) => DAY_ABBREV[DAY_ORDER[i]]).join('');
     return {
       key: group.map((g) => g.id).join('-'),
-      code: first.code,
       dayCode,
       sortDayIndex: dayIndexes[0] ?? 0,
       time: `${formatTime12h(first.starts_at)} - ${formatTime12h(first.ends_at)}`,
+      code: first.code,
       subject: first.subject_name ?? first.code,
       room: first.room_name ?? '—',
       campus: first.campus_name ?? '—',
       section: first.section_name ?? '—',
-      unit: formatUnit(first.units),
+      unit: formatUnit(first.units) ?? '—',
       instructor: first.teacher_name ?? '—',
     };
   });
@@ -117,7 +119,7 @@ function groupIntoRows(rows: AcademicSchedule[]): ScheduleRow[] {
 
 function IconChevronLeft({ color }: { color: string }) {
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
@@ -154,55 +156,46 @@ function IconClock({ color, size = 20 }: { color: string; size?: number }) {
     </Svg>
   );
 }
-
-// Column order/labels are shared with the PDF export below, but the widths
-// aren't: on-screen widths are sized in dp for touch/legibility, while the
-// PDF's hand-rolled writer (see buildTablePdf) lays out in points on a fixed
-// ~532pt-wide Letter page - reusing the on-screen widths there would run
-// columns off the page, so each column carries both.
-interface Column {
-  key: keyof Pick<ScheduleRow, 'dayCode' | 'time' | 'code' | 'subject' | 'room' | 'campus' | 'section' | 'unit' | 'instructor'>;
-  labelKey: string;
-  fallback: string;
-  width: number;
-  pdfWidth: number;
-}
-
-const COLUMNS: Column[] = [
-  { key: 'dayCode', labelKey: 'student_schedule.col_day', fallback: 'Day', width: 52, pdfWidth: 32 },
-  { key: 'time', labelKey: 'student_schedule.col_time', fallback: 'Time', width: 128, pdfWidth: 68 },
-  { key: 'code', labelKey: 'student_schedule.col_code', fallback: 'Code', width: 76, pdfWidth: 45 },
-  { key: 'subject', labelKey: 'student_schedule.col_subject', fallback: 'Subject', width: 150, pdfWidth: 110 },
-  { key: 'room', labelKey: 'student_schedule.col_room', fallback: 'Room', width: 84, pdfWidth: 50 },
-  { key: 'campus', labelKey: 'student_schedule.col_campus', fallback: 'Campus', width: 100, pdfWidth: 65 },
-  { key: 'section', labelKey: 'student_schedule.col_section', fallback: 'Section', width: 76, pdfWidth: 40 },
-  { key: 'unit', labelKey: 'student_schedule.col_unit', fallback: 'Unit', width: 60, pdfWidth: 28 },
-  { key: 'instructor', labelKey: 'student_schedule.col_instructor', fallback: 'Instructor', width: 140, pdfWidth: 80 },
-];
-const TABLE_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
-
-function TableSkeleton() {
+function IconDoor({ color }: { color: string }) {
   return (
-    <View style={styles.table}>
-      <View style={styles.headerRow}>
-        {COLUMNS.map((c) => (
-          <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
-            <Skeleton width="70%" height={11} borderRadius={4} />
-          </View>
-        ))}
-      </View>
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={styles.dataRow}>
-          {COLUMNS.map((c) => (
-            <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
-              <Skeleton width="80%" height={13} borderRadius={4} />
-            </View>
-          ))}
-        </View>
-      ))}
-    </View>
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1={6} y1={21} x2={20} y2={21} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx={13} cy={13} r={0.8} stroke={color} strokeWidth={2} />
+    </Svg>
   );
 }
+function IconMapPin({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 21s7-6.6 7-11.5A7 7 0 0 0 5 9.5C5 14.4 12 21 12 21Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={12} cy={9.5} r={2.3} stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+function IconPerson({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={3.4} stroke={color} strokeWidth={2} />
+      <Path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// Column labels shared with the PDF export's hand-rolled writer (see
+// buildTablePdf) - laid out in points on a fixed ~532pt-wide Letter page.
+type PdfColumnKey = keyof Omit<PdfRow, 'key' | 'sortDayIndex'>;
+const PDF_COLUMNS: { key: PdfColumnKey; labelKey: string; fallback: string; pdfWidth: number }[] = [
+  { key: 'dayCode', labelKey: 'student_schedule.col_day', fallback: 'Day', pdfWidth: 32 },
+  { key: 'time', labelKey: 'student_schedule.col_time', fallback: 'Time', pdfWidth: 68 },
+  { key: 'code', labelKey: 'student_schedule.col_code', fallback: 'Code', pdfWidth: 45 },
+  { key: 'subject', labelKey: 'student_schedule.col_subject', fallback: 'Subject', pdfWidth: 110 },
+  { key: 'room', labelKey: 'student_schedule.col_room', fallback: 'Room', pdfWidth: 50 },
+  { key: 'campus', labelKey: 'student_schedule.col_campus', fallback: 'Campus', pdfWidth: 65 },
+  { key: 'section', labelKey: 'student_schedule.col_section', fallback: 'Section', pdfWidth: 40 },
+  { key: 'unit', labelKey: 'student_schedule.col_unit', fallback: 'Unit', pdfWidth: 28 },
+  { key: 'instructor', labelKey: 'student_schedule.col_instructor', fallback: 'Instructor', pdfWidth: 80 },
+];
 
 function StatTile({ icon, value, label }: { icon: React.ReactElement; value: string; label: string }) {
   return (
@@ -211,6 +204,18 @@ function StatTile({ icon, value, label }: { icon: React.ReactElement; value: str
       <View style={{ flex: 1 }}>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <Skeleton width={50} height={15} borderRadius={4} />
+      <View style={{ flex: 1, marginLeft: 24 }}>
+        <Skeleton width="55%" height={15} borderRadius={4} style={{ marginBottom: 8 }} />
+        <Skeleton width="75%" height={12} borderRadius={4} />
       </View>
     </View>
   );
@@ -256,13 +261,20 @@ export default function StudentScheduleScreen() {
     load({ silent: true });
   };
 
-  const scheduleRows = useMemo(() => groupIntoRows(rows), [rows]);
+  // On-screen: full day-grouped detail, same shape as TeacherMyScheduleScreen
+  // - every weekday a class meets gets its own full-name section, every
+  // class its own detailed card. No abbreviation, no compact day badge.
+  const grouped = useMemo(
+    () =>
+      DAY_ORDER.map((day) => ({
+        day,
+        items: rows.filter((r) => r.day_of_week === day).sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
+      })).filter((g) => g.items.length > 0),
+    [rows]
+  );
 
-  // Detail strip above the table: total weekly meetings, distinct subjects,
-  // and total weekly hours - the same underlying rows, just summarized so
-  // the screen reads as more than a bare table at a glance.
   const stats = useMemo(() => {
-    const subjectCount = new Set(scheduleRows.map((r) => r.subject)).size;
+    const subjectCount = new Set(rows.map((r) => r.subject_name ?? r.code)).size;
     const totalMinutes = rows.reduce((sum, r) => {
       const [sh, sm] = r.starts_at.slice(0, 5).split(':').map(Number);
       const [eh, em] = r.ends_at.slice(0, 5).split(':').map(Number);
@@ -275,16 +287,17 @@ export default function StudentScheduleScreen() {
       subjects: subjectCount,
       hoursLabel: hours > 0 ? (Number.isInteger(hours) ? String(hours) : hours.toFixed(1)) : '—',
     };
-  }, [rows, scheduleRows]);
+  }, [rows]);
 
   const handleExportPdf = async () => {
-    if (scheduleRows.length === 0 || isExporting) return;
+    const pdfRows = groupForPdf(rows);
+    if (pdfRows.length === 0 || isExporting) return;
     setIsExporting(true);
     try {
       const pdf = buildTablePdf(
         t('student_schedule.title', 'My Schedule'),
-        COLUMNS.map((c) => ({ label: t(c.labelKey, c.fallback), width: c.pdfWidth })),
-        scheduleRows.map((r) => COLUMNS.map((c) => r[c.key]))
+        PDF_COLUMNS.map((c) => ({ label: t(c.labelKey, c.fallback), width: c.pdfWidth })),
+        pdfRows.map((r) => PDF_COLUMNS.map((c) => r[c.key]))
       );
       const fileName = `my-schedule-${Date.now()}.pdf`;
       await saveTextFileToDevice(pdf, fileName, 'ascii');
@@ -316,13 +329,13 @@ export default function StudentScheduleScreen() {
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={handleExportPdf}
-          disabled={isExporting || scheduleRows.length === 0}
+          disabled={isExporting || rows.length === 0}
           hitSlop={10}
         >
           {isExporting ? (
             <ActivityIndicator size="small" color={EMERALD} />
           ) : (
-            <IconExport color={scheduleRows.length === 0 ? SUBTLE : EMERALD} />
+            <IconExport color={rows.length === 0 ? SUBTLE : EMERALD} />
           )}
         </TouchableOpacity>
       </View>
@@ -340,9 +353,9 @@ export default function StudentScheduleScreen() {
               </View>
             ))}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator>
-            <TableSkeleton />
-          </ScrollView>
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
         </ScrollView>
       ) : (
         <ScrollView
@@ -355,7 +368,7 @@ export default function StudentScheduleScreen() {
             </View>
           ) : null}
 
-          {!error && scheduleRows.length === 0 ? (
+          {!error && grouped.length === 0 ? (
             <View style={styles.emptyWrap}>
               <View style={styles.emptyIconWrap}>
                 <IconCalendar color={EMERALD} size={30} />
@@ -367,7 +380,7 @@ export default function StudentScheduleScreen() {
             </View>
           ) : null}
 
-          {scheduleRows.length > 0 ? (
+          {grouped.length > 0 ? (
             <>
               <View style={styles.statsRow}>
                 <StatTile
@@ -387,40 +400,64 @@ export default function StudentScheduleScreen() {
                 />
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator>
-                <View style={styles.table}>
-                  <View style={styles.headerRow}>
-                    {COLUMNS.map((c) => (
-                      <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
-                        <Text style={styles.headerCellText} numberOfLines={1}>
-                          {t(c.labelKey, c.fallback)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {scheduleRows.map((row, i) => (
-                    <View key={row.key} style={[styles.dataRow, i % 2 === 1 && styles.dataRowStripe]}>
-                      {COLUMNS.map((c) => (
-                        <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
-                          {c.key === 'dayCode' ? (
-                            <View style={styles.dayPill}>
-                              <Text style={styles.dayPillText}>{row.dayCode || '—'}</Text>
-                            </View>
-                          ) : (
-                            <Text
-                              style={[styles.dataCellText, c.key === 'subject' && styles.dataCellTextStrong]}
-                              numberOfLines={2}
-                            >
-                              {row[c.key]}
-                            </Text>
-                          )}
+              {grouped.map((g) => (
+                <View key={g.day} style={styles.dayGroup}>
+                  <Text style={styles.dayGroupTitle}>{dayLabel(t, g.day)}</Text>
+                  {g.items.map((item) => {
+                    const unit = formatUnit(item.units);
+                    return (
+                      <View key={item.id} style={styles.card}>
+                        <View style={styles.time}>
+                          <Text style={styles.timeText}>{item.starts_at.slice(0, 5)}</Text>
+                          <Text style={styles.to}>{t('student_schedule.to', 'to')}</Text>
+                          <Text style={styles.timeText}>{item.ends_at.slice(0, 5)}</Text>
                         </View>
-                      ))}
-                    </View>
-                  ))}
+                        <View style={styles.line} />
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.cardTitleRow}>
+                            <Text style={styles.cardTitle} numberOfLines={1}>{item.subject_name ?? item.code}</Text>
+                            <View style={[styles.badge, styles.badgeCode]}>
+                              <Text style={[styles.badgeText, styles.badgeTextCode]}>{item.code}</Text>
+                            </View>
+                          </View>
+                          <View style={styles.metaRow}>
+                            {item.teacher_name ? (
+                              <View style={styles.badge}>
+                                <IconPerson color={SUBTLE} />
+                                <Text style={styles.badgeText}>{item.teacher_name}</Text>
+                              </View>
+                            ) : null}
+                            {item.room_name ? (
+                              <View style={styles.badge}>
+                                <IconDoor color={SUBTLE} />
+                                <Text style={styles.badgeText}>{item.room_name}</Text>
+                              </View>
+                            ) : null}
+                            {item.campus_name ? (
+                              <View style={styles.badge}>
+                                <IconMapPin color={SUBTLE} />
+                                <Text style={styles.badgeText}>{item.campus_name}</Text>
+                              </View>
+                            ) : null}
+                            {item.section_name ? (
+                              <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{item.section_name}</Text>
+                              </View>
+                            ) : null}
+                            {unit ? (
+                              <View style={styles.badge}>
+                                <Text style={styles.badgeText}>
+                                  {t('student_schedule.unit_badge', '{unit} unit').replace('{unit}', unit)}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
-              </ScrollView>
+              ))}
             </>
           ) : null}
         </ScrollView>
@@ -446,9 +483,7 @@ const styles = StyleSheet.create({
 
   outerScroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
 
-  // --- Detail strip: same data as the table below, summarized so the
-  // screen reads as more than a bare table at a glance. ---
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   statTile: {
     flex: 1,
     flexDirection: 'row',
@@ -472,43 +507,41 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 17, fontWeight: '800', color: INK },
   statLabel: { fontSize: 10.5, color: SUBTLE, marginTop: 1 },
 
-  // --- Registrar-style table: scrolls horizontally so every column (Day,
-  // Time, Code, Subject, Room, Campus, Section, Unit, Instructor) stays
-  // legible instead of getting cut off or wrapped on a narrow phone. ---
-  table: {
-    width: TABLE_WIDTH,
+  // --- Day-grouped bento cards: each weekday a class meets gets its own
+  // full-name section header, each class its own detailed card. ---
+  dayGroup: { marginBottom: 18 },
+  dayGroupTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.md,
+    padding: 14,
+    marginBottom: 9,
     borderWidth: 1,
     borderColor: HAIRLINE,
-    overflow: 'hidden',
     ...SHADOW.level1,
   },
-  headerRow: {
+  time: { width: 62 },
+  timeText: { fontSize: 14, fontWeight: '800', color: INK },
+  to: { fontSize: 10, color: SUBTLE, marginVertical: 2 },
+  line: { width: 1, height: 40, backgroundColor: EMERALD, marginHorizontal: 12 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
+  cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: INK },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  badge: {
     flexDirection: 'row',
-    backgroundColor: EMERALD_SOFT,
-    borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
-  },
-  headerCell: { paddingHorizontal: 10, paddingVertical: 10, justifyContent: 'center' },
-  headerCellText: { fontSize: 11, fontWeight: '800', color: EMERALD, textTransform: 'uppercase', letterSpacing: 0.4 },
-  dataRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
-  },
-  dataRowStripe: { backgroundColor: STRIPE },
-  dataCell: { paddingHorizontal: 10, paddingVertical: 12, justifyContent: 'center' },
-  dataCellText: { fontSize: 13, color: INK },
-  dataCellTextStrong: { fontWeight: '700' },
-  dayPill: {
+    alignItems: 'center',
+    gap: 5,
     alignSelf: 'flex-start',
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: '#F5F7F6',
     borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  dayPillText: { fontSize: 11.5, fontWeight: '800', color: EMERALD, letterSpacing: 0.3 },
+  badgeText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  badgeCode: { backgroundColor: EMERALD_SOFT },
+  badgeTextCode: { color: EMERALD, fontWeight: '800', fontSize: 11 },
 
   emptyWrap: { alignItems: 'center', paddingVertical: 40 },
   emptyIconWrap: {
