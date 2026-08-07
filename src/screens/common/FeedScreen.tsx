@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import {
   Post,
   PostPrivacy,
@@ -30,6 +31,8 @@ import UserProfileModal from '../../components/UserProfileModal';
 import FeedDeckCard from '../../components/feed/FeedDeckCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
+import TodayAttendanceCard from '../../components/TodayAttendanceCard';
+import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -81,6 +84,13 @@ export default function FeedScreen() {
   // (and other non-staff roles) can still repost from the feed, but never
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
+
+  // A student on a regular (non-orphan) school has no composer here at
+  // all - that empty space at the top of Home is put to use instead with
+  // two glanceable cards (today's attendance, today's classes) rather than
+  // adding yet another menu entry for them. Orphan schools have no
+  // class/attendance concept, same gating as these cards' dashboard use.
+  const showStudentCards = user?.role === 'student' && !isOrphanSchoolUser(user) && !!token;
 
   // --- Outer section pager (Home / Shop / Charity), vertical -------------
   const [outerHeight, setOuterHeight] = useState(0);
@@ -336,6 +346,13 @@ export default function FeedScreen() {
         </TouchableOpacity>
       )}
 
+      {showStudentCards && (
+        <View style={styles.studentCardsWrap}>
+          <TodayAttendanceCard token={token!} />
+          <UpcomingClassesCard token={token!} />
+        </View>
+      )}
+
       <View style={styles.deckWrap} onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}>
         {loading ? (
           <View style={styles.centerFill}>
@@ -470,6 +487,8 @@ const styles = StyleSheet.create({
   },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
+
+  studentCardsWrap: { paddingHorizontal: 16, marginBottom: 4 },
 
   // The bottom tab bar is a normal docked element (MainTabs' custom TabBar
   // has no position:'absolute'), so it already gets its own space outside

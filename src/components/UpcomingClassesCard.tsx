@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
 import { fetchMySchedule, AcademicSchedule, Day } from '../services/academicScheduleService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
@@ -15,15 +16,22 @@ function formatTime12h(hhmm: string): string {
   return `${h}:${m} ${suffix}`;
 }
 
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
-const INK = '#1C1C1E';
-const SUBTLE = '#8A9099';
-const HAIRLINE = '#EDEEF0';
+// Dark hero gradient - same black tone the Admin/Teacher/Student dashboard
+// heroes already use (HERO_TOP/HERO_BOTTOM), so this card reads as part of
+// the same visual language wherever it's dropped (dashboard, feed).
+const GRADIENT_TOP = '#1C1C1E';
+const GRADIENT_BOTTOM = '#000000';
+const PALE_GREEN = '#8FD9AE';
+const WHITE = '#FFFFFF';
+const FAINT = 'rgba(255,255,255,0.6)';
+const FAINTER = 'rgba(255,255,255,0.55)';
+const GLASS_FILL = 'rgba(255,255,255,0.12)';
+const HAIRLINE = 'rgba(255,255,255,0.14)';
+const SKELETON_BASE = 'rgba(255,255,255,0.14)';
 
 const DAY_INDEX_TO_KEY: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-function CalendarIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
+function CalendarIcon({ color = PALE_GREEN, size = 22 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
@@ -33,7 +41,7 @@ function CalendarIcon({ color = EMERALD, size = 22 }: { color?: string; size?: n
     </Svg>
   );
 }
-function ArrowRightIcon({ color = EMERALD, size = 16 }: { color?: string; size?: number }) {
+function ArrowRightIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
@@ -41,7 +49,7 @@ function ArrowRightIcon({ color = EMERALD, size = 16 }: { color?: string; size?:
     </Svg>
   );
 }
-function DoorIcon({ color = SUBTLE, size = 13 }: { color?: string; size?: number }) {
+function DoorIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -50,7 +58,7 @@ function DoorIcon({ color = SUBTLE, size = 13 }: { color?: string; size?: number
     </Svg>
   );
 }
-function PersonIcon({ color = SUBTLE, size = 13 }: { color?: string; size?: number }) {
+function PersonIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
@@ -58,7 +66,7 @@ function PersonIcon({ color = SUBTLE, size = 13 }: { color?: string; size?: numb
     </Svg>
   );
 }
-function ClockIcon({ color = EMERALD, size = 13 }: { color?: string; size?: number }) {
+function ClockIcon({ color = PALE_GREEN, size = 13 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
@@ -79,6 +87,10 @@ function ClockIcon({ color = EMERALD, size = 13 }: { color?: string; size?: numb
  * uses - already scoped server-side to this student's enrolled section
  * and published-only, already denormalized with subject/teacher/room
  * names. "Today" is computed client-side from the device's own date.
+ *
+ * Dark gradient card - matches the dashboards' own hero black gradient
+ * instead of a plain white card, so it reads as a distinct highlight
+ * wherever it's dropped (dashboard, feed).
  */
 export default function UpcomingClassesCard({ token }: { token: string }) {
   const navigation = useNavigation();
@@ -107,34 +119,34 @@ export default function UpcomingClassesCard({ token }: { token: string }) {
 
   if (isLoading) {
     return (
-      <View style={styles.card}>
+      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
         <View style={styles.headerRow}>
-          <SkeletonCircle size={42} />
+          <SkeletonCircle size={42} baseColor={SKELETON_BASE} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Skeleton width={120} height={16} style={{ marginBottom: 6 }} />
-            <Skeleton width={90} height={12} />
+            <Skeleton width={120} height={16} baseColor={SKELETON_BASE} style={{ marginBottom: 6 }} />
+            <Skeleton width={90} height={12} baseColor={SKELETON_BASE} />
           </View>
         </View>
-        <Skeleton width="100%" height={54} style={{ borderRadius: 14, marginTop: 14 }} />
-      </View>
+        <Skeleton width="100%" height={54} baseColor={SKELETON_BASE} style={{ borderRadius: 14, marginTop: 14 }} />
+      </LinearGradient>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.card}>
+      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load} activeOpacity={0.8}>
           <Text style={styles.retryBtnText}>Try again</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   const preview = todayClasses.slice(0, 3);
 
   return (
-    <View style={styles.card}>
+    <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
       <TouchableOpacity style={styles.headerRow} activeOpacity={0.85} onPress={goToSchedule}>
         <View style={styles.iconBox}>
           <CalendarIcon />
@@ -181,54 +193,53 @@ export default function UpcomingClassesCard({ token }: { token: string }) {
           ))}
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 18,
     marginBottom: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   iconBox: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: GLASS_FILL,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 16, fontWeight: '700', color: INK },
-  subtitle: { fontSize: 12, color: SUBTLE, marginTop: 2 },
+  title: { fontSize: 16, fontWeight: '700', color: WHITE },
+  subtitle: { fontSize: 12, color: FAINT, marginTop: 2 },
   arrowCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: GLASS_FILL,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  emptyText: { fontSize: 13, color: SUBTLE, marginTop: 16, lineHeight: 18 },
+  emptyText: { fontSize: 13, color: FAINT, marginTop: 16, lineHeight: 18 },
 
   rows: { marginTop: 14 },
   row: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: HAIRLINE },
   timeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
-  timeText: { fontSize: 12, fontWeight: '700', color: EMERALD },
-  subjectText: { fontSize: 14.5, fontWeight: '700', color: INK },
+  timeText: { fontSize: 12, fontWeight: '700', color: PALE_GREEN },
+  subjectText: { fontSize: 14.5, fontWeight: '700', color: WHITE },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 11.5, color: SUBTLE },
+  metaText: { fontSize: 11.5, color: FAINTER },
 
-  errorText: { color: '#E5484D', fontSize: 13, textAlign: 'center', marginBottom: 10 },
-  retryBtn: { alignSelf: 'center', backgroundColor: EMERALD_SOFT, paddingVertical: 9, paddingHorizontal: 20, borderRadius: 10 },
-  retryBtnText: { color: EMERALD, fontWeight: '700', fontSize: 13 },
+  errorText: { color: '#FF8A8A', fontSize: 13, textAlign: 'center', marginBottom: 10 },
+  retryBtn: { alignSelf: 'center', backgroundColor: GLASS_FILL, paddingVertical: 9, paddingHorizontal: 20, borderRadius: 10 },
+  retryBtnText: { color: WHITE, fontWeight: '700', fontSize: 13 },
 });
