@@ -256,7 +256,6 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   'analyticsExtended',
   'notifications',
   'fees',
-  'studentDocumentRequests',
   'studentServiceRequests',
 ]);
 

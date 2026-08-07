@@ -395,26 +395,42 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
     },
     // Document requests (report card/COR/certificate) don't apply to an
     // orphan school - there's no class-based academics to issue them from
-    // (same gating as My Progress/Schedule/ID Card above). Orphan children
-    // instead upload their own documents.
-    !isOrphan
-      ? {
-          key: 'documents',
-          title: t('student_dashboard.documents_title', 'Documents'),
-          description: t('student_dashboard.documents_desc', 'Request report cards, COR and certificates'),
-          icon: (c: string) => <DocumentIcon color={c} size={20} />,
-          onPress: () => (navigation as any).navigate('StudentDocuments'),
-        }
-      : {
-          key: 'uploadDocuments',
-          title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
-          description: t(
-            'student_dashboard.upload_documents_desc',
-            'Submit your ID, guardian consent and other files',
-          ),
-          icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
-          onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
-        },
+    // (same gating as My Progress/Schedule/ID Card above), so orphan
+    // children only get the upload tile. Regular schools get both: request
+    // an official document from the school, or upload one of their own
+    // (ID, medical records, etc.) - the two flows aren't mutually exclusive.
+    ...(!isOrphan
+      ? [
+          {
+            key: 'documents',
+            title: t('student_dashboard.documents_title', 'Documents'),
+            description: t('student_dashboard.documents_desc', 'Request report cards, COR and certificates'),
+            icon: (c: string) => <DocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentDocuments'),
+          },
+          {
+            key: 'uploadDocuments',
+            title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
+            description: t(
+              'student_dashboard.upload_documents_desc',
+              'Submit your ID, medical records and other files',
+            ),
+            icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
+          },
+        ]
+      : [
+          {
+            key: 'uploadDocuments',
+            title: t('student_dashboard.upload_documents_title', 'Upload Documents'),
+            description: t(
+              'student_dashboard.upload_documents_desc_orphan',
+              'Submit your ID, guardian consent and other files',
+            ),
+            icon: (c: string) => <UploadDocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentUploadDocuments'),
+          },
+        ]),
     {
       key: 'services',
       title: t('student_dashboard.services_title', 'Services'),

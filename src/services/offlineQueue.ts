@@ -31,7 +31,9 @@ export type QueuedActionKind =
   | 'attendance_submit'
   | 'attendance_scan'
   | 'examination_save'
-  | 'examination_results_save';
+  | 'examination_results_save'
+  | 'admin_document_issue'
+  | 'admin_document_reject';
 
 interface OrphanReportSubmitPayload {
   fields: { note: string; academic_rating: number; wellbeing_rating: number; report_month?: string };
@@ -72,13 +74,24 @@ interface ExaminationResultsSavePayload {
   results: ResultDraft[];
 }
 
+interface AdminDocumentIssuePayload {
+  documentId: number;
+}
+
+interface AdminDocumentRejectPayload {
+  documentId: number;
+  reason: string;
+}
+
 type QueuedActionPayload =
   | OrphanReportSubmitPayload
   | TeacherOrphanReportSubmitPayload
   | AttendanceSubmitPayload
   | AttendanceScanPayload
   | ExaminationSavePayload
-  | ExaminationResultsSavePayload;
+  | ExaminationResultsSavePayload
+  | AdminDocumentIssuePayload
+  | AdminDocumentRejectPayload;
 
 export interface QueuedAction {
   id: string;
@@ -183,6 +196,18 @@ async function runAction(action: QueuedAction): Promise<void> {
     const { saveExaminationResults } = await import('./examinationService');
     const payload = action.payload as ExaminationResultsSavePayload;
     await saveExaminationResults(action.token, payload.examinationId, payload.results);
+    return;
+  }
+  if (action.kind === 'admin_document_issue') {
+    const { issueAdminDocument } = await import('./studentPortalService');
+    const payload = action.payload as AdminDocumentIssuePayload;
+    await issueAdminDocument(action.token, payload.documentId);
+    return;
+  }
+  if (action.kind === 'admin_document_reject') {
+    const { rejectAdminDocument } = await import('./studentPortalService');
+    const payload = action.payload as AdminDocumentRejectPayload;
+    await rejectAdminDocument(action.token, payload.documentId, payload.reason);
     return;
   }
   throw new Error(`No offline queue executor registered for "${action.kind}".`);
@@ -306,6 +331,14 @@ export function enqueueExaminationResultsSave(
   results: ResultDraft[],
 ): QueuedAction {
   return enqueue('examination_results_save', token, { examinationId, results });
+}
+
+export function enqueueAdminDocumentIssue(token: string, documentId: number): QueuedAction {
+  return enqueue('admin_document_issue', token, { documentId });
+}
+
+export function enqueueAdminDocumentReject(token: string, documentId: number, reason: string): QueuedAction {
+  return enqueue('admin_document_reject', token, { documentId, reason });
 }
 
 export function getPendingCount(): number {
