@@ -248,8 +248,8 @@ export default function TeacherAttendanceRosterScreen() {
     fetchTeacherAttendanceStatuses(token)
       .then(setConfiguredStatuses)
       .catch(() => {
-        // Falls back to DEFAULT_STATUS_META - the quick-mark bar and swipe
-        // card still work with the original 5 statuses.
+        // Falls back to DEFAULT_STATUS_META - the swipe card still works
+        // with the original 5 statuses.
       });
   }, [token]);
 
@@ -317,14 +317,6 @@ export default function TeacherAttendanceRosterScreen() {
     const next = toISO(d);
     if (fromISO(next).getTime() > fromISO(toISO(new Date())).getTime()) return; // no future dates
     setDate(next);
-  };
-
-  const markAll = (status: AttendanceStatus) => {
-    const next: Record<number, AttendanceStatus> = {};
-    students.forEach((s) => {
-      next[s.student_id] = status;
-    });
-    setStatuses(next);
   };
 
   const markedCount = Object.keys(statuses).length;
@@ -419,41 +411,6 @@ export default function TeacherAttendanceRosterScreen() {
             {lockedByName
               ? t('teacher_attendance_roster.locked_by', 'Submitted by {name}. Ask an admin to unlock this day to make changes.').replace('{name}', lockedByName)
               : t('teacher_attendance_roster.locked_generic', 'This day has already been submitted. Ask an admin to unlock it to make changes.')}
-          </Text>
-        </View>
-      ) : null}
-
-      {!isLoading && students.length > 0 && !locked ? (
-        <View style={styles.quickBar}>
-          <Text style={styles.quickBarLabel}>{t('teacher_attendance_roster.quick_mark', 'Quick mark')}</Text>
-          <View style={styles.quickBarChipRow}>
-            {effectiveStatuses.map((s) => s.code).map((status) => {
-              const meta = statusMeta[status] ?? DEFAULT_STATUS_META.present;
-              return (
-                <TouchableOpacity
-                  key={status}
-                  style={[styles.quickBarChip, { backgroundColor: meta.soft, borderColor: meta.color }]}
-                  onPress={() => markAll(status)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.quickBarChipDot, { backgroundColor: meta.color }]} />
-                  <Text style={[styles.quickBarChipText, { color: meta.color }]}>{statusLabel(status)}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
-
-      {!isLoading && students.length > 0 && !locked ? (
-        <View style={styles.legendBar}>
-          <Text style={styles.legendText}>
-            {t('teacher_attendance_roster.swipe_legend_prefix', 'Swipe the card')}
-            {directionMeta.right ? ` - right: ${directionMeta.right.label}` : ''}
-            {directionMeta.left ? ` · left: ${directionMeta.left.label}` : ''}
-            {directionMeta.up ? ` · up: ${directionMeta.up.label}` : ''}
-            {directionMeta.down ? ` · down: ${directionMeta.down.label}` : ''}
-            {' · '}{t('teacher_attendance_roster.swipe_legend_suffix', 'tap for more / remarks')}
           </Text>
         </View>
       ) : null}
@@ -638,30 +595,6 @@ const styles = StyleSheet.create({
   },
   dateArrow: { paddingHorizontal: 18 },
   dateLabel: { fontSize: 14.5, fontWeight: '700', color: INK, minWidth: 140, textAlign: 'center' },
-
-  quickBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: GLASS_SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
-  },
-  quickBarLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
-  quickBarChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  quickBarChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    ...SHADOW.level1,
-  },
-  quickBarChipDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
-  quickBarChipText: { fontSize: 12, fontWeight: '700' },
-
-  legendBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: GLASS_SURFACE, borderBottomWidth: 1, borderBottomColor: GLASS_BORDER },
-  legendText: { fontSize: 11, color: SUBTLE, textAlign: 'center' },
 
   // flex-start, not 'center': centering re-balances against whatever space
   // is left above it, so an error/success banner appearing (shrinking that
