@@ -249,7 +249,6 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   'security',
   'orgStructure',
   'behaviorIncidents',
-  'examinations',
   'studentProgress',
   'integrationSettings',
   'localizationSettings',
