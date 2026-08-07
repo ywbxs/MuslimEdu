@@ -4,23 +4,17 @@
  * Phase 2 - unblocks the Materials library (spec SS5: "upload PDFs, presentations,
  * video, audio, worksheets, and references").
  *
- * The Materials backend already accepts any file type. The Materials UI could only
- * send photos, because `react-native-image-picker` was the only picker installed.
- * This module wraps both and picks the best available one at runtime:
- *
- *   - react-native-document-picker installed -> full PDF/video/audio/doc support
- *   - not installed                          -> transparent fallback to photos,
- *                                               with `degraded: true` so the caller
- *                                               can tell the user why
- *
- * That means you can merge this BEFORE running the native install, and the app
- * keeps building either way. No red screen if the pod/gradle step is pending.
- *
- * To enable full support:
- *   npm i react-native-document-picker
- *   cd ios && pod install && cd ..    # iOS only
- *   # then rebuild the app (JS-only reload is NOT enough for a native module)
+ * Single entry point (`pickFiles`) over `@react-native-documents/picker`, the
+ * document picker TeacherMaterialsScreen already uses directly. Both it and
+ * `react-native-image-picker` are real dependencies (see package.json), so
+ * this wraps them with static `require`/`import` calls only - Metro resolves
+ * its dependency graph by statically parsing `require`/`import` calls, so a
+ * *dynamic* `require(moduleName)` (a variable, not a string literal) fails
+ * the whole bundle with "Invalid call ... require(moduleName)" even when
+ * wrapped in try/catch, regardless of whether the module is installed.
  */
+import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 export interface PickedFile {
   uri: string;
@@ -34,23 +28,6 @@ export interface PickResult {
   cancelled: boolean;
   /** true when we had to fall back to the image-only picker */
   degraded: boolean;
-}
-
-function optionalRequire(moduleName: string): any {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    const mod = require(moduleName);
-    return mod?.default ?? mod;
-  } catch (e) {
-    return null;
-  }
-}
-
-const DocumentPicker = optionalRequire('react-native-document-picker');
-const ImagePicker = optionalRequire('react-native-image-picker');
-
-export function isDocumentPickerAvailable(): boolean {
-  return Boolean(DocumentPicker?.pick);
 }
 
 function guessMime(name: string, provided?: string | null): string {
@@ -78,11 +55,9 @@ function guessMime(name: string, provided?: string | null): string {
 
 async function pickWithDocumentPicker(allowMultiple: boolean): Promise<PickResult> {
   try {
-    const picked = allowMultiple
-      ? await DocumentPicker.pick({ allowMultiSelection: true, type: [DocumentPicker.types.allFiles] })
-      : [await DocumentPicker.pickSingle({ type: [DocumentPicker.types.allFiles] })];
+    const picked = await pick({ type: [types.allFiles], allowMultiSelection: allowMultiple });
 
-    const files: PickedFile[] = (picked ?? []).map((f: any) => ({
+    const files: PickedFile[] = (picked ?? []).map((f) => ({
       uri: f.uri,
       name: f.name ?? 'file',
       type: guessMime(f.name ?? '', f.type),
@@ -90,8 +65,8 @@ async function pickWithDocumentPicker(allowMultiple: boolean): Promise<PickResul
     }));
 
     return { files, cancelled: false, degraded: false };
-  } catch (err: any) {
-    if (DocumentPicker.isCancel?.(err)) {
+  } catch (err) {
+    if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
       return { files: [], cancelled: true, degraded: false };
     }
     throw err;
@@ -99,11 +74,7 @@ async function pickWithDocumentPicker(allowMultiple: boolean): Promise<PickResul
 }
 
 async function pickWithImagePicker(allowMultiple: boolean): Promise<PickResult> {
-  if (!ImagePicker?.launchImageLibrary) {
-    throw new Error('No file picker is available in this build.');
-  }
-
-  const res = await ImagePicker.launchImageLibrary({
+  const res = await launchImageLibrary({
     mediaType: 'mixed',
     selectionLimit: allowMultiple ? 0 : 1,
   });
@@ -115,8 +86,8 @@ async function pickWithImagePicker(allowMultiple: boolean): Promise<PickResult> 
     throw new Error(res.errorMessage ?? 'Could not open the photo library.');
   }
 
-  const files: PickedFile[] = (res?.assets ?? []).map((a: any) => ({
-    uri: a.uri,
+  const files: PickedFile[] = (res?.assets ?? []).map((a) => ({
+    uri: a.uri ?? '',
     name: a.fileName ?? `upload-${Date.now()}.jpg`,
     type: guessMime(a.fileName ?? '', a.type),
     size: a.fileSize ?? null,
@@ -125,12 +96,19 @@ async function pickWithImagePicker(allowMultiple: boolean): Promise<PickResult> 
   return { files, cancelled: false, degraded: true };
 }
 
-/** Single entry point. Use this everywhere instead of calling a picker directly. */
+/**
+ * Single entry point. Use this everywhere instead of calling a picker
+ * directly. Prefers the full document picker (PDFs, video, audio, office
+ * docs); if it fails for a reason other than the user cancelling (e.g. the
+ * native module isn't linked in this particular build), falls back to the
+ * photo-only picker so uploading isn't completely blocked.
+ */
 export async function pickFiles(allowMultiple = false): Promise<PickResult> {
-  if (isDocumentPickerAvailable()) {
-    return pickWithDocumentPicker(allowMultiple);
+  try {
+    return await pickWithDocumentPicker(allowMultiple);
+  } catch (err) {
+    return pickWithImagePicker(allowMultiple);
   }
-  return pickWithImagePicker(allowMultiple);
 }
 
 /** Ready to append straight onto a FormData for the materials upload endpoint. */

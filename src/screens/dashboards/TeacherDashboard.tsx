@@ -244,17 +244,24 @@ function QuickActionCard({
   title,
   description,
   badge,
+  solid,
   onPress,
 }: {
   icon: React.ReactElement;
   title: string;
   description: string;
   badge?: number;
+  solid?: boolean;
   onPress: () => void;
 }) {
+  const fg = solid ? '#FFFFFF' : EMERALD;
   return (
-    <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={onPress}>
-      <View style={styles.quickIconWrap}>
+    <TouchableOpacity
+      style={[styles.quickCard, solid ? styles.quickCardSolid : styles.quickCardSoft]}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
+      <View style={[styles.quickIconWrap, solid ? styles.quickIconWrapSolid : styles.quickIconWrapSoft]}>
         {icon}
         {!!badge && badge > 0 ? (
           <View style={styles.quickBadge}>
@@ -262,12 +269,13 @@ function QuickActionCard({
           </View>
         ) : null}
       </View>
-      <Text style={styles.quickTitle}>{title}</Text>
-      <Text style={styles.quickDescription}>{description}</Text>
-      <View style={styles.quickArrowButton}>
-        <ArrowRightIcon color={EMERALD} size={16} />
+      <Text style={[styles.quickTitle, solid ? styles.quickTitleSolid : null]}>{title}</Text>
+      <Text style={[styles.quickDescription, solid ? styles.quickDescriptionSolid : null]}>{description}</Text>
+      <View style={styles.quickArrowRow}>
+        <View style={[styles.quickArrowButton, solid ? styles.quickArrowButtonSolid : styles.quickArrowButtonSoft]}>
+          <ArrowRightIcon color={fg} size={16} />
+        </View>
       </View>
-      <View style={styles.quickAccentBar} />
     </TouchableOpacity>
   );
 }
@@ -356,6 +364,148 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
     );
   }, [t]);
 
+  // Quick Actions grid - built as an array (like AdminDashboard's Manage
+  // grid) so the first entry can always render as the highlighted "solid"
+  // card, matching the Manage screen's card design.
+  interface QuickAction {
+    key: string;
+    title: string;
+    description: string;
+    icon: (color: string) => React.ReactElement;
+    badge?: number;
+    onPress: () => void;
+  }
+  const quickActions: QuickAction[] = [
+    // My Reports - orphan teachers only.
+    ...(isOrphan
+      ? [
+          {
+            key: 'myReports',
+            title: t('teacher_dashboard.my_reports_title', 'My Reports'),
+            description: t('teacher_dashboard.my_reports_desc', 'View your report submissions'),
+            icon: (c: string) => <DocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('Reports'),
+          },
+        ]
+      : []),
+    // Academic-subsystem cards - hidden entirely for orphan schools (no
+    // classes/subjects/grading/curriculum there).
+    ...(!isOrphan
+      ? [
+          {
+            key: 'mySchedule',
+            title: t('teacher_dashboard.my_schedule_title', 'My Schedule'),
+            description: t('teacher_dashboard.my_schedule_desc', 'See your weekly class timetable'),
+            icon: (c: string) => <CalendarIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherMySchedule'),
+          },
+          {
+            key: 'takeAttendance',
+            title: t('teacher_dashboard.take_attendance_title', 'Take Attendance'),
+            description: t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes"),
+            icon: (c: string) => <ClipboardCheckIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherAttendanceClasses'),
+          },
+          {
+            key: 'enterGrades',
+            title: t('teacher_dashboard.enter_grades_title', 'Enter Grades'),
+            description: t('teacher_dashboard.enter_grades_desc', 'Record marks for your assigned subjects'),
+            icon: (c: string) => <GradeIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherGradebookClasses'),
+          },
+          {
+            key: 'announcements',
+            title: t('teacher_dashboard.announcements_title', 'Announcements'),
+            description: t('teacher_dashboard.announcements_desc', 'Post updates to your classes'),
+            icon: (c: string) => <AnnouncementIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherAnnouncements'),
+          },
+          {
+            key: 'behavior',
+            title: t('teacher_dashboard.behavior_title', 'Behavior & Discipline'),
+            description: t('teacher_dashboard.behavior_desc', 'Log and track student behavior incidents'),
+            icon: (c: string) => <ClipboardCheckIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('BehaviorIncidents'),
+          },
+          {
+            key: 'examinations',
+            title: t('teacher_dashboard.examinations_title', 'Examinations'),
+            description: t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades'),
+            icon: (c: string) => <AssessmentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('Examinations'),
+          },
+          {
+            key: 'studentProgress',
+            title: t('teacher_dashboard.student_progress_title', 'Student Progress'),
+            description: isQuranTrackingSchool
+              ? t(
+                  'teacher_dashboard.student_progress_desc_quran',
+                  'Attendance, grades, behavior, memorization in one view',
+                )
+              : t('teacher_dashboard.student_progress_desc', 'Attendance, grades, and behavior in one view'),
+            icon: (c: string) => <AssessmentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentProgress'),
+          },
+          {
+            key: 'lessonPlans',
+            title: t('teacher_dashboard.lesson_plans_title', 'Lesson Plans'),
+            description: t('teacher_dashboard.lesson_plans_desc', 'Draft, submit, and revise your lesson plans'),
+            icon: (c: string) => <LessonPlanIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherLessonPlans'),
+          },
+          {
+            key: 'assessments',
+            title: t('teacher_dashboard.assessments_title', 'Assessments'),
+            description: t(
+              'teacher_dashboard.assessments_desc',
+              'Create assignments, quizzes, and grade submissions',
+            ),
+            icon: (c: string) => <AssessmentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherAssessments'),
+          },
+          {
+            key: 'assessmentGrades',
+            title: t('teacher_dashboard.assessment_grades_title', 'Assessment Grades'),
+            description: t('teacher_dashboard.assessment_grades_desc', 'Weighted grade breakdown for your sections'),
+            icon: (c: string) => <StarIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherAssessmentGrades'),
+          },
+          {
+            key: 'materials',
+            title: t('teacher_dashboard.materials_title', 'Materials'),
+            description: t(
+              'teacher_dashboard.materials_desc',
+              'Share lecture notes, slides, and other resources',
+            ),
+            icon: (c: string) => <DocumentIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('TeacherMaterials'),
+          },
+        ]
+      : []),
+    {
+      key: 'notifications',
+      title: t('teacher_dashboard.notifications_title', 'Notifications'),
+      description: t('teacher_dashboard.notifications_desc', 'Stay updated with important alerts'),
+      icon: (c: string) => <BellIcon color={c} size={20} />,
+      badge: 0,
+      onPress: () => (navigation as any).navigate('Notifications'),
+    },
+    {
+      key: 'security',
+      title: t('teacher_dashboard.security_title', 'Security'),
+      description: t('teacher_dashboard.security_desc', 'Two-factor authentication and device sessions'),
+      icon: (c: string) => <IdCardIcon color={c} size={20} />,
+      onPress: () => (navigation as any).navigate('SecuritySettings'),
+    },
+    {
+      key: 'settings',
+      title: t('teacher_dashboard.settings_title', 'Settings'),
+      description: t('teacher_dashboard.settings_desc', 'Language, theme, privacy and password'),
+      icon: (c: string) => <GearIcon color={c} size={20} />,
+      onPress: () => (navigation as any).navigate('AccountSettings'),
+    },
+  ];
+
   // --- Overview stats: wired to real submission history (orphan-only). ---
   const history = status?.history ?? [];
   const reportsSubmitted = String(history.length);
@@ -402,8 +552,6 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
-          <Circle cx="85%" cy="12%" r="90" fill="rgba(255,255,255,0.04)" />
-          <Circle cx="15%" cy="30%" r="60" fill="rgba(255,255,255,0.03)" />
         </Svg>
       </Animated.View>
 
@@ -522,6 +670,15 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           </TouchableOpacity>
         ) : null}
 
+        {/* Today's class schedule preview - a quick reminder of what the
+            teacher is teaching today, without leaving Home. Regular schools
+            only - orphan schools have no class/schedule concept (same
+            gating as the academic Quick Action tiles below). fetchMySchedule
+            already resolves "mine" server-side by role, so this same
+            component works unchanged for a teacher. Shown above Quick
+            Actions so "what's happening today" is the first thing seen. */}
+        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
+
         {/* Quick Actions */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{t('teacher_dashboard.quick_actions', 'Quick Actions')}</Text>
@@ -535,125 +692,18 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
         </View>
 
         <View style={styles.quickRow}>
-          {/* My Reports - orphan students only */}
-          {isOrphan ? (
+          {quickActions.map((action, index) => (
             <QuickActionCard
-              icon={<DocumentIcon color={EMERALD} size={20} />}
-              title={t('teacher_dashboard.my_reports_title', 'My Reports')}
-              description={t('teacher_dashboard.my_reports_desc', 'View your report submissions')}
-              onPress={() => (navigation as any).navigate('Reports')}
+              key={action.key}
+              icon={action.icon(index === 0 ? '#FFFFFF' : EMERALD)}
+              title={action.title}
+              description={action.description}
+              badge={action.badge}
+              solid={index === 0}
+              onPress={action.onPress}
             />
-          ) : null}
-          {/* Academic-subsystem cards - hidden entirely for orphan schools
-              (no classes/subjects/grading/curriculum there). */}
-          {!isOrphan && (
-            <>
-              <QuickActionCard
-                icon={<CalendarIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.my_schedule_title', 'My Schedule')}
-                description={t('teacher_dashboard.my_schedule_desc', 'See your weekly class timetable')}
-                onPress={() => (navigation as any).navigate('TeacherMySchedule')}
-              />
-              <QuickActionCard
-                icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.take_attendance_title', 'Take Attendance')}
-                description={t('teacher_dashboard.take_attendance_desc', "Mark today's attendance for your classes")}
-                onPress={() => (navigation as any).navigate('TeacherAttendanceClasses')}
-              />
-              <QuickActionCard
-                icon={<GradeIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.enter_grades_title', 'Enter Grades')}
-                description={t('teacher_dashboard.enter_grades_desc', 'Record marks for your assigned subjects')}
-                onPress={() => (navigation as any).navigate('TeacherGradebookClasses')}
-              />
-              <QuickActionCard
-                icon={<AnnouncementIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.announcements_title', 'Announcements')}
-                description={t('teacher_dashboard.announcements_desc', 'Post updates to your classes')}
-                onPress={() => (navigation as any).navigate('TeacherAnnouncements')}
-              />
-              <QuickActionCard
-                icon={<ClipboardCheckIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.behavior_title', 'Behavior & Discipline')}
-                description={t('teacher_dashboard.behavior_desc', 'Log and track student behavior incidents')}
-                onPress={() => (navigation as any).navigate('BehaviorIncidents')}
-              />
-              <QuickActionCard
-                icon={<AssessmentIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.examinations_title', 'Examinations')}
-                description={t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades')}
-                onPress={() => (navigation as any).navigate('Examinations')}
-              />
-              <QuickActionCard
-                icon={<AssessmentIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.student_progress_title', 'Student Progress')}
-                description={
-                  isQuranTrackingSchool
-                    ? t('teacher_dashboard.student_progress_desc_quran', 'Attendance, grades, behavior, memorization in one view')
-                    : t('teacher_dashboard.student_progress_desc', 'Attendance, grades, and behavior in one view')
-                }
-                onPress={() => (navigation as any).navigate('StudentProgress')}
-              />
-              <QuickActionCard
-                icon={<LessonPlanIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.lesson_plans_title', 'Lesson Plans')}
-                description={t('teacher_dashboard.lesson_plans_desc', 'Draft, submit, and revise your lesson plans')}
-                onPress={() => (navigation as any).navigate('TeacherLessonPlans')}
-              />
-              <QuickActionCard
-                icon={<AssessmentIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.assessments_title', 'Assessments')}
-                description={t(
-                  'teacher_dashboard.assessments_desc',
-                  'Create assignments, quizzes, and grade submissions',
-                )}
-                onPress={() => (navigation as any).navigate('TeacherAssessments')}
-              />
-              <QuickActionCard
-                icon={<StarIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.assessment_grades_title', 'Assessment Grades')}
-                description={t('teacher_dashboard.assessment_grades_desc', 'Weighted grade breakdown for your sections')}
-                onPress={() => (navigation as any).navigate('TeacherAssessmentGrades')}
-              />
-              <QuickActionCard
-                icon={<DocumentIcon color={EMERALD} size={20} />}
-                title={t('teacher_dashboard.materials_title', 'Materials')}
-                description={t(
-                  'teacher_dashboard.materials_desc',
-                  'Share lecture notes, slides, and other resources',
-                )}
-                onPress={() => (navigation as any).navigate('TeacherMaterials')}
-              />
-            </>
-          )}
-          <QuickActionCard
-            icon={<BellIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.notifications_title', 'Notifications')}
-            description={t('teacher_dashboard.notifications_desc', 'Stay updated with important alerts')}
-            badge={0}
-            onPress={() => (navigation as any).navigate('Notifications')}
-          />
-          <QuickActionCard
-            icon={<IdCardIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.security_title', 'Security')}
-            description={t('teacher_dashboard.security_desc', 'Two-factor authentication and device sessions')}
-            onPress={() => (navigation as any).navigate('SecuritySettings')}
-          />
-          <QuickActionCard
-            icon={<GearIcon color={EMERALD} size={20} />}
-            title={t('teacher_dashboard.settings_title', 'Settings')}
-            description={t('teacher_dashboard.settings_desc', 'Language, theme, privacy and password')}
-            onPress={() => (navigation as any).navigate('AccountSettings')}
-          />
+          ))}
         </View>
-
-        {/* Today's class schedule preview - a quick reminder of what the
-            teacher is teaching today, without leaving Home. Regular schools
-            only - orphan schools have no class/schedule concept (same
-            gating as the academic Quick Action tiles above). fetchMySchedule
-            already resolves "mine" server-side by role, so this same
-            component works unchanged for a teacher. */}
-        {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
         {/* This Month Overview - orphan students only (it's report-backed) */}
         {isOrphan ? (
@@ -822,29 +872,30 @@ const styles = StyleSheet.create({
   viewAllRow: { flexDirection: 'row', alignItems: 'center' },
   viewAllText: { fontSize: 13, fontWeight: '700', color: EMERALD, marginRight: 2 },
 
+  // Matches the "Manage" grid card design (AdminDashboard): big rounded
+  // icon badge, bold title + description, circular arrow button bottom
+  // right, and a solid-emerald variant for the single highlighted card.
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
   quickCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  quickIconWrap: {
-    width: 44,
-    height: 44,
     borderRadius: 22,
-    backgroundColor: EMERALD_SOFT,
+    padding: 16,
+    minHeight: 176,
+    marginBottom: 14,
+  },
+  quickCardSolid: { backgroundColor: EMERALD },
+  quickCardSoft: { backgroundColor: EMERALD_SOFT },
+  quickIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    position: 'relative',
   },
+  quickIconWrapSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
+  quickIconWrapSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
   quickBadge: {
     position: 'absolute',
     top: -4,
@@ -858,24 +909,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   quickBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-  quickTitle: { fontSize: 14, fontWeight: '700', color: INK, marginBottom: 4 },
-  quickDescription: { fontSize: 11, color: SUBTLE, lineHeight: 15, marginBottom: 10 },
+  quickTitle: { fontSize: 18, fontWeight: '700', color: INK, marginBottom: 5 },
+  quickTitleSolid: { color: '#FFFFFF' },
+  quickDescription: { fontSize: 12.5, color: SUBTLE, lineHeight: 17 },
+  quickDescriptionSolid: { color: 'rgba(255,255,255,0.8)' },
+  quickArrowRow: { marginTop: 'auto', alignItems: 'flex-end' },
   quickArrowButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: EMERALD_SOFT,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-end',
   },
-  quickAccentBar: {
-    height: 3,
-    backgroundColor: EMERALD,
-    marginHorizontal: -14,
-    marginBottom: -14,
-    marginTop: 12,
-  },
+  quickArrowButtonSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  quickArrowButtonSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
 
   overviewCard: {
     backgroundColor: '#FFFFFF',

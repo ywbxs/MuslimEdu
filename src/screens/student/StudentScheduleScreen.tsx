@@ -1,23 +1,25 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline } from 'react-native-svg';
+import Svg, { Polyline, Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { AcademicSchedule, Day, fetchMySchedule } from '../../services/academicScheduleService';
 import { Skeleton } from '../../components/Skeleton';
 import { saveTextFileToDevice } from '../../utils/downloadFile';
 import { buildTablePdf } from '../../utils/pdfExport';
+import GlassBackground from '../../components/glass/GlassBackground';
+import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
-const INK = '#1C1C1E';
-const SUBTLE = '#8A9099';
-const HAIRLINE = '#EDEEF0';
-const CANVAS = '#F6F7F9';
-const STRIPE = '#FAFBFC';
-const DANGER_SOFT = '#FCEDED';
-const DANGER = '#E5484D';
+const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
+const INK = COLORS.ink;
+const SUBTLE = COLORS.subtle;
+const HAIRLINE = COLORS.border;
+const DANGER = COLORS.danger;
+const DANGER_SOFT = 'rgba(239,68,68,0.1)';
+const STRIPE = '#F7FAF8';
 
 /**
  * Student: read-only weekly timetable, scoped by the backend to this
@@ -30,6 +32,11 @@ const DANGER = '#E5484D';
  * the same subject/section/time); groupIntoRows below merges same-class
  * rows across days into one row with a combined day code ("MWF"), sorted
  * by the earliest day + start time it occurs.
+ *
+ * Spatial/glass design pass: same data + PDF export as before, reskinned
+ * onto the app-wide glass design system (GlassBackground canvas + the
+ * theme/glass color/radius/shadow tokens) instead of hardcoded hex, plus a
+ * stats strip so the level of detail matches the table underneath it.
  */
 
 const DAY_ORDER: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -110,15 +117,40 @@ function groupIntoRows(rows: AcademicSchedule[]): ScheduleRow[] {
 
 function IconChevronLeft({ color }: { color: string }) {
   return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
 function IconExport({ color }: { color: string }) {
   return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Polyline points="7 8 12 3 17 8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3v12M7 8l5-5 5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconCalendar({ color, size = 20 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 9h16M8 4v3M16 4v3" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M4.5 6.5A1.5 1.5 0 0 1 6 5h12a1.5 1.5 0 0 1 1.5 1.5V19A1.5 1.5 0 0 1 18 20.5H6A1.5 1.5 0 0 1 4.5 19V6.5Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconBook({ color, size = 20 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5A1.5 1.5 0 0 1 20 20.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconClock({ color, size = 20 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke={color} strokeWidth={1.8} />
+      <Path d="M12 7v5l3.5 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -172,7 +204,20 @@ function TableSkeleton() {
   );
 }
 
+function StatTile({ icon, value, label }: { icon: React.ReactElement; value: string; label: string }) {
+  return (
+    <View style={styles.statTile}>
+      <View style={styles.statIconWrap}>{icon}</View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function StudentScheduleScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
   const { t } = useLocale();
@@ -213,6 +258,25 @@ export default function StudentScheduleScreen() {
 
   const scheduleRows = useMemo(() => groupIntoRows(rows), [rows]);
 
+  // Detail strip above the table: total weekly meetings, distinct subjects,
+  // and total weekly hours - the same underlying rows, just summarized so
+  // the screen reads as more than a bare table at a glance.
+  const stats = useMemo(() => {
+    const subjectCount = new Set(scheduleRows.map((r) => r.subject)).size;
+    const totalMinutes = rows.reduce((sum, r) => {
+      const [sh, sm] = r.starts_at.slice(0, 5).split(':').map(Number);
+      const [eh, em] = r.ends_at.slice(0, 5).split(':').map(Number);
+      const mins = eh * 60 + em - (sh * 60 + sm);
+      return sum + (Number.isFinite(mins) && mins > 0 ? mins : 0);
+    }, 0);
+    const hours = totalMinutes / 60;
+    return {
+      meetings: rows.length,
+      subjects: subjectCount,
+      hoursLabel: hours > 0 ? (Number.isInteger(hours) ? String(hours) : hours.toFixed(1)) : '—',
+    };
+  }, [rows, scheduleRows]);
+
   const handleExportPdf = async () => {
     if (scheduleRows.length === 0 || isExporting) return;
     setIsExporting(true);
@@ -237,25 +301,48 @@ export default function StudentScheduleScreen() {
 
   return (
     <View style={styles.flex}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
+      <GlassBackground variant="canvas" />
+
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} hitSlop={10}>
           <IconChevronLeft color={EMERALD} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('student_schedule.title', 'My Schedule')}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{t('student_schedule.title', 'My Schedule')}</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>
+            {t('student_schedule.header_subtitle', 'Your weekly timetable')}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={styles.exportBtn}
+          style={styles.iconBtn}
           onPress={handleExportPdf}
           disabled={isExporting || scheduleRows.length === 0}
           hitSlop={10}
         >
-          {isExporting ? <ActivityIndicator size="small" color={EMERALD} /> : <IconExport color={scheduleRows.length === 0 ? '#C4C9CF' : EMERALD} />}
+          {isExporting ? (
+            <ActivityIndicator size="small" color={EMERALD} />
+          ) : (
+            <IconExport color={scheduleRows.length === 0 ? SUBTLE : EMERALD} />
+          )}
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.outerScroll}>
-          <TableSkeleton />
+        <ScrollView contentContainerStyle={styles.outerScroll}>
+          <View style={styles.statsRow}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.statTile}>
+                <Skeleton width={36} height={36} borderRadius={12} style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Skeleton width="60%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+                  <Skeleton width="80%" height={11} borderRadius={4} />
+                </View>
+              </View>
+            ))}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator>
+            <TableSkeleton />
+          </ScrollView>
         </ScrollView>
       ) : (
         <ScrollView
@@ -269,44 +356,72 @@ export default function StudentScheduleScreen() {
           ) : null}
 
           {!error && scheduleRows.length === 0 ? (
-            <Text style={styles.empty}>{t('student_schedule.empty', 'No published schedule yet.')}</Text>
+            <View style={styles.emptyWrap}>
+              <View style={styles.emptyIconWrap}>
+                <IconCalendar color={EMERALD} size={30} />
+              </View>
+              <Text style={styles.emptyTitle}>{t('student_schedule.empty_title', 'No published schedule yet')}</Text>
+              <Text style={styles.emptyBody}>
+                {t('student_schedule.empty', 'No published schedule yet.')}
+              </Text>
+            </View>
           ) : null}
 
           {scheduleRows.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator>
-              <View style={styles.table}>
-                <View style={styles.headerRow}>
-                  {COLUMNS.map((c) => (
-                    <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
-                      <Text style={styles.headerCellText} numberOfLines={1}>
-                        {t(c.labelKey, c.fallback)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+            <>
+              <View style={styles.statsRow}>
+                <StatTile
+                  icon={<IconBook color={EMERALD} size={18} />}
+                  value={String(stats.meetings)}
+                  label={t('student_schedule.stat_meetings', 'Weekly meetings')}
+                />
+                <StatTile
+                  icon={<IconCalendar color={EMERALD} size={18} />}
+                  value={String(stats.subjects)}
+                  label={t('student_schedule.stat_subjects', 'Subjects')}
+                />
+                <StatTile
+                  icon={<IconClock color={EMERALD} size={18} />}
+                  value={stats.hoursLabel}
+                  label={t('student_schedule.stat_hours', 'Hours / week')}
+                />
+              </View>
 
-                {scheduleRows.map((row, i) => (
-                  <View key={row.key} style={[styles.dataRow, i % 2 === 1 && styles.dataRowStripe]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator>
+                <View style={styles.table}>
+                  <View style={styles.headerRow}>
                     {COLUMNS.map((c) => (
-                      <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
-                        {c.key === 'dayCode' ? (
-                          <View style={styles.dayPill}>
-                            <Text style={styles.dayPillText}>{row.dayCode || '—'}</Text>
-                          </View>
-                        ) : (
-                          <Text
-                            style={[styles.dataCellText, c.key === 'subject' && styles.dataCellTextStrong]}
-                            numberOfLines={2}
-                          >
-                            {row[c.key]}
-                          </Text>
-                        )}
+                      <View key={c.key} style={[styles.headerCell, { width: c.width }]}>
+                        <Text style={styles.headerCellText} numberOfLines={1}>
+                          {t(c.labelKey, c.fallback)}
+                        </Text>
                       </View>
                     ))}
                   </View>
-                ))}
-              </View>
-            </ScrollView>
+
+                  {scheduleRows.map((row, i) => (
+                    <View key={row.key} style={[styles.dataRow, i % 2 === 1 && styles.dataRowStripe]}>
+                      {COLUMNS.map((c) => (
+                        <View key={c.key} style={[styles.dataCell, { width: c.width }]}>
+                          {c.key === 'dayCode' ? (
+                            <View style={styles.dayPill}>
+                              <Text style={styles.dayPillText}>{row.dayCode || '—'}</Text>
+                            </View>
+                          ) : (
+                            <Text
+                              style={[styles.dataCellText, c.key === 'subject' && styles.dataCellTextStrong]}
+                              numberOfLines={2}
+                            >
+                              {row[c.key]}
+                            </Text>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </>
           ) : null}
         </ScrollView>
       )}
@@ -315,35 +430,59 @@ export default function StudentScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CANVAS },
+  flex: { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 12,
     paddingBottom: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
   },
-  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 60 },
-  backText: { color: EMERALD, fontSize: 15, fontWeight: '600', marginLeft: 2 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
-  exportBtn: { minWidth: 60, alignItems: 'flex-end', padding: 4 },
+  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: INK, textAlign: 'center' },
+  headerSubtitle: { fontSize: 12, color: SUBTLE, textAlign: 'center', marginTop: 2 },
 
-  outerScroll: { padding: 16, paddingBottom: 32, flexGrow: 1 },
+  outerScroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+
+  // --- Detail strip: same data as the table below, summarized so the
+  // screen reads as more than a bare table at a glance. ---
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  statTile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    padding: 12,
+    ...SHADOW.level1,
+  },
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  statValue: { fontSize: 17, fontWeight: '800', color: INK },
+  statLabel: { fontSize: 10.5, color: SUBTLE, marginTop: 1 },
 
   // --- Registrar-style table: scrolls horizontally so every column (Day,
   // Time, Code, Subject, Room, Campus, Section, Unit, Instructor) stays
   // legible instead of getting cut off or wrapped on a narrow phone. ---
   table: {
     width: TABLE_WIDTH,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: HAIRLINE,
     overflow: 'hidden',
+    ...SHADOW.level1,
   },
   headerRow: {
     flexDirection: 'row',
@@ -371,7 +510,19 @@ const styles = StyleSheet.create({
   },
   dayPillText: { fontSize: 11.5, fontWeight: '800', color: EMERALD, letterSpacing: 0.3 },
 
-  empty: { textAlign: 'center', color: SUBTLE, marginTop: 36 },
-  errorBanner: { backgroundColor: DANGER_SOFT, borderRadius: 14, padding: 16, marginBottom: 12 },
+  emptyWrap: { alignItems: 'center', paddingVertical: 40 },
+  emptyIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginBottom: 6 },
+  emptyBody: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 19, paddingHorizontal: 20 },
+
+  errorBanner: { backgroundColor: DANGER_SOFT, borderRadius: RADIUS.md, padding: 16, marginBottom: 12 },
   errorText: { color: DANGER, fontSize: 13.5, textAlign: 'center' },
 });
