@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {
   ChatThread,
   ChatUser,
 } from '../../services/chatService';
+import { isOppositeGender } from '../../utils/genderGuard';
 
 const EMERALD = '#0F9D58';
 const INK = '#1C1C1E';
@@ -48,7 +49,7 @@ function timeAgo(iso: string | null): string {
 export default function ChatListScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLocale();
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -120,10 +121,19 @@ export default function ChatListScreen() {
     navigation.navigate('ChatBox', params);
   };
 
-  const onPickUser = async (user: ChatUser) => {
-    if (!token) return;
-    const threadId = await startThread(token, user.user_id);
-    openChat({ threadId, userId: user.user_id, name: user.name, photo: user.photo });
+  // Opposite-gender results never even show up as an option to start a new
+  // conversation with - existing conversations (the thread list below) are
+  // untouched, only new ones are gated. Applies to every role, not just
+  // students - see genderGuard.ts.
+  const visibleSearchResults = useMemo(
+    () => searchResults.filter((candidate) => !isOppositeGender(user?.gender, candidate.gender)),
+    [searchResults, user?.gender],
+  );
+
+  const onPickUser = async (candidate: ChatUser) => {
+    if (!token || isOppositeGender(user?.gender, candidate.gender)) return;
+    const threadId = await startThread(token, candidate.user_id);
+    openChat({ threadId, userId: candidate.user_id, name: candidate.name, photo: candidate.photo });
   };
 
   const showingSearch = query.trim() !== '';
@@ -157,7 +167,7 @@ export default function ChatListScreen() {
           <ActivityIndicator style={{ marginTop: 24 }} color={EMERALD} />
         ) : (
           <FlatList
-            data={searchResults}
+            data={visibleSearchResults}
             keyExtractor={(item) => String(item.user_id)}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={<Text style={styles.emptyText}>{t('chat_list.no_matching_users', 'No matching users.')}</Text>}

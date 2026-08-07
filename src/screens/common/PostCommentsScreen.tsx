@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import {
   deleteComment,
   toggleCommentLike,
 } from '../../services/postService';
+import { isOppositeGender } from '../../utils/genderGuard';
 
 const EMERALD = '#0F9D58';
 const INK = '#1C1C1E';
@@ -107,6 +108,18 @@ function removeCommentFromTree(comments: PostComment[], id: number): PostComment
     .map((c) => (c.replies?.length ? { ...c, replies: removeCommentFromTree(c.replies, id) } : c));
 }
 
+// Gender-segregated comments: a viewer never sees a comment (or reply)
+// written by someone of the opposite gender - applies to every role, see
+// genderGuard.ts. Filters both levels of the tree independently, so a
+// same-gender reply under an opposite-gender top-level comment's thread
+// still isn't reachable (its parent is gone), matching "separate what men
+// and women can see" rather than just hiding the top row's text.
+function filterCommentsByGender(comments: PostComment[], viewerGender?: string | null): PostComment[] {
+  return comments
+    .filter((c) => !isOppositeGender(viewerGender, c.author?.gender))
+    .map((c) => (c.replies?.length ? { ...c, replies: filterCommentsByGender(c.replies, viewerGender) } : c));
+}
+
 export default function PostCommentsScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
@@ -137,6 +150,8 @@ export default function PostCommentsScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const visibleComments = useMemo(() => filterCommentsByGender(comments, user?.gender), [comments, user?.gender]);
 
   const send = async () => {
     if (!token || !text.trim() || sending) return;
@@ -266,9 +281,9 @@ export default function PostCommentsScreen() {
         </View>
       ) : (
         <FlatList
-          data={comments}
+          data={visibleComments}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={comments.length === 0 ? { flexGrow: 1 } : { paddingVertical: 10 }}
+          contentContainerStyle={visibleComments.length === 0 ? { flexGrow: 1 } : { paddingVertical: 10 }}
           renderItem={({ item }) => renderComment(item, false)}
           ListEmptyComponent={
             <View style={styles.centerFill}>

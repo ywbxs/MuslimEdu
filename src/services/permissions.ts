@@ -58,6 +58,7 @@ const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   parent: [],
   student: ['submit_student_work', 'view_own_records'],
   warden: ['view_students'],
+  alumni: [],
 };
 
 /**

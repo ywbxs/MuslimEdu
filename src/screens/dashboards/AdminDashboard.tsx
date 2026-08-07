@@ -198,6 +198,14 @@ function IdCardIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function AlumniCapIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function CameraIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -744,6 +752,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminStudentDocuments',
       icon: (c) => <ReportDocIcon color={c} />,
+    },
+    {
+      key: 'alumniApplications',
+      title: t('admin_dashboard.alumni_applications_title', 'Alumni Applications'),
+      desc: t('admin_dashboard.alumni_applications_desc', 'Review and approve self-service alumni signups'),
+      variant: 'soft',
+      route: 'AdminAlumniApplications',
+      icon: (c) => <AlumniCapIcon color={c} />,
     },
     {
       key: 'studentServiceRequests',

@@ -664,11 +664,11 @@ export default function LoginScreen() {
         onClose={() => setSheetOpen(false)}
         onSchool={() => {
           setSheetOpen(false);
-          // navigation.navigate('SchoolRegistration');
+          (navigation as any).navigate('SchoolRegistration');
         }}
         onAlumni={() => {
           setSheetOpen(false);
-          // navigation.navigate('AlumniRegistration');
+          (navigation as any).navigate('AlumniRegistration');
         }}
       />
     </View>

@@ -4,6 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
+import SchoolRegistrationScreen from '../screens/SchoolRegistrationScreen';
+import AlumniRegistrationScreen from '../screens/AlumniRegistrationScreen';
 import StudentListScreen from '../screens/students/StudentListScreen';
 import OrphanReportScreen from '../screens/orphan/OrphanReportScreen';
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
@@ -139,6 +141,7 @@ import StudentPortalHomeScreen from '../screens/student/StudentPortalHomeScreen'
 import StudentDocumentsScreen from '../screens/student/StudentDocumentsScreen';
 import StudentServicesScreen from '../screens/student/StudentServicesScreen';
 import StudentDocumentRequestsScreen from '../screens/admin/StudentDocumentRequestsScreen';
+import AlumniApplicationsScreen from '../screens/admin/AlumniApplicationsScreen';
 import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequestsScreen';
 // Orphan-school children upload their own documents (ID, guardian consent,
 // etc.) instead of requesting official school documents - see
@@ -160,6 +163,7 @@ import PostModerationScreen from '../screens/superadmin/PostModerationScreen';
 import TrashScreen from '../screens/superadmin/TrashScreen';
 import ActivityLogScreen from '../screens/superadmin/ActivityLogScreen';
 import AnnouncementUploadScreen from '../screens/superadmin/AnnouncementUploadScreen';
+import PendingRegistrationsScreen from '../screens/superadmin/PendingRegistrationsScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -638,7 +642,19 @@ export default function RootNavigator() {
               />
             </>
           ) : (
-            <Stack.Screen name="Login" component={LoginScreen} />
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen
+                name="SchoolRegistration"
+                component={SchoolRegistrationScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="AlumniRegistration"
+                component={AlumniRegistrationScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+            </>
           )}
               {/* SUBJECT_LOADING_ROUTES */}
       <Stack.Screen name="SubjectLoadingQueue" component={SubjectLoadingQueueScreen} />
@@ -677,6 +693,7 @@ export default function RootNavigator() {
       <Stack.Screen name="StudentUploadDocuments" component={StudentUploadDocumentsScreen} />
       <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
       <Stack.Screen name="AdminStudentDocuments" component={StudentDocumentRequestsScreen} />
+      <Stack.Screen name="AdminAlumniApplications" component={AlumniApplicationsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AdminStudentServices" component={StudentServiceRequestsScreen} />
       <Stack.Screen name="AdminFeeReports" component={AdminFeeReportsScreen} />
       <Stack.Screen name="RecordFeePayment" component={RecordFeePaymentScreen} />
@@ -697,6 +714,7 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminTrash" component={TrashScreen} />
       <Stack.Screen name="SuperAdminActivityLog" component={ActivityLogScreen} />
       <Stack.Screen name="SuperAdminAnnouncementUpload" component={AnnouncementUploadScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminPendingRegistrations" component={PendingRegistrationsScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>
