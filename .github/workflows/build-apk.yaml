@@ -45,6 +45,17 @@ jobs:
           sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
           sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
 
+      - name: Add notification permission for Android 13+ (Firebase push)
+        run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
+      - name: Copy Firebase config (Cloud Messaging)
+        run: cp source-files/android-config/google-services.json MuslimEdu/android/app/google-services.json
+
+      - name: Wire up the Google Services Gradle plugin
+        run: |
+          sed -i '/classpath("com.facebook.react:react-native-gradle-plugin")/a\        classpath("com.google.gms:google-services:4.4.2")' MuslimEdu/android/build.gradle
+          echo 'apply plugin: "com.google.gms.google-services"' >> MuslimEdu/android/app/build.gradle
+
       - name: Install base dependencies
         working-directory: MuslimEdu
         run: npm install
@@ -73,7 +84,9 @@ jobs:
             "react-native-vision-camera@^4.7.3" \
             "react-native-qrcode-svg@^6.3.21" \
             "react-native-view-shot@^4.0.3" \
-            "@react-native-community/geolocation@^3.4.0"
+            "@react-native-community/geolocation@^3.4.0" \
+            "@react-native-firebase/app@^21.6.1" \
+            "@react-native-firebase/messaging@^21.6.1"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu
