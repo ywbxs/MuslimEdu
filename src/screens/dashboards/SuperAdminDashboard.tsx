@@ -83,6 +83,22 @@ function ClipboardCheckIcon({ color }: { color: string }) {
   );
 }
 
+function BellCogIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M5 16h11l-1.3-2A5.5 5.5 0 0 1 14 11V9a3.5 3.5 0 0 0-7 0v2a5.5 5.5 0 0 1-.7 3.5L5 16z"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <Circle cx={10.5} cy={18.5} r={1.3} fill={color} />
+      <Circle cx={18} cy={7} r={2.3} stroke={color} strokeWidth={1.8} />
+      <Path d="M18 4.3v.6M18 9.1v.6M15.3 7h.6M20.1 7h.6M16.1 5.1l.4.4M19.5 8.5l.4.4M16.1 8.9l.4-.4M19.5 5.5l.4-.4" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 function SuperAdminCard({
   icon,
   title,
@@ -214,6 +230,12 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           title={t('superadmin_dashboard.pending_registrations_title', 'Pending Registrations')}
           desc={t('superadmin_dashboard.pending_registrations_desc', 'Review and approve self-service school signups')}
           onPress={() => (navigation as any).navigate('SuperAdminPendingRegistrations')}
+        />
+        <SuperAdminCard
+          icon={<BellCogIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.firebase_config_title', 'Firebase Configuration')}
+          desc={t('superadmin_dashboard.firebase_config_desc', 'Set up real-time push notification credentials')}
+          onPress={() => (navigation as any).navigate('SuperAdminFirebaseConfig')}
         />
       </View>
     </DashboardShell>

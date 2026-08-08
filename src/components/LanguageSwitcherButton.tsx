@@ -1,0 +1,164 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { useAuth } from '../context/AuthContext';
+import { useLocale, RTL_LOCALES } from '../context/LocaleContext';
+import { saveUserSettings } from '../services/studentPortalService';
+import { COLORS, RADIUS, SHADOW } from '../theme/glass';
+
+const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
+const INK = COLORS.ink;
+const SUBTLE = COLORS.subtle;
+
+const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' },
+];
+
+function GlobeIcon({ color = '#FFFFFF', size = 17 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
+      <Path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12.5l5 5L20 6.5" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/**
+ * Icon-only quick language switch - English/Arabic today, matching the
+ * two languages AccountSettingsScreen's fuller language picker always
+ * offers (see LANGUAGE_LABELS there). Self-contained like
+ * CurrencyBalanceButton: owns its own modal state, so any screen just
+ * drops in <LanguageSwitcherButton /> with no wiring.
+ *
+ * Persists the same way AccountSettingsScreen's save does (best-effort -
+ * a failed save still flips the in-session locale via refresh(), it just
+ * won't survive a relaunch) and shows the same "restart required" prompt
+ * when the pick flips RTL-ness, since I18nManager only takes full visual
+ * effect on the next app launch (see LocaleContext.tsx).
+ */
+export default function LanguageSwitcherButton({ style }: { style?: object }) {
+  const { token } = useAuth();
+  const { locale, isRTL, refresh } = useLocale();
+  const [visible, setVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const pick = async (code: string) => {
+    if (code === locale || saving) {
+      setVisible(false);
+      return;
+    }
+    setSaving(true);
+    const wasRTL = isRTL;
+    try {
+      if (token) await saveUserSettings(token, { language: code }).catch(() => {});
+      await refresh(code);
+      setVisible(false);
+      if (RTL_LOCALES.has(code) !== wasRTL) {
+        Alert.alert('Restart required', 'Restart the app for the right-to-left layout to fully apply.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+        <GlobeIcon />
+      </TouchableOpacity>
+
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <View style={styles.backdrop}>
+          <TouchableOpacity style={styles.backdropTouch} activeOpacity={1} onPress={() => setVisible(false)} />
+          <View style={styles.sheet}>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setVisible(false)} hitSlop={12}>
+              <CloseIcon />
+            </TouchableOpacity>
+            <Text style={styles.title}>Language</Text>
+
+            {LANGUAGE_OPTIONS.map((opt) => {
+              const active = opt.code === locale;
+              return (
+                <TouchableOpacity
+                  key={opt.code}
+                  style={[styles.row, active && styles.rowActive]}
+                  activeOpacity={0.7}
+                  onPress={() => pick(opt.code)}
+                  disabled={saving}
+                >
+                  <Text style={[styles.rowLabel, active && styles.rowLabelActive]}>{opt.label}</Text>
+                  {active && <CheckIcon />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  btn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: EMERALD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOW.level1,
+  },
+
+  backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  backdropTouch: { ...StyleSheet.absoluteFillObject },
+  sheet: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.xl,
+    padding: 20,
+    ...SHADOW.level3,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.canvas,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontSize: 17, fontWeight: '800', color: INK, marginBottom: 14 },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.md,
+    marginBottom: 6,
+    backgroundColor: COLORS.canvas,
+  },
+  rowActive: { backgroundColor: EMERALD_SOFT },
+  rowLabel: { fontSize: 15, fontWeight: '600', color: INK },
+  rowLabelActive: { color: EMERALD, fontWeight: '800' },
+});

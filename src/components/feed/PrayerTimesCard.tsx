@@ -4,7 +4,15 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
-import { fetchPrayerTimes, computeNextPrayer, formatCountdown, PrayerTimesResult, NextPrayerInfo } from '../../services/prayerTimesService';
+import {
+  fetchPrayerTimes,
+  computeNextPrayer,
+  formatCountdown,
+  PrayerTimesResult,
+  NextPrayerInfo,
+  PrayerLocation,
+} from '../../services/prayerTimesService';
+import { getCurrentCoordinates } from '../../utils/geolocation';
 import { Skeleton, SkeletonCircle } from '../Skeleton';
 import { CARD_W } from './widgetCarouselMetrics';
 
@@ -33,15 +41,18 @@ function ArrowRightIcon({ color = WHITE, size = 15 }: { color?: string; size?: n
 
 /**
  * Compact "short" widget - the first card in the feed's WidgetCarousel.
- * Location comes from the school's own address (fetchMySchoolBranding,
- * callable by every role) rather than device GPS, since no geolocation
- * library/permission exists in this app. Tapping it pushes
- * PrayerTimesDetailScreen for the full "long" view.
+ * Location prefers the device's own GPS (if the user grants permission -
+ * see utils/geolocation.ts) for accuracy, falling back to the school's own
+ * address (fetchMySchoolBranding, callable by every role) when permission
+ * is denied or a fix can't be obtained. Tapping it pushes
+ * PrayerTimesDetailScreen for the full "long" view, carrying along
+ * whichever location already resolved so the detail screen doesn't need
+ * to re-prompt for permission or wait on GPS again.
  */
 export default function PrayerTimesCard({ token }: { token: string }) {
   const navigation = useNavigation();
   const [result, setResult] = useState<PrayerTimesResult | null>(null);
-  const [address, setAddress] = useState<string | null>(null);
+  const [location, setLocation] = useState<PrayerLocation | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [next, setNext] = useState<NextPrayerInfo | null>(null);
@@ -51,24 +62,30 @@ export default function PrayerTimesCard({ token }: { token: string }) {
     let cancelled = false;
     setLoading(true);
     setError(false);
-    fetchMySchoolBranding(token)
-      .then((branding) => {
+
+    (async () => {
+      try {
+        const coords = await getCurrentCoordinates();
+        let resolvedLocation: PrayerLocation;
+        if (coords) {
+          resolvedLocation = { kind: 'coords', latitude: coords.latitude, longitude: coords.longitude };
+        } else {
+          const branding = await fetchMySchoolBranding(token);
+          const addr = branding.address ?? branding.name ?? '';
+          if (!addr) throw new Error('No location available - GPS denied and no school address on file');
+          resolvedLocation = { kind: 'address', address: addr };
+        }
         if (cancelled) return;
-        const addr = branding.address ?? branding.name ?? '';
-        setAddress(addr);
-        if (!addr) throw new Error('No school address on file');
-        return fetchPrayerTimes(token, addr);
-      })
-      .then((res) => {
-        if (cancelled || !res) return;
-        setResult(res);
-      })
-      .catch(() => {
+        setLocation(resolvedLocation);
+        const res = await fetchPrayerTimes(token, resolvedLocation);
+        if (!cancelled) setResult(res);
+      } catch {
         if (!cancelled) setError(true);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -84,7 +101,7 @@ export default function PrayerTimesCard({ token }: { token: string }) {
     };
   }, [result]);
 
-  const openDetail = () => (navigation as any).navigate('PrayerTimesDetail', { address });
+  const openDetail = () => (navigation as any).navigate('PrayerTimesDetail', { location });
 
   if (loading) {
     return (

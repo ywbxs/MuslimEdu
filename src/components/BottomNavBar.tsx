@@ -4,6 +4,7 @@ import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 import { COLORS, BRAND } from '../theme/glass';
 
@@ -45,6 +46,19 @@ function ChatIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function BellIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinejoin="round"
+      />
+      <Circle cx={12} cy={20} r={1.4} fill={color} />
+    </Svg>
+  );
+}
 function MenuIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -61,6 +75,7 @@ const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Admission: (c) => <AdmissionIcon color={c} />,
   Reports: (c) => <ReportsIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
+  Alerts: (c) => <BellIcon color={c} />,
   Menu: (c) => <MenuIcon color={c} />,
 };
 
@@ -91,12 +106,20 @@ export default function BottomNavBar() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const activeName = useActiveTabName();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   // Reports only has real content on orphan schools - see MainTabs.tsx.
   const showReports = isOrphanSchoolUser(user);
 
-  const tabs = ['Home', ...(isAdminRole ? ['Admission'] : []), ...(showReports ? ['Reports'] : []), 'Chat', 'Menu'];
+  const tabs = [
+    'Home',
+    ...(isAdminRole ? ['Admission'] : []),
+    ...(showReports ? ['Reports'] : []),
+    'Chat',
+    'Alerts',
+    'Menu',
+  ];
 
   return (
     <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -111,7 +134,16 @@ export default function BottomNavBar() {
             onPress={() => (navigation as any).navigate('MainTabs', { screen: name })}
           >
             {isActive && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>{ICONS[name](color)}</View>
+            <View style={styles.iconWrap}>
+              {ICONS[name](color)}
+              {name === 'Alerts' && unreadCount > 0 && (
+                <View style={styles.badge} pointerEvents="none">
+                  <Text style={styles.badgeText} numberOfLines={1}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.label, { color }]} numberOfLines={1}>
               {name}
             </Text>
@@ -142,4 +174,17 @@ const styles = StyleSheet.create({
   },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
 });

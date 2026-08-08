@@ -23,6 +23,7 @@ import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS } from '../theme/glass';
+import LanguageSwitcherButton from '../components/LanguageSwitcherButton';
 
 // ============================================================================
 // Brand colors are untouched (BRAND.emerald / BRAND.emeraldDeep from
@@ -452,6 +453,8 @@ export default function LoginScreen() {
             <View style={styles.topbar}>
               <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
               <Text style={styles.topbarTitle}>MuslimEdu</Text>
+              <View style={{ flex: 1 }} />
+              <LanguageSwitcherButton />
             </View>
           ) : (
             <View style={styles.topbar}>

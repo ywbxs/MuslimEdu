@@ -13,7 +13,9 @@ import {
   PrayerTimesResult,
   NextPrayerInfo,
   PrayerTiming,
+  PrayerLocation,
 } from '../../services/prayerTimesService';
+import { getCurrentCoordinates } from '../../utils/geolocation';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
@@ -93,9 +95,9 @@ export default function PrayerTimesDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { token } = useAuth();
-  const routeAddress = (route.params as any)?.address as string | undefined;
+  const routeLocation = (route.params as any)?.location as PrayerLocation | undefined;
 
-  const [address, setAddress] = useState<string | null>(routeAddress ?? null);
+  const [location, setLocation] = useState<PrayerLocation | null>(routeLocation ?? null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [result, setResult] = useState<PrayerTimesResult | null>(null);
@@ -114,16 +116,23 @@ export default function PrayerTimesDetailScreen() {
 
     (async () => {
       try {
-        let addr = address;
-        if (!addr) {
-          const branding = await fetchMySchoolBranding(token);
+        let loc = location;
+        if (!loc) {
+          const coords = await getCurrentCoordinates();
           if (cancelled) return;
-          addr = branding.address ?? branding.name ?? '';
-          setAddress(addr);
-          setSchoolName(branding.name ?? null);
+          if (coords) {
+            loc = { kind: 'coords', latitude: coords.latitude, longitude: coords.longitude };
+          } else {
+            const branding = await fetchMySchoolBranding(token);
+            if (cancelled) return;
+            const addr = branding.address ?? branding.name ?? '';
+            if (!addr) throw new Error('No location available - GPS denied and no school address on file.');
+            loc = { kind: 'address', address: addr };
+            setSchoolName(branding.name ?? null);
+          }
+          setLocation(loc);
         }
-        if (!addr) throw new Error('No school address on file to look up prayer times for.');
-        const res = await fetchPrayerTimes(token, addr, selectedDate);
+        const res = await fetchPrayerTimes(token, loc, selectedDate);
         if (!cancelled) setResult(res);
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? 'Could not load prayer times.');
@@ -152,6 +161,7 @@ export default function PrayerTimesDetailScreen() {
   }, [result, isToday]);
 
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const locationLabel = location?.kind === 'coords' ? 'Current Location' : schoolName ?? location?.address ?? null;
 
   return (
     <View style={styles.flex}>
@@ -182,7 +192,7 @@ export default function PrayerTimesDetailScreen() {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.dateGregorian}>{result.gregorianLabel}</Text>
                 {!!result.hijriLabel && <Text style={styles.dateHijri}>{result.hijriLabel}</Text>}
-                {!!(schoolName || address) && <Text style={styles.dateAddress}>{schoolName ?? address}</Text>}
+                {!!locationLabel && <Text style={styles.dateAddress}>{locationLabel}</Text>}
               </View>
             </View>
 

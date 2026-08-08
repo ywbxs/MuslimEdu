@@ -1,31 +1,35 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchActiveWidgetAnnouncements, WidgetAnnouncement } from '../../services/widgetAnnouncementService';
 import { RADIUS, SHADOW } from '../../theme/glass';
 import PrayerTimesCard from './PrayerTimesCard';
-import { CARD_W as OUTER_CARD_W } from './deckMetrics';
 import { CARD_W, EDGE, GAP, SNAP, END_PAD } from './widgetCarouselMetrics';
+
+const ROW_HEIGHT = 210;
 
 type WidgetItem = { kind: 'prayer' } | { kind: 'announcement'; announcement: WidgetAnnouncement };
 
-function AnnouncementImageCard({ announcement, height, onPress }: { announcement: WidgetAnnouncement; height: number; onPress: () => void }) {
+function AnnouncementImageCard({ announcement, onPress }: { announcement: WidgetAnnouncement; onPress: () => void }) {
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.announcementCard, { width: CARD_W, height }]}>
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.announcementCard, { width: CARD_W, height: ROW_HEIGHT }]}>
       <Image source={{ uri: announcement.image_url }} style={styles.announcementImage} resizeMode="cover" />
     </TouchableOpacity>
   );
 }
 
 /**
- * Nested horizontal carousel dropped into the outer feed deck's `{ kind:
- * 'widgets' }` slot (see FeedScreen.tsx). Prayer Times card always first,
- * then any active superadmin-uploaded announcement images. Owns its own
- * data loading rather than being prop-drilled from FeedScreen, since it's
- * orthogonal to posts.
+ * Its own item in the vertical Home feed (see FeedScreen.tsx's deckData,
+ * WIDGETS_AFTER_POSTS) - pinned to a fixed, early-but-not-first position
+ * among the posts rather than a header/footer, so it reads as a distinct
+ * section roughly centered within the feed instead of tacked onto either
+ * end. A plain horizontal row, sized to its own compact height rather
+ * than a full post card's. Prayer Times card always first, then any
+ * active superadmin-uploaded announcement images. Owns its own data
+ * loading, refreshed whenever the Home tab regains focus.
  */
-export default function WidgetCarousel({ height, active }: { height: number; active?: boolean }) {
+export default function WidgetCarousel() {
   const { token } = useAuth();
   const navigation = useNavigation();
   const [announcements, setAnnouncements] = useState<WidgetAnnouncement[]>([]);
@@ -40,18 +44,14 @@ export default function WidgetCarousel({ height, active }: { height: number; act
       });
   }, [token]);
 
-  useEffect(() => {
-    if (active) load();
-  }, [active, load]);
+  useFocusEffect(load);
 
   if (!token) return null;
 
   const items: WidgetItem[] = [{ kind: 'prayer' }, ...announcements.map((a) => ({ kind: 'announcement' as const, announcement: a }))];
 
-  const cardHeight = Math.min(height, 320);
-
   return (
-    <View style={[styles.wrap, { width: OUTER_CARD_W, height }]}>
+    <View style={[styles.wrap, { height: ROW_HEIGHT }]}>
       <FlatList
         data={items}
         keyExtractor={(item) => (item.kind === 'prayer' ? 'prayer' : `announcement-${item.announcement.id}`)}
@@ -69,7 +69,6 @@ export default function WidgetCarousel({ height, active }: { height: number; act
           ) : (
             <AnnouncementImageCard
               announcement={item.announcement}
-              height={cardHeight}
               onPress={() =>
                 (navigation as any).navigate('ImageViewer', { images: [item.announcement.image_url], initialIndex: 0 })
               }
@@ -82,7 +81,7 @@ export default function WidgetCarousel({ height, active }: { height: number; act
 }
 
 const styles = StyleSheet.create({
-  wrap: { justifyContent: 'center' },
+  wrap: { justifyContent: 'center', marginTop: 16 },
   announcementCard: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',

@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
 import MenuScreen from '../screens/common/MenuScreen';
 import FeedScreen from '../screens/common/FeedScreen';
+import NotificationsScreen from '../screens/common/NotificationsScreen';
 import ChildReportWizardScreen from '../screens/orphan/ChildReportWizardScreen';
 import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportScreen';
 import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
@@ -87,6 +89,19 @@ function MenuIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+function BellIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="20" r="1.4" fill={color} />
+    </Svg>
+  );
+}
 function ScanIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -108,14 +123,27 @@ const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Reports: (c) => <ReportsIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
+  Alerts: (c) => <BellIcon color={c} />,
   Menu: (c) => <MenuIcon color={c} />,
 };
 
 // Docked bar attached to the bottom edge of the screen - full width, square
 // corners, no shadow/blur/margins. Active tab is indicated by icon+label
 // color and a small top indicator bar, not a pill background.
+function TabBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.badge} pointerEvents="none">
+      <Text style={styles.badgeText} numberOfLines={1}>
+        {count > 99 ? '99+' : count}
+      </Text>
+    </View>
+  );
+}
+
 function TabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -158,7 +186,10 @@ function TabBar({ state, navigation }: any) {
             activeOpacity={0.7}
           >
             {isRouteFocused && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>{renderIcon && renderIcon(color)}</View>
+            <View style={styles.iconWrap}>
+              {renderIcon && renderIcon(color)}
+              {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+            </View>
             <Text style={[styles.label, { color }]} numberOfLines={1}>
               {route.name}
             </Text>
@@ -342,6 +373,7 @@ export default function MainTabs() {
       )}
 
       <Tab.Screen name="Chat" component={ChatListScreen} />
+      <Tab.Screen name="Alerts" component={NotificationsScreen} />
       <Tab.Screen name="Menu" component={MenuScreen} />
     </Tab.Navigator>
   );
@@ -378,5 +410,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginTop: 3,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 });
