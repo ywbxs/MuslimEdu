@@ -30,6 +30,7 @@ import UserProfileModal from '../../components/UserProfileModal';
 import PostCard from '../../components/PostCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
+import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { COLORS, RADIUS } from '../../theme/glass';
 
@@ -384,7 +385,10 @@ export default function FeedScreen() {
     <View style={styles.flex}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
-        <CurrencyBalanceButton />
+        <View style={styles.headerActions}>
+          <LanguageSwitcherButton />
+          <CurrencyBalanceButton />
+        </View>
       </View>
 
       <View style={styles.outerWrap} onLayout={(e) => setOuterHeight(e.nativeEvent.layout.height)}>
@@ -429,6 +433,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   // Wraps the Home/Shop/Charity vertical pager - fills whatever's left
   // below the header.
