@@ -17,6 +17,7 @@ import { MonthlyReport } from '../../services/orphanService';
 import {
   fetchChildReports,
   createChildReport,
+  updateChildReport,
   deleteChildReport,
 } from '../../services/adminOrphanReportService';
 import { Skeleton } from '../../components/Skeleton';
@@ -69,6 +70,11 @@ export default function AdminChildReportDetailScreen() {
   const [academicRating, setAcademicRating] = useState<number | null>(null);
   const [wellbeingRating, setWellbeingRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Non-null while editing an existing report - handleSave calls
+  // updateChildReport instead of createChildReport, and the form is
+  // pre-filled from that report. There's no separate draft/approval status
+  // on this model, so editing an existing month's report IS the resubmission.
+  const [editingReportId, setEditingReportId] = useState<number | null>(null);
 
   // Full-screen photo viewer state - which report's photos are open, and
   // at which index, so PhotoLightbox can be a single shared instance for
@@ -93,29 +99,51 @@ export default function AdminChildReportDetailScreen() {
     load().finally(() => setIsLoading(false));
   }, [load]);
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingReportId(null);
+    setNote('');
+    setAcademicRating(null);
+    setWellbeingRating(null);
+  };
+
+  const handleSave = async () => {
     if (!token || !academicRating || !wellbeingRating) {
       Alert.alert(t('admin_child_report_detail.almost_done', 'Almost done'), t('admin_child_report_detail.select_both_ratings', 'Please select both ratings.'));
       return;
     }
     setIsSubmitting(true);
     try {
-      await createChildReport(
-        token,
-        studentId,
-        { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
-      );
-      Alert.alert(t('admin_child_report_detail.report_added', 'Report added'), t('admin_child_report_detail.report_added_message', 'A report was added for {name}.').replace('{name}', studentName));
-      setShowForm(false);
-      setNote('');
-      setAcademicRating(null);
-      setWellbeingRating(null);
+      if (editingReportId) {
+        await updateChildReport(token, editingReportId, {
+          note,
+          academic_rating: academicRating,
+          wellbeing_rating: wellbeingRating,
+        });
+        Alert.alert(t('admin_child_report_detail.report_updated', 'Report updated'), t('admin_child_report_detail.report_updated_message', "This report was updated."));
+      } else {
+        await createChildReport(
+          token,
+          studentId,
+          { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
+        );
+        Alert.alert(t('admin_child_report_detail.report_added', 'Report added'), t('admin_child_report_detail.report_added_message', 'A report was added for {name}.').replace('{name}', studentName));
+      }
+      resetForm();
       await load();
     } catch (err) {
       Alert.alert(t('admin_child_report_detail.error_title', 'Something went wrong'), err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (report: MonthlyReport) => {
+    setEditingReportId(report.id);
+    setNote(report.note ?? '');
+    setAcademicRating(report.academic_rating);
+    setWellbeingRating(report.wellbeing_rating);
+    setShowForm(true);
   };
 
   const handleDelete = (reportId: number) => {
@@ -182,7 +210,11 @@ export default function AdminChildReportDetailScreen() {
 
           {showForm && (
             <View style={styles.formCard}>
-              <Text style={styles.formTitle}>{t('admin_child_report_detail.new_report', 'New Report')}</Text>
+              <Text style={styles.formTitle}>
+                {editingReportId
+                  ? t('admin_child_report_detail.edit_report', 'Edit Report')
+                  : t('admin_child_report_detail.new_report', 'New Report')}
+              </Text>
               <TextInput
                 style={styles.noteInput}
                 placeholder={t('admin_child_report_detail.note_placeholder', 'Write a short note...')}
@@ -195,18 +227,22 @@ export default function AdminChildReportDetailScreen() {
               <RatingSelector label={t('admin_child_report_detail.wellbeing_rating', 'Wellbeing Rating')} value={wellbeingRating} onChange={setWellbeingRating} />
 
               <View style={styles.formButtonRow}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowForm(false)}>
+                <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>
                   <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
-                  onPress={handleCreate}
+                  onPress={handleSave}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.submitButtonText}>{t('admin_child_report_detail.save_report', 'Save Report')}</Text>
+                    <Text style={styles.submitButtonText}>
+                      {editingReportId
+                        ? t('admin_child_report_detail.update_report', 'Update Report')
+                        : t('admin_child_report_detail.save_report', 'Save Report')}
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -221,9 +257,14 @@ export default function AdminChildReportDetailScreen() {
               <View key={report.id} style={styles.reportCard}>
                 <View style={styles.reportCardHeader}>
                   <Text style={styles.reportMonth}>{report.report_month}</Text>
-                  <TouchableOpacity onPress={() => handleDelete(report.id)} hitSlop={8}>
-                    <Text style={styles.deleteText}>{t('admin_child_report_detail.delete', 'Delete')}</Text>
-                  </TouchableOpacity>
+                  <View style={styles.reportCardActions}>
+                    <TouchableOpacity onPress={() => handleEdit(report)} hitSlop={8}>
+                      <Text style={styles.editText}>{t('admin_child_report_detail.edit', 'Edit')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(report.id)} hitSlop={8}>
+                      <Text style={styles.deleteText}>{t('admin_child_report_detail.delete', 'Delete')}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.gaugeRow}>
@@ -339,6 +380,8 @@ const styles = StyleSheet.create({
   },
   reportCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   reportMonth: { fontWeight: '800', color: INK, fontSize: 15 },
+  reportCardActions: { flexDirection: 'row', gap: 16 },
+  editText: { color: EMERALD, fontSize: 13, fontWeight: '600' },
   deleteText: { color: DANGER, fontSize: 13, fontWeight: '600' },
 
   gaugeRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },

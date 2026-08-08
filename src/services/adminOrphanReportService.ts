@@ -122,3 +122,34 @@ export async function createChildReport(
 export async function deleteChildReport(token: string, reportId: number): Promise<{ message: string }> {
   return authedPost('/admin_orphan_report_delete', token, { report_id: reportId });
 }
+
+/**
+ * POST /admin_orphan_report_update - admin edits/resubmits an existing
+ * report's content in place (no separate draft/approval status exists on
+ * this model - editing IS the resubmission). New photos are appended the
+ * same way createChildReport uploads them; existing photos already on the
+ * report are left as-is since this call doesn't remove any.
+ */
+export async function updateChildReport(
+  token: string,
+  reportId: number,
+  fields: { note: string; academic_rating: number; wellbeing_rating: number },
+  photos: PickedPhoto[] = [],
+): Promise<{ message: string }> {
+  const form = new FormData();
+  form.append('report_id', String(reportId));
+  form.append('note', fields.note);
+  form.append('academic_rating', String(fields.academic_rating));
+  form.append('wellbeing_rating', String(fields.wellbeing_rating));
+
+  photos.forEach((photo, index) => {
+    // @ts-ignore - React Native's FormData accepts this shape for file uploads
+    form.append('photos[]', {
+      uri: photo.uri,
+      name: photo.fileName ?? `photo_${index}.jpg`,
+      type: photo.type ?? 'image/jpeg',
+    });
+  });
+
+  return authedPost('/admin_orphan_report_update', token, form);
+}
