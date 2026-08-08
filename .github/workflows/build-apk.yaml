@@ -40,6 +40,11 @@ jobs:
       - name: Add camera permission for QR/ID scanning
         run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
 
+      - name: Add location permissions for GPS-based prayer times
+        run: |
+          sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
       - name: Install base dependencies
         working-directory: MuslimEdu
         run: npm install
@@ -67,7 +72,8 @@ jobs:
             "@react-native-community/netinfo@^11.4.1" \
             "react-native-vision-camera@^4.7.3" \
             "react-native-qrcode-svg@^6.3.21" \
-            "react-native-view-shot@^4.0.3"
+            "react-native-view-shot@^4.0.3" \
+            "@react-native-community/geolocation@^3.4.0"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu

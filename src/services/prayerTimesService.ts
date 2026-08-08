@@ -6,11 +6,13 @@ import { cacheKeyFor, cacheThenNetwork } from '../utils/offlineCache';
  * host this app calls, so it's kept isolated here rather than forced
  * through apiClient/API_BASE_URL, which are hardcoded to our own backend.
  *
- * Location comes from the school's own address (fetchMySchoolBranding in
- * academicSetupService.ts, already callable by every role) rather than
- * device GPS - no geolocation library/permission exists in this app yet,
- * and Aladhan's timingsByAddress endpoint geocodes a free-text address
- * server-side, so this needs nothing new on the client.
+ * Location is either the device's own GPS coordinates (preferred, if the
+ * user grants location permission - see utils/geolocation.ts) via
+ * Aladhan's /timings endpoint, or the school's own address
+ * (fetchMySchoolBranding in academicSetupService.ts) via /timingsByAddress
+ * as a fallback when permission is denied/unavailable. GPS is more
+ * accurate than geocoding a free-text school address and doesn't depend
+ * on the address being well-formed.
  */
 const ALADHAN_BASE = 'https://api.aladhan.com/v1';
 const CACHE_PREFIX = '@prayer_times_cache_v1';
@@ -37,6 +39,19 @@ export interface PrayerTimesResult {
   timings: PrayerTiming[];
 }
 
+export type PrayerLocation =
+  | { kind: 'coords'; latitude: number; longitude: number }
+  | { kind: 'address'; address: string };
+
+function locationCacheKeyPart(location: PrayerLocation): string {
+  // Coordinates are rounded to ~1km precision for the cache key - plenty
+  // accurate for "which city's prayer times" and keeps a walk around the
+  // block from missing the cache and refetching.
+  return location.kind === 'coords'
+    ? `geo:${location.latitude.toFixed(2)},${location.longitude.toFixed(2)}`
+    : `addr:${location.address}`;
+}
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -60,8 +75,11 @@ function stripTimingSuffix(raw: string): string {
   return raw.trim().slice(0, 5);
 }
 
-async function fetchTimingsForDate(address: string, date: Date): Promise<PrayerTimesResult> {
-  const url = `${ALADHAN_BASE}/timingsByAddress?address=${encodeURIComponent(address)}&method=${CALCULATION_METHOD}&date=${ddmmyyyy(date)}`;
+async function fetchTimingsForDate(location: PrayerLocation, date: Date): Promise<PrayerTimesResult> {
+  const url =
+    location.kind === 'coords'
+      ? `${ALADHAN_BASE}/timings?latitude=${location.latitude}&longitude=${location.longitude}&method=${CALCULATION_METHOD}&date=${ddmmyyyy(date)}`
+      : `${ALADHAN_BASE}/timingsByAddress?address=${encodeURIComponent(location.address)}&method=${CALCULATION_METHOD}&date=${ddmmyyyy(date)}`;
   const response = await fetch(url);
   const data = await response.json().catch(() => null);
 
@@ -86,15 +104,15 @@ async function fetchTimingsForDate(address: string, date: Date): Promise<PrayerT
 }
 
 /**
- * One network call per calendar day per address per account - cached via
+ * One network call per calendar day per location per account - cached via
  * the same cacheThenNetwork every other read-through cache in this app
  * uses (fetchFeed, fetchMySchedule, fetchMySchoolBranding, ...). `token`
  * is only used to namespace the cache key per-account, the same as every
  * other cache here - Aladhan itself needs no auth.
  */
-export async function fetchPrayerTimes(token: string, address: string, date: Date = new Date()): Promise<PrayerTimesResult> {
-  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, address, ddmmyyyy(date));
-  return cacheThenNetwork(cacheKey, () => fetchTimingsForDate(address, date));
+export async function fetchPrayerTimes(token: string, location: PrayerLocation, date: Date = new Date()): Promise<PrayerTimesResult> {
+  const cacheKey = cacheKeyFor(CACHE_PREFIX, token, locationCacheKeyPart(location), ddmmyyyy(date));
+  return cacheThenNetwork(cacheKey, () => fetchTimingsForDate(location, date));
 }
 
 export interface NextPrayerInfo {

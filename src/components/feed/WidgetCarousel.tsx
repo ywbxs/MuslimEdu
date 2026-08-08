@@ -20,12 +20,13 @@ function AnnouncementImageCard({ announcement, onPress }: { announcement: Widget
 }
 
 /**
- * Its own standalone section on the Home feed - NOT one of the swipeable
- * post-deck items (that made it read as just another post, misaligned
- * with the rest of the feed's card-per-swipe rhythm). Sits above the post
- * deck as a plain horizontal row, sized to its own compact height rather
- * than the full post-card height. Prayer Times card always first, then
- * any active superadmin-uploaded announcement images. Owns its own data
+ * Its own item in the vertical Home feed (see FeedScreen.tsx's deckData,
+ * WIDGETS_AFTER_POSTS) - pinned to a fixed, early-but-not-first position
+ * among the posts rather than a header/footer, so it reads as a distinct
+ * section roughly centered within the feed instead of tacked onto either
+ * end. A plain horizontal row, sized to its own compact height rather
+ * than a full post card's. Prayer Times card always first, then any
+ * active superadmin-uploaded announcement images. Owns its own data
  * loading, refreshed whenever the Home tab regains focus.
  */
 export default function WidgetCarousel() {
@@ -80,7 +81,7 @@ export default function WidgetCarousel() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { justifyContent: 'center', marginBottom: 16 },
+  wrap: { justifyContent: 'center', marginTop: 16 },
   announcementCard: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',

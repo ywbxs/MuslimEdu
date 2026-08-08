@@ -27,11 +27,10 @@ import {
 } from '../../services/postService';
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
-import FeedDeckCard from '../../components/feed/FeedDeckCard';
+import PostCard from '../../components/PostCard';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
-import { CARD_W, SNAP, EDGE, END_PAD } from '../../components/feed/deckMetrics';
 import { COLORS, RADIUS } from '../../theme/glass';
 
 const EMERALD = COLORS.emerald;
@@ -55,15 +54,22 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 }
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the
-// end of the Home deck - reached the same way every other post is, by
-// swiping to it - rather than a pill overlaid on top of the last post.
-type DeckItem = { kind: 'post'; post: Post } | { kind: 'caughtUp' };
+// end of the vertical feed - reached the same way every other post is, by
+// scrolling to it - rather than a pill overlaid on top of the last post.
+//
+// 'widgets' (Prayer Times + superadmin announcements, see WidgetCarousel.tsx)
+// sits at a fixed, early-but-not-first position - once there are enough
+// posts to have a "middle" at all, it's pinned to index WIDGETS_AFTER_POSTS
+// rather than a count derived from posts.length, so it never becomes a
+// moving/receding target as more posts paginate in later.
+type DeckItem = { kind: 'post'; post: Post } | { kind: 'widgets' } | { kind: 'caughtUp' };
+const WIDGETS_AFTER_POSTS = 2;
 
-// The screen is a vertical pager of full-screen sections - scroll DOWN to
-// move between them, one full screen at a time. Home's own content (the
-// actual posts) is a separate, nested HORIZONTAL deck - swipe LEFT-RIGHT to
-// move between posts. Two different gestures for two different things:
-// vertical = which section, horizontal = which post within Home.
+// The screen is a vertical pager of full-screen sections (Home/Shop/
+// Charity) - in practice a no-op today since SECTIONS only has one entry,
+// so this outer FlatList never actually has anywhere to scroll to. Home's
+// own content (the actual posts) is a separate, nested vertical FlatList -
+// a normal scrolling feed, not a swipe-per-post deck.
 //
 // Shop and Charity are TEMPORARILY disabled - they were placeholder decks of
 // hardcoded sample cards with no real feature behind them yet. The pager is
@@ -103,12 +109,8 @@ export default function FeedScreen() {
     [outerHeight],
   );
 
-  // --- Inner Home deck (the actual posts), horizontal --------------------
+  // --- Inner Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
-  const [deckHeight, setDeckHeight] = useState(0);
-  // deckHeight is the wrap's own box height (padding doesn't shrink that) -
-  // subtract its top+bottom padding to get the actual space a card has.
-  const cardHeight = deckHeight > 0 ? deckHeight - 12 - 20 : 0;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,10 +121,17 @@ export default function FeedScreen() {
   const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
-  const [index, setIndex] = useState(0);
+  // Whether the "All caught up" card has actually scrolled into view yet -
+  // drives its one-shot entrance animation (see CaughtUpCard.tsx).
+  const [caughtUpVisible, setCaughtUpVisible] = useState(false);
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: { item: DeckItem }[] }) => {
+    if (viewableItems.some((v) => v.item.kind === 'caughtUp')) setCaughtUpVisible(true);
+  }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
 
   const deckData: DeckItem[] = useMemo(() => {
     const items: DeckItem[] = posts.map((post) => ({ kind: 'post', post }));
+    if (posts.length > 0) items.splice(Math.min(WIDGETS_AFTER_POSTS, posts.length), 0, { kind: 'widgets' });
     if (posts.length > 0 && !hasMore) items.push({ kind: 'caughtUp' });
     return items;
   }, [posts, hasMore]);
@@ -136,7 +145,7 @@ export default function FeedScreen() {
         setPosts(res.posts);
         setHasMore(res.hasMore);
         setNextBeforeId(res.nextBeforeId);
-        setIndex(0);
+        setCaughtUpVisible(false);
         listRef.current?.scrollToOffset({ offset: 0, animated: false });
       } catch (err: any) {
         Alert.alert(
@@ -186,19 +195,6 @@ export default function FeedScreen() {
     }
   }, [token, hasMore, nextBeforeId]);
 
-  // Horizontal onEndReachedThreshold is measured in multiples of the
-  // visible WIDTH, not a fixed distance - 0.4 (fine for a vertical list)
-  // would fire far too late here, so pagination is also driven proactively
-  // from onSettle below once the reader nears the end of what's loaded.
-  const onSettle = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const i = Math.max(0, Math.round(e.nativeEvent.contentOffset.x / SNAP));
-      setIndex(i);
-      if (i >= posts.length - 3) onEndReached();
-    },
-    [posts.length, onEndReached],
-  );
-
   const handleToggleLike = async (post: Post) => {
     if (!token) return;
     setPosts((prev) =>
@@ -223,11 +219,9 @@ export default function FeedScreen() {
     (navigation as any).navigate('PostComments', { postId: post.id });
   };
 
-  // A new post (from posting or reposting) lands at index 0 and shifts
-  // every existing index under the reader's finger - jump the deck back to
-  // the start so what they're looking at doesn't silently change under them.
+  // A new post (from posting or reposting) lands at the top - scroll back
+  // there so what the reader is looking at doesn't silently move under them.
   const jumpToStart = () => {
-    setIndex(0);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
@@ -281,14 +275,7 @@ export default function FeedScreen() {
 
   const handleDelete = async (post: Post) => {
     if (!token) return;
-    const deletedIndex = posts.findIndex((p) => p.id === post.id);
     setPosts((prev) => prev.filter((p) => p.id !== post.id));
-    // Clamp the deck to the new (shorter) end so it doesn't strand past it.
-    const newLast = posts.length - 2;
-    if (deletedIndex !== -1 && deletedIndex <= index && newLast >= 0) {
-      const target = Math.max(0, Math.min(index, newLast));
-      listRef.current?.scrollToIndex({ index: target, animated: true });
-    }
     try {
       await deletePost(token, post.id);
     } catch (err: any) {
@@ -337,42 +324,31 @@ export default function FeedScreen() {
         </TouchableOpacity>
       )}
 
-      <WidgetCarousel />
-
-      <View style={styles.deckWrap} onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}>
+      <View style={styles.deckWrap}>
         {loading ? (
           <View style={styles.centerFill}>
             <ActivityIndicator color={EMERALD} />
           </View>
-        ) : cardHeight <= 0 ? null : (
+        ) : (
           <FlatList
             ref={listRef}
             data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : 'caught-up')}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            snapToInterval={SNAP}
-            snapToAlignment="start"
-            disableIntervalMomentum
-            contentContainerStyle={{ paddingLeft: EDGE, paddingRight: END_PAD }}
-            getItemLayout={(_, i) => ({ length: SNAP, offset: i * SNAP, index: i })}
+            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-            removeClippedSubviews={false}
-            initialNumToRender={2}
-            maxToRenderPerBatch={3}
-            windowSize={5}
-            onMomentumScrollEnd={onSettle}
-            onScrollEndDrag={onSettle}
             onEndReached={onEndReached}
-            onEndReachedThreshold={1.5}
-            renderItem={({ item, index: itemIndex }) =>
+            onEndReachedThreshold={0.5}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            renderItem={({ item }) =>
               item.kind === 'caughtUp' ? (
-                <CaughtUpCard height={cardHeight} active={itemIndex === index} />
+                <CaughtUpCard visible={caughtUpVisible} />
+              ) : item.kind === 'widgets' ? (
+                <WidgetCarousel />
               ) : (
-                <FeedDeckCard
+                <PostCard
                   post={item.post}
-                  height={cardHeight}
                   onToggleLike={handleToggleLike}
                   onPressComment={handleComment}
                   onPressRepost={handleRepost}
@@ -388,13 +364,13 @@ export default function FeedScreen() {
             }
             ListFooterComponent={
               loadingMore ? (
-                <View style={[styles.footerLoading, { height: cardHeight }]}>
+                <View style={styles.footerLoading}>
                   <ActivityIndicator color={EMERALD} />
                 </View>
               ) : null
             }
             ListEmptyComponent={
-              <View style={[styles.centerFill, { width: CARD_W }]}>
+              <View style={styles.centerFill}>
                 <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
               </View>
             }
@@ -478,18 +454,18 @@ const styles = StyleSheet.create({
   // The bottom tab bar is a normal docked element (MainTabs' custom TabBar
   // has no position:'absolute'), so it already gets its own space outside
   // this screen - deckWrap's flex:1 naturally stops above it with no manual
-  // clearance needed. Just a small breathing gap below the card instead of
-  // a much bigger reservation, so each post's photo gets nearly the full
-  // remaining height instead of rendering squarish.
-  deckWrap: { flex: 1, paddingTop: 12, paddingBottom: 20 },
+  // clearance needed.
+  deckWrap: { flex: 1 },
+  listContent: { paddingBottom: 20, flexGrow: 1 },
 
-  footerLoading: { width: CARD_W, alignItems: 'center', justifyContent: 'center' },
+  footerLoading: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
 
   centerFill: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 30,
+    paddingTop: 60,
   },
   emptyText: { color: SUBTLE, fontSize: 14, textAlign: 'center' },
 });
