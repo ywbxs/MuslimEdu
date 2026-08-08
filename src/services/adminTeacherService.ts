@@ -234,6 +234,83 @@ export async function fetchTeacherReports(token: string, teacherId: number): Pro
   return rawList.map(normalizeTeacherReport);
 }
 
+/**
+ * POST /admin_teacher_report_create - admin adds a monthly report on a
+ * teacher's behalf, same shape as adminOrphanReportService.createChildReport.
+ */
+export async function createTeacherReport(
+  token: string,
+  teacherId: number,
+  fields: {
+    note: string;
+    teaching_effectiveness_rating: number;
+    classroom_engagement_rating: number;
+    professional_growth_rating: number;
+    report_month?: string;
+  },
+  photos: { uri: string; fileName?: string | null; type?: string | null }[] = [],
+): Promise<{ message: string }> {
+  const form = new FormData();
+  form.append('teacher_id', String(teacherId));
+  form.append('note', fields.note);
+  form.append('teaching_effectiveness_rating', String(fields.teaching_effectiveness_rating));
+  form.append('classroom_engagement_rating', String(fields.classroom_engagement_rating));
+  form.append('professional_growth_rating', String(fields.professional_growth_rating));
+  if (fields.report_month) form.append('report_month', fields.report_month);
+
+  photos.forEach((photo, index) => {
+    // @ts-ignore - React Native's FormData accepts this shape for file uploads
+    form.append('photos[]', {
+      uri: photo.uri,
+      name: photo.fileName ?? `photo_${index}.jpg`,
+      type: photo.type ?? 'image/jpeg',
+    });
+  });
+
+  return authedPost('/admin_teacher_report_create', token, form);
+}
+
+/**
+ * POST /admin_teacher_report_update - admin edits/resubmits an existing
+ * teacher report's content in place, mirroring updateChildReport - editing
+ * IS the resubmission, since there's no separate draft/approval status on
+ * this model.
+ */
+export async function updateTeacherReport(
+  token: string,
+  reportId: number,
+  fields: {
+    note: string;
+    teaching_effectiveness_rating: number;
+    classroom_engagement_rating: number;
+    professional_growth_rating: number;
+  },
+  photos: { uri: string; fileName?: string | null; type?: string | null }[] = [],
+): Promise<{ message: string }> {
+  const form = new FormData();
+  form.append('report_id', String(reportId));
+  form.append('note', fields.note);
+  form.append('teaching_effectiveness_rating', String(fields.teaching_effectiveness_rating));
+  form.append('classroom_engagement_rating', String(fields.classroom_engagement_rating));
+  form.append('professional_growth_rating', String(fields.professional_growth_rating));
+
+  photos.forEach((photo, index) => {
+    // @ts-ignore - React Native's FormData accepts this shape for file uploads
+    form.append('photos[]', {
+      uri: photo.uri,
+      name: photo.fileName ?? `photo_${index}.jpg`,
+      type: photo.type ?? 'image/jpeg',
+    });
+  });
+
+  return authedPost('/admin_teacher_report_update', token, form);
+}
+
+/** POST /admin_teacher_report_delete - remove a teacher's report. */
+export async function deleteTeacherReport(token: string, reportId: number): Promise<{ message: string }> {
+  return authedPost('/admin_teacher_report_delete', token, { report_id: reportId });
+}
+
 /** POST /admin_teacher_profile - a single teacher's basic contact/role info. */
 export async function fetchTeacherProfile(token: string, teacherId: number): Promise<TeacherProfile> {
   const data = await authedPost('/admin_teacher_profile', token, { teacher_id: teacherId });
