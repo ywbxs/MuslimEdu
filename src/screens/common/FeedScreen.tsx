@@ -28,6 +28,7 @@ import {
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import PostCard from '../../components/PostCard';
+import PostCardSkeleton from '../../components/feed/PostCardSkeleton';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
@@ -316,8 +317,10 @@ export default function FeedScreen() {
 
       <View style={styles.deckWrap}>
         {loading ? (
-          <View style={styles.centerFill}>
-            <ActivityIndicator color={EMERALD} />
+          <View style={styles.skeletonStack}>
+            <PostCardSkeleton withImage style={styles.feedPostCard} />
+            <PostCardSkeleton style={styles.feedPostCard} />
+            <PostCardSkeleton withImage style={styles.feedPostCard} />
           </View>
         ) : (
           <FlatList
@@ -463,6 +466,8 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 20, flexGrow: 1 },
 
   footerLoading: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
+
+  skeletonStack: { paddingTop: 4 },
 
   centerFill: {
     flex: 1,
