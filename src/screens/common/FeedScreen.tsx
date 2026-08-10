@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -66,18 +64,16 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 type DeckItem = { kind: 'post'; post: Post } | { kind: 'widgets' } | { kind: 'caughtUp' };
 const WIDGETS_AFTER_POSTS = 2;
 
-// The screen is a vertical pager of full-screen sections (Home/Shop/
-// Charity) - in practice a no-op today since SECTIONS only has one entry,
-// so this outer FlatList never actually has anywhere to scroll to. Home's
-// own content (the actual posts) is a separate, nested vertical FlatList -
-// a normal scrolling feed, not a swipe-per-post deck.
-//
-// Shop and Charity are TEMPORARILY disabled - they were placeholder decks of
-// hardcoded sample cards with no real feature behind them yet. The pager is
-// left in place (rather than unwound back to a plain Home screen) so putting
-// them back is just re-adding their entries here and their sample data.
-type Section = 'home' | 'shop' | 'charity';
-const SECTIONS: Section[] = ['home'];
+// Home used to be wrapped in an outer vertical FlatList (a Home/Shop/
+// Charity pager) around this inner vertical FlatList (the actual posts).
+// Two same-axis FlatLists nested like that is a known RN gotcha: the outer
+// one intercepts scroll/touch gestures even with nothing to scroll to,
+// which silently blocked the inner post list from scrolling at all. Shop
+// and Charity were already disabled placeholders (hardcoded sample cards,
+// no real feature behind them), so the pager was pure dead weight actively
+// breaking the feed - removed rather than patched. If Shop/Charity come
+// back, give them their own tab/screen instead of re-nesting a vertical
+// pager around this list.
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -90,27 +86,9 @@ export default function FeedScreen() {
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  // --- Outer section pager (Home / Shop / Charity), vertical -------------
-  const [outerHeight, setOuterHeight] = useState(0);
-  const [sectionIndex, setSectionIndex] = useState(0);
-  const activeSection: Section = SECTIONS[sectionIndex] ?? 'home';
-  const headerTitleText =
-    activeSection === 'shop'
-      ? t('feed.header_shop', 'Shop')
-      : activeSection === 'charity'
-      ? t('feed.header_charity', 'Charity')
-      : t('feed.header_home', 'Home');
+  const headerTitleText = t('feed.header_home', 'Home');
 
-  const onOuterSettle = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (outerHeight <= 0) return;
-      const i = Math.max(0, Math.min(SECTIONS.length - 1, Math.round(e.nativeEvent.contentOffset.y / outerHeight)));
-      setSectionIndex(i);
-    },
-    [outerHeight],
-  );
-
-  // --- Inner Home feed (the actual posts), vertical -----------------------
+  // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -391,23 +369,7 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      <View style={styles.outerWrap} onLayout={(e) => setOuterHeight(e.nativeEvent.layout.height)}>
-        {outerHeight <= 0 ? null : (
-          <FlatList
-            data={SECTIONS}
-            keyExtractor={(s) => s}
-            showsVerticalScrollIndicator={false}
-            decelerationRate="fast"
-            snapToInterval={outerHeight}
-            snapToAlignment="start"
-            disableIntervalMomentum
-            getItemLayout={(_, i) => ({ length: outerHeight, offset: i * outerHeight, index: i })}
-            onMomentumScrollEnd={onOuterSettle}
-            onScrollEndDrag={onOuterSettle}
-            renderItem={() => <View style={{ height: outerHeight }}>{homeContent}</View>}
-          />
-        )}
-      </View>
+      <View style={styles.outerWrap}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
