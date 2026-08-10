@@ -8,7 +8,7 @@ import { fetchReportStatus, submitReport, PickedPhoto } from '../../services/orp
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
 
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 

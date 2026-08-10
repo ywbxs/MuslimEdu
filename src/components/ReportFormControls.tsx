@@ -6,8 +6,8 @@ import { PickedPhoto } from '../services/orphanService';
 import { SHADOW } from '../theme/spatial';
 import { preparePostPhoto, InvalidPhotoTypeError, formatBytes, MAX_PHOTO_BYTES } from '../utils/imagePrep';
 
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';

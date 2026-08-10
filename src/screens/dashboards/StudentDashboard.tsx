@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   quickIconWrapSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  quickIconWrapSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  quickIconWrapSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
   quickBadge: {
     position: 'absolute',
     top: -4,
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickArrowButtonSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  quickArrowButtonSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  quickArrowButtonSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
 
   overviewCard: {
     backgroundColor: '#FFFFFF',

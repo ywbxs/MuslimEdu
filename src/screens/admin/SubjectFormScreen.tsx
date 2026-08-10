@@ -54,7 +54,7 @@ function IconChevronLeft({ color }: { color: string }) {
 // than a free color picker - simplest option that reuses the same chip
 // pattern as every other selector on this screen.
 const COLOR_PRESETS = [
-  '#4F46E5', '#0EA5E9', '#10B981', '#F59E0B',
+  '#4F46E5', '#0EA5E9', '#2BCBB0', '#F59E0B',
   '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6',
 ];
 

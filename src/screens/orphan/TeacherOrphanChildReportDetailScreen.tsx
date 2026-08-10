@@ -18,7 +18,7 @@ import PhotoLightbox from '../../components/PhotoLightbox';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW } from '../../theme/spatial';
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 const GOLD = '#B8912F';
 const INK = '#14171A';
 const SUBTLE = '#7A8078';

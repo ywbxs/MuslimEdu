@@ -5,8 +5,8 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#EAF7EF';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 

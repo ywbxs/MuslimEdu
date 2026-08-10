@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardIconSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  cardIconSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  cardIconSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
   lockBadge: {
     position: 'absolute',
     bottom: -2,
@@ -1075,5 +1075,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardArrowSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  cardArrowSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  cardArrowSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
 });

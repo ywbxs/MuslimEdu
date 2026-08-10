@@ -40,11 +40,11 @@ const CANVAS_SOFT = '#F2FAF8';
 const SURFACE = '#F4FAFA';
 const PLACEHOLDER = '#9CA3AF';
 const DANGER = '#D9534F';
-const ACCENT = '#1A7A6E';
-const ACCENT_MID = '#2A9D8F';
-const ACCENT_LIGHT = '#5BBFB5';
-const ACCENT_GHOST = 'rgba(26,122,110,0.08)';
-const ACCENT_BORDER = 'rgba(26,122,110,0.15)';
+const ACCENT = '#2BCBB0';
+const ACCENT_MID = '#1E927E';
+const ACCENT_LIGHT = '#2AB4DB';
+const ACCENT_GHOST = 'rgba(43,203,176,0.08)';
+const ACCENT_BORDER = 'rgba(43,203,176,0.15)';
 
 const APP_ICON = require('../assets/images/app-icon.png');
 const STUDENTS_ILLUSTRATION = require('../assets/images/students-illustration-transparent.png');

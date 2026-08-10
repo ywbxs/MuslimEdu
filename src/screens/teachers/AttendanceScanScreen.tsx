@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     padding: 14,
     ...SHADOW.level2,
   },
-  bannerOk: { backgroundColor: 'rgba(15,157,88,0.92)' },
+  bannerOk: { backgroundColor: 'rgba(43,203,176,0.92)' },
   bannerError: { backgroundColor: 'rgba(229,72,77,0.92)' },
   bannerText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13.5, textAlign: 'center' },
 
