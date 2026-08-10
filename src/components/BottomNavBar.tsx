@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Mirrors MainTabs.tsx's TabBar (same icons/order/colors/notch treatment)
 // so screens pushed on the root stack still give one-tap access back to the
@@ -29,19 +28,36 @@ function HomeIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+// Admin center button (orphan-type and regular school type alike) - a plain
+// plus, matching MainTabs.tsx's TabBar.
 function AdmissionIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3.2} stroke={color} strokeWidth={1.9} />
-      <Path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-      <Path d="M18 8v6M15 11h6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
-function ReportsIcon({ color }: { color: string }) {
+function ScanIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 20V11M12 20V4M18 20v-7" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Path
+        d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Rect x={9} y={9} width={6} height={6} rx={1} stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+// Student center button - opens their status report (classes, attendance,
+// grades - see MyProgressScreen/StudentProgressScreen.tsx).
+function ProfileIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={3.4} stroke={color} strokeWidth={1.9} />
+      <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -79,7 +95,8 @@ function MenuIcon({ color }: { color: string }) {
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
-  Reports: (c) => <ReportsIcon color={c} />,
+  Scan: (c) => <ScanIcon color={c} />,
+  MyProgress: (c) => <ProfileIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
   Alerts: (c) => <BellIcon color={c} />,
   Menu: (c) => <MenuIcon color={c} />,
@@ -115,16 +132,26 @@ export default function BottomNavBar() {
   const { unreadCount } = useNotifications();
   const activeName = useActiveTabName();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
-  // Reports only has real content on orphan schools - see MainTabs.tsx.
-  const showReports = isOrphanSchoolUser(user);
+  const isTeacherRole = user?.role === 'teacher';
+  const isStudentRole = user?.role === 'student';
 
-  // Admission (admin/superadmin only) is the raised center button, same as
-  // MainTabs.tsx - this simplified bar has no "Scan" tab to fall back to.
-  const centerName = isAdminRole ? 'Admission' : null;
+  // Raised center button, same mapping as MainTabs.tsx's TabBar: Admission
+  // for both admin school types, Scan for teachers, MyProgress (their
+  // status report) for students - always exactly one, capping this bar at
+  // 5 total icons for every role.
+  const centerName = isAdminRole ? 'Admission' : isTeacherRole ? 'Scan' : isStudentRole ? 'MyProgress' : null;
 
-  const sideTabs = ['Home', ...(showReports ? ['Reports'] : []), 'Chat', 'Alerts', 'Menu'];
+  const sideTabs = ['Home', 'Chat', 'Alerts', 'Menu'];
 
-  const goTo = (name: string) => (navigation as any).navigate('MainTabs', { screen: name });
+  const goTo = (name: string) => {
+    // MyProgress is a RootNavigator stack screen, not a MainTabs tab - push
+    // it directly instead of routing through MainTabs' screen param.
+    if (name === 'MyProgress') {
+      (navigation as any).navigate('MyProgress');
+      return;
+    }
+    (navigation as any).navigate('MainTabs', { screen: name });
+  };
 
   return (
     <View style={styles.tabBarWrap}>
