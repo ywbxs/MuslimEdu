@@ -6,16 +6,25 @@ import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
 import ExpandableText from './ExpandableText';
 import { Post } from '../services/postService';
-import { COLORS, RADIUS, SHADOW } from '../theme/glass';
+import { RADIUS, SHADOW } from '../theme/glass';
 
-const EMERALD = COLORS.emerald;
-const EMERALD_SOFT = COLORS.emeraldSoft;
-const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
-const HAIRLINE = COLORS.border;
-const CANVAS = COLORS.canvas;
-const DANGER = COLORS.danger;
-const HEART_RED = '#E0245E';
+// Teal/mint palette (matches the Home feed + login redesign) - scoped to
+// this component rather than theme/glass, same "own its own colors"
+// precedent LoginScreen.tsx set. PostCard is shared across many screens
+// (moderation queue, profile modal, admin trash, the feed itself), so this
+// recolor is intentionally global to the component - a repost icon that's
+// teal in the feed but green everywhere else would look like two different
+// apps stitched together.
+const EMERALD = '#1A7A6E';
+const EMERALD_SOFT = 'rgba(26,122,110,0.08)';
+const INK = '#0D1E1C';
+const SUBTLE = '#6B8C88';
+const HAIRLINE = 'rgba(13,30,28,0.08)';
+const CANVAS = '#E8F4F2';
+const DANGER = '#D9534F';
+// Liked hearts fill the same teal accent as everything else instead of a
+// separate red, so the feed reads as one coherent color system.
+const HEART_RED = EMERALD;
 // Neutral fill behind a hero photo while it loads, and behind a text-only
 // post's headline - matches PostImageGrid's own image placeholder so a
 // loading/blank hero reads as "nothing here yet" instead of a green card.
@@ -642,7 +651,7 @@ export default function PostCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 8,
@@ -709,9 +718,9 @@ const styles = StyleSheet.create({
   imageWrap: { marginTop: 12, alignItems: 'center' },
   quoteBox: {
     marginTop: 12,
-    backgroundColor: COLORS.canvas,
+    backgroundColor: CANVAS,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: HAIRLINE,
     borderRadius: RADIUS.md,
     padding: 14,
   },
@@ -726,7 +735,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: HAIRLINE,
   },
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.

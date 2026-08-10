@@ -2,19 +2,22 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
-import { COLORS, BRAND } from '../theme/glass';
 
-// Mirrors MainTabs.tsx's TabBar (same icons/labels/order/colors) so screens
-// pushed on the root stack still give one-tap access back to the app's main
-// sections. Docked bar, no floating/pill styling - active tab is indicated
-// by icon+label color plus a small top indicator bar.
+// Mirrors MainTabs.tsx's TabBar (same icons/order/colors/floating-pill
+// treatment) so screens pushed on the root stack still give one-tap access
+// back to the app's main sections, and look like the same nav bar.
 
-const INACTIVE = COLORS.subtle;
-const ACTIVE = BRAND.emerald;
+const INACTIVE = '#6B8C88';
+const ACTIVE = '#0D1E1C';
+const DANGER = '#D9534F';
+const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+const GLASS_FILL = 'rgba(255,255,255,0.55)';
+const CENTER_BTN_BG = '#16211F';
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -112,68 +115,87 @@ export default function BottomNavBar() {
   // Reports only has real content on orphan schools - see MainTabs.tsx.
   const showReports = isOrphanSchoolUser(user);
 
-  const tabs = [
-    'Home',
-    ...(isAdminRole ? ['Admission'] : []),
-    ...(showReports ? ['Reports'] : []),
-    'Chat',
-    'Alerts',
-    'Menu',
-  ];
+  // Admission (admin/superadmin only) is the raised center button, same as
+  // MainTabs.tsx - this simplified bar has no "Scan" tab to fall back to.
+  const centerName = isAdminRole ? 'Admission' : null;
+
+  const sideTabs = ['Home', ...(showReports ? ['Reports'] : []), 'Chat', 'Alerts', 'Menu'];
+
+  const goTo = (name: string) => (navigation as any).navigate('MainTabs', { screen: name });
 
   return (
-    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {tabs.map((name) => {
-        const isActive = activeName === name;
-        const color = isActive ? ACTIVE : INACTIVE;
-        return (
-          <TouchableOpacity
-            key={name}
-            style={styles.tabItem}
-            activeOpacity={0.7}
-            onPress={() => (navigation as any).navigate('MainTabs', { screen: name })}
-          >
-            {isActive && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>
-              {ICONS[name](color)}
-              {name === 'Alerts' && unreadCount > 0 && (
-                <View style={styles.badge} pointerEvents="none">
-                  <Text style={styles.badgeText} numberOfLines={1}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {centerName && (
+        <TouchableOpacity style={styles.centerBtn} activeOpacity={0.85} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
+          {ICONS[centerName]('#FFFFFF')}
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.tabBar}>
+        <BlurView blurType="light" blurAmount={24} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
+        <View style={[StyleSheet.absoluteFillObject, styles.tabBarTint]} />
+        {sideTabs.map((name) => {
+          const isActive = activeName === name;
+          const color = isActive ? ACTIVE : INACTIVE;
+          return (
+            <TouchableOpacity key={name} style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
+              <View style={styles.iconWrap}>
+                {ICONS[name](color)}
+                {name === 'Alerts' && unreadCount > 0 && (
+                  <View style={styles.badge} pointerEvents="none">
+                    <Text style={styles.badgeText} numberOfLines={1}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  tabBarWrap: { paddingHorizontal: 16, paddingTop: 0 },
   tabBar: {
     flexDirection: 'row',
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
+    alignItems: 'center',
+    height: 64,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    overflow: 'hidden',
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: ACTIVE,
-  },
+  tabBarTint: { backgroundColor: GLASS_FILL },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  centerBtn: {
+    position: 'absolute',
+    top: -15,
+    left: '50%',
+    marginLeft: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: CENTER_BTN_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 9,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.55)',
+  },
   badge: {
     position: 'absolute',
     top: -4,
@@ -182,7 +204,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: COLORS.danger,
+    backgroundColor: DANGER,
     alignItems: 'center',
     justifyContent: 'center',
   },
