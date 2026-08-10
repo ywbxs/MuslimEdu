@@ -2,22 +2,25 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
-// Mirrors MainTabs.tsx's TabBar (same icons/order/colors/floating-pill
-// treatment) so screens pushed on the root stack still give one-tap access
-// back to the app's main sections, and look like the same nav bar.
+// Mirrors MainTabs.tsx's TabBar (same icons/order/colors/notch treatment)
+// so screens pushed on the root stack still give one-tap access back to the
+// app's main sections, and look like the same nav bar.
 
 const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
-const GLASS_BORDER = 'rgba(255,255,255,0.65)';
-const GLASS_FILL = 'rgba(255,255,255,0.55)';
+// No backdrop-blur equivalent for a curved shape without a masking library
+// (see MainTabs.tsx's TabBar) - opaque enough on its own to stay legible.
+const GLASS_FILL = 'rgba(255,255,255,0.82)';
 const CENTER_BTN_BG = '#16211F';
+// Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
+// either changes.
+const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -132,8 +135,9 @@ export default function BottomNavBar() {
       )}
 
       <View style={styles.tabBar}>
-        <BlurView blurType="light" blurAmount={24} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
-        <View style={[StyleSheet.absoluteFillObject, styles.tabBarTint]} />
+        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+        </Svg>
         {sideTabs.map((name) => {
           const isActive = activeName === name;
           const color = isActive ? ACTIVE : INACTIVE;
@@ -158,22 +162,18 @@ export default function BottomNavBar() {
 }
 
 const styles = StyleSheet.create({
-  tabBarWrap: { paddingHorizontal: 16, paddingTop: 0 },
+  // Edge-to-edge, no side margins/rounded pill - matches MainTabs.tsx.
+  tabBarWrap: { paddingTop: 0 },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 64,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    overflow: 'hidden',
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
     elevation: 8,
   },
-  tabBarTint: { backgroundColor: GLASS_FILL },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {
