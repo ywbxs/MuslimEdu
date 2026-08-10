@@ -37,6 +37,9 @@ jobs:
       - name: Copy your app icon over the default one
         run: cp -r source-files/android-icons/* MuslimEdu/android/app/src/main/res/
 
+      - name: Lock the app to portrait orientation
+        run: sed -i '/android:name=".MainActivity"/a\      android:screenOrientation="portrait"' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
       - name: Add camera permission for QR/ID scanning
         run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
 
