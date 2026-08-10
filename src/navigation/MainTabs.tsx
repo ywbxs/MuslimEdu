@@ -191,7 +191,7 @@ function TabBar({ state, navigation }: any) {
   };
 
   return (
-    <View style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={styles.tabBarWrap}>
       {centerRouteName && (
         <TouchableOpacity
           style={styles.centerBtn}
@@ -204,7 +204,7 @@ function TabBar({ state, navigation }: any) {
         </TouchableOpacity>
       )}
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
         {/* A rectangular BlurView can't be clipped to this curved shape
             without a masking library, so the "glass" here is a translucent
             fill + shadow rather than a true backdrop blur - same tradeoff
@@ -421,20 +421,17 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  // Floating pill, not docked full-bleed - horizontal margins + rounded
-  // corners on tabBar itself, with the raised center button overlapping
-  // its top edge (approximates the mockup's wave-notch cutout without the
-  // SVG clipPath complexity - visually near-identical, just an overlap
-  // instead of a literal cut).
   // Edge-to-edge, no side margins/rounded pill - full-width glass bar, same
-  // as the login/feed mockups' tab-bar-wrap (0 horizontal padding).
-  tabBarWrap: {
-    paddingTop: 0,
-  },
+  // as the login/feed mockups' tab-bar-wrap (0 padding at all, including
+  // bottom - the safe-area inset lives on tabBar's own paddingBottom below
+  // instead, so the glass fill itself reaches the literal screen edge
+  // rather than leaving a gap of bare canvas underneath the bar).
+  tabBarWrap: {},
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64,
+    paddingTop: 14,
+    paddingHorizontal: 20,
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
