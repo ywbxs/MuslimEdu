@@ -828,6 +828,10 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
         </Svg>
+        {/* Soft luminous glow, same as the HTML mockup's hero - a bright
+            core fading to nothing, not a flat-opacity disc. */}
+        <View style={styles.glowTopRight} pointerEvents="none" />
+        <View style={styles.glowBottomLeft} pointerEvents="none" />
       </Animated.View>
 
       <Animated.ScrollView
@@ -928,6 +932,18 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas, overflow: 'hidden' },
 
+  glowTopRight: {
+    position: 'absolute',
+    top: -70, right: -70,
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(43,203,176,0.16)',
+  },
+  glowBottomLeft: {
+    position: 'absolute',
+    bottom: -80, left: -50,
+    width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(42,180,219,0.10)',
+  },
   bgLayer: {
     position: 'absolute',
     top: 0,
