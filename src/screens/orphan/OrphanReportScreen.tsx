@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Line, Circle, Polyline, Rect } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,8 @@ import {
 import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard';
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
 import PhotoLightbox from '../../components/PhotoLightbox';
+import MonthlyReportTimeline, { TimelineMonthMeta } from '../../components/reports/MonthlyReportTimeline';
+import MonthlyReportSkeleton from '../../components/reports/MonthlyReportSkeleton';
 
 const EMERALD = '#2BCBB0';
 const EMERALD_SOFT = '#E5F8F5';
@@ -95,13 +97,6 @@ function IconCalendar({ color = EMERALD }: { color?: string }) {
       <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
       <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
       <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function IconCheck({ color = '#FFFFFF', size = 13 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 13 10 18 19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -332,6 +327,23 @@ export default function OrphanReportScreen() {
   }, [status]);
 
   const visibleTimeline = showAllHistory ? timeline : timeline.slice(0, HISTORY_PREVIEW_COUNT);
+  const timelineMeta: TimelineMonthMeta[] = visibleTimeline.map((m) => ({
+    key: m.key,
+    name: m.name,
+    submitted: m.submitted,
+    submittedOn: m.submittedOn,
+    meters: [
+      { label: t('orphan_report.academic', 'Academic'), value: m.report?.academic_rating ?? null },
+      { label: t('orphan_report.wellbeing', 'Wellbeing'), value: m.report?.wellbeing_rating ?? null, tone: 'gold' },
+    ],
+    photos: m.report?.photos ?? [],
+  }));
+  const pressTimelineMonth = (meta: TimelineMonthMeta) => {
+    const original = visibleTimeline.find((x) => x.key === meta.key);
+    if (!original) return;
+    if (original.submitted) setSelectedMonth(original);
+    else openWizardFor(original);
+  };
 
   const resetForm = () => {
     setNote('');
@@ -464,8 +476,16 @@ export default function OrphanReportScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={EMERALD} />
+      <View style={styles.flex}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
+            <IconChevronLeft />
+            <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('orphan_report.header_title', 'Monthly Report')}</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <MonthlyReportSkeleton />
       </View>
     );
   }
@@ -577,47 +597,7 @@ export default function OrphanReportScreen() {
           {visibleTimeline.length === 0 ? (
             <Text style={styles.emptyHistory}>{t('orphan_report.empty_history', 'No reports yet. Your first submission will show up here.')}</Text>
           ) : (
-            <View style={styles.timelineOuter}>
-              <View style={styles.timelineLine} />
-              {visibleTimeline.map((m, idx) => (
-                <TouchableOpacity
-                  key={m.key}
-                  style={[styles.timelineRow, idx === visibleTimeline.length - 1 && styles.timelineRowLast]}
-                  activeOpacity={0.7}
-                  onPress={() => (m.submitted ? setSelectedMonth(m) : openWizardFor(m))}
-                >
-                  <View style={styles.timelineNodeCol}>
-                    {m.submitted ? (
-                      <View style={styles.timelineNodeFilled}>
-                        <IconCheck size={13} />
-                      </View>
-                    ) : (
-                      <View style={styles.timelineNodeHollow} />
-                    )}
-                  </View>
-
-                  <View style={[styles.timelineCard, m.submitted && styles.timelineCardHighlighted]}>
-                    <View style={[styles.calChip, m.submitted ? styles.calChipDark : styles.calChipMissing]}>
-                      <IconCalendar color={m.submitted ? '#FFFFFF' : DANGER} />
-                    </View>
-                    <View style={styles.flex1}>
-                      <Text style={styles.historyMonth}>{m.name}</Text>
-                      {m.submitted ? (
-                        <Text style={styles.historySubmittedOn}>{t('orphan_report.submitted', 'Submitted')}</Text>
-                      ) : (
-                        <Text style={styles.historyMissing}>{t('orphan_report.missing', 'Missing')}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.statusBadge, m.submitted ? styles.statusBadgeOnTime : styles.statusBadgePending]}>
-                      <Text style={[styles.statusBadgeText, m.submitted ? styles.statusBadgeTextOnTime : styles.statusBadgeTextPending]}>
-                        {m.submitted ? t('orphan_report.on_time', 'On time') : t('orphan_report.make_up', 'Make up')}
-                      </Text>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <MonthlyReportTimeline months={timelineMeta} onPressMonth={pressTimelineMonth} />
           )}
         </View>
       </ScrollView>
@@ -727,59 +707,7 @@ const styles = StyleSheet.create({
   },
 
   calChip: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  calChipDark: { backgroundColor: INK },
-  calChipMissing: { backgroundColor: DANGER_SOFT },
-  historyMonth: { fontSize: 15, fontWeight: '700', color: INK },
-  historySubmittedOn: { fontSize: 12.5, color: EMERALD, fontWeight: '600', marginTop: 2 },
-  historyMissing: { fontSize: 12.5, color: DANGER, fontWeight: '600', marginTop: 2 },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
-
-  timelineOuter: { position: 'relative', marginTop: 6 },
-  timelineLine: {
-    position: 'absolute',
-    left: 19,
-    top: 20,
-    bottom: 20,
-    width: 0,
-    borderLeftWidth: 1.5,
-    borderColor: '#D9DCE0',
-    borderStyle: 'solid',
-  },
-  timelineRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  timelineRowLast: { marginBottom: 0 },
-  timelineNodeCol: { width: 40, alignItems: 'center', paddingTop: 20 },
-  timelineNodeFilled: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: INK,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timelineNodeHollow: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#C7CBD1',
-  },
-  timelineCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-  },
-  timelineCardHighlighted: { backgroundColor: '#F4FAF7', borderColor: '#DCEEE3' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginLeft: 8 },
-  statusBadgeOnTime: { backgroundColor: EMERALD_SOFT },
-  statusBadgePending: { backgroundColor: DANGER_SOFT },
-  statusBadgeText: { fontSize: 11.5, fontWeight: '700' },
-  statusBadgeTextOnTime: { color: EMERALD },
-  statusBadgeTextPending: { color: DANGER },
-  chevron: { fontSize: 20, color: '#C4C9CF', fontWeight: '400', marginLeft: 6 },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(12,16,14,0.45)', justifyContent: 'flex-end' },
   modalBackdropTouch: { ...StyleSheet.absoluteFillObject },
