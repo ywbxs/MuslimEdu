@@ -450,8 +450,8 @@ export default function OrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('orphan_report.photos_title', 'Add Photos'),
-        subtitle: t('orphan_report.photos_subtitle_required', 'Required — add at least one photo of your activities, achievements or study progress.'),
-        content: <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={5} required />,
+        subtitle: t('orphan_report.photos_subtitle_required', 'Required — add at least one photo of your activities, achievements or study progress (up to 20).'),
+        content: <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={20} required />,
         // Photos are required for the child report (unlike the optional
         // teacher version) - the wizard's Submit button stays disabled
         // until at least one photo is attached.

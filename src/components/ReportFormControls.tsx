@@ -91,7 +91,7 @@ function IconClose() {
 export function PhotoPicker({
   photos,
   onChange,
-  maxPhotos = 5,
+  maxPhotos = 20,
   required = false,
 }: {
   photos: PickedPhoto[];
