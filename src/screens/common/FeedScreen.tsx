@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -30,11 +32,18 @@ import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
-import { COLORS, RADIUS } from '../../theme/glass';
+import { RADIUS } from '../../theme/glass';
 
-const EMERALD = COLORS.emerald;
-const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
+// Teal/mint palette matching the login + feed mockup redesign - see
+// LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
+// soft gradient backdrop instead of a flat color, same as login.
+const EMERALD = '#1A7A6E';
+const INK = '#0D1E1C';
+const SUBTLE = '#6B8C88';
+const CANVAS = '#E8F4F2';
+const CANVAS_SOFT = '#F2FAF8';
+const GLASS_BORDER = 'rgba(255,255,255,0.5)';
+const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -293,6 +302,8 @@ export default function FeedScreen() {
     <>
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+          <BlurView blurType="light" blurAmount={18} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
+          <View style={[StyleSheet.absoluteFillObject, styles.composerTint]} />
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
           <Text style={styles.composerPlaceholder} numberOfLines={1}>
             {t('feed.composer_placeholder', 'Share a photo...')}
@@ -338,6 +349,7 @@ export default function FeedScreen() {
                   onPressImage={(images, imgIndex) =>
                     (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
                   }
+                  containerStyle={styles.feedPostCard}
                 />
               )
             }
@@ -361,6 +373,12 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
+      <LinearGradient
+        colors={[CANVAS_SOFT, CANVAS]}
+        start={{ x: 0.3, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
@@ -386,7 +404,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas },
+  flex: { flex: 1, backgroundColor: CANVAS },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -404,18 +422,37 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: GLASS_BORDER,
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
+    overflow: 'hidden',
   },
+  // Sits between the BlurView and content - keeps the composer readable
+  // over whatever's behind it (see LoginScreen.tsx's cardTint for the same
+  // pattern).
+  composerTint: { backgroundColor: GLASS_FILL },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
+
+  // Edge-to-edge translucent row instead of PostCard's default floating
+  // rounded card - matches the feed mockup's flat, hairline-divided list.
+  // Only applied here (via containerStyle); PostCard's own default "card"
+  // style is untouched for every other screen that renders it (moderation
+  // queue, profile modal, admin trash, etc).
+  feedPostCard: {
+    backgroundColor: GLASS_FILL,
+    borderRadius: 0,
+    marginHorizontal: 0,
+    marginTop: 0,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
+  },
 
 
   // The bottom tab bar is a normal docked element (MainTabs' custom TabBar

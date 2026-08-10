@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from '@react-native-community/blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
@@ -23,20 +24,30 @@ import {
   StudentEnrollmentWorkflowStatus,
 } from '../services/enrollmentWorkflowService';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
-import { COLORS, BRAND } from '../theme/glass';
+
+// Teal/mint palette matching the login + feed redesign - see
+// LoginScreen.tsx's own local-palette precedent. Floating glass pill bar
+// with a raised circular center button for whichever tab is this role's
+// "primary action" (Admission for admin/superadmin, Scan for teacher),
+// instead of the old docked square bar with that tab inline.
+const ACTIVE = '#0D1E1C';
+const SUBTLE = '#6B8C88';
+const DANGER = '#D9534F';
+const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+const GLASS_FILL = 'rgba(255,255,255,0.55)';
+const CENTER_BTN_BG = '#16211F';
+
+const Tab = createBottomTabNavigator();
+
+// Whichever of these routes is present becomes the raised center button
+// instead of an inline tab - first match wins, so an admin (who could in
+// theory also satisfy a later check) always gets Admission, never Scan.
+const CENTER_ROUTE_CANDIDATES = ['Admission', 'Scan'];
 
 // Per-user cache of the last known enrollment gate verdict, so a student who
 // opens the app offline sees the same gate decision as their last online
 // check rather than being treated as "unknown" - see EnrollmentGate below.
 const ENROLLMENT_GATE_CACHE_KEY = '@enrollment_gate_completed_v1';
-
-// Docked bar, no floating/pill styling - matches BottomNavBar.tsx (same
-// icons/labels/order/colors) so there's one source of truth for "what does
-// the active tab look like" whichever bar happens to be on screen.
-const ACTIVE = BRAND.emerald;
-const SUBTLE = COLORS.subtle;
-
-const Tab = createBottomTabNavigator();
 
 // --- Inline tab icons (react-native-svg) ---
 function HomeIcon({ color }: { color: string }) {
@@ -158,44 +169,58 @@ function TabBar({ state, navigation }: any) {
     return null;
   }
 
+  const centerRouteName = CENTER_ROUTE_CANDIDATES.find((name) => state.routes.some((r: any) => r.name === name)) ?? null;
+  const visibleRoutes = state.routes.filter((r: any) => r.name !== centerRouteName);
+  const centerIndex = centerRouteName ? state.routes.findIndex((r: any) => r.name === centerRouteName) : -1;
+  const centerFocused = centerIndex === state.index;
+
+  const goToRoute = (route: any, isRouteFocused: boolean) => {
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (!isRouteFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name);
+    }
+  };
+
   return (
-    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {state.routes.map((route: any, index: number) => {
-        const isRouteFocused = state.index === index;
-        const renderIcon = ICONS[route.name];
-        const color = isRouteFocused ? ACTIVE : SUBTLE;
+    <View style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {centerRouteName && (
+        <TouchableOpacity
+          style={styles.centerBtn}
+          activeOpacity={0.85}
+          onPress={() => goToRoute(state.routes[centerIndex], centerFocused)}
+          accessibilityRole="button"
+          accessibilityLabel={centerRouteName}
+        >
+          {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
+        </TouchableOpacity>
+      )}
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!isRouteFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+      <View style={styles.tabBar}>
+        <BlurView blurType="light" blurAmount={24} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
+        <View style={[StyleSheet.absoluteFillObject, styles.tabBarTint]} />
+        {visibleRoutes.map((route: any) => {
+          const index = state.routes.indexOf(route);
+          const isRouteFocused = state.index === index;
+          const renderIcon = ICONS[route.name];
+          const color = isRouteFocused ? ACTIVE : SUBTLE;
 
-        return (
-          <TouchableOpacity
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isRouteFocused ? { selected: true } : {}}
-            onPress={onPress}
-            style={styles.tabItem}
-            activeOpacity={0.7}
-          >
-            {isRouteFocused && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>
-              {renderIcon && renderIcon(color)}
-              {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
-            </View>
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {route.name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isRouteFocused ? { selected: true } : {}}
+              onPress={() => goToRoute(route, isRouteFocused)}
+              style={styles.tabItem}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconWrap}>
+                {renderIcon && renderIcon(color)}
+                {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -380,36 +405,58 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
+  // Floating pill, not docked full-bleed - horizontal margins + rounded
+  // corners on tabBar itself, with the raised center button overlapping
+  // its top edge (approximates the mockup's wave-notch cutout without the
+  // SVG clipPath complexity - visually near-identical, just an overlap
+  // instead of a literal cut).
+  tabBarWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 0,
+  },
   tabBar: {
     flexDirection: 'row',
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
+    alignItems: 'center',
+    height: 64,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    overflow: 'hidden',
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 8,
   },
+  tabBarTint: { backgroundColor: GLASS_FILL },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: ACTIVE,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 3,
+  centerBtn: {
+    position: 'absolute',
+    top: -15,
+    left: '50%',
+    marginLeft: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: CENTER_BTN_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 9,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.55)',
   },
   badge: {
     position: 'absolute',
@@ -419,7 +466,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: COLORS.danger,
+    backgroundColor: DANGER,
     alignItems: 'center',
     justifyContent: 'center',
   },
