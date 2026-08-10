@@ -2,8 +2,10 @@
 // DESIGN TOKENS — solid-surface "premium light" system (see DESIGN_SYSTEM.md)
 // ----------------------------------------------------------------------------
 // White cards on a light canvas, soft layered shadows, green as the single
-// accent. Real blur (BlurView) is reserved for surface="hero" panels only —
-// everything else is solid. Module kept as `theme/glass` (with the
+// accent. No real blur anywhere - @react-native-community/blur doesn't
+// reliably respect rounded-corner clipping on Android, so every "glass"
+// surface (including surface="hero" panels) approximates frosted glass
+// with an opaque-enough translucent fill instead. Module kept as `theme/glass` (with the
 // `theme/spatial` back-compat shim re-exporting it) so existing imports keep
 // working while each screen is migrated phase by phase.
 // ============================================================================

@@ -12,9 +12,10 @@
 // Material Design 3 tokens for the Student Admission wizard — glassmorphism
 // spatial UI pass. Surface colors are now translucent (rgba) instead of flat
 // white, so every component built on `md3.color.surface*` automatically
-// reads as frosted glass once it sits inside a blurred GlassCard/GlassBackground
-// (see AdmissionScreen.tsx, which wraps the wizard's chrome in real BlurViews).
-// Elevation now reuses the app-wide glass shadow tokens for consistency.
+// reads as frosted glass once it sits inside an opaque-tinted GlassCard/
+// GlassBackground panel (see AdmissionScreen.tsx - no real blur, see
+// theme/glass.ts for why). Elevation now reuses the app-wide glass shadow
+// tokens for consistency.
 // -----------------------------------------------------------------------------
 import { SHADOW, GLASS } from '../../../theme/glass';
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
@@ -143,6 +143,15 @@ export default function BottomNavBar() {
 
   const sideTabs = ['Home', 'Chat', 'Alerts', 'Menu'];
 
+  // See MainTabs.tsx's TabBar for why this is measured rather than passed
+  // as "100%" - percentage Svg sizing against a content-driven-height
+  // parent can resolve to 0 on Android, leaving the notch fill invisible.
+  const [barSize, setBarSize] = useState({ width: 0, height: 0 });
+  const onBarLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setBarSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
+  };
+
   const goTo = (name: string) => {
     // MyProgress is a RootNavigator stack screen, not a MainTabs tab - push
     // it directly instead of routing through MainTabs' screen param.
@@ -161,10 +170,12 @@ export default function BottomNavBar() {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
-        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
-          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
-        </Svg>
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]} onLayout={onBarLayout}>
+        {barSize.width > 0 && barSize.height > 0 && (
+          <Svg width={barSize.width} height={barSize.height} viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+            <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+          </Svg>
+        )}
         {sideTabs.map((name) => {
           const isActive = activeName === name;
           const color = isActive ? ACTIVE : INACTIVE;
