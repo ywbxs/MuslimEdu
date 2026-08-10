@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 import { COLORS, GLASS, RADIUS, SHADOW } from '../../theme/glass';
 
 interface GlassCardProps {
@@ -24,14 +23,20 @@ interface GlassCardProps {
 /**
  * The atomic building block of the redesign. `surface="light"` (default,
  * nearly every screen) is a plain solid white card — hairline border, soft
- * layered shadow, no blur. `surface="hero"` is reserved for nav bars and
- * overlays that sit on top of imagery/dark heroes and want real frosted blur.
+ * layered shadow. `surface="hero"` is for nav bars and overlays that sit on
+ * top of imagery/dark heroes and want a frosted look.
+ *
+ * Neither uses a real BlurView - `@react-native-community/blur` doesn't
+ * reliably respect this view's rounded-corner clipping on Android (it can
+ * render as an unclipped rectangle instead of a blurred fill), so every
+ * "glass" surface in this app approximates frosted glass with an opaque-
+ * enough translucent fill instead - same tradeoff already used by
+ * MainTabs.tsx's tab bar.
  */
 export default function GlassCard({
   children,
   style,
   surface = 'light',
-  intensity,
   radius = RADIUS.lg,
   padded = true,
   elevated = true,
@@ -39,7 +44,6 @@ export default function GlassCard({
 }: GlassCardProps) {
   const isHero = surface === 'hero';
   const border = isHero ? GLASS.border : COLORS.border;
-  const blurAmount = intensity ?? GLASS.blurAmount.md;
 
   return (
     <View
@@ -49,19 +53,12 @@ export default function GlassCard({
         style,
       ]}
     >
-      {isHero ? (
-        <>
-          <BlurView
-            blurType="dark"
-            blurAmount={blurAmount}
-            reducedTransparencyFallbackColor={GLASS.fill}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: GLASS.fill }]} />
-        </>
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.surface }]} />
-      )}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: isHero ? 'rgba(20,32,29,0.72)' : COLORS.surface },
+        ]}
+      />
       <View style={[padded && styles.padded, contentStyle]}>{children}</View>
     </View>
   );

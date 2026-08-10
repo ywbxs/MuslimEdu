@@ -12,7 +12,6 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -303,8 +302,6 @@ export default function FeedScreen() {
     <>
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <BlurView blurType="light" blurAmount={18} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
-          <View style={[StyleSheet.absoluteFillObject, styles.composerTint]} />
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
           <Text style={styles.composerPlaceholder} numberOfLines={1}>
             {t('feed.composer_placeholder', 'Share a photo...')}
@@ -430,15 +427,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
     overflow: 'hidden',
   },
-  // Sits between the BlurView and content - keeps the composer readable
-  // over whatever's behind it (see LoginScreen.tsx's cardTint for the same
-  // pattern).
-  composerTint: { backgroundColor: GLASS_FILL },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
 

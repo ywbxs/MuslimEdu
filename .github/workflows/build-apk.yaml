@@ -77,7 +77,6 @@ jobs:
             react-native-image-picker \
           "@react-native-documents/picker@10.1.7" \
             react-native-linear-gradient \
-            "@react-native-community/blur" \
             react-native-fs \
             "@bam.tech/react-native-image-resizer" \
             axios \

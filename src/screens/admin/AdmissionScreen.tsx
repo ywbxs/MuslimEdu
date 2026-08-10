@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { BlurView } from '@react-native-community/blur';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -522,7 +521,6 @@ export default function AdmissionScreen() {
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-          <BlurView blurType="light" blurAmount={GLASS.blurAmount.strong} reducedTransparencyFallbackColor={GLASS.fillOnLightStrong} style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <TouchableOpacity
             onPress={goBack}
@@ -538,7 +536,6 @@ export default function AdmissionScreen() {
         </View>
 
         <View style={styles.stepperWrap}>
-          <BlurView blurType="light" blurAmount={GLASS.blurAmount.subtle} reducedTransparencyFallbackColor={GLASS.fillOnLightStrong} style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <Stepper steps={steps as StepDef[]} activeIndex={stepIndex} />
         </View>
@@ -569,7 +566,6 @@ export default function AdmissionScreen() {
         </ScrollView>
 
         <View style={styles.buttonRow}>
-          <BlurView blurType="light" blurAmount={GLASS.blurAmount.strong} reducedTransparencyFallbackColor={GLASS.fillOnLightStrong} style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <TouchableOpacity style={styles.backButton} onPress={goBack} disabled={submitting} activeOpacity={0.85}>
             <Text style={styles.backButtonText}>{stepIndex === 0 ? t('common.cancel', 'Cancel') : t('common.back', 'Back')}</Text>

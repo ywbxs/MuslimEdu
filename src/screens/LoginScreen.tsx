@@ -19,7 +19,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
@@ -545,8 +544,6 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.card}>
-              <BlurView blurType="light" blurAmount={18} reducedTransparencyFallbackColor={SURFACE} style={StyleSheet.absoluteFillObject} />
-              <View style={[StyleSheet.absoluteFillObject, styles.cardTint]} />
               {step === 1 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
@@ -780,17 +777,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.6)',
     padding: 20,
     overflow: 'hidden',
+    backgroundColor: SURFACE,
     shadowColor: '#0B3D2E',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 4,
   },
-  // Sits between the BlurView and the content - a light frosted tint so
-  // text/inputs stay readable over whatever's behind the card, since
-  // BlurView alone (especially its Android fallback) isn't reliably opaque
-  // enough on its own.
-  cardTint: { backgroundColor: 'rgba(255,255,255,0.55)' },
 
   fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
 

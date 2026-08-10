@@ -11,7 +11,6 @@ import {
   TextInputProps,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { BlurView } from '@react-native-community/blur';
 import { BRAND, COLORS, GLASS, RADIUS, SHADOW, SPACING, TYPE } from '../../theme/glass';
 
 // ---------------------------------------------------------------------------
