@@ -19,31 +19,39 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
-import { BRAND, COLORS } from '../theme/glass';
 import LanguageSwitcherButton from '../components/LanguageSwitcherButton';
 
 // ============================================================================
-// Brand colors are untouched (BRAND.emerald / BRAND.emeraldDeep from
-// theme/glass). Logo + illustration are the real assets from
-// src/assets/images, not hand-drawn SVG.
+// Login-specific teal/mint palette (deliberately its own thing, not the
+// app-wide BRAND green from theme/glass - same "this screen owns its own
+// colors" precedent the old version already used for BORDER/DANGER). Logo +
+// illustration are the real assets from src/assets/images, not hand-drawn SVG.
 // ============================================================================
-const INK = COLORS.ink;
-const MUTED = COLORS.subtle;
-const BORDER = '#E5E7EB';
-const CANVAS = COLORS.canvas;
-const SURFACE = COLORS.surface;
+const INK = '#0D1E1C';
+const MUTED = '#3A5C58';
+const FAINT = '#6B8C88';
+const BORDER = 'rgba(13,30,28,0.1)';
+const CANVAS = '#E8F4F2';
+const CANVAS_SOFT = '#F2FAF8';
+const SURFACE = '#F4FAFA';
 const PLACEHOLDER = '#9CA3AF';
-const DANGER = '#E24C4C';
+const DANGER = '#D9534F';
+const ACCENT = '#1A7A6E';
+const ACCENT_MID = '#2A9D8F';
+const ACCENT_LIGHT = '#5BBFB5';
+const ACCENT_GHOST = 'rgba(26,122,110,0.08)';
+const ACCENT_BORDER = 'rgba(26,122,110,0.15)';
 
 const APP_ICON = require('../assets/images/app-icon.png');
 const STUDENTS_ILLUSTRATION = require('../assets/images/students-illustration-transparent.png');
 
 /* ========================= ICONS ========================= */
 
-function MailIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+function MailIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth={1.7} />
@@ -52,7 +60,7 @@ function MailIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?:
   );
 }
 
-function LockIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+function LockIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth={1.7} />
@@ -83,7 +91,7 @@ function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: nu
   );
 }
 
-function ChevronRightIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+function ChevronRightIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
@@ -99,7 +107,7 @@ function CheckIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: nu
   );
 }
 
-function SchoolIcon({ color = BRAND.emerald, size = 24 }: { color?: string; size?: number }) {
+function SchoolIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M3 10l9-5 9 5-9 5-9-5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
@@ -108,7 +116,7 @@ function SchoolIcon({ color = BRAND.emerald, size = 24 }: { color?: string; size
   );
 }
 
-function AlumniIcon({ color = BRAND.emerald, size = 24 }: { color?: string; size?: number }) {
+function AlumniIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -117,7 +125,7 @@ function AlumniIcon({ color = BRAND.emerald, size = 24 }: { color?: string; size
   );
 }
 
-/* ========================= GRADIENT BUTTON (brand green, untouched) ========================= */
+/* ========================= GRADIENT BUTTON ========================= */
 
 function GradientButton({
   label,
@@ -136,7 +144,7 @@ function GradientButton({
   return (
     <TouchableOpacity activeOpacity={0.88} onPress={onPress} disabled={disabled || loading} style={[btn.wrap, style]}>
       <LinearGradient
-        colors={[BRAND.emeraldLight, BRAND.emeraldDeep]}
+        colors={[ACCENT_LIGHT, ACCENT]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[btn.gradient, (disabled || loading) && btn.disabled]}
@@ -154,7 +162,7 @@ const btn = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: BRAND.emeraldDeep,
+    shadowColor: ACCENT,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
@@ -355,6 +363,9 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  // Which input row currently has focus, so it can pick up the accent
+  // border highlight (mirrors the mockup's `:focus-within` treatment).
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | 'twoFactor' | null>(null);
 
   // The server told us this account needs a code - move to step 3 once,
   // without fighting the user if they navigate back and the flag is still
@@ -444,6 +455,12 @@ export default function LoginScreen() {
   return (
     <View style={styles.flex}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <LinearGradient
+        colors={[CANVAS_SOFT, CANVAS]}
+        start={{ x: 0.3, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.screen, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
           {/* Top bar changes per step but always stays pinned at the top,
@@ -488,7 +505,7 @@ export default function LoginScreen() {
                 <View style={styles.heroTextCol}>
                   <Text style={styles.titleCompact}>
                     {t('login.greeting_peace_be', 'Peace be')}{'\n'}
-                    <Text style={styles.titleGreen}>{t('login.greeting_upon_you', 'upon you!')}</Text>
+                    <Text style={styles.titleAccentItalic}>{t('login.greeting_upon_you', 'upon you!')}</Text>
                   </Text>
                   <View style={styles.subtitleRow}>
                     <Text style={styles.subtitle}>{t('login.connect_through', 'Connect through ')}</Text>
@@ -511,7 +528,7 @@ export default function LoginScreen() {
                   <Text style={styles.titleGreen}>{t('login.back', 'back!')}</Text>
                 </Text>
                 <View style={styles.emailChip}>
-                  <MailIcon color={BRAND.emerald} size={14} />
+                  <MailIcon color={ACCENT} size={14} />
                   <Text style={styles.emailChipText} numberOfLines={1}>
                     {email.trim()}
                   </Text>
@@ -528,10 +545,12 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.card}>
+              <BlurView blurType="light" blurAmount={18} reducedTransparencyFallbackColor={SURFACE} style={StyleSheet.absoluteFillObject} />
+              <View style={[StyleSheet.absoluteFillObject, styles.cardTint]} />
               {step === 1 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
-                  <View style={styles.inputRow}>
+                  <View style={[styles.inputRow, focusedField === 'email' && styles.inputRowFocused]}>
                     <MailIcon />
                     <TextInput
                       style={styles.input}
@@ -546,6 +565,8 @@ export default function LoginScreen() {
                         if (emailError) setEmailError('');
                         if (error) clearError();
                       }}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField((f) => (f === 'email' ? null : f))}
                       onSubmitEditing={goToStep2}
                       returnKeyType="next"
                     />
@@ -558,7 +579,7 @@ export default function LoginScreen() {
               ) : step === 2 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.password_label', 'PASSWORD')}</Text>
-                  <View style={styles.inputRow}>
+                  <View style={[styles.inputRow, focusedField === 'password' && styles.inputRowFocused]}>
                     <LockIcon />
                     <TextInput
                       // Remounting on toggle works around an Android quirk where
@@ -579,6 +600,8 @@ export default function LoginScreen() {
                         setPassword(text);
                         if (error) clearError();
                       }}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField((f) => (f === 'password' ? null : f))}
                       onSubmitEditing={handleSubmit}
                       returnKeyType="go"
                     />
@@ -612,7 +635,7 @@ export default function LoginScreen() {
               ) : (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.auth_code_label', 'AUTHENTICATION CODE')}</Text>
-                  <View style={styles.inputRow}>
+                  <View style={[styles.inputRow, focusedField === 'twoFactor' && styles.inputRowFocused]}>
                     <LockIcon />
                     <TextInput
                       style={styles.input}
@@ -625,6 +648,8 @@ export default function LoginScreen() {
                         setTwoFactorCode(text);
                         if (error) clearError();
                       }}
+                      onFocus={() => setFocusedField('twoFactor')}
+                      onBlur={() => setFocusedField((f) => (f === 'twoFactor' ? null : f))}
                       onSubmitEditing={handleSubmitTwoFactor}
                       returnKeyType="go"
                       autoFocus
@@ -687,7 +712,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     paddingHorizontal: 24,
-    backgroundColor: CANVAS,
+    backgroundColor: 'transparent',
   },
 
   topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
@@ -712,11 +737,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: INK,
   },
-  stepPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: BRAND.emeraldLight },
+  stepPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: ACCENT_LIGHT },
 
   hero: { marginTop: 16 },
   title: { fontSize: 34, fontWeight: '800', color: INK, lineHeight: 39, letterSpacing: -0.5 },
-  titleGreen: { color: BRAND.emerald },
+  titleGreen: { color: ACCENT },
+  // Approximates the mockup's Playfair Display italic flourish on "upon
+  // you!" using the system italic - RN would need a bundled custom font
+  // family (+ native linking) for the real serif face, not worth the CI/
+  // native-build overhead for one accent word.
+  titleAccentItalic: { color: ACCENT, fontStyle: 'italic' },
 
   heroRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 10 },
   heroTextCol: { flex: 1 },
@@ -724,7 +754,7 @@ const styles = StyleSheet.create({
 
   subtitleRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', marginTop: 8 },
   subtitle: { fontSize: 15, color: MUTED, lineHeight: 21 },
-  subtitleGreen: { fontSize: 15, color: BRAND.emerald, fontWeight: '700', lineHeight: 21 },
+  subtitleGreen: { fontSize: 15, color: ACCENT, fontWeight: '700', lineHeight: 21 },
 
   illustrationWrapRow: { alignItems: 'center', justifyContent: 'center' },
 
@@ -737,27 +767,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: COLORS.emeraldSoft,
+    backgroundColor: ACCENT_GHOST,
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.25)',
+    borderColor: ACCENT_BORDER,
   },
-  emailChipText: { fontSize: 13, fontWeight: '700', color: BRAND.emeraldDeep, flexShrink: 1 },
+  emailChipText: { fontSize: 13, fontWeight: '700', color: ACCENT, flexShrink: 1 },
 
   card: {
     marginTop: 20,
-    backgroundColor: SURFACE,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: 'rgba(255,255,255,0.6)',
     padding: 20,
+    overflow: 'hidden',
     shadowColor: '#0B3D2E',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 4,
   },
+  // Sits between the BlurView and the content - a light frosted tint so
+  // text/inputs stay readable over whatever's behind the card, since
+  // BlurView alone (especially its Android fallback) isn't reliably opaque
+  // enough on its own.
+  cardTint: { backgroundColor: 'rgba(255,255,255,0.55)' },
 
-  fieldLabel: { fontSize: 12, fontWeight: '800', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
+  fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
 
   inputRow: {
     flexDirection: 'row',
@@ -770,9 +805,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
   },
+  inputRowFocused: { borderColor: ACCENT_MID, backgroundColor: '#FFFFFF' },
   input: { flex: 1, fontSize: 16, color: INK, paddingVertical: 0 },
 
-  helperText: { fontSize: 12.5, color: MUTED, marginTop: 10, lineHeight: 18 },
+  helperText: { fontSize: 12.5, color: FAINT, marginTop: 10, lineHeight: 18 },
   errorText: { color: DANGER, fontSize: 12.5, fontWeight: '600', marginTop: 8 },
 
   optionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, gap: 12, flexWrap: 'wrap' },
@@ -787,15 +823,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: { backgroundColor: BRAND.emerald, borderColor: BRAND.emerald },
+  checkboxChecked: { backgroundColor: ACCENT, borderColor: ACCENT },
   rememberText: { fontSize: 13, color: INK, fontWeight: '600' },
-  forgotText: { fontSize: 13, color: BRAND.emerald, fontWeight: '800' },
+  forgotText: { fontSize: 13, color: ACCENT, fontWeight: '800' },
 
   actionSpacing: { marginTop: 18 },
 
   getStartedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
-  getStartedMuted: { fontSize: 13, color: MUTED, fontWeight: '600' },
-  getStartedLink: { fontSize: 13, color: BRAND.emerald, fontWeight: '800' },
+  getStartedMuted: { fontSize: 13, color: FAINT, fontWeight: '600' },
+  getStartedLink: { fontSize: 13, color: ACCENT, fontWeight: '800' },
 });
 
 const dots = StyleSheet.create({
@@ -832,7 +868,7 @@ const sheet = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: COLORS.emeraldSoft,
+    backgroundColor: ACCENT_GHOST,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
