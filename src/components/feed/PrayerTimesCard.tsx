@@ -14,7 +14,7 @@ import {
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
 import { Skeleton, SkeletonCircle } from '../Skeleton';
-import { CARD_W } from './widgetCarouselMetrics';
+import { useWidgetCardMetrics } from './widgetCarouselMetrics';
 
 const GRADIENT_TOP = '#0F3D2E';
 const GRADIENT_BOTTOM = '#062318';
@@ -51,6 +51,7 @@ function ArrowRightIcon({ color = WHITE, size = 15 }: { color?: string; size?: n
  */
 export default function PrayerTimesCard({ token }: { token: string }) {
   const navigation = useNavigation();
+  const { CARD_W } = useWidgetCardMetrics();
   const [result, setResult] = useState<PrayerTimesResult | null>(null);
   const [location, setLocation] = useState<PrayerLocation | null>(null);
   const [error, setError] = useState(false);

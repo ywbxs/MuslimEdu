@@ -30,8 +30,8 @@ import PhotoLightbox from '../../components/PhotoLightbox';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
@@ -481,7 +481,7 @@ export default function TeacherOrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('teacher_orphan_report.step_photos_title', 'Add Photos'),
-        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments.'),
+        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments (up to 20).'),
         content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
         // Photos are required to submit - the wizard's Submit button
         // stays disabled until at least one is attached.

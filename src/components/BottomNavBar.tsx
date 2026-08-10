@@ -5,16 +5,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { isOrphanSchoolUser } from '../utils/orphanSchool';
-import { COLORS, BRAND } from '../theme/glass';
 
-// Mirrors MainTabs.tsx's TabBar (same icons/labels/order/colors) so screens
-// pushed on the root stack still give one-tap access back to the app's main
-// sections. Docked bar, no floating/pill styling - active tab is indicated
-// by icon+label color plus a small top indicator bar.
+// Mirrors MainTabs.tsx's TabBar (same icons/order/colors/notch treatment)
+// so screens pushed on the root stack still give one-tap access back to the
+// app's main sections, and look like the same nav bar.
 
-const INACTIVE = COLORS.subtle;
-const ACTIVE = BRAND.emerald;
+const INACTIVE = '#6B8C88';
+const ACTIVE = '#0D1E1C';
+const DANGER = '#D9534F';
+// No backdrop-blur equivalent for a curved shape without a masking library
+// (see MainTabs.tsx's TabBar) - opaque enough on its own to stay legible.
+const GLASS_FILL = 'rgba(255,255,255,0.82)';
+const CENTER_BTN_BG = '#16211F';
+// Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
+// either changes.
+const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -23,19 +28,36 @@ function HomeIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+// Admin center button (orphan-type and regular school type alike) - a plain
+// plus, matching MainTabs.tsx's TabBar.
 function AdmissionIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3.2} stroke={color} strokeWidth={1.9} />
-      <Path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-      <Path d="M18 8v6M15 11h6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
-function ReportsIcon({ color }: { color: string }) {
+function ScanIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 20V11M12 20V4M18 20v-7" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Path
+        d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Rect x={9} y={9} width={6} height={6} rx={1} stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+// Student center button - opens their status report (classes, attendance,
+// grades - see MyProgressScreen/StudentProgressScreen.tsx).
+function ProfileIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={8} r={3.4} stroke={color} strokeWidth={1.9} />
+      <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -73,7 +95,8 @@ function MenuIcon({ color }: { color: string }) {
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
-  Reports: (c) => <ReportsIcon color={c} />,
+  Scan: (c) => <ScanIcon color={c} />,
+  MyProgress: (c) => <ProfileIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
   Alerts: (c) => <BellIcon color={c} />,
   Menu: (c) => <MenuIcon color={c} />,
@@ -109,71 +132,101 @@ export default function BottomNavBar() {
   const { unreadCount } = useNotifications();
   const activeName = useActiveTabName();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
-  // Reports only has real content on orphan schools - see MainTabs.tsx.
-  const showReports = isOrphanSchoolUser(user);
+  const isTeacherRole = user?.role === 'teacher';
+  const isStudentRole = user?.role === 'student';
 
-  const tabs = [
-    'Home',
-    ...(isAdminRole ? ['Admission'] : []),
-    ...(showReports ? ['Reports'] : []),
-    'Chat',
-    'Alerts',
-    'Menu',
-  ];
+  // Raised center button, same mapping as MainTabs.tsx's TabBar: Admission
+  // for both admin school types, Scan for teachers, MyProgress (their
+  // status report) for students - always exactly one, capping this bar at
+  // 5 total icons for every role.
+  const centerName = isAdminRole ? 'Admission' : isTeacherRole ? 'Scan' : isStudentRole ? 'MyProgress' : null;
+
+  const sideTabs = ['Home', 'Chat', 'Alerts', 'Menu'];
+
+  const goTo = (name: string) => {
+    // MyProgress is a RootNavigator stack screen, not a MainTabs tab - push
+    // it directly instead of routing through MainTabs' screen param.
+    if (name === 'MyProgress') {
+      (navigation as any).navigate('MyProgress');
+      return;
+    }
+    (navigation as any).navigate('MainTabs', { screen: name });
+  };
 
   return (
-    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {tabs.map((name) => {
-        const isActive = activeName === name;
-        const color = isActive ? ACTIVE : INACTIVE;
-        return (
-          <TouchableOpacity
-            key={name}
-            style={styles.tabItem}
-            activeOpacity={0.7}
-            onPress={() => (navigation as any).navigate('MainTabs', { screen: name })}
-          >
-            {isActive && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>
-              {ICONS[name](color)}
-              {name === 'Alerts' && unreadCount > 0 && (
-                <View style={styles.badge} pointerEvents="none">
-                  <Text style={styles.badgeText} numberOfLines={1}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.tabBarWrap}>
+      {centerName && (
+        <TouchableOpacity style={styles.centerBtn} activeOpacity={0.85} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
+          {ICONS[centerName]('#FFFFFF')}
+        </TouchableOpacity>
+      )}
+
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
+        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+        </Svg>
+        {sideTabs.map((name) => {
+          const isActive = activeName === name;
+          const color = isActive ? ACTIVE : INACTIVE;
+          return (
+            <TouchableOpacity key={name} style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
+              <View style={styles.iconWrap}>
+                {ICONS[name](color)}
+                {name === 'Alerts' && unreadCount > 0 && (
+                  <View style={styles.badge} pointerEvents="none">
+                    <Text style={styles.badgeText} numberOfLines={1}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Edge-to-edge, no side margins/rounded pill - matches MainTabs.tsx.
+  // No padding on the wrap at all - the safe-area inset lives on tabBar's
+  // own paddingBottom below, so the glass fill reaches the literal screen
+  // edge instead of leaving a gap of bare canvas underneath the bar.
+  tabBarWrap: {},
   tabBar: {
     flexDirection: 'row',
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingHorizontal: 20,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: ACTIVE,
-  },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  centerBtn: {
+    position: 'absolute',
+    top: -15,
+    left: '50%',
+    marginLeft: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: CENTER_BTN_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 9,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.55)',
+  },
   badge: {
     position: 'absolute',
     top: -4,
@@ -182,7 +235,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: COLORS.danger,
+    backgroundColor: DANGER,
     alignItems: 'center',
     justifyContent: 'center',
   },

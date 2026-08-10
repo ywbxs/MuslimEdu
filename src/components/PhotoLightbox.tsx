@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   dotActive: { width: 14, borderRadius: 3, backgroundColor: '#FFFFFF' },
   bottom: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 28 },
   downloadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 13 },
-  downloadBtnDone: { backgroundColor: '#0F9D58' },
+  downloadBtnDone: { backgroundColor: '#2BCBB0' },
   downloadText: { color: '#14171A', fontWeight: '700', fontSize: 13.5 },
   downloadTextDone: { color: '#FFFFFF' },
 });

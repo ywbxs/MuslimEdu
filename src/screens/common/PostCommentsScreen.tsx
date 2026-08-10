@@ -29,7 +29,7 @@ import {
 } from '../../services/postService';
 import { isOppositeGender } from '../../utils/genderGuard';
 
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';

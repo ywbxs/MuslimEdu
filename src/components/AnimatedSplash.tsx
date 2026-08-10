@@ -5,7 +5,7 @@ import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect, Circle } from 'r
 /* ------------------------------------------------------------------ *
  * Animated splash for MuslimEdu (no Expo, no extra deps).
  *
- * Green gradient background (#16A34A -> #15803D) with a soft radial glow
+ * Green gradient background (#1E927E -> #15803D) with a soft radial glow
  * behind the logo. The logo fades in, springs from 0.8x -> 1.0x, floats
  * gently, and pulses a soft glow. When `ready` flips true (auth/session
  * check done), the whole splash crossfades out via onFinish.
@@ -109,13 +109,13 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#16A34A" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="#1E927E" translucent />
 
       {/* Base + drifting gradient background */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
         <Defs>
           <LinearGradient id="bgBase" x1="0" y1="0" x2="0.3" y2="1">
-            <Stop offset="0" stopColor="#16A34A" />
+            <Stop offset="0" stopColor="#1E927E" />
             <Stop offset="1" stopColor="#15803D" />
           </LinearGradient>
           <LinearGradient id="bgDrift" x1="0" y1="0" x2="1" y2="1">
@@ -143,7 +143,7 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
             <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.55" />
               <Stop offset="0.5" stopColor="#BBF7D0" stopOpacity="0.18" />
-              <Stop offset="1" stopColor="#16A34A" stopOpacity="0" />
+              <Stop offset="1" stopColor="#1E927E" stopOpacity="0" />
             </RadialGradient>
           </Defs>
           <Circle cx={glowSize / 2} cy={glowSize / 2} r={glowSize / 2} fill="url(#glow)" />
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#16A34A',
+    backgroundColor: '#1E927E',
     zIndex: 999,
   },
 });

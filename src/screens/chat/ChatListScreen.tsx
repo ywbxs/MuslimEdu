@@ -25,7 +25,7 @@ import {
 } from '../../services/chatService';
 import { isOppositeGender } from '../../utils/genderGuard';
 
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const TRACK_BG = '#F4F5F7';
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 28, fontWeight: '700', color: INK },
   newMessageBtn: {
-    backgroundColor: '#E7F5EC',
+    backgroundColor: '#E5F8F5',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,

@@ -20,14 +20,16 @@ import {
   deleteTeacherReport,
   TeacherReport,
 } from '../../services/adminTeacherService';
+import { PickedPhoto } from '../../services/orphanService';
 import { Skeleton } from '../../components/Skeleton';
 import PhotoLightbox from '../../components/PhotoLightbox';
+import { PhotoPicker } from '../../components/ReportFormControls';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#EAF7EF';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const DANGER = '#D70015';
@@ -89,12 +91,17 @@ export default function AdminTeacherReportDetailScreen() {
   const [teachingRating, setTeachingRating] = useState<number | null>(null);
   const [engagementRating, setEngagementRating] = useState<number | null>(null);
   const [growthRating, setGrowthRating] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Non-null while editing an existing report - handleSave calls
   // updateTeacherReport instead of createTeacherReport. There's no separate
   // draft/approval status on this model, so editing IS the resubmission -
   // mirrors AdminChildReportDetailScreen.tsx.
   const [editingReportId, setEditingReportId] = useState<number | null>(null);
+  // The report already on file when editing - shown read-only above the
+  // picker (the update endpoint appends new uploads, it doesn't remove
+  // existing photos - see adminTeacherService.ts).
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -119,6 +126,8 @@ export default function AdminTeacherReportDetailScreen() {
     setTeachingRating(null);
     setEngagementRating(null);
     setGrowthRating(null);
+    setPhotos([]);
+    setExistingPhotos([]);
   };
 
   const handleSave = async () => {
@@ -138,10 +147,10 @@ export default function AdminTeacherReportDetailScreen() {
         professional_growth_rating: growthRating,
       };
       if (editingReportId) {
-        await updateTeacherReport(token, editingReportId, fields);
+        await updateTeacherReport(token, editingReportId, fields, photos);
         Alert.alert(t('admin_teacher_report_detail.report_updated', 'Report updated'), t('admin_teacher_report_detail.report_updated_message', 'This report was updated.'));
       } else {
-        await createTeacherReport(token, teacherId, fields);
+        await createTeacherReport(token, teacherId, fields, photos);
         Alert.alert(
           t('admin_teacher_report_detail.report_added', 'Report added'),
           t('admin_teacher_report_detail.report_added_message', 'A report was added for {name}.').replace('{name}', teacherName),
@@ -162,6 +171,8 @@ export default function AdminTeacherReportDetailScreen() {
     setTeachingRating(report.teaching_effectiveness_rating);
     setEngagementRating(report.classroom_engagement_rating);
     setGrowthRating(report.professional_growth_rating);
+    setPhotos([]);
+    setExistingPhotos(report.photos ?? []);
     setShowForm(true);
   };
 
@@ -243,6 +254,29 @@ export default function AdminTeacherReportDetailScreen() {
               <RatingSelector label={t('admin_teacher_report_detail.teaching', 'Teaching')} value={teachingRating} onChange={setTeachingRating} />
               <RatingSelector label={t('admin_teacher_report_detail.engagement', 'Engagement')} value={engagementRating} onChange={setEngagementRating} />
               <RatingSelector label={t('admin_teacher_report_detail.growth', 'Growth')} value={growthRating} onChange={setGrowthRating} />
+
+              {existingPhotos.length > 0 && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.fieldLabel}>{t('admin_teacher_report_detail.current_photos', 'Current Photos')}</Text>
+                  <View style={styles.photoGrid}>
+                    {existingPhotos.map((url, index) => (
+                      <TouchableOpacity
+                        key={url}
+                        activeOpacity={0.85}
+                        onPress={() => setLightbox({ photos: existingPhotos, index })}
+                      >
+                        <Image source={{ uri: url }} style={styles.photoThumb} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+              <Text style={styles.fieldLabel}>
+                {existingPhotos.length > 0
+                  ? t('admin_teacher_report_detail.add_more_photos', 'Add More Photos')
+                  : t('admin_teacher_report_detail.photos', 'Photos')}
+              </Text>
+              <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={20} />
 
               <View style={styles.formButtonRow}>
                 <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>

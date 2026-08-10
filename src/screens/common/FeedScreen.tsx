@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -13,6 +11,8 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from '@react-native-community/blur';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -28,15 +28,23 @@ import {
 import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import PostCard from '../../components/PostCard';
+import PostCardSkeleton from '../../components/feed/PostCardSkeleton';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
-import { COLORS, RADIUS } from '../../theme/glass';
+import { RADIUS } from '../../theme/glass';
 
-const EMERALD = COLORS.emerald;
-const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
+// Teal/mint palette matching the login + feed mockup redesign - see
+// LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
+// soft gradient backdrop instead of a flat color, same as login.
+const EMERALD = '#2BCBB0';
+const INK = '#0D1E1C';
+const SUBTLE = '#6B8C88';
+const CANVAS = '#E8F4F2';
+const CANVAS_SOFT = '#F2FAF8';
+const GLASS_BORDER = 'rgba(255,255,255,0.5)';
+const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -66,18 +74,16 @@ function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 type DeckItem = { kind: 'post'; post: Post } | { kind: 'widgets' } | { kind: 'caughtUp' };
 const WIDGETS_AFTER_POSTS = 2;
 
-// The screen is a vertical pager of full-screen sections (Home/Shop/
-// Charity) - in practice a no-op today since SECTIONS only has one entry,
-// so this outer FlatList never actually has anywhere to scroll to. Home's
-// own content (the actual posts) is a separate, nested vertical FlatList -
-// a normal scrolling feed, not a swipe-per-post deck.
-//
-// Shop and Charity are TEMPORARILY disabled - they were placeholder decks of
-// hardcoded sample cards with no real feature behind them yet. The pager is
-// left in place (rather than unwound back to a plain Home screen) so putting
-// them back is just re-adding their entries here and their sample data.
-type Section = 'home' | 'shop' | 'charity';
-const SECTIONS: Section[] = ['home'];
+// Home used to be wrapped in an outer vertical FlatList (a Home/Shop/
+// Charity pager) around this inner vertical FlatList (the actual posts).
+// Two same-axis FlatLists nested like that is a known RN gotcha: the outer
+// one intercepts scroll/touch gestures even with nothing to scroll to,
+// which silently blocked the inner post list from scrolling at all. Shop
+// and Charity were already disabled placeholders (hardcoded sample cards,
+// no real feature behind them), so the pager was pure dead weight actively
+// breaking the feed - removed rather than patched. If Shop/Charity come
+// back, give them their own tab/screen instead of re-nesting a vertical
+// pager around this list.
 
 export default function FeedScreen() {
   const { token, user } = useAuth();
@@ -90,27 +96,9 @@ export default function FeedScreen() {
   // get a composer.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  // --- Outer section pager (Home / Shop / Charity), vertical -------------
-  const [outerHeight, setOuterHeight] = useState(0);
-  const [sectionIndex, setSectionIndex] = useState(0);
-  const activeSection: Section = SECTIONS[sectionIndex] ?? 'home';
-  const headerTitleText =
-    activeSection === 'shop'
-      ? t('feed.header_shop', 'Shop')
-      : activeSection === 'charity'
-      ? t('feed.header_charity', 'Charity')
-      : t('feed.header_home', 'Home');
+  const headerTitleText = t('feed.header_home', 'Home');
 
-  const onOuterSettle = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (outerHeight <= 0) return;
-      const i = Math.max(0, Math.min(SECTIONS.length - 1, Math.round(e.nativeEvent.contentOffset.y / outerHeight)));
-      setSectionIndex(i);
-    },
-    [outerHeight],
-  );
-
-  // --- Inner Home feed (the actual posts), vertical -----------------------
+  // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -315,6 +303,8 @@ export default function FeedScreen() {
     <>
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+          <BlurView blurType="light" blurAmount={18} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
+          <View style={[StyleSheet.absoluteFillObject, styles.composerTint]} />
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
           <Text style={styles.composerPlaceholder} numberOfLines={1}>
             {t('feed.composer_placeholder', 'Share a photo...')}
@@ -327,8 +317,10 @@ export default function FeedScreen() {
 
       <View style={styles.deckWrap}>
         {loading ? (
-          <View style={styles.centerFill}>
-            <ActivityIndicator color={EMERALD} />
+          <View style={styles.skeletonStack}>
+            <PostCardSkeleton withImage style={styles.feedPostCard} />
+            <PostCardSkeleton style={styles.feedPostCard} />
+            <PostCardSkeleton withImage style={styles.feedPostCard} />
           </View>
         ) : (
           <FlatList
@@ -360,6 +352,7 @@ export default function FeedScreen() {
                   onPressImage={(images, imgIndex) =>
                     (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
                   }
+                  containerStyle={styles.feedPostCard}
                 />
               )
             }
@@ -383,6 +376,12 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
+      <LinearGradient
+        colors={[CANVAS_SOFT, CANVAS]}
+        start={{ x: 0.3, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
@@ -391,23 +390,7 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      <View style={styles.outerWrap} onLayout={(e) => setOuterHeight(e.nativeEvent.layout.height)}>
-        {outerHeight <= 0 ? null : (
-          <FlatList
-            data={SECTIONS}
-            keyExtractor={(s) => s}
-            showsVerticalScrollIndicator={false}
-            decelerationRate="fast"
-            snapToInterval={outerHeight}
-            snapToAlignment="start"
-            disableIntervalMomentum
-            getItemLayout={(_, i) => ({ length: outerHeight, offset: i * outerHeight, index: i })}
-            onMomentumScrollEnd={onOuterSettle}
-            onScrollEndDrag={onOuterSettle}
-            renderItem={() => <View style={{ height: outerHeight }}>{homeContent}</View>}
-          />
-        )}
-      </View>
+      <View style={styles.outerWrap}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -424,7 +407,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas },
+  flex: { flex: 1, backgroundColor: CANVAS },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -442,18 +425,37 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: GLASS_BORDER,
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
+    overflow: 'hidden',
   },
+  // Sits between the BlurView and content - keeps the composer readable
+  // over whatever's behind it (see LoginScreen.tsx's cardTint for the same
+  // pattern).
+  composerTint: { backgroundColor: GLASS_FILL },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },
+
+  // Edge-to-edge translucent row instead of PostCard's default floating
+  // rounded card - matches the feed mockup's flat, hairline-divided list.
+  // Only applied here (via containerStyle); PostCard's own default "card"
+  // style is untouched for every other screen that renders it (moderation
+  // queue, profile modal, admin trash, etc).
+  feedPostCard: {
+    backgroundColor: GLASS_FILL,
+    borderRadius: 0,
+    marginHorizontal: 0,
+    marginTop: 0,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
+  },
 
 
   // The bottom tab bar is a normal docked element (MainTabs' custom TabBar
@@ -464,6 +466,8 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 20, flexGrow: 1 },
 
   footerLoading: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
+
+  skeletonStack: { paddingTop: 4 },
 
   centerFill: {
     flex: 1,

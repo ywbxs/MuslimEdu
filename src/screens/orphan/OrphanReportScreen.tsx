@@ -18,8 +18,8 @@ import ReportStepWizard, { WizardStep } from '../../components/ReportStepWizard'
 import { NoteInput, RatingSelector, PhotoPicker } from '../../components/ReportFormControls';
 import PhotoLightbox from '../../components/PhotoLightbox';
 
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
@@ -450,8 +450,8 @@ export default function OrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('orphan_report.photos_title', 'Add Photos'),
-        subtitle: t('orphan_report.photos_subtitle_required', 'Required — add at least one photo of your activities, achievements or study progress.'),
-        content: <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={5} required />,
+        subtitle: t('orphan_report.photos_subtitle_required', 'Required — add at least one photo of your activities, achievements or study progress (up to 20).'),
+        content: <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={20} required />,
         // Photos are required for the child report (unlike the optional
         // teacher version) - the wizard's Submit button stays disabled
         // until at least one photo is attached.

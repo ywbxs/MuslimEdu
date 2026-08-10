@@ -19,7 +19,7 @@ import { fetchChatMessages, sendMessage, ChatMessage } from '../../services/chat
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const TRACK_BG = '#F4F5F7';

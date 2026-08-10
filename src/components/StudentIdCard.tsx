@@ -21,7 +21,7 @@ export interface CardTheme {
 // storage - "custom" here means the admin/student picks one of these per
 // view/export, not that every school gets a bespoke design pipeline.
 export const CARD_THEMES: CardTheme[] = [
-  { key: 'emerald', label: 'Emerald', colors: ['#0B3D2E', '#0F9D58', '#22C55E'] },
+  { key: 'emerald', label: 'Emerald', colors: ['#0B3D2E', '#2BCBB0', '#2BCBB0'] },
   { key: 'gold', label: 'Gold', colors: ['#7C5A0B', '#B8860B', '#D4A64A'] },
   { key: 'ocean', label: 'Ocean', colors: ['#0B2545', '#134E8A', '#2B7FD4'] },
   { key: 'charcoal', label: 'Charcoal', colors: ['#111827', '#1F2937', '#374151'] },

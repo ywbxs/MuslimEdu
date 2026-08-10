@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View, TextStyle, StyleSheet, StyleProp } from 'react-native';
 
-const EMERALD = '#0F9D58';
+const EMERALD = '#2BCBB0';
 
 interface Props {
   text: string;

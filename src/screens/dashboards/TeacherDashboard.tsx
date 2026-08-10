@@ -553,6 +553,9 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
         </Svg>
+        {/* Soft luminous glow, same as the HTML mockup's hero. */}
+        <View style={styles.glowTopRight} pointerEvents="none" />
+        <View style={styles.glowBottomLeft} pointerEvents="none" />
       </Animated.View>
 
       <Animated.ScrollView
@@ -773,6 +776,18 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas, overflow: 'hidden' },
+  glowTopRight: {
+    position: 'absolute',
+    top: -70, right: -70,
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(43,203,176,0.16)',
+  },
+  glowBottomLeft: {
+    position: 'absolute',
+    bottom: -80, left: -50,
+    width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(42,180,219,0.10)',
+  },
   bgLayer: {
     position: 'absolute',
     top: 0,
@@ -895,7 +910,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   quickIconWrapSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  quickIconWrapSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  quickIconWrapSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
   quickBadge: {
     position: 'absolute',
     top: -4,
@@ -922,7 +937,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickArrowButtonSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  quickArrowButtonSoft: { backgroundColor: 'rgba(15,157,88,0.12)' },
+  quickArrowButtonSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
 
   overviewCard: {
     backgroundColor: '#FFFFFF',

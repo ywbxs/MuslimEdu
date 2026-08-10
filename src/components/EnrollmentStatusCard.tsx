@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     borderWidth: 1,
   },
-  tileOk: { backgroundColor: EMERALD_SOFT, borderColor: 'rgba(34,197,94,0.18)' },
+  tileOk: { backgroundColor: EMERALD_SOFT, borderColor: 'rgba(43,203,176,0.18)' },
   tilePending: { backgroundColor: AMBER_SOFT, borderColor: 'rgba(180,83,9,0.16)' },
   tileTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badge: {

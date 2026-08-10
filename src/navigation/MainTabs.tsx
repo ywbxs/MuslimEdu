@@ -7,13 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
 import MenuScreen from '../screens/common/MenuScreen';
 import FeedScreen from '../screens/common/FeedScreen';
 import NotificationsScreen from '../screens/common/NotificationsScreen';
-import ChildReportWizardScreen from '../screens/orphan/ChildReportWizardScreen';
-import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportScreen';
-import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import TeacherAttendanceClassesScreen from '../screens/teachers/TeacherAttendanceClassesScreen';
@@ -23,20 +19,40 @@ import {
   StudentEnrollmentWorkflowStatus,
 } from '../services/enrollmentWorkflowService';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
-import { COLORS, BRAND } from '../theme/glass';
+
+// Teal/mint palette matching the login + feed redesign - see
+// LoginScreen.tsx's own local-palette precedent. Floating glass pill bar
+// with a raised circular center button for whichever tab is this role's
+// "primary action" (Admission for admin/superadmin, Scan for teacher),
+// instead of the old docked square bar with that tab inline.
+const ACTIVE = '#0D1E1C';
+const SUBTLE = '#6B8C88';
+const DANGER = '#D9534F';
+// No backdrop-blur equivalent without a masking library (see TabBar's
+// notch rendering), so this needs to be opaque enough on its own to keep
+// icons legible over whatever's scrolling underneath - higher than a
+// typical "glass" alpha would be if it were sitting on real blur.
+const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// Shape of the tab bar's top edge: flat, dips into a shallow curved notch
+// for the raised center button to nest into, flat again to the far edge -
+// same silhouette as the login/feed mockups' SVG clipPath, expressed as a
+// fillable Path instead (RN has no clip-path equivalent for arbitrary
+// View shapes). Coordinates are in a 0-1000 unit box; stretched to the
+// bar's actual pixel size by the Svg's width/height="100%".
+const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
+const CENTER_BTN_BG = '#16211F';
+
+const Tab = createBottomTabNavigator();
+
+// Whichever of these routes is present becomes the raised center button
+// instead of an inline tab - first match wins, so an admin (who could in
+// theory also satisfy a later check) always gets Admission, never Scan.
+const CENTER_ROUTE_CANDIDATES = ['Admission', 'Scan'];
 
 // Per-user cache of the last known enrollment gate verdict, so a student who
 // opens the app offline sees the same gate decision as their last online
 // check rather than being treated as "unknown" - see EnrollmentGate below.
 const ENROLLMENT_GATE_CACHE_KEY = '@enrollment_gate_completed_v1';
-
-// Docked bar, no floating/pill styling - matches BottomNavBar.tsx (same
-// icons/labels/order/colors) so there's one source of truth for "what does
-// the active tab look like" whichever bar happens to be on screen.
-const ACTIVE = BRAND.emerald;
-const SUBTLE = COLORS.subtle;
-
-const Tab = createBottomTabNavigator();
 
 // --- Inline tab icons (react-native-svg) ---
 function HomeIcon({ color }: { color: string }) {
@@ -51,19 +67,23 @@ function HomeIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+// Center button for both admin school types (orphan and regular) - a plain
+// plus, not the old person+plus admission glyph, per the request that the
+// admin center icon simply read as "add/admission".
 function AdmissionIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx="9" cy="8" r="3.2" stroke={color} strokeWidth={1.9} />
-      <Path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-      <Path d="M18 8v6M15 11h6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
-function ReportsIcon({ color }: { color: string }) {
+// Student center button - opens their status report (classes, attendance,
+// grades - see MyProgressScreen/StudentProgressScreen.tsx).
+function ProfileIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 20V10M12 20V4M19 20v-7" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx="12" cy="8" r="3.4" stroke={color} strokeWidth={1.9} />
+      <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -120,7 +140,7 @@ function ScanIcon({ color }: { color: string }) {
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
-  Reports: (c) => <ReportsIcon color={c} />,
+  MyProgress: (c) => <ProfileIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
   Alerts: (c) => <BellIcon color={c} />,
@@ -141,7 +161,7 @@ function TabBadge({ count }: { count: number }) {
   );
 }
 
-function TabBar({ state, navigation }: any) {
+function TabBar({ state, navigation, isStudent }: any) {
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
 
@@ -158,77 +178,82 @@ function TabBar({ state, navigation }: any) {
     return null;
   }
 
+  const centerRouteName = CENTER_ROUTE_CANDIDATES.find((name) => state.routes.some((r: any) => r.name === name)) ?? null;
+  const visibleRoutes = state.routes.filter((r: any) => r.name !== centerRouteName);
+  const centerIndex = centerRouteName ? state.routes.findIndex((r: any) => r.name === centerRouteName) : -1;
+  const centerFocused = centerIndex === state.index;
+  // Students have no Admission/Scan tab, so their center button isn't a tab
+  // at all - it pushes MyProgress (StudentProgressScreen: classes,
+  // attendance, grades) on the parent stack instead of switching tabs.
+  const showStudentCenter = isStudent && !centerRouteName;
+
+  const goToRoute = (route: any, isRouteFocused: boolean) => {
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (!isRouteFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name);
+    }
+  };
+
   return (
-    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {state.routes.map((route: any, index: number) => {
-        const isRouteFocused = state.index === index;
-        const renderIcon = ICONS[route.name];
-        const color = isRouteFocused ? ACTIVE : SUBTLE;
+    <View style={styles.tabBarWrap}>
+      {centerRouteName && (
+        <TouchableOpacity
+          style={styles.centerBtn}
+          activeOpacity={0.85}
+          onPress={() => goToRoute(state.routes[centerIndex], centerFocused)}
+          accessibilityRole="button"
+          accessibilityLabel={centerRouteName}
+        >
+          {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
+        </TouchableOpacity>
+      )}
+      {showStudentCenter && (
+        <TouchableOpacity
+          style={styles.centerBtn}
+          activeOpacity={0.85}
+          onPress={() => (navigation.getParent() ?? navigation).navigate('MyProgress')}
+          accessibilityRole="button"
+          accessibilityLabel="My Progress"
+        >
+          {ICONS.MyProgress('#FFFFFF')}
+        </TouchableOpacity>
+      )}
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!isRouteFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
+        {/* A rectangular BlurView can't be clipped to this curved shape
+            without a masking library, so the "glass" here is a translucent
+            fill + shadow rather than a true backdrop blur - same tradeoff
+            noted on centerBtn. preserveAspectRatio="none" stretches the
+            path non-uniformly to fill the bar's real width/height, the same
+            way the mockup's objectBoundingBox clipPath did. */}
+        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+        </Svg>
+        {visibleRoutes.map((route: any) => {
+          const index = state.routes.indexOf(route);
+          const isRouteFocused = state.index === index;
+          const renderIcon = ICONS[route.name];
+          const color = isRouteFocused ? ACTIVE : SUBTLE;
 
-        return (
-          <TouchableOpacity
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isRouteFocused ? { selected: true } : {}}
-            onPress={onPress}
-            style={styles.tabItem}
-            activeOpacity={0.7}
-          >
-            {isRouteFocused && <View style={styles.activeIndicator} pointerEvents="none" />}
-            <View style={styles.iconWrap}>
-              {renderIcon && renderIcon(color)}
-              {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
-            </View>
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {route.name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isRouteFocused ? { selected: true } : {}}
+              onPress={() => goToRoute(route, isRouteFocused)}
+              style={styles.tabItem}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconWrap}>
+                {renderIcon && renderIcon(color)}
+                {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
-}
-
-function AdmissionPlaceholder() {
-  return <PlaceholderCardScreen title="Admission" />;
-}
-function ReportsPlaceholder() {
-  return <PlaceholderCardScreen title="Reports" />;
-}
-
-function ReportsRouter() {
-  const { user } = useAuth();
-  if (!user) return null;
-
-  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-
-  if (!isOrphanSchoolUser(user)) {
-    return <ReportsPlaceholder />;
-  }
-
-  if (isAdmin) {
-    return <AdminOrphanOverviewScreen />;
-  }
-
-  // A "teacher-orphan" (role === 'teacher' && is_orphan) is a different
-  // person/feature from a child-orphan (student) - they must never share
-  // the same monthly-report screen or payload. See
-  // TeacherOrphanReportScreen.tsx / ChildReportWizardScreen.tsx.
-  if (user.role === 'teacher') {
-    return <TeacherOrphanReportScreen />;
-  }
-  return <ChildReportWizardScreen />;
 }
 
 // A student with no workflow record at all (`started === false`) is not yet
@@ -243,8 +268,7 @@ function isEnrollmentCompleted(status: StudentEnrollmentWorkflowStatus): boolean
 // A logged-in student whose enrollment workflow isn't `completed` yet must
 // see EnrollmentStatusScreen instead of the rest of the app - reuses the
 // existing student-facing status fetch/screen as-is, no new backend or UI.
-// Orphan-school students have no enrollment pipeline (confirmed elsewhere in
-// this codebase, e.g. ReportsRouter above) and are never gated.
+// Orphan-school students have no enrollment pipeline and are never gated.
 //
 // Returns [completed, applyStatus] - `applyStatus` lets EnrollmentStatusScreen
 // feed its own (independent) fetch result back into this gate. Without it, a
@@ -339,31 +363,31 @@ export default function MainTabs() {
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
   const isTeacherRole = user.role === 'teacher';
-  // Reports is the monthly-report feature (child report wizard / teacher-
-  // orphan report / admin orphan overview) - it only has real content for
-  // orphan schools (see ReportsRouter above); everywhere else it was just a
-  // dead placeholder tab. Hidden for every role, including admin, on a
-  // non-orphan school.
-  const showReports = isOrphanSchoolUser(user);
+  const isStudentRole = user.role === 'student';
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <TabBar {...props} isStudent={isStudentRole} />}
+    >
       {/* Home is the social feed (hearts/comments/reposts). The role
           dashboard (teacher/children/manage cards etc) lives directly on
           the Menu tab now, with profile + log out at the bottom of the
           same screen - see MenuScreen.tsx. */}
       <Tab.Screen name="Home" component={FeedScreen} />
 
-      {/* Admins get a real single-student admission form here. */}
+      {/* Admins (orphan-type and regular school type alike) get the raised
+          plus center button here, for a real single-student admission
+          form. Capped at exactly 5 total bottom-bar icons for every role
+          (Home, center, Chat, Alerts, Menu) - the old orphan-only Reports
+          tab was dropped; admins reach the equivalent monthly-report
+          screen from a dashboard tile instead (see AdminDashboard.tsx). */}
       {isAdminRole && <Tab.Screen name="Admission" component={AdmissionScreen} />}
 
-      {showReports && <Tab.Screen name="Reports" component={ReportsRouter} />}
-
-      {/* Teacher-only, every school type: jumps into the class picker with
-          directTo=AttendanceScan, so tapping a class goes straight into
-          scanning instead of the Manual/Scan/Face chooser. Sits next to
-          Reports (or in Reports' old spot when hidden) so it lands near the
-          middle of the bar. */}
+      {/* Teacher-only, every school type: raised center button jumps into
+          the class picker with directTo=AttendanceScan, so tapping a class
+          goes straight into scanning instead of the Manual/Scan/Face
+          chooser. */}
       {isTeacherRole && (
         <Tab.Screen
           name="Scan"
@@ -380,36 +404,51 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
+  // Edge-to-edge, no side margins/rounded pill - full-width glass bar, same
+  // as the login/feed mockups' tab-bar-wrap (0 padding at all, including
+  // bottom - the safe-area inset lives on tabBar's own paddingBottom below
+  // instead, so the glass fill itself reaches the literal screen edge
+  // rather than leaving a gap of bare canvas underneath the bar).
+  tabBarWrap: {},
   tabBar: {
     flexDirection: 'row',
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingHorizontal: 20,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 8,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: ACTIVE,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 3,
+  centerBtn: {
+    position: 'absolute',
+    top: -15,
+    left: '50%',
+    marginLeft: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: CENTER_BTN_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 9,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.55)',
   },
   badge: {
     position: 'absolute',
@@ -419,7 +458,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: COLORS.danger,
+    backgroundColor: DANGER,
     alignItems: 'center',
     justifyContent: 'center',
   },
