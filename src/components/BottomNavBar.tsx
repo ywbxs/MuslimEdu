@@ -127,14 +127,14 @@ export default function BottomNavBar() {
   const goTo = (name: string) => (navigation as any).navigate('MainTabs', { screen: name });
 
   return (
-    <View style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={styles.tabBarWrap}>
       {centerName && (
         <TouchableOpacity style={styles.centerBtn} activeOpacity={0.85} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
           {ICONS[centerName]('#FFFFFF')}
         </TouchableOpacity>
       )}
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
         <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
           <Path d={NOTCH_PATH} fill={GLASS_FILL} />
         </Svg>
@@ -163,11 +163,15 @@ export default function BottomNavBar() {
 
 const styles = StyleSheet.create({
   // Edge-to-edge, no side margins/rounded pill - matches MainTabs.tsx.
-  tabBarWrap: { paddingTop: 0 },
+  // No padding on the wrap at all - the safe-area inset lives on tabBar's
+  // own paddingBottom below, so the glass fill reaches the literal screen
+  // edge instead of leaving a gap of bare canvas underneath the bar.
+  tabBarWrap: {},
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64,
+    paddingTop: 14,
+    paddingHorizontal: 20,
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
