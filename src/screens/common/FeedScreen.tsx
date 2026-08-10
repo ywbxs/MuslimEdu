@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,6 +45,19 @@ const CANVAS = '#E8F4F2';
 const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
+
+// Same parallax technique as DashboardShell.tsx/AdminDashboard.tsx: the
+// header sits behind the scrollable content (position:'absolute', lower in
+// paint order) and recedes at half the scroll speed while fading out, so it
+// reads as a background layer the feed scrolls "past" rather than a header
+// that just scrolls away at the same 1:1 rate as everything else.
+const HEADER_HEIGHT = 92;
+const PARALLAX_FACTOR = 0.5;
+
+// Cast needed because Animated.createAnimatedComponent widens FlatList's
+// prop/ref types - this keeps `listRef.current?.scrollToOffset(...)` and
+// the `<DeckItem>` generic working exactly like the plain FlatList did.
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -99,6 +113,20 @@ export default function FeedScreen() {
 
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
+
+  // Parallax header - see HEADER_HEIGHT's comment above.
+  const [headerHeight, setHeaderHeight] = useState(HEADER_HEIGHT);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, headerHeight],
+    outputRange: [0, -headerHeight * PARALLAX_FACTOR],
+    extrapolate: 'clamp',
+  });
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, headerHeight * 0.6, headerHeight],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -320,13 +348,15 @@ export default function FeedScreen() {
             <PostCardSkeleton withImage style={styles.feedPostCard} />
           </View>
         ) : (
-          <FlatList
+          <AnimatedFlatList
             ref={listRef}
             data={deckData}
             keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            scrollEventThrottle={16}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.5}
             onViewableItemsChanged={onViewableItemsChanged}
@@ -379,15 +409,31 @@ export default function FeedScreen() {
         end={{ x: 0.7, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      {/* Parallax header - sits behind the feed (position:'absolute', lower
+          in paint order than outerWrap below), receding at half the feed's
+          scroll speed and fading out as you scroll, same technique as
+          DashboardShell.tsx's hero. outerWrap's paddingTop below holds it
+          at its resting spot; the header's own translateY/opacity only
+          affect how it looks, not the feed's layout. */}
+      <Animated.View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + 12, opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
+        ]}
+        onLayout={(e) => {
+          const measured = e.nativeEvent.layout.height;
+          if (Math.abs(measured - headerHeight) > 1) setHeaderHeight(measured);
+        }}
+        pointerEvents="box-none"
+      >
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
           <LanguageSwitcherButton />
           <CurrencyBalanceButton />
         </View>
-      </View>
+      </Animated.View>
 
-      <View style={styles.outerWrap}>{homeContent}</View>
+      <View style={[styles.outerWrap, { paddingTop: headerHeight }]}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -406,6 +452,10 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
