@@ -7,13 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import PlaceholderCardScreen from '../screens/common/PlaceholderCardScreen';
 import MenuScreen from '../screens/common/MenuScreen';
 import FeedScreen from '../screens/common/FeedScreen';
 import NotificationsScreen from '../screens/common/NotificationsScreen';
-import ChildReportWizardScreen from '../screens/orphan/ChildReportWizardScreen';
-import TeacherOrphanReportScreen from '../screens/teachers/TeacherOrphanReportScreen';
-import AdminOrphanOverviewScreen from '../screens/orphan/AdminOrphanOverviewScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import TeacherAttendanceClassesScreen from '../screens/teachers/TeacherAttendanceClassesScreen';
@@ -71,19 +67,23 @@ function HomeIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+// Center button for both admin school types (orphan and regular) - a plain
+// plus, not the old person+plus admission glyph, per the request that the
+// admin center icon simply read as "add/admission".
 function AdmissionIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx="9" cy="8" r="3.2" stroke={color} strokeWidth={1.9} />
-      <Path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-      <Path d="M18 8v6M15 11h6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
 }
-function ReportsIcon({ color }: { color: string }) {
+// Student center button - opens their status report (classes, attendance,
+// grades - see MyProgressScreen/StudentProgressScreen.tsx).
+function ProfileIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 20V10M12 20V4M19 20v-7" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx="12" cy="8" r="3.4" stroke={color} strokeWidth={1.9} />
+      <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -140,7 +140,7 @@ function ScanIcon({ color }: { color: string }) {
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
   Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
-  Reports: (c) => <ReportsIcon color={c} />,
+  MyProgress: (c) => <ProfileIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
   Chat: (c) => <ChatIcon color={c} />,
   Alerts: (c) => <BellIcon color={c} />,
@@ -161,7 +161,7 @@ function TabBadge({ count }: { count: number }) {
   );
 }
 
-function TabBar({ state, navigation }: any) {
+function TabBar({ state, navigation, isStudent }: any) {
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
 
@@ -182,6 +182,10 @@ function TabBar({ state, navigation }: any) {
   const visibleRoutes = state.routes.filter((r: any) => r.name !== centerRouteName);
   const centerIndex = centerRouteName ? state.routes.findIndex((r: any) => r.name === centerRouteName) : -1;
   const centerFocused = centerIndex === state.index;
+  // Students have no Admission/Scan tab, so their center button isn't a tab
+  // at all - it pushes MyProgress (StudentProgressScreen: classes,
+  // attendance, grades) on the parent stack instead of switching tabs.
+  const showStudentCenter = isStudent && !centerRouteName;
 
   const goToRoute = (route: any, isRouteFocused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -201,6 +205,17 @@ function TabBar({ state, navigation }: any) {
           accessibilityLabel={centerRouteName}
         >
           {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
+        </TouchableOpacity>
+      )}
+      {showStudentCenter && (
+        <TouchableOpacity
+          style={styles.centerBtn}
+          activeOpacity={0.85}
+          onPress={() => (navigation.getParent() ?? navigation).navigate('MyProgress')}
+          accessibilityRole="button"
+          accessibilityLabel="My Progress"
+        >
+          {ICONS.MyProgress('#FFFFFF')}
         </TouchableOpacity>
       )}
 
@@ -241,37 +256,6 @@ function TabBar({ state, navigation }: any) {
   );
 }
 
-function AdmissionPlaceholder() {
-  return <PlaceholderCardScreen title="Admission" />;
-}
-function ReportsPlaceholder() {
-  return <PlaceholderCardScreen title="Reports" />;
-}
-
-function ReportsRouter() {
-  const { user } = useAuth();
-  if (!user) return null;
-
-  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-
-  if (!isOrphanSchoolUser(user)) {
-    return <ReportsPlaceholder />;
-  }
-
-  if (isAdmin) {
-    return <AdminOrphanOverviewScreen />;
-  }
-
-  // A "teacher-orphan" (role === 'teacher' && is_orphan) is a different
-  // person/feature from a child-orphan (student) - they must never share
-  // the same monthly-report screen or payload. See
-  // TeacherOrphanReportScreen.tsx / ChildReportWizardScreen.tsx.
-  if (user.role === 'teacher') {
-    return <TeacherOrphanReportScreen />;
-  }
-  return <ChildReportWizardScreen />;
-}
-
 // A student with no workflow record at all (`started === false`) is not yet
 // in the tracked pipeline - e.g. enrolled before this feature existed, or
 // the admin hasn't started their workflow yet. Only an actually-started,
@@ -284,8 +268,7 @@ function isEnrollmentCompleted(status: StudentEnrollmentWorkflowStatus): boolean
 // A logged-in student whose enrollment workflow isn't `completed` yet must
 // see EnrollmentStatusScreen instead of the rest of the app - reuses the
 // existing student-facing status fetch/screen as-is, no new backend or UI.
-// Orphan-school students have no enrollment pipeline (confirmed elsewhere in
-// this codebase, e.g. ReportsRouter above) and are never gated.
+// Orphan-school students have no enrollment pipeline and are never gated.
 //
 // Returns [completed, applyStatus] - `applyStatus` lets EnrollmentStatusScreen
 // feed its own (independent) fetch result back into this gate. Without it, a
@@ -380,31 +363,31 @@ export default function MainTabs() {
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
   const isTeacherRole = user.role === 'teacher';
-  // Reports is the monthly-report feature (child report wizard / teacher-
-  // orphan report / admin orphan overview) - it only has real content for
-  // orphan schools (see ReportsRouter above); everywhere else it was just a
-  // dead placeholder tab. Hidden for every role, including admin, on a
-  // non-orphan school.
-  const showReports = isOrphanSchoolUser(user);
+  const isStudentRole = user.role === 'student';
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <TabBar {...props} isStudent={isStudentRole} />}
+    >
       {/* Home is the social feed (hearts/comments/reposts). The role
           dashboard (teacher/children/manage cards etc) lives directly on
           the Menu tab now, with profile + log out at the bottom of the
           same screen - see MenuScreen.tsx. */}
       <Tab.Screen name="Home" component={FeedScreen} />
 
-      {/* Admins get a real single-student admission form here. */}
+      {/* Admins (orphan-type and regular school type alike) get the raised
+          plus center button here, for a real single-student admission
+          form. Capped at exactly 5 total bottom-bar icons for every role
+          (Home, center, Chat, Alerts, Menu) - the old orphan-only Reports
+          tab was dropped; admins reach the equivalent monthly-report
+          screen from a dashboard tile instead (see AdminDashboard.tsx). */}
       {isAdminRole && <Tab.Screen name="Admission" component={AdmissionScreen} />}
 
-      {showReports && <Tab.Screen name="Reports" component={ReportsRouter} />}
-
-      {/* Teacher-only, every school type: jumps into the class picker with
-          directTo=AttendanceScan, so tapping a class goes straight into
-          scanning instead of the Manual/Scan/Face chooser. Sits next to
-          Reports (or in Reports' old spot when hidden) so it lands near the
-          middle of the bar. */}
+      {/* Teacher-only, every school type: raised center button jumps into
+          the class picker with directTo=AttendanceScan, so tapping a class
+          goes straight into scanning instead of the Manual/Scan/Face
+          chooser. */}
       {isTeacherRole && (
         <Tab.Screen
           name="Scan"
