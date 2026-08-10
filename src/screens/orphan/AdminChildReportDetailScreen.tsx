@@ -13,7 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { MonthlyReport } from '../../services/orphanService';
+import { MonthlyReport, PickedPhoto } from '../../services/orphanService';
 import {
   fetchChildReports,
   createChildReport,
@@ -23,6 +23,7 @@ import {
 import { Skeleton } from '../../components/Skeleton';
 import RatingGauge from '../../components/RatingGauge';
 import PhotoLightbox from '../../components/PhotoLightbox';
+import { PhotoPicker } from '../../components/ReportFormControls';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW } from '../../theme/spatial';
@@ -69,12 +70,17 @@ export default function AdminChildReportDetailScreen() {
   const [note, setNote] = useState('');
   const [academicRating, setAcademicRating] = useState<number | null>(null);
   const [wellbeingRating, setWellbeingRating] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Non-null while editing an existing report - handleSave calls
   // updateChildReport instead of createChildReport, and the form is
   // pre-filled from that report. There's no separate draft/approval status
   // on this model, so editing an existing month's report IS the resubmission.
   const [editingReportId, setEditingReportId] = useState<number | null>(null);
+  // The report already on file when editing - shown read-only above the
+  // picker (the update endpoint appends new uploads, it doesn't remove
+  // existing photos - see adminOrphanReportService.ts).
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
   // Full-screen photo viewer state - which report's photos are open, and
   // at which index, so PhotoLightbox can be a single shared instance for
@@ -105,6 +111,8 @@ export default function AdminChildReportDetailScreen() {
     setNote('');
     setAcademicRating(null);
     setWellbeingRating(null);
+    setPhotos([]);
+    setExistingPhotos([]);
   };
 
   const handleSave = async () => {
@@ -115,17 +123,19 @@ export default function AdminChildReportDetailScreen() {
     setIsSubmitting(true);
     try {
       if (editingReportId) {
-        await updateChildReport(token, editingReportId, {
-          note,
-          academic_rating: academicRating,
-          wellbeing_rating: wellbeingRating,
-        });
+        await updateChildReport(
+          token,
+          editingReportId,
+          { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
+          photos,
+        );
         Alert.alert(t('admin_child_report_detail.report_updated', 'Report updated'), t('admin_child_report_detail.report_updated_message', "This report was updated."));
       } else {
         await createChildReport(
           token,
           studentId,
           { note, academic_rating: academicRating, wellbeing_rating: wellbeingRating },
+          photos,
         );
         Alert.alert(t('admin_child_report_detail.report_added', 'Report added'), t('admin_child_report_detail.report_added_message', 'A report was added for {name}.').replace('{name}', studentName));
       }
@@ -143,6 +153,8 @@ export default function AdminChildReportDetailScreen() {
     setNote(report.note ?? '');
     setAcademicRating(report.academic_rating);
     setWellbeingRating(report.wellbeing_rating);
+    setPhotos([]);
+    setExistingPhotos(report.photos ?? []);
     setShowForm(true);
   };
 
@@ -225,6 +237,30 @@ export default function AdminChildReportDetailScreen() {
               />
               <RatingSelector label={t('admin_child_report_detail.academic_rating', 'Academic Rating')} value={academicRating} onChange={setAcademicRating} />
               <RatingSelector label={t('admin_child_report_detail.wellbeing_rating', 'Wellbeing Rating')} value={wellbeingRating} onChange={setWellbeingRating} />
+
+              {existingPhotos.length > 0 && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.fieldLabel}>{t('admin_child_report_detail.current_photos', 'Current Photos')}</Text>
+                  <View style={styles.photoGrid}>
+                    {existingPhotos.map((url, index) => (
+                      <TouchableOpacity
+                        key={url}
+                        style={styles.photoTile}
+                        activeOpacity={0.85}
+                        onPress={() => openLightbox(existingPhotos, index)}
+                      >
+                        <Image source={{ uri: url }} style={styles.photoTileImage} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+              <Text style={styles.fieldLabel}>
+                {existingPhotos.length > 0
+                  ? t('admin_child_report_detail.add_more_photos', 'Add More Photos')
+                  : t('admin_child_report_detail.photos', 'Photos')}
+              </Text>
+              <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={20} />
 
               <View style={styles.formButtonRow}>
                 <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>

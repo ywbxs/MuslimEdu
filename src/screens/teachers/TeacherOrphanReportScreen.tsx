@@ -481,7 +481,7 @@ export default function TeacherOrphanReportScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('teacher_orphan_report.step_photos_title', 'Add Photos'),
-        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments.'),
+        subtitle: t('teacher_orphan_report.step_photos_subtitle_required', 'Required — add at least one photo of your teaching activities, achievements, or classroom moments (up to 20).'),
         content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
         // Photos are required to submit - the wizard's Submit button
         // stays disabled until at least one is attached.

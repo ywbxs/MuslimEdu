@@ -151,7 +151,7 @@ export default function ChildReportWizardScreen() {
         id: 'photos',
         icon: <IconImage />,
         title: t('child_report_wizard.photos_title', 'Add Photos'),
-        subtitle: t('child_report_wizard.photos_subtitle_required', 'Required — add at least one photo from this month (up to 5).'),
+        subtitle: t('child_report_wizard.photos_subtitle_required', 'Required — add at least one photo from this month (up to 20).'),
         content: <PhotoPicker photos={photos} onChange={setPhotos} required />,
         // Photos are required to submit - the wizard's Submit button
         // stays disabled until at least one is attached.
