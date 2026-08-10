@@ -5,15 +5,23 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchActiveWidgetAnnouncements, WidgetAnnouncement } from '../../services/widgetAnnouncementService';
 import { RADIUS, SHADOW } from '../../theme/glass';
 import PrayerTimesCard from './PrayerTimesCard';
-import { CARD_W, EDGE, GAP, SNAP, END_PAD } from './widgetCarouselMetrics';
+import { useWidgetCardMetrics, EDGE, GAP, END_PAD } from './widgetCarouselMetrics';
 
 const ROW_HEIGHT = 210;
 
 type WidgetItem = { kind: 'prayer' } | { kind: 'announcement'; announcement: WidgetAnnouncement };
 
-function AnnouncementImageCard({ announcement, onPress }: { announcement: WidgetAnnouncement; onPress: () => void }) {
+function AnnouncementImageCard({
+  announcement,
+  onPress,
+  cardW,
+}: {
+  announcement: WidgetAnnouncement;
+  onPress: () => void;
+  cardW: number;
+}) {
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.announcementCard, { width: CARD_W, height: ROW_HEIGHT }]}>
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.announcementCard, { width: cardW, height: ROW_HEIGHT }]}>
       <Image source={{ uri: announcement.image_url }} style={styles.announcementImage} resizeMode="cover" />
     </TouchableOpacity>
   );
@@ -32,6 +40,7 @@ function AnnouncementImageCard({ announcement, onPress }: { announcement: Widget
 export default function WidgetCarousel() {
   const { token } = useAuth();
   const navigation = useNavigation();
+  const { CARD_W, SNAP } = useWidgetCardMetrics();
   const [announcements, setAnnouncements] = useState<WidgetAnnouncement[]>([]);
 
   const load = useCallback(() => {
@@ -69,6 +78,7 @@ export default function WidgetCarousel() {
           ) : (
             <AnnouncementImageCard
               announcement={item.announcement}
+              cardW={CARD_W}
               onPress={() =>
                 (navigation as any).navigate('ImageViewer', { images: [item.announcement.image_url], initialIndex: 0 })
               }
