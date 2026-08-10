@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
@@ -33,8 +32,18 @@ import { isOrphanSchoolUser } from '../utils/orphanSchool';
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
-const GLASS_BORDER = 'rgba(255,255,255,0.65)';
-const GLASS_FILL = 'rgba(255,255,255,0.55)';
+// No backdrop-blur equivalent without a masking library (see TabBar's
+// notch rendering), so this needs to be opaque enough on its own to keep
+// icons legible over whatever's scrolling underneath - higher than a
+// typical "glass" alpha would be if it were sitting on real blur.
+const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// Shape of the tab bar's top edge: flat, dips into a shallow curved notch
+// for the raised center button to nest into, flat again to the far edge -
+// same silhouette as the login/feed mockups' SVG clipPath, expressed as a
+// fillable Path instead (RN has no clip-path equivalent for arbitrary
+// View shapes). Coordinates are in a 0-1000 unit box; stretched to the
+// bar's actual pixel size by the Svg's width/height="100%".
+const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 const CENTER_BTN_BG = '#16211F';
 
 const Tab = createBottomTabNavigator();
@@ -196,8 +205,15 @@ function TabBar({ state, navigation }: any) {
       )}
 
       <View style={styles.tabBar}>
-        <BlurView blurType="light" blurAmount={24} reducedTransparencyFallbackColor="#FFFFFF" style={StyleSheet.absoluteFillObject} />
-        <View style={[StyleSheet.absoluteFillObject, styles.tabBarTint]} />
+        {/* A rectangular BlurView can't be clipped to this curved shape
+            without a masking library, so the "glass" here is a translucent
+            fill + shadow rather than a true backdrop blur - same tradeoff
+            noted on centerBtn. preserveAspectRatio="none" stretches the
+            path non-uniformly to fill the bar's real width/height, the same
+            way the mockup's objectBoundingBox clipPath did. */}
+        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+        </Svg>
         {visibleRoutes.map((route: any) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
@@ -410,25 +426,21 @@ const styles = StyleSheet.create({
   // its top edge (approximates the mockup's wave-notch cutout without the
   // SVG clipPath complexity - visually near-identical, just an overlap
   // instead of a literal cut).
+  // Edge-to-edge, no side margins/rounded pill - full-width glass bar, same
+  // as the login/feed mockups' tab-bar-wrap (0 horizontal padding).
   tabBarWrap: {
-    paddingHorizontal: 16,
     paddingTop: 0,
   },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 64,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    overflow: 'hidden',
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
     elevation: 8,
   },
-  tabBarTint: { backgroundColor: GLASS_FILL },
   tabItem: {
     flex: 1,
     alignItems: 'center',
