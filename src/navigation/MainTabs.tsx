@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -164,6 +164,18 @@ function TabBadge({ count }: { count: number }) {
 function TabBar({ state, navigation, isStudent }: any) {
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
+  // Percentage width/height on react-native-svg's <Svg> can fail to resolve
+  // reliably on Android when the parent's own height is itself content-
+  // driven (no explicit `height` on styles.tabBar) - the notch background
+  // can end up 0-sized and invisible behind the icons. Measuring the bar's
+  // actual laid-out size and feeding the Svg exact pixel dimensions removes
+  // that ambiguity entirely (same onLayout-measure pattern DashboardShell.tsx
+  // uses for its hero).
+  const [barSize, setBarSize] = useState({ width: 0, height: 0 });
+  const onBarLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setBarSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
+  };
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -219,16 +231,20 @@ function TabBar({ state, navigation, isStudent }: any) {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]}>
+      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]} onLayout={onBarLayout}>
         {/* A rectangular BlurView can't be clipped to this curved shape
             without a masking library, so the "glass" here is a translucent
             fill + shadow rather than a true backdrop blur - same tradeoff
             noted on centerBtn. preserveAspectRatio="none" stretches the
             path non-uniformly to fill the bar's real width/height, the same
-            way the mockup's objectBoundingBox clipPath did. */}
-        <Svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
-          <Path d={NOTCH_PATH} fill={GLASS_FILL} />
-        </Svg>
+            way the mockup's objectBoundingBox clipPath did. Exact pixel
+            width/height (measured above) instead of "100%" strings - see
+            barSize's comment for why. */}
+        {barSize.width > 0 && barSize.height > 0 && (
+          <Svg width={barSize.width} height={barSize.height} viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+            <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+          </Svg>
+        )}
         {visibleRoutes.map((route: any) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
