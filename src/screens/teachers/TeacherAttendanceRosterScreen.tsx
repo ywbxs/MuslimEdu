@@ -30,8 +30,8 @@ import BigAttendanceCard, { SwipeDirection, DirectionMeta } from '../../componen
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#0F9D58';
-const EMERALD_SOFT = '#E7F5EC';
+const EMERALD = '#2BCBB0';
+const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
@@ -51,7 +51,7 @@ interface StatusMeta {
 // resolves (and for a school with no configured statuses at all, though the
 // backend already returns these same 5 defaults in that case too).
 const DEFAULT_STATUS_META: Record<string, StatusMeta> = {
-  present: { label: 'Present', short: 'P', color: '#0F9D58', soft: '#E7F5EC' },
+  present: { label: 'Present', short: 'P', color: '#2BCBB0', soft: '#E5F8F5' },
   late: { label: 'Late', short: 'L', color: '#B8860B', soft: '#FBF2DE' },
   absent: { label: 'Absent', short: 'A', color: '#E5484D', soft: '#FCEDED' },
   excused: { label: 'Excused', short: 'E', color: '#4C6EF5', soft: '#EAEDFC' },

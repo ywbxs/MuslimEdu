@@ -144,7 +144,7 @@ export function GlassPill({
 
   const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <Wrapper onPress={onPress} activeOpacity={0.8} style={[styles.pill, active && { backgroundColor: 'rgba(15,157,88,0.16)', borderColor: BRAND.emerald }]}>
+    <Wrapper onPress={onPress} activeOpacity={0.8} style={[styles.pill, active && { backgroundColor: 'rgba(43,203,176,0.16)', borderColor: BRAND.emerald }]}>
       <Text style={[styles.pillText, { color: active ? BRAND.emerald : toneColor }]}>{label}</Text>
     </Wrapper>
   );
