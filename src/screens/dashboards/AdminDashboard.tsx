@@ -846,7 +846,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           }}
         >
           {/* Greeting + avatar (foreground, scrolls at normal speed over the bg) */}
-          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+          <View style={[styles.headerRow, { paddingTop: insets.top }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.greetingSmall}>{t('admin_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name ?? ''}</Text>
