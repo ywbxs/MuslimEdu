@@ -42,13 +42,19 @@ const GLASS_FILL = 'rgba(255,255,255,0.82)';
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 const CENTER_BTN_BG = '#16211F';
 
-// The bar's geometry is COMPUTED, never measured. A previous version fed an
-// onLayout-measured height back into the notch Svg's own height prop, which
-// created a layout feedback loop: the Svg counted toward the row's height,
-// the taller row measured taller, and the bar grew without bound until it
-// swallowed the screen. Both dimensions are already known without measuring
-// - the bar is edge-to-edge so its width IS the window width, and its height
-// is just padding + icon. Keep it that way; don't reintroduce onLayout here.
+// The bar's geometry is COMPUTED, never measured.
+//
+// The bar once grew without bound until it swallowed the screen. The root
+// cause was that the notch Svg was never actually taken out of the row's
+// flow: it relied on `StyleSheet.absoluteFillObject`, which React Native
+// removed in 0.8x, so at runtime that style was `undefined` and RN silently
+// ignored it. The Svg therefore counted toward the row's height - and a
+// then-current onLayout that fed the measured height back into the Svg's own
+// height prop turned that into an unbounded feedback loop.
+//
+// Both dimensions are knowable without measuring: the bar is edge-to-edge so
+// its width IS the window width, and its height is just padding + icon. Keep
+// it that way; don't reintroduce onLayout here.
 const ICON_SIZE = 24;
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
@@ -444,7 +450,7 @@ const styles = StyleSheet.create({
   },
   // Holds the notch Svg out of the row's flow so it can never contribute to
   // the bar's height.
-  barBackground: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  barBackground: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
   tabItem: {
     flex: 1,
     alignItems: 'center',

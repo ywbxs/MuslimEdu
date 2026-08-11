@@ -20,8 +20,8 @@ const CENTER_BTN_BG = '#16211F';
 // Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
 // either changes.
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
-// Computed, never measured - see MainTabs.tsx for why onLayout must not come
-// back here (it caused an unbounded layout feedback loop).
+// Computed, never measured - see MainTabs.tsx for the full story on why
+// onLayout must not come back here.
 const ICON_SIZE = 24;
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 24,
   },
-  barBackground: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  barBackground: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {

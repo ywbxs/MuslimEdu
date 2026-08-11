@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(12,16,14,0.45)', justifyContent: 'flex-end' },
-  modalBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  modalBackdropTouch: { ...StyleSheet.absoluteFill },
   modalCard: {
     backgroundColor: GLASS_SURFACE,
     borderTopLeftRadius: 24,

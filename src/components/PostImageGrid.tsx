@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   half: { flex: 1, position: 'relative', overflow: 'hidden', borderRadius: IMAGE_RADIUS },
   fill: { width: '100%', height: '100%', position: 'relative' },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',

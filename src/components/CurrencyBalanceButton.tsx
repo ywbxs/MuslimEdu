@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  backdropTouch: { ...StyleSheet.absoluteFillObject },
+  backdropTouch: { ...StyleSheet.absoluteFill },
   sheet: {
     width: '100%',
     maxWidth: 340,
