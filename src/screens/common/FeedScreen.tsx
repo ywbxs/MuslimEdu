@@ -135,6 +135,19 @@ export default function FeedScreen() {
   // position 0. Measured rather than guessed since that height isn't a
   // fixed constant (safe-area inset varies by device, composer only shows
   // for roles that canPost).
+  //
+  // Applied as the FlatList's OWN contentContainerStyle.paddingTop below -
+  // NOT as a static paddingTop on its outer wrapper. A static wrapper
+  // padding would offset the FlatList's whole viewport permanently, so the
+  // list's visible window would always start at that fixed y - but the hero
+  // behind it recedes/fades based on a totally different value (BG_HEIGHT),
+  // moving away faster than the list's fixed-position window reveals new
+  // content. The result was a growing gap of bare canvas between the
+  // shrinking hero and wherever the list's still-far-down viewport top
+  // happened to be. Content padding scrolls away in lockstep with the
+  // actual scroll position instead, which is what keeps the list's visible
+  // top always exactly where scrolling has gotten to - no separate value to
+  // go out of sync with.
   const [heroHeight, setHeroHeight] = useState(180);
 
   // Drives the background layer's parallax translate/fade only - see
@@ -353,7 +366,7 @@ export default function FeedScreen() {
   const homeContent = (
     <View style={styles.deckWrap}>
       {loading ? (
-        <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
+        <View style={[styles.skeletonStack, { paddingTop: heroHeight, paddingBottom: tabBarHeight }]}>
           <PostCardSkeleton withImage style={styles.feedPostCard} />
           <PostCardSkeleton style={styles.feedPostCard} />
           <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -364,7 +377,7 @@ export default function FeedScreen() {
           data={deckData}
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
+          contentContainerStyle={[styles.listContent, { paddingTop: heroHeight, paddingBottom: 20 + tabBarHeight }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
@@ -490,7 +503,7 @@ export default function FeedScreen() {
         </View>
       </Animated.View>
 
-      <View style={[styles.outerWrap, { paddingTop: heroHeight }]}>{homeContent}</View>
+      <View style={styles.outerWrap}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
