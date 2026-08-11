@@ -333,6 +333,23 @@ export default function FeedScreen() {
 
   const homeContent = (
     <>
+      {/* Scrolls at the feed's own normal speed (not tied to the header's
+          parallax translate/fade) - at rest it sits right over the gradient
+          background like the header does, then scrolls away with everything
+          else as a normal list item once you scroll, instead of receding
+          and fading in lockstep with the title/currency balance. */}
+      {canPost && (
+        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+          <Text style={styles.composerPlaceholder} numberOfLines={1}>
+            {t('feed.composer_placeholder', 'Share a photo...')}
+          </Text>
+          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+            <PhotoIcon />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.deckWrap}>
         {loading ? (
           <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
@@ -428,23 +445,6 @@ export default function FeedScreen() {
             <CurrencyBalanceButton />
           </View>
         </View>
-
-        {/* Composer now lives in the parallax header alongside the currency
-            balance button instead of pinned as its own static block above
-            the feed - it recedes at the same half-speed and fades out the
-            same way as everything else here while scrolling, rather than
-            sitting fixed in place looking like a detached floating card. */}
-        {canPost && (
-          <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-            <Text style={styles.composerPlaceholder} numberOfLines={1}>
-              {t('feed.composer_placeholder', 'Share a photo...')}
-            </Text>
-            <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-              <PhotoIcon />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
       </Animated.View>
 
       <View style={[styles.outerWrap, { paddingTop: headerHeight }]}>{homeContent}</View>
@@ -488,7 +488,8 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
+    marginHorizontal: 16,
+    marginBottom: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
