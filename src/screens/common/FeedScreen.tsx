@@ -555,8 +555,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: 0,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
   },
 
 
