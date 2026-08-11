@@ -13,15 +13,16 @@ import { useNotifications } from '../context/NotificationContext';
 const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
-// No backdrop-blur equivalent for a curved shape without a masking library
-// (see MainTabs.tsx's TabBar) - opaque enough on its own to stay legible.
-const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// Solid and deliberately tinted, not translucent - see MainTabs.tsx's
+// TabBar for why (a translucent white on the near-white navigator canvas
+// was indistinguishable in an actual device screenshot).
+const GLASS_FILL = '#EAF6F3';
 const CENTER_BTN_BG = '#16211F';
 // Outlines the curve itself - see MainTabs.tsx's TabBar for why this is
 // required (elevation can't follow the notch shape, and the iOS shadow*
 // props do nothing on Android, so without a stroke the bar had no visible
 // edge on Android at all).
-const NOTCH_STROKE = 'rgba(13,30,28,0.22)';
+const NOTCH_STROKE = 'rgba(13,30,28,0.35)';
 // Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
 // either changes.
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';

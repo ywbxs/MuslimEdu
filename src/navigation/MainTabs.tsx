@@ -28,21 +28,26 @@ import { isOrphanSchoolUser } from '../utils/orphanSchool';
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
-// No backdrop-blur equivalent without a masking library (see TabBar's
-// notch rendering), so this needs to be opaque enough on its own to keep
-// icons legible over whatever's scrolling underneath - higher than a
-// typical "glass" alpha would be if it were sitting on real blur.
-const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// This bar is docked (not a floating overlay - see styles.tabBar's own
+// comment), so nothing ever actually scrolls behind it; there is no real
+// "glass" effect to serve here, only the flat NavigationContainer canvas
+// (theme.colors.background, #F7FAF8 - see RootNavigator.tsx). A translucent
+// white on top of a canvas that's already almost-white came out visually
+// indistinguishable in practice - confirmed against real device screenshots,
+// not just close in theory. Solid and deliberately tinted away from white
+// removes any dependency on what's rendered behind the bar at all.
+const GLASS_FILL = '#EAF6F3';
 // Outlines the notch's own curve directly on the Path, rather than relying
 // on a native shadow to imply it. `elevation` (Android's shadow) casts from
 // a View's rectangular bounds and can't follow an arbitrary path, which is
 // why it's deliberately absent on styles.tabBar below - but shadowColor/
 // shadowOffset/shadowOpacity/shadowRadius are iOS-only in RN, so without
 // this stroke the bar had NO visible edge at all on Android: a translucent-
-// white fill sitting on a near-white canvas, indistinguishable from it. The
-// stroke is what actually makes the curve legible, on both platforms,
-// regardless of how close the fill and background colors are.
-const NOTCH_STROKE = 'rgba(13,30,28,0.22)';
+// white fill sitting on a near-white canvas, indistinguishable from it. Two
+// rounds of opacity bumps on this stroke alone still weren't legible in a
+// real screenshot, which is why GLASS_FILL above stopped being translucent -
+// the stroke is now a second line of defense, not the only one.
+const NOTCH_STROKE = 'rgba(13,30,28,0.35)';
 // Shape of the tab bar's top edge: flat, dips into a shallow curved notch
 // for the raised center button to nest into, flat again to the far edge -
 // same silhouette as the login/feed mockups' SVG clipPath, expressed as a
