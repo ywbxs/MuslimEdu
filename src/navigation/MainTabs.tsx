@@ -33,6 +33,16 @@ const DANGER = '#D9534F';
 // icons legible over whatever's scrolling underneath - higher than a
 // typical "glass" alpha would be if it were sitting on real blur.
 const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// Outlines the notch's own curve directly on the Path, rather than relying
+// on a native shadow to imply it. `elevation` (Android's shadow) casts from
+// a View's rectangular bounds and can't follow an arbitrary path, which is
+// why it's deliberately absent on styles.tabBar below - but shadowColor/
+// shadowOffset/shadowOpacity/shadowRadius are iOS-only in RN, so without
+// this stroke the bar had NO visible edge at all on Android: a translucent-
+// white fill sitting on a near-white canvas, indistinguishable from it. The
+// stroke is what actually makes the curve legible, on both platforms,
+// regardless of how close the fill and background colors are.
+const NOTCH_STROKE = 'rgba(13,30,28,0.10)';
 // Shape of the tab bar's top edge: flat, dips into a shallow curved notch
 // for the raised center button to nest into, flat again to the far edge -
 // same silhouette as the login/feed mockups' SVG clipPath, expressed as a
@@ -250,7 +260,14 @@ function TabBar({ state, navigation, isStudent }: any) {
             for that is what let it drive the parent's height before. */}
         <View style={styles.barBackground} pointerEvents="none">
           <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
-            <Path d={NOTCH_PATH} fill={GLASS_FILL} />
+            {/* vectorEffect keeps the stroke a constant pixel width despite
+                preserveAspectRatio="none" scaling X and Y independently -
+                without it, a scalar strokeWidth in the 1000-unit viewBox
+                would render as a fraction of a pixel along the bar's near-
+                horizontal edges (barHeight/1000 is tiny) while looking
+                normal along its vertical ones, an inconsistent, mostly-
+                invisible border. */}
+            <Path d={NOTCH_PATH} fill={GLASS_FILL} stroke={NOTCH_STROKE} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
           </Svg>
         </View>
         {visibleRoutes.map((route: any) => {
