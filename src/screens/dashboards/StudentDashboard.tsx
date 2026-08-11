@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
+import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG, HeroGlow } from './DashboardShell';
 import { fetchReportStatus, ReportStatus } from '../../services/orphanService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
@@ -503,9 +503,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGrad)" />
         </Svg>
-        {/* Soft luminous glow, same as the HTML mockup's hero. */}
-        <View style={styles.glowTopRight} pointerEvents="none" />
-        <View style={styles.glowBottomLeft} pointerEvents="none" />
+        <HeroGlow />
       </Animated.View>
 
       <Animated.ScrollView
@@ -727,18 +725,6 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  glowTopRight: {
-    position: 'absolute',
-    top: -70, right: -70,
-    width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(43,203,176,0.16)',
-  },
-  glowBottomLeft: {
-    position: 'absolute',
-    bottom: -80, left: -50,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(42,180,219,0.10)',
-  },
   bgLayer: {
     position: 'absolute',
     top: 0,

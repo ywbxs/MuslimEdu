@@ -475,7 +475,7 @@ export default function PostCard({
           </View>
 
           {/* Body text */}
-          {!!post.content && <ExpandableText text={post.content} style={styles.content} maxParagraphs={2} />}
+          {!!post.content && <ExpandableText text={post.content} style={styles.content} maxParagraphs={1} />}
 
           {/* Own images */}
           {!quoted && post.images.length > 0 && (

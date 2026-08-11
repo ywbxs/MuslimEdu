@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useTabBarHeight } from '../../navigation/tabBarMetrics';
@@ -43,6 +43,42 @@ function CameraIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: n
     </Svg>
   );
 }
+
+// Shared hero glow - real radial gradients (bright core fading smoothly to
+// nothing) instead of a flat-opacity circle, which just looked like a
+// plain tinted disc with a hard edge. Same idea as FeedScreen.tsx's own
+// background glows. Every hero (this shell + Admin/Teacher/Student's own
+// custom heroes) renders the exact same two blobs, so it's centralized here
+// once instead of copy-pasted four times.
+export function HeroGlow() {
+  return (
+    <>
+      <Svg style={heroGlowStyles.topRight} width={220} height={220} pointerEvents="none">
+        <Defs>
+          <RadialGradient id="dashHeroGlowTeal" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={EMERALD} stopOpacity={0.55} />
+            <Stop offset="1" stopColor={EMERALD} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={110} cy={110} r={110} fill="url(#dashHeroGlowTeal)" />
+      </Svg>
+      <Svg style={heroGlowStyles.bottomLeft} width={180} height={180} pointerEvents="none">
+        <Defs>
+          <RadialGradient id="dashHeroGlowBlue" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#2AB4DB" stopOpacity={0.4} />
+            <Stop offset="1" stopColor="#2AB4DB" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={90} cy={90} r={90} fill="url(#dashHeroGlowBlue)" />
+      </Svg>
+    </>
+  );
+}
+
+const heroGlowStyles = StyleSheet.create({
+  topRight: { position: 'absolute', top: -70, right: -70 },
+  bottomLeft: { position: 'absolute', bottom: -80, left: -50 },
+});
 
 function GearIcon({ color = '#FFFFFF', size = 18 }: { color?: string; size?: number }) {
   return (
@@ -125,10 +161,7 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#shellHeroGrad)" />
         </Svg>
-        {/* Soft luminous glow, same as the HTML mockup's hero - a bright
-            core fading to nothing, not a flat-opacity disc. */}
-        <View style={styles.glowTopRight} pointerEvents="none" />
-        <View style={styles.glowBottomLeft} pointerEvents="none" />
+        <HeroGlow />
       </Animated.View>
 
       <Animated.ScrollView
@@ -211,19 +244,6 @@ const styles = StyleSheet.create({
     zIndex: 0,
     elevation: 0,
   },
-  glowTopRight: {
-    position: 'absolute',
-    top: -70, right: -70,
-    width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(43,203,176,0.16)',
-  },
-  glowBottomLeft: {
-    position: 'absolute',
-    bottom: -80, left: -50,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(42,180,219,0.10)',
-  },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
