@@ -743,7 +743,16 @@ const styles = StyleSheet.create({
   // you!" using the system italic - RN would need a bundled custom font
   // family (+ native linking) for the real serif face, not worth the CI/
   // native-build overhead for one accent word.
-  titleAccentItalic: { color: ACCENT, fontStyle: 'italic' },
+  // Serif italic (same Platform.select precedent as PostCard.tsx's
+  // LETTER_FONT) reads much closer to the mockup's script-like accent than
+  // the base sans font's own italic, which just looks like a slanted sans -
+  // fontStyle:'italic' alone was already applying, but on a font that
+  // barely has a distinct italic form.
+  titleAccentItalic: {
+    color: INK,
+    fontStyle: 'italic',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' }),
+  },
 
   heroRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 10 },
   heroTextCol: { flex: 1 },
