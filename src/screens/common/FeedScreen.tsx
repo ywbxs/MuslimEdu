@@ -450,6 +450,14 @@ export default function FeedScreen() {
           end={{ x: 0.7, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        {/* CANVAS_SOFT/CANVAS are both pale near-white tints - too close to
+            each other (and to feedPostCard's own translucent white) for the
+            gradient alone to make this layer's movement/fade actually
+            visible while scrolling. These soft emerald glows (same idea as
+            AdminDashboard.tsx's glowTopRight/glowBottomLeft) give the eye
+            something with enough contrast to actually track. */}
+        <View style={styles.glowTopRight} />
+        <View style={styles.glowBottomLeft} />
       </Animated.View>
 
       <View style={styles.outerWrap}>{homeContent}</View>
@@ -476,10 +484,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: BG_HEIGHT,
+    overflow: 'hidden',
     // Explicit zIndex/elevation, not just paint order - see the comment
     // above BG_HEIGHT for why this matters on Android.
     zIndex: 0,
     elevation: 0,
+  },
+  glowTopRight: {
+    position: 'absolute',
+    top: -60,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(43,203,176,0.22)',
+  },
+  glowBottomLeft: {
+    position: 'absolute',
+    bottom: -70,
+    left: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(42,180,219,0.16)',
   },
   header: {
     flexDirection: 'row',
