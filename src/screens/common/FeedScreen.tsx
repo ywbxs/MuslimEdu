@@ -46,24 +46,24 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// Parallax background/hero, done the way DashboardShell.tsx/AdminDashboard.tsx
-// do it: a separate absolutely-positioned layer behind everything, with
-// explicit zIndex/elevation pinning it there - not just paint order. That
-// explicit zIndex is what makes it safe to put REAL content ("Home", the
-// currency button, and the composer) inside this animated layer: on
-// Android, an animated transform can promote a view to its own compositing
-// layer and paint it above later siblings regardless of JSX order, which is
-// exactly what explicit zIndex/elevation (rather than relying on paint
-// order alone) prevents. Posts/widgets/caught-up are the only ordinary
-// scrolling content (the FlatList's own items) - they scroll over this hero
-// as it recedes and fades out from underneath them.
-//
-// Tall enough that the recede+fade plays out over a real chunk of scrolling
-// instead of finishing inside the first flick - at 260 it was resolving
-// almost instantly (posts run tall now with the 4:3 crop), which read as
-// "nothing happening" even though the value was updating correctly.
-const BG_HEIGHT = 520;
-const PARALLAX_FACTOR = 0.5;
+// Background/hero: "Home", the currency button, and the composer sit in a
+// layer above the plain decorative gradient/glow, both fading out together
+// as you start to scroll. The feed list starts right below this hero (a
+// static reserved gap, not scrollable content) and is never physically
+// underneath it, which is what keeps three things simultaneously true
+// without fighting each other:
+//   - the composer/currency button are reliably tappable (the list's own
+//     rendered bounds don't extend into that space at all, so there's
+//     nothing there to swallow the touch - see heroHeight below)
+//   - scrolling works normally everywhere (nothing here touches the list's
+//     own pointerEvents/gesture handling)
+//   - posts always render on top of (not under) the hero, since they never
+//     share the same screen space to begin with once list scrolling and
+//     hero fade are both this short
+// FADE_DISTANCE is deliberately short - the hero fades out well within the
+// first bit of scrolling, before there's ever a real chance of it lingering
+// visibly near where the list begins.
+const FADE_DISTANCE = 140;
 
 // Cast needed because Animated.createAnimatedComponent widens FlatList's
 // prop/ref types - this keeps `listRef.current?.scrollToOffset(...)` and
@@ -129,39 +129,25 @@ export default function FeedScreen() {
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
 
-  // The foreground (posts/widgets/caught-up) needs top clearance equal to
-  // the hero's real rendered height (title + currency button + composer),
-  // so it starts right below the hero instead of overlapping it at scroll
-  // position 0. Measured rather than guessed since that height isn't a
-  // fixed constant (safe-area inset varies by device, composer only shows
+  // The list's static top clearance - its own rendered bounds start here
+  // (a real layout offset, not scrollable content), so it never physically
+  // overlaps the hero above it. Measured rather than guessed since it isn't
+  // a fixed constant (safe-area inset varies by device, composer only shows
   // for roles that canPost).
-  //
-  // Applied as the FlatList's OWN contentContainerStyle.paddingTop below -
-  // NOT as a static paddingTop on its outer wrapper. A static wrapper
-  // padding would offset the FlatList's whole viewport permanently, so the
-  // list's visible window would always start at that fixed y - but the hero
-  // behind it recedes/fades based on a totally different value (BG_HEIGHT),
-  // moving away faster than the list's fixed-position window reveals new
-  // content. The result was a growing gap of bare canvas between the
-  // shrinking hero and wherever the list's still-far-down viewport top
-  // happened to be. Content padding scrolls away in lockstep with the
-  // actual scroll position instead, which is what keeps the list's visible
-  // top always exactly where scrolling has gotten to - no separate value to
-  // go out of sync with.
   const [heroHeight, setHeroHeight] = useState(180);
 
-  // Drives the background layer's parallax translate/fade only - see
-  // BG_HEIGHT's comment above. Native driver is fine here because nothing
-  // but that decorative layer's transform/opacity depends on this value.
+  // Drives the hero's fade/translate only - see FADE_DISTANCE's comment
+  // above. Native driver is fine here because nothing but that layer's own
+  // transform/opacity depends on this value.
   const scrollY = useRef(new Animated.Value(0)).current;
   const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, BG_HEIGHT],
-    outputRange: [0, -BG_HEIGHT * PARALLAX_FACTOR],
+    inputRange: [0, FADE_DISTANCE],
+    outputRange: [0, -FADE_DISTANCE * 0.6],
     extrapolate: 'clamp',
   });
   const bgOpacity = scrollY.interpolate({
-    inputRange: [0, BG_HEIGHT * 0.7, BG_HEIGHT],
-    outputRange: [1, 1, 0],
+    inputRange: [0, FADE_DISTANCE],
+    outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
@@ -364,9 +350,9 @@ export default function FeedScreen() {
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
   const homeContent = (
-    <View style={styles.deckWrap}>
+    <View style={[styles.deckWrap, { paddingTop: heroHeight }]}>
       {loading ? (
-        <View style={[styles.skeletonStack, { paddingTop: heroHeight, paddingBottom: tabBarHeight }]}>
+        <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
           <PostCardSkeleton withImage style={styles.feedPostCard} />
           <PostCardSkeleton style={styles.feedPostCard} />
           <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -377,7 +363,7 @@ export default function FeedScreen() {
           data={deckData}
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.listContent, { paddingTop: heroHeight, paddingBottom: 20 + tabBarHeight }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
@@ -473,15 +459,16 @@ export default function FeedScreen() {
       <View style={styles.outerWrap}>{homeContent}</View>
 
       {/* "Home", the currency button, and the composer - a SEPARATE overlay
-          from bgLayer, not full-screen (sized to just this content), and
-          painted with a higher zIndex than the scrolling list below. That's
-          what makes the composer/currency button reliably tappable: RN hit-
-          tests by paint order, and since this overlay only covers the small
-          top slice of the screen it actually uses (not the whole screen the
-          way bgLayer/the list do), it never sits over any of the list below
-          it, so nothing here can block scrolling further down. Shares
-          bgLayer's exact opacity/translateY so it recedes/fades in lockstep
-          with the background behind it. */}
+          from bgLayer, not full-screen (sized to just this content). The
+          list's own content starts below it via a static paddingTop
+          (deckWrap, see heroHeight above) rather than sharing this screen
+          space, so the two never physically overlap: the composer/currency
+          button stay reliably tappable (nothing from the list is ever
+          rendered on top of them), scrolling is unaffected (nothing here
+          touches the list's gesture handling), and posts always end up
+          visually above the hero once it's gone, never the other way
+          around. Shares bgLayer's exact opacity/translateY so it recedes/
+          fades in lockstep with the background behind it. */}
       <Animated.View
         style={[styles.heroContent, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
         onLayout={(e) => {
@@ -523,13 +510,13 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
-  // Fills the WHOLE screen (not just BG_HEIGHT) so there's never a visible
-  // bottom edge to the gradient - a box that stopped partway down the
-  // screen showed a hard seam (canvas-colored gradient above a flat cutoff
-  // line below it), especially obvious where it sliced straight through the
-  // bottom glow. BG_HEIGHT still governs how much scrolling it takes for
-  // the translate/fade to play out - that's independent of how tall this
-  // box physically is.
+  // Fills the WHOLE screen so there's never a visible bottom edge to the
+  // gradient - a box that stopped partway down the screen showed a hard
+  // seam (canvas-colored gradient above a flat cutoff line below it),
+  // especially obvious where it sliced straight through the bottom glow.
+  // FADE_DISTANCE still governs how much scrolling it takes for the
+  // translate/fade to play out - that's independent of how tall this box
+  // physically is.
   bgLayer: {
     position: 'absolute',
     top: 0,
@@ -538,16 +525,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     overflow: 'hidden',
     // Explicit zIndex/elevation, not just paint order - see the comment
-    // above BG_HEIGHT for why this matters on Android.
+    // above FADE_DISTANCE for why this matters on Android.
     zIndex: 0,
     elevation: 0,
   },
   glowTopRight: { position: 'absolute', top: -80, right: -80 },
-  // Anchored from the top (not bottom) now that bgLayer fills the whole
-  // screen instead of stopping at BG_HEIGHT - "bottom: -100" would otherwise
-  // push this glow far down past where it's meant to cluster near the top
-  // alongside glowTopRight. 340 keeps it in the same visual spot it sat in
-  // when the box was still a fixed BG_HEIGHT (520) tall.
+  // Anchored from the top (not bottom) since bgLayer fills the whole screen
+  // - "bottom: -100" would otherwise push this glow far down past where
+  // it's meant to cluster near the top alongside glowTopRight.
   glowBottomLeft: { position: 'absolute', top: 340, left: -70 },
   header: {
     flexDirection: 'row',
