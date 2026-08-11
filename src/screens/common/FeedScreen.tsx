@@ -378,6 +378,15 @@ export default function FeedScreen() {
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.listContent, { paddingTop: heroHeight, paddingBottom: 20 + tabBarHeight }]}
+          // The list's own bounds span the full screen (its content is just
+          // padded down by heroHeight, not physically offset - see the
+          // comment above heroHeight), so without this its empty top
+          // padding area sits directly over the hero and swallows taps meant
+          // for the composer/currency button underneath. box-none lets
+          // touches over that empty padding pass through to the hero, while
+          // real list items (and drags starting on them) still scroll
+          // normally.
+          pointerEvents="box-none"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
