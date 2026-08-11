@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "react-native start",
+    "start": "react-native start --host 0.0.0.0",
     "android": "react-native run-android",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx"
