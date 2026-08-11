@@ -13,7 +13,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -457,11 +457,29 @@ export default function FeedScreen() {
         {/* CANVAS_SOFT/CANVAS are both pale near-white tints - too close to
             each other (and to feedPostCard's own translucent white) for the
             gradient alone to make this layer's movement/fade actually
-            visible while scrolling. These soft emerald glows (same idea as
-            AdminDashboard.tsx's glowTopRight/glowBottomLeft) give the eye
-            something with enough contrast to actually track. */}
-        <View style={styles.glowTopRight} />
-        <View style={styles.glowBottomLeft} />
+            visible while scrolling. A true radial gradient (bright teal core
+            fading smoothly to nothing) reads as an actual glow; a flat-
+            opacity circle just looks like a plain tinted disc with a hard
+            edge. Both glows sit inside this same animated bgLayer, so they
+            still recede/fade with the rest of the parallax on scroll. */}
+        <Svg style={styles.glowTopRight} width={320} height={320}>
+          <Defs>
+            <RadialGradient id="glowTeal" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={EMERALD} stopOpacity={0.55} />
+              <Stop offset="1" stopColor={EMERALD} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={160} cy={160} r={160} fill="url(#glowTeal)" />
+        </Svg>
+        <Svg style={styles.glowBottomLeft} width={300} height={300}>
+          <Defs>
+            <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#2AB4DB" stopOpacity={0.45} />
+              <Stop offset="1" stopColor="#2AB4DB" stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={150} cy={150} r={150} fill="url(#glowBlue)" />
+        </Svg>
       </Animated.View>
 
       <View style={styles.outerWrap}>{homeContent}</View>
@@ -494,24 +512,8 @@ const styles = StyleSheet.create({
     zIndex: 0,
     elevation: 0,
   },
-  glowTopRight: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(43,203,176,0.32)',
-  },
-  glowBottomLeft: {
-    position: 'absolute',
-    bottom: -100,
-    left: -70,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(42,180,219,0.24)',
-  },
+  glowTopRight: { position: 'absolute', top: -80, right: -80 },
+  glowBottomLeft: { position: 'absolute', bottom: -100, left: -70 },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
