@@ -51,22 +51,28 @@ export default function CurrencyBalanceButton({
   variant = 'light',
 }: {
   style?: object;
-  // 'light' (default) - solid emerald gradient pill, for a white/light page
-  // background. 'dark' - translucent white pill, for sitting on top of a
-  // dark hero where a solid emerald pill would blend in too much.
-  variant?: 'light' | 'dark';
+  // 'light' (default) - solid emerald gradient pill, white text/icon, for a
+  // white/light page background. 'dark' - translucent white pill, for
+  // sitting on top of a dark hero where a solid emerald pill would blend in
+  // too much. 'outline' - solid white pill with emerald text/icon, the
+  // inverse of 'light'.
+  variant?: 'light' | 'dark' | 'outline';
 }) {
   const { t } = useLocale();
   const [visible, setVisible] = useState(false);
-  const isDark = variant === 'dark';
 
   return (
     <>
       <TouchableOpacity style={[styles.pillWrap, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
-        {isDark ? (
+        {variant === 'dark' ? (
           <View style={[styles.pill, styles.pillDark]}>
             <WalletIcon />
             <Text style={styles.pillText}>{t('currency_balance.label', '₱0')}</Text>
+          </View>
+        ) : variant === 'outline' ? (
+          <View style={[styles.pill, styles.pillOutline]}>
+            <WalletIcon color={EMERALD} />
+            <Text style={[styles.pillText, styles.pillTextOutline]}>{t('currency_balance.label', '₱0')}</Text>
           </View>
         ) : (
           <LinearGradient
@@ -120,7 +126,12 @@ const styles = StyleSheet.create({
     ...SHADOW.level1,
   },
   pillDark: { backgroundColor: 'rgba(255,255,255,0.18)' },
+  // elevation:0 overrides the base pill's SHADOW.level1 - same Android-
+  // elevation-ignores-shadowColor gotcha as LoginScreen's card, and a white
+  // pill makes that flat gray shadow especially obvious.
+  pillOutline: { backgroundColor: '#FFFFFF', elevation: 0 },
   pillText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  pillTextOutline: { color: EMERALD },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   backdropTouch: { ...StyleSheet.absoluteFill },

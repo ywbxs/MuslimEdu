@@ -8,24 +8,48 @@ interface Props {
   numberOfLines?: number;
   style?: StyleProp<TextStyle>;
   seeMoreStyle?: StyleProp<TextStyle>;
+  // Alternative to numberOfLines: truncate by paragraph count instead of
+  // measured line count, so "See more" kicks in based on how much the
+  // author actually wrote (paragraph breaks) rather than how the device
+  // happens to wrap it. Takes over entirely when set - numberOfLines is
+  // ignored, since the two strategies would otherwise fight over what
+  // "truncated" means.
+  maxParagraphs?: number;
 }
 
 /**
- * Renders text truncated to `numberOfLines`, with a "See more" toggle that
- * appears only if the text actually overflows. Tapping it expands the full
- * text (and shows "See less" to collapse again).
- *
- * A hidden, untruncated copy of the text is used purely to measure how many
- * lines the full text would take, since onTextLayout on an already-truncated
- * <Text> only reports the visible (truncated) lines, not the true total.
+ * Renders text truncated to `numberOfLines` (or, with `maxParagraphs` set,
+ * to that many paragraphs instead), with a "See more" toggle that appears
+ * only if the text actually overflows. Tapping it expands the full text
+ * (and shows "See less" to collapse again).
  */
-export default function ExpandableText({ text, numberOfLines = 6, style, seeMoreStyle }: Props) {
+export default function ExpandableText({ text, numberOfLines = 6, style, seeMoreStyle, maxParagraphs }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [isTruncated, setIsTruncated] = useState(false);
 
+  if (maxParagraphs != null) {
+    const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim() !== '');
+    const overflows = paragraphs.length > maxParagraphs;
+    const previewText = overflows ? paragraphs.slice(0, maxParagraphs).join('\n\n') : text;
+
+    return (
+      <View>
+        <Text style={style}>{expanded ? text : previewText}</Text>
+        {overflows && (
+          <Text style={[styles.seeMore, seeMoreStyle]} onPress={() => setExpanded((v) => !v)} suppressHighlighting>
+            {expanded ? 'See less' : 'See more'}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View>
-      {/* Hidden measurer: same style, unlimited lines, not interactive/visible */}
+      {/* Hidden measurer: same style, unlimited lines, not interactive/visible.
+          Only needed for the line-count strategy - onTextLayout on an
+          already-truncated <Text> only reports the visible (truncated)
+          lines, not the true total, so a full-height copy measures it. */}
       <Text
         style={[style, styles.measurer]}
         onTextLayout={(e) => {
