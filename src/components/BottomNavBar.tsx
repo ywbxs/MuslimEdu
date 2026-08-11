@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
@@ -20,6 +20,11 @@ const CENTER_BTN_BG = '#16211F';
 // Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
 // either changes.
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
+// Computed, never measured - see MainTabs.tsx for why onLayout must not come
+// back here (it caused an unbounded layout feedback loop).
+const ICON_SIZE = 24;
+const BAR_PADDING_TOP = 14;
+const BAR_PADDING_BOTTOM = 14;
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -128,9 +133,12 @@ function useActiveTabName(): string | null {
 export default function BottomNavBar() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const activeName = useActiveTabName();
+  const bottomInset = Math.max(insets.bottom, 8);
+  const barHeight = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM + bottomInset;
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   const isTeacherRole = user?.role === 'teacher';
   const isStudentRole = user?.role === 'student';
@@ -142,15 +150,6 @@ export default function BottomNavBar() {
   const centerName = isAdminRole ? 'Admission' : isTeacherRole ? 'Scan' : isStudentRole ? 'MyProgress' : null;
 
   const sideTabs = ['Home', 'Chat', 'Alerts', 'Menu'];
-
-  // See MainTabs.tsx's TabBar for why this is measured rather than passed
-  // as "100%" - percentage Svg sizing against a content-driven-height
-  // parent can resolve to 0 on Android, leaving the notch fill invisible.
-  const [barSize, setBarSize] = useState({ width: 0, height: 0 });
-  const onBarLayout = (e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setBarSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
-  };
 
   const goTo = (name: string) => {
     // MyProgress is a RootNavigator stack screen, not a MainTabs tab - push
@@ -170,12 +169,12 @@ export default function BottomNavBar() {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]} onLayout={onBarLayout}>
-        {barSize.width > 0 && barSize.height > 0 && (
-          <Svg width={barSize.width} height={barSize.height} viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+      <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
+        <View style={styles.barBackground} pointerEvents="none">
+          <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
             <Path d={NOTCH_PATH} fill={GLASS_FILL} />
           </Svg>
-        )}
+        </View>
         {sideTabs.map((name) => {
           const isActive = activeName === name;
           const color = isActive ? ACTIVE : INACTIVE;
@@ -208,14 +207,16 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 14,
+    paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: 20,
+    // No `elevation` - see MainTabs.tsx's tabBar for why (rectangular
+    // Android shadow cutting straight across the notch dip).
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
-    elevation: 8,
   },
+  barBackground: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {

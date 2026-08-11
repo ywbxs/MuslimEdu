@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,6 +41,17 @@ const GLASS_FILL = 'rgba(255,255,255,0.82)';
 // bar's actual pixel size by the Svg's width/height="100%".
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 const CENTER_BTN_BG = '#16211F';
+
+// The bar's geometry is COMPUTED, never measured. A previous version fed an
+// onLayout-measured height back into the notch Svg's own height prop, which
+// created a layout feedback loop: the Svg counted toward the row's height,
+// the taller row measured taller, and the bar grew without bound until it
+// swallowed the screen. Both dimensions are already known without measuring
+// - the bar is edge-to-edge so its width IS the window width, and its height
+// is just padding + icon. Keep it that way; don't reintroduce onLayout here.
+const ICON_SIZE = 24;
+const BAR_PADDING_TOP = 14;
+const BAR_PADDING_BOTTOM = 14;
 
 const Tab = createBottomTabNavigator();
 
@@ -164,18 +175,9 @@ function TabBadge({ count }: { count: number }) {
 function TabBar({ state, navigation, isStudent }: any) {
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
-  // Percentage width/height on react-native-svg's <Svg> can fail to resolve
-  // reliably on Android when the parent's own height is itself content-
-  // driven (no explicit `height` on styles.tabBar) - the notch background
-  // can end up 0-sized and invisible behind the icons. Measuring the bar's
-  // actual laid-out size and feeding the Svg exact pixel dimensions removes
-  // that ambiguity entirely (same onLayout-measure pattern DashboardShell.tsx
-  // uses for its hero).
-  const [barSize, setBarSize] = useState({ width: 0, height: 0 });
-  const onBarLayout = (e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setBarSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
-  };
+  const { width: windowWidth } = useWindowDimensions();
+  const bottomInset = Math.max(insets.bottom, 8);
+  const barHeight = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM + bottomInset;
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -231,20 +233,20 @@ function TabBar({ state, navigation, isStudent }: any) {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { paddingBottom: 14 + Math.max(insets.bottom, 8) }]} onLayout={onBarLayout}>
+      <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
         {/* A rectangular BlurView can't be clipped to this curved shape
             without a masking library, so the "glass" here is a translucent
             fill + shadow rather than a true backdrop blur - same tradeoff
             noted on centerBtn. preserveAspectRatio="none" stretches the
-            path non-uniformly to fill the bar's real width/height, the same
-            way the mockup's objectBoundingBox clipPath did. Exact pixel
-            width/height (measured above) instead of "100%" strings - see
-            barSize's comment for why. */}
-        {barSize.width > 0 && barSize.height > 0 && (
-          <Svg width={barSize.width} height={barSize.height} viewBox="0 0 1000 1000" preserveAspectRatio="none" style={StyleSheet.absoluteFillObject}>
+            path non-uniformly to fill the bar, the same way the mockup's
+            objectBoundingBox clipPath did. The plain View wrapper is what
+            takes it out of the row's flow - relying on the Svg's own style
+            for that is what let it drive the parent's height before. */}
+        <View style={styles.barBackground} pointerEvents="none">
+          <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
             <Path d={NOTCH_PATH} fill={GLASS_FILL} />
           </Svg>
-        )}
+        </View>
         {visibleRoutes.map((route: any) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
@@ -429,14 +431,20 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 14,
+    paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: 20,
+    // No `elevation` here on purpose: this View has no backgroundColor (the
+    // fill is the notch Svg behind it), and Android's elevation shadow is
+    // cast from the view's rectangular bounds, so it draws a straight shadow
+    // line straight across the notch dip instead of following the curve.
     shadowColor: '#0D1E1C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
-    elevation: 8,
   },
+  // Holds the notch Svg out of the row's flow so it can never contribute to
+  // the bar's height.
+  barBackground: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   tabItem: {
     flex: 1,
     alignItems: 'center',
