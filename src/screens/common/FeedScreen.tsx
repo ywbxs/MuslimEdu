@@ -373,6 +373,8 @@ export default function FeedScreen() {
                     (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
                   }
                   containerStyle={styles.feedPostCard}
+                  edgeToEdgeImages
+                  edgeToEdgeInset={16}
                 />
               )
             }

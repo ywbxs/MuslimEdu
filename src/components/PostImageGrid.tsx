@@ -18,6 +18,11 @@ interface Props {
   // vertical card (e.g. the fixed-width feed deck card) - omit to keep
   // today's behavior exactly as-is.
   width?: number;
+  // Overrides IMAGE_RADIUS - callers going edge-to-edge (e.g. the main feed,
+  // Instagram-style) pass 0 since a rounded corner floating with nothing
+  // around it to round against looks like a rendering bug. Omit to keep the
+  // default rounded-tile look used everywhere else.
+  radius?: number;
 }
 
 /**
@@ -28,10 +33,11 @@ interface Props {
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius }: Props) {
   if (!images || images.length === 0) return null;
 
   const W = width ?? GRID_WIDTH;
+  const R = radius ?? IMAGE_RADIUS;
   const tap = (index: number) => onPressImage?.(index);
 
   const Tile = ({
@@ -57,7 +63,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 1) {
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05) }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05), borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
@@ -65,18 +71,18 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 2) {
     return (
-      <View style={[styles.wrap, styles.row, { width: W, height: 200 }]}>
-        <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
-        <Tile uri={images[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
+      <View style={[styles.wrap, styles.row, { width: W, height: 200, borderRadius: R }]}>
+        <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2, borderRadius: R }]} index={0} />
+        <Tile uri={images[1]} style={[styles.half, { marginLeft: GAP / 2, borderRadius: R }]} index={1} />
       </View>
     );
   }
 
   if (images.length === 3) {
     return (
-      <View style={[styles.wrap, styles.row, { width: W, height: 240 }]}>
-        <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
-        <View style={[styles.half, { marginLeft: GAP / 2 }]}>
+      <View style={[styles.wrap, styles.row, { width: W, height: 240, borderRadius: R }]}>
+        <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2, borderRadius: R }]} index={0} />
+        <View style={[styles.half, { marginLeft: GAP / 2, borderRadius: R }]}>
           <Tile uri={images[1]} style={[styles.fill, { marginBottom: GAP / 2 }]} index={1} />
           <Tile uri={images[2]} style={[styles.fill, { marginTop: GAP / 2 }]} index={2} />
         </View>
@@ -89,16 +95,16 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   const remaining = images.length - 4;
 
   return (
-    <View style={[styles.wrap, { width: W, height: 240 }]}>
+    <View style={[styles.wrap, { width: W, height: 240, borderRadius: R }]}>
       <View style={[styles.row, { flex: 1, marginBottom: GAP / 2 }]}>
-        <Tile uri={visible[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
-        <Tile uri={visible[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
+        <Tile uri={visible[0]} style={[styles.half, { marginRight: GAP / 2, borderRadius: R }]} index={0} />
+        <Tile uri={visible[1]} style={[styles.half, { marginLeft: GAP / 2, borderRadius: R }]} index={1} />
       </View>
       <View style={[styles.row, { flex: 1, marginTop: GAP / 2 }]}>
-        <Tile uri={visible[2]} style={[styles.half, { marginRight: GAP / 2 }]} index={2} />
+        <Tile uri={visible[2]} style={[styles.half, { marginRight: GAP / 2, borderRadius: R }]} index={2} />
         <Tile
           uri={visible[3]}
-          style={[styles.half, { marginLeft: GAP / 2 }]}
+          style={[styles.half, { marginLeft: GAP / 2, borderRadius: R }]}
           index={3}
           overlayCount={remaining > 0 ? remaining : undefined}
         />

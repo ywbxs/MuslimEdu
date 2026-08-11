@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, ScrollView, Platform, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, ScrollView, Platform, StyleProp, ViewStyle, useWindowDimensions } from 'react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
@@ -207,6 +207,15 @@ interface Props {
   // ExpandableText "See more" (expanding in place wouldn't fit over a
   // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
+  // Instagram-style: the post's own images bleed edge-to-edge to the
+  // screen, breaking out of the card's own horizontal padding, with square
+  // (unrounded) corners - instead of sitting inset and rounded like the
+  // classic card everywhere else. `edgeToEdgeInset` is how much horizontal
+  // padding to cancel out (the containerStyle's own paddingHorizontal - the
+  // caller knows that number, PostCard doesn't inspect containerStyle for
+  // it). Quoted-repost images are unaffected either way.
+  edgeToEdgeImages?: boolean;
+  edgeToEdgeInset?: number;
 }
 
 const PRIVACY_MENU_OPTIONS: { key: Post['privacy']; label: string }[] = [
@@ -229,7 +238,10 @@ export default function PostCard({
   contentWidth,
   clipContent,
   bodyNumberOfLines,
+  edgeToEdgeImages,
+  edgeToEdgeInset = 0,
 }: Props) {
+  const { width: windowWidth } = useWindowDimensions();
   const scale = useRef(new Animated.Value(1)).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
@@ -467,8 +479,18 @@ export default function PostCard({
 
           {/* Own images */}
           {!quoted && post.images.length > 0 && (
-            <View style={styles.imageWrap}>
-              <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
+            <View
+              style={[
+                styles.imageWrap,
+                edgeToEdgeImages && { marginHorizontal: -edgeToEdgeInset },
+              ]}
+            >
+              <PostImageGrid
+                images={post.images}
+                width={edgeToEdgeImages ? windowWidth : contentWidth}
+                radius={edgeToEdgeImages ? 0 : undefined}
+                onPressImage={(i) => onPressImage?.(post.images, i)}
+              />
             </View>
           )}
 
