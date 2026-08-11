@@ -7,6 +7,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { AppNotification } from '../../services/notificationService';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -64,6 +65,10 @@ function NotificationRow({ item, onPress }: { item: AppNotification; onPress: (i
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of
+  // docking below it - see tabBarMetrics.ts. Already includes the safe-area
+  // bottom inset, so it replaces (not adds to) insets.bottom below.
+  const tabBarHeight = useTabBarHeight();
   const { notifications, unreadCount, loading, refresh, markRead, markAllRead } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -102,7 +107,7 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <NotificationRow item={item} onPress={onPressItem} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 24, paddingHorizontal: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
         ListEmptyComponent={
           !loading ? (

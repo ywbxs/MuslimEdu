@@ -14,6 +14,7 @@ import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser, isQuranTrackingSchoolUser
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 // Dark hero palette (kept local so it doesn't leak into other screens).
 const HERO_TOP = '#1C1C1E';
 const HERO_BOTTOM = '#000000';
@@ -284,6 +285,9 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of docking
+  // below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation();
   const { user, token } = useAuth();
   const { t } = useLocale();
@@ -836,7 +840,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 
       <Animated.ScrollView
         style={styles.scrollFlex}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 20 }]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,

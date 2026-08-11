@@ -34,6 +34,7 @@ import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { RADIUS } from '../../theme/glass';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 
 // Teal/mint palette matching the login + feed mockup redesign - see
 // LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
@@ -103,6 +104,10 @@ export default function FeedScreen() {
   const { t } = useLocale();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  // The bottom tab bar now floats over this screen (see MainTabs.tsx's
+  // tabBarWrap) instead of docking below it, so nothing reserves layout
+  // space for it anymore - this screen has to clear it itself.
+  const tabBarHeight = useTabBarHeight();
 
   // Admins and teachers can author new posts (or edit their own). Students
   // (and other non-staff roles) can still repost from the feed, but never
@@ -342,7 +347,7 @@ export default function FeedScreen() {
 
       <View style={styles.deckWrap}>
         {loading ? (
-          <View style={styles.skeletonStack}>
+          <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
             <PostCardSkeleton withImage style={styles.feedPostCard} />
             <PostCardSkeleton style={styles.feedPostCard} />
             <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -353,7 +358,7 @@ export default function FeedScreen() {
             data={deckData}
             keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
             scrollEventThrottle={16}

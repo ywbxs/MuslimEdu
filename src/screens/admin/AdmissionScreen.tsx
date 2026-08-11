@@ -23,6 +23,7 @@ import PhotoField, { PreparedPhotoState } from './admission/components/PhotoFiel
 import AdmissionSuccessModal from './admission/components/SuccessModal';
 import SignaturePad, { SignaturePadHandle } from '../../components/SignaturePad';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
 import { GLASS, RADIUS } from '../../theme/glass';
@@ -210,6 +211,11 @@ const emptyForm: AdmissionInput = { name: '' };
 
 export default function AdmissionScreen() {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen (reached via its
+  // raised center button) instead of docking below it - the wizard's own
+  // Cancel/Next footer needs its own bottom clearance now or the floating
+  // bar covers it. See tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation();
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -565,7 +571,7 @@ export default function AdmissionScreen() {
           </Animated.View>
         </ScrollView>
 
-        <View style={styles.buttonRow}>
+        <View style={[styles.buttonRow, { paddingBottom: (Platform.OS === 'ios' ? 30 : 16) + tabBarHeight }]}>
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <TouchableOpacity style={styles.backButton} onPress={goBack} disabled={submitting} activeOpacity={0.85}>
             <Text style={styles.backButtonText}>{stepIndex === 0 ? t('common.cancel', 'Cancel') : t('common.back', 'Back')}</Text>

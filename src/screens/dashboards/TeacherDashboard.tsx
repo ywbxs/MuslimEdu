@@ -21,6 +21,7 @@ import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOW } from '../../theme/spatial';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
 // Animated layer sitting behind the ScrollView content, so it can move
@@ -309,6 +310,9 @@ interface TeacherDashboardProps {
 
 export default function TeacherDashboard({ footer }: TeacherDashboardProps = {}) {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of docking
+  // below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const { user, token } = useAuth();
   const isQuranTrackingSchool = isQuranTrackingSchoolUser(user);
   const { t } = useLocale();
@@ -560,7 +564,7 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
 
       <Animated.ScrollView
         style={styles.scrollFlex}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 20 }]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}

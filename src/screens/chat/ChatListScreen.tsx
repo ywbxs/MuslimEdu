@@ -16,6 +16,7 @@ import UserAvatar from '../../components/UserAvatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 import {
   fetchThreadList,
   searchUsers,
@@ -48,6 +49,9 @@ function timeAgo(iso: string | null): string {
 
 export default function ChatListScreen() {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of
+  // docking below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation<any>();
   const { token, user } = useAuth();
   const { t } = useLocale();
@@ -170,6 +174,7 @@ export default function ChatListScreen() {
             data={visibleSearchResults}
             keyExtractor={(item) => String(item.user_id)}
             keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: tabBarHeight }}
             ListEmptyComponent={<Text style={styles.emptyText}>{t('chat_list.no_matching_users', 'No matching users.')}</Text>}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => onPickUser(item)}>
@@ -190,6 +195,7 @@ export default function ChatListScreen() {
         <FlatList
           data={threads}
           keyExtractor={(item) => String(item.thread_id)}
+          contentContainerStyle={{ paddingBottom: tabBarHeight }}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           ListEmptyComponent={
             <Text style={styles.emptyText}>{t('chat_list.no_conversations', 'No conversations yet - search above to message someone.')}</Text>

@@ -17,6 +17,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 const EMERALD = '#2BCBB0';
 const EMERALD_SOFT = '#E5F8F5';
 const AMBER = '#B8860B';
@@ -101,6 +102,9 @@ function ClassCardSkeleton() {
 // AttendanceScan, since the whole point of that tab is scanning.
 export default function TeacherAttendanceClassesScreen() {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of
+  // docking below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation();
   const route = useRoute<any>();
   const directTo = route.params?.directTo ?? 'AttendanceMethodChooser';
@@ -203,7 +207,7 @@ export default function TeacherAttendanceClassesScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.listContent}>
+        <View style={[styles.listContent, { paddingBottom: tabBarHeight }]}>
           <ClassCardSkeleton />
           <ClassCardSkeleton />
           <ClassCardSkeleton />
@@ -212,7 +216,7 @@ export default function TeacherAttendanceClassesScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => `${item.section_id}-${item.subject_id}`}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 16 + tabBarHeight }]}
           stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           ListEmptyComponent={

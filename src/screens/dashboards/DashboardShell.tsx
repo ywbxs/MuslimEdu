@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 
 const EMERALD = '#2BCBB0';
 const EMERALD_SOFT = '#E5F8F5';
@@ -85,6 +86,9 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
   const navigation = useNavigation();
   const { t } = useLocale();
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of docking
+  // below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const [photoFailed, setPhotoFailed] = useState(false);
   const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -184,7 +188,7 @@ export default function DashboardShell({ title, children, footer }: DashboardShe
 
         {/* White rounded body panel rides up over the dark hero, same as
             AdminDashboard's own body. */}
-        <View style={styles.body}>
+        <View style={[styles.body, { paddingBottom: tabBarHeight + 20 }]}>
           {children}
           {footer}
         </View>

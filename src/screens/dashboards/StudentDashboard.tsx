@@ -19,6 +19,7 @@ import UpcomingClassesCard from '../../components/UpcomingClassesCard';
 import EnrollmentStatusCard from '../../components/EnrollmentStatusCard';
 import UserAvatar from '../../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarHeight } from '../../navigation/tabBarMetrics';
 
 // --- Depth layer sizing -----------------------------------------------
 // The gradient hero covers the greeting + Profile card. It's a separate
@@ -282,6 +283,9 @@ interface StudentDashboardProps {
 
 export default function StudentDashboard({ footer }: StudentDashboardProps = {}) {
   const insets = useSafeAreaInsets();
+  // MainTabs' bottom tab bar now floats over this screen instead of docking
+  // below it - see tabBarMetrics.ts.
+  const tabBarHeight = useTabBarHeight();
   const { user, token } = useAuth();
   const { t } = useLocale();
   const navigation = useNavigation();
@@ -506,7 +510,7 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
 
       <Animated.ScrollView
         style={styles.scrollFlex}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 20 }]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}

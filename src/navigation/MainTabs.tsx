@@ -19,6 +19,7 @@ import {
   StudentEnrollmentWorkflowStatus,
 } from '../services/enrollmentWorkflowService';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
+import { TAB_BAR_ICON_SIZE, TAB_BAR_PADDING_TOP, TAB_BAR_PADDING_BOTTOM } from './tabBarMetrics';
 
 // Teal/mint palette matching the login + feed redesign - see
 // LoginScreen.tsx's own local-palette precedent. Floating glass pill bar
@@ -28,26 +29,21 @@ import { isOrphanSchoolUser } from '../utils/orphanSchool';
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
-// This bar is docked (not a floating overlay - see styles.tabBar's own
-// comment), so nothing ever actually scrolls behind it; there is no real
-// "glass" effect to serve here, only the flat NavigationContainer canvas
-// (theme.colors.background, #F7FAF8 - see RootNavigator.tsx). A translucent
-// white on top of a canvas that's already almost-white came out visually
-// indistinguishable in practice - confirmed against real device screenshots,
-// not just close in theory. Solid and deliberately tinted away from white
-// removes any dependency on what's rendered behind the bar at all.
-const GLASS_FILL = '#EAF6F3';
+// The bar now floats over the screen's own scrolling content (see
+// tabBarWrap below - matches the feed mockup's .tab-bar-wrap: position
+// absolute, nothing reserving layout space for it) instead of being a
+// docked element with only the flat navigator canvas behind it. That's
+// what makes a translucent fill actually read as glass - real post
+// images/cards show through the notch cutout now, not a fixed color that
+// either does or doesn't happen to contrast with a static background.
+const GLASS_FILL = 'rgba(255,255,255,0.55)';
 // Outlines the notch's own curve directly on the Path, rather than relying
 // on a native shadow to imply it. `elevation` (Android's shadow) casts from
 // a View's rectangular bounds and can't follow an arbitrary path, which is
 // why it's deliberately absent on styles.tabBar below - but shadowColor/
 // shadowOffset/shadowOpacity/shadowRadius are iOS-only in RN, so without
-// this stroke the bar had NO visible edge at all on Android: a translucent-
-// white fill sitting on a near-white canvas, indistinguishable from it. Two
-// rounds of opacity bumps on this stroke alone still weren't legible in a
-// real screenshot, which is why GLASS_FILL above stopped being translucent -
-// the stroke is now a second line of defense, not the only one.
-const NOTCH_STROKE = 'rgba(13,30,28,0.35)';
+// this stroke the bar had no visible edge at all on Android.
+const NOTCH_STROKE = 'rgba(13,30,28,0.28)';
 // Shape of the tab bar's top edge: flat, dips into a shallow curved notch
 // for the raised center button to nest into, flat again to the far edge -
 // same silhouette as the login/feed mockups' SVG clipPath, expressed as a
@@ -57,7 +53,8 @@ const NOTCH_STROKE = 'rgba(13,30,28,0.35)';
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
 const CENTER_BTN_BG = '#16211F';
 
-// The bar's geometry is COMPUTED, never measured.
+// The bar's geometry is COMPUTED, never measured (see tabBarMetrics.ts,
+// shared with every screen that needs to clear the now-floating bar).
 //
 // The bar once grew without bound until it swallowed the screen. The root
 // cause was that the notch Svg was never actually taken out of the row's
@@ -65,14 +62,10 @@ const CENTER_BTN_BG = '#16211F';
 // removed in 0.8x, so at runtime that style was `undefined` and RN silently
 // ignored it. The Svg therefore counted toward the row's height - and a
 // then-current onLayout that fed the measured height back into the Svg's own
-// height prop turned that into an unbounded feedback loop.
-//
-// Both dimensions are knowable without measuring: the bar is edge-to-edge so
-// its width IS the window width, and its height is just padding + icon. Keep
-// it that way; don't reintroduce onLayout here.
-const ICON_SIZE = 24;
-const BAR_PADDING_TOP = 14;
-const BAR_PADDING_BOTTOM = 14;
+// height prop turned that into an unbounded feedback loop. Both dimensions
+// are knowable without measuring: the bar is edge-to-edge so its width IS
+// the window width, and its height is just padding + icon. Keep it that
+// way; don't reintroduce onLayout here.
 
 const Tab = createBottomTabNavigator();
 
@@ -198,7 +191,7 @@ function TabBar({ state, navigation, isStudent }: any) {
   const { unreadCount } = useNotifications();
   const { width: windowWidth } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 8);
-  const barHeight = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM + bottomInset;
+  const barHeight = TAB_BAR_PADDING_TOP + TAB_BAR_ICON_SIZE + TAB_BAR_PADDING_BOTTOM + bottomInset;
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -254,7 +247,7 @@ function TabBar({ state, navigation, isStudent }: any) {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
+      <View style={[styles.tabBar, { height: barHeight, paddingBottom: TAB_BAR_PADDING_BOTTOM + bottomInset }]}>
         {/* A rectangular BlurView can't be clipped to this curved shape
             without a masking library, so the "glass" here is a translucent
             fill + shadow rather than a true backdrop blur - same tradeoff
@@ -450,16 +443,22 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  // Edge-to-edge, no side margins/rounded pill - full-width glass bar, same
-  // as the login/feed mockups' tab-bar-wrap (0 padding at all, including
-  // bottom - the safe-area inset lives on tabBar's own paddingBottom below
-  // instead, so the glass fill itself reaches the literal screen edge
-  // rather than leaving a gap of bare canvas underneath the bar).
-  tabBarWrap: {},
+  // Floats over the active screen's own content instead of docking below it
+  // - matches the feed mockup's .tab-bar-wrap (position:absolute, nothing
+  // else reserves layout space for it). Every screen inside this
+  // Tab.Navigator must add useTabBarHeight() as its own bottom clearance
+  // now (see tabBarMetrics.ts) since the navigator no longer does that
+  // automatically the way it did when this was a docked element. Edge-to-
+  // edge, no side margins/rounded pill, same as the login/feed mockups (0
+  // padding at all, including bottom - the safe-area inset lives on
+  // tabBar's own paddingBottom below instead, so the glass fill itself
+  // reaches the literal screen edge rather than leaving a gap of bare
+  // canvas underneath the bar).
+  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20 },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: BAR_PADDING_TOP,
+    paddingTop: TAB_BAR_PADDING_TOP,
     paddingHorizontal: 20,
     // No `elevation` here on purpose: this View has no backgroundColor (the
     // fill is the notch Svg behind it), and Android's elevation shadow is
