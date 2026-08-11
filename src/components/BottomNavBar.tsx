@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 9,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.55)',
+    // No ring border - see MainTabs.tsx's centerBtn (it read as a grey
+    // halo over the notch cutout).
   },
   badge: {
     position: 'absolute',

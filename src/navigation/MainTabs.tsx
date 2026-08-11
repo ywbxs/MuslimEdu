@@ -471,8 +471,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 9,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.55)',
+    // No ring border here: a translucent-white ring only reads as "white"
+    // over an opaque light bar. Over the notch cutout it blended with
+    // whatever showed through and came out as a grey halo around the
+    // button. The dark button already separates cleanly from the pale
+    // notch on contrast alone.
   },
   badge: {
     position: 'absolute',
