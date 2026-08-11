@@ -62,7 +62,11 @@ const GLASS_FILL = 'rgba(255,255,255,0.4)';
 // underneath them. Keeping the animated transform confined to a background-
 // only decorative layer, with real content never inside it, avoids that
 // failure mode entirely.
-const BG_HEIGHT = 260;
+// Tall enough that the recede+fade plays out over a real chunk of scrolling
+// instead of finishing inside the first flick - at 260 it was resolving
+// almost instantly (posts run tall now with the 4:3 crop), which read as
+// "nothing happening" even though the value was updating correctly.
+const BG_HEIGHT = 520;
 const PARALLAX_FACTOR = 0.5;
 
 // Cast needed because Animated.createAnimatedComponent widens FlatList's
@@ -492,21 +496,21 @@ const styles = StyleSheet.create({
   },
   glowTopRight: {
     position: 'absolute',
-    top: -60,
-    right: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(43,203,176,0.22)',
+    top: -80,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(43,203,176,0.32)',
   },
   glowBottomLeft: {
     position: 'absolute',
-    bottom: -70,
-    left: -50,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(42,180,219,0.16)',
+    bottom: -100,
+    left: -70,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(42,180,219,0.24)',
   },
   header: {
     flexDirection: 'row',
