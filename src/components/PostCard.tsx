@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   // Same geometry PostImageGrid uses for its own tiles, which have always
   // rendered correctly - explicit 100%/100% in normal flow, never absolute.
   heroFill: { width: '100%', height: '100%', position: 'relative' },
-  heroSpinner: { ...StyleSheet.absoluteFillObject },
+  heroSpinner: { ...StyleSheet.absoluteFill },
   // Centering box for a text-only post (and the "Photo unavailable"
   // fallback) - the padding/centering the hero itself used to carry.
   heroCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  captionBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  captionBackdropTouch: { ...StyleSheet.absoluteFill },
   captionModal: {
     width: '100%',
     maxWidth: 420,

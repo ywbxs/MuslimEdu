@@ -407,7 +407,7 @@ export default function FeedScreen() {
         colors={[CANVAS_SOFT, CANVAS]}
         start={{ x: 0.3, y: 0 }}
         end={{ x: 0.7, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       {/* Parallax header - sits behind the feed (position:'absolute', lower
           in paint order than outerWrap below), receding at half the feed's

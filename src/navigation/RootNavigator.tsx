@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, StatusBar } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { COLORS } from '../theme/glass';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SchoolRegistrationScreen from '../screens/SchoolRegistrationScreen';
@@ -169,6 +170,18 @@ import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
 
+// React Navigation's DefaultTheme paints every navigator container with its
+// own neutral grey (rgb(242,242,242)) - a color that appears nowhere in this
+// app's palette. It showed up most obviously through the bottom tab bar's
+// curved notch: the notch is a genuine cutout, so whatever sits behind the
+// tab bar strip shows through it, and that was a slab of foreign grey rather
+// than the app's own canvas. Pointing the theme at the app canvas token
+// makes the cutout read as part of the screen instead of chrome.
+const APP_NAV_THEME = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: COLORS.canvas },
+};
+
 export default function RootNavigator() {
   const { user, isLoading, hasStoredSession } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -201,7 +214,7 @@ export default function RootNavigator() {
   return (
     <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
       <StatusBar barStyle="dark-content" />
-      <NavigationContainer>
+      <NavigationContainer theme={APP_NAV_THEME}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, animation: 'fade' }}
           screenLayout={({ route, navigation: screenNavigation, children }) =>

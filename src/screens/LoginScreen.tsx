@@ -237,7 +237,7 @@ function GetStartedSheet({
     <Modal transparent visible animationType="none" onRequestClose={() => animateOut(onClose)}>
       <View style={sheet.root}>
         <Animated.View style={[sheet.backdrop, { opacity: backdrop }]}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => animateOut(onClose)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => animateOut(onClose)} />
         </Animated.View>
 
         <Animated.View style={[sheet.cardWrap, { transform: [{ translateY }] }]}>
@@ -458,7 +458,7 @@ export default function LoginScreen() {
         colors={[CANVAS_SOFT, CANVAS]}
         start={{ x: 0.3, y: 0 }}
         end={{ x: 0.7, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.screen, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
@@ -835,7 +835,7 @@ const dots = StyleSheet.create({
 
 const sheet = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,30,22,0.55)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,30,22,0.55)' },
   cardWrap: {
     backgroundColor: SURFACE,
     borderTopLeftRadius: 30,

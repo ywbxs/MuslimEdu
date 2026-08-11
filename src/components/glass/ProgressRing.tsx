@@ -48,7 +48,7 @@ export default function ProgressRing({
           origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
-      <View style={StyleSheet.absoluteFillObject}>
+      <View style={StyleSheet.absoluteFill}>
         <View style={styles.centerWrap}>
           <Text style={[styles.percentText, { color: labelColor ?? color, fontSize: size * 0.24 }]}>{Math.round(clamped)}%</Text>
           {label ? <Text style={[styles.labelText, { color: labelColor ?? color }]}>{label}</Text> : null}
