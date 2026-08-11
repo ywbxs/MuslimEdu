@@ -52,7 +52,16 @@ function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
  * when the pick flips RTL-ness, since I18nManager only takes full visual
  * effect on the next app launch (see LocaleContext.tsx).
  */
-export default function LanguageSwitcherButton({ style }: { style?: object }) {
+interface Props {
+  style?: object;
+  // 'icon' (default) is the small solid-emerald circle used everywhere
+  // today (feed header, dashboards, etc). 'pill' is the white rounded pill
+  // with a dark globe + language code text - LoginScreen's own look, per
+  // its mockup.
+  variant?: 'icon' | 'pill';
+}
+
+export default function LanguageSwitcherButton({ style, variant = 'icon' }: Props) {
   const { token } = useAuth();
   const { locale, isRTL, refresh } = useLocale();
   const [visible, setVisible] = useState(false);
@@ -79,9 +88,16 @@ export default function LanguageSwitcherButton({ style }: { style?: object }) {
 
   return (
     <>
-      <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
-        <GlobeIcon />
-      </TouchableOpacity>
+      {variant === 'pill' ? (
+        <TouchableOpacity style={[styles.pill, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+          <GlobeIcon color={INK} size={18} />
+          <Text style={styles.pillText}>{locale.toUpperCase()}</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+          <GlobeIcon />
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <View style={styles.backdrop}>
@@ -124,6 +140,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOW.level1,
   },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.pill,
+    backgroundColor: '#F9FBFB',
+    // Same iOS-only shadow-props/Android-elevation gotcha as LoginScreen's
+    // card - no elevation, so Android doesn't get a flat dark shadow here
+    // either.
+    shadowColor: '#0B3D2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+  },
+  pillText: { fontSize: 15, fontWeight: '800', color: INK, letterSpacing: 0.4 },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   backdropTouch: { ...StyleSheet.absoluteFill },

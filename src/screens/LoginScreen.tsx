@@ -470,7 +470,7 @@ export default function LoginScreen() {
               <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
               <Text style={styles.topbarTitle}>MuslimEdu</Text>
               <View style={{ flex: 1 }} />
-              <LanguageSwitcherButton />
+              <LanguageSwitcherButton variant="pill" />
             </View>
           ) : (
             <View style={styles.topbar}>
@@ -778,11 +778,16 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     backgroundColor: SURFACE,
+    // shadowColor/shadowOpacity are iOS-only - Android's `elevation` ignores
+    // them entirely and always renders a flat gray/black shadow regardless
+    // of what's set here, which read as a hard dark shadow instead of the
+    // soft, barely-there one in the mockup. No `elevation` at all - the
+    // border above carries the card's edge on Android, and the soft shadow
+    // below still applies on iOS.
     shadowColor: '#0B3D2E',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 24,
-    elevation: 4,
   },
 
   fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
