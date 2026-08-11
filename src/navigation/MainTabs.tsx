@@ -42,7 +42,7 @@ const GLASS_FILL = 'rgba(255,255,255,0.82)';
 // white fill sitting on a near-white canvas, indistinguishable from it. The
 // stroke is what actually makes the curve legible, on both platforms,
 // regardless of how close the fill and background colors are.
-const NOTCH_STROKE = 'rgba(13,30,28,0.10)';
+const NOTCH_STROKE = 'rgba(13,30,28,0.22)';
 // Shape of the tab bar's top edge: flat, dips into a shallow curved notch
 // for the raised center button to nest into, flat again to the far edge -
 // same silhouette as the login/feed mockups' SVG clipPath, expressed as a
@@ -267,7 +267,7 @@ function TabBar({ state, navigation, isStudent }: any) {
                 horizontal edges (barHeight/1000 is tiny) while looking
                 normal along its vertical ones, an inconsistent, mostly-
                 invisible border. */}
-            <Path d={NOTCH_PATH} fill={GLASS_FILL} stroke={NOTCH_STROKE} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            <Path d={NOTCH_PATH} fill={GLASS_FILL} stroke={NOTCH_STROKE} strokeWidth={2} vectorEffect="non-scaling-stroke" />
           </Svg>
         </View>
         {visibleRoutes.map((route: any) => {

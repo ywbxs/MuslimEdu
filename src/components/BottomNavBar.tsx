@@ -21,7 +21,7 @@ const CENTER_BTN_BG = '#16211F';
 // required (elevation can't follow the notch shape, and the iOS shadow*
 // props do nothing on Android, so without a stroke the bar had no visible
 // edge on Android at all).
-const NOTCH_STROKE = 'rgba(13,30,28,0.10)';
+const NOTCH_STROKE = 'rgba(13,30,28,0.22)';
 // Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
 // either changes.
 const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
@@ -177,7 +177,7 @@ export default function BottomNavBar() {
       <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
         <View style={styles.barBackground} pointerEvents="none">
           <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
-            <Path d={NOTCH_PATH} fill={GLASS_FILL} stroke={NOTCH_STROKE} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            <Path d={NOTCH_PATH} fill={GLASS_FILL} stroke={NOTCH_STROKE} strokeWidth={2} vectorEffect="non-scaling-stroke" />
           </Svg>
         </View>
         {sideTabs.map((name) => {
