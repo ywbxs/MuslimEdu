@@ -515,12 +515,19 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
+  // Fills the WHOLE screen (not just BG_HEIGHT) so there's never a visible
+  // bottom edge to the gradient - a box that stopped partway down the
+  // screen showed a hard seam (canvas-colored gradient above a flat cutoff
+  // line below it), especially obvious where it sliced straight through the
+  // bottom glow. BG_HEIGHT still governs how much scrolling it takes for
+  // the translate/fade to play out - that's independent of how tall this
+  // box physically is.
   bgLayer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: BG_HEIGHT,
+    bottom: 0,
     overflow: 'hidden',
     // Explicit zIndex/elevation, not just paint order - see the comment
     // above BG_HEIGHT for why this matters on Android.
@@ -528,7 +535,12 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   glowTopRight: { position: 'absolute', top: -80, right: -80 },
-  glowBottomLeft: { position: 'absolute', bottom: -100, left: -70 },
+  // Anchored from the top (not bottom) now that bgLayer fills the whole
+  // screen instead of stopping at BG_HEIGHT - "bottom: -100" would otherwise
+  // push this glow far down past where it's meant to cluster near the top
+  // alongside glowTopRight. 340 keeps it in the same visual spot it sat in
+  // when the box was still a fixed BG_HEIGHT (520) tall.
+  glowBottomLeft: { position: 'absolute', top: 340, left: -70 },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
