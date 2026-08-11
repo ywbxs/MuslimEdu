@@ -8,12 +8,11 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -46,29 +45,15 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// Background/hero: "Home", the currency button, and the composer sit in a
-// layer above the plain decorative gradient/glow, both fading out together
-// as you start to scroll. The feed list starts right below this hero (a
-// static reserved gap, not scrollable content) and is never physically
-// underneath it, which is what keeps three things simultaneously true
-// without fighting each other:
-//   - the composer/currency button are reliably tappable (the list's own
-//     rendered bounds don't extend into that space at all, so there's
-//     nothing there to swallow the touch - see heroHeight below)
-//   - scrolling works normally everywhere (nothing here touches the list's
-//     own pointerEvents/gesture handling)
-//   - posts always render on top of (not under) the hero, since they never
-//     share the same screen space to begin with once list scrolling and
-//     hero fade are both this short
-// FADE_DISTANCE is deliberately short - the hero fades out well within the
-// first bit of scrolling, before there's ever a real chance of it lingering
-// visibly near where the list begins.
-const FADE_DISTANCE = 140;
-
-// Cast needed because Animated.createAnimatedComponent widens FlatList's
-// prop/ref types - this keeps `listRef.current?.scrollToOffset(...)` and
-// the `<DeckItem>` generic working exactly like the plain FlatList did.
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
+// "Home" + the currency button are a plain, static header - not animated,
+// not absolutely positioned, not scrollable. It sits above the list as an
+// ordinary flex sibling (normal column layout: header takes its natural
+// height, the list fills what's left) and never moves. Every attempt at a
+// receding/fading parallax hero here ran into a different bug (untappable
+// composer, broken scrolling, post content peeking out from under it,
+// stacking order flipped) because it required keeping a separately
+// animated/measured layer in sync with the list - this has nothing to keep
+// in sync, so none of those failure modes are possible.
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -128,28 +113,6 @@ export default function FeedScreen() {
 
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
-
-  // The list's static top clearance - its own rendered bounds start here
-  // (a real layout offset, not scrollable content), so it never physically
-  // overlaps the hero above it. Measured rather than guessed since it isn't
-  // a fixed constant (safe-area inset varies by device, composer only shows
-  // for roles that canPost).
-  const [heroHeight, setHeroHeight] = useState(180);
-
-  // Drives the hero's fade/translate only - see FADE_DISTANCE's comment
-  // above. Native driver is fine here because nothing but that layer's own
-  // transform/opacity depends on this value.
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, FADE_DISTANCE],
-    outputRange: [0, -FADE_DISTANCE * 0.6],
-    extrapolate: 'clamp',
-  });
-  const bgOpacity = scrollY.interpolate({
-    inputRange: [0, FADE_DISTANCE],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -365,7 +328,7 @@ export default function FeedScreen() {
   ) : null;
 
   const homeContent = (
-    <View style={[styles.deckWrap, { paddingTop: heroHeight }]}>
+    <View style={styles.deckWrap}>
       {loading ? (
         <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
           {listHeader}
@@ -374,16 +337,19 @@ export default function FeedScreen() {
           <PostCardSkeleton withImage style={styles.feedPostCard} />
         </View>
       ) : (
-        <AnimatedFlatList
+        <FlatList
           ref={listRef}
           data={deckData}
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
+          // FlatList defaults this to true on Android, which can break a
+          // nested horizontal FlatList's own gesture handling (the widget
+          // carousel's swipe) - see WidgetCarousel.tsx's nestedScrollEnabled
+          // for the other half of this same fix.
+          removeClippedSubviews={false}
           contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
           ListHeaderComponent={listHeader}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-          scrollEventThrottle={16}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
@@ -431,77 +397,20 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
-      {/* Background layer - purely decorative (gradient + glows), pinned
-          behind everything with explicit zIndex/elevation (not just paint
-          order), same as AdminDashboard.tsx's bgLayer. pointerEvents="none"
-          since nothing interactive lives in here - see heroContent below
-          for why the composer/currency button moved out of this layer. */}
-      <Animated.View
-        style={[styles.bgLayer, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
+      <LinearGradient
+        colors={[CANVAS_SOFT, CANVAS]}
+        start={{ x: 0.3, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={StyleSheet.absoluteFill}
         pointerEvents="none"
-      >
-        <LinearGradient
-          colors={[CANVAS_SOFT, CANVAS]}
-          start={{ x: 0.3, y: 0 }}
-          end={{ x: 0.7, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {/* CANVAS_SOFT/CANVAS are both pale near-white tints - too close to
-            each other (and to feedPostCard's own translucent white) for the
-            gradient alone to make this layer's movement/fade actually
-            visible while scrolling. A true radial gradient (bright teal core
-            fading smoothly to nothing) reads as an actual glow; a flat-
-            opacity circle just looked like a plain tinted disc with a hard
-            edge. */}
-        <Svg style={styles.glowTopRight} width={320} height={320}>
-          <Defs>
-            <RadialGradient id="glowTeal" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={EMERALD} stopOpacity={0.55} />
-              <Stop offset="1" stopColor={EMERALD} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={160} cy={160} r={160} fill="url(#glowTeal)" />
-        </Svg>
-        <Svg style={styles.glowBottomLeft} width={300} height={300}>
-          <Defs>
-            <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#2AB4DB" stopOpacity={0.45} />
-              <Stop offset="1" stopColor="#2AB4DB" stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={150} cy={150} r={150} fill="url(#glowBlue)" />
-        </Svg>
-      </Animated.View>
+      />
 
-      <View style={styles.outerWrap}>{homeContent}</View>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.headerTitle}>{headerTitleText}</Text>
+        <CurrencyBalanceButton variant="outline" />
+      </View>
 
-      {/* "Home" and the currency button only - a SEPARATE overlay from
-          bgLayer, not full-screen (sized to just this content). The list's
-          own content starts below it via a static paddingTop (deckWrap, see
-          heroHeight above) rather than sharing this screen space, so the two
-          never physically overlap: the currency button stays reliably
-          tappable, scrolling is unaffected, and posts always end up
-          visually above the hero once it's gone. Shares bgLayer's exact
-          opacity/translateY so it recedes/fades in lockstep with the
-          background behind it.
-          The composer is deliberately NOT in here (see listHeader in
-          homeContent below) - every attempt to keep it in this
-          separately-measured overlay hit a different bug (untappable,
-          scroll broken, post content peeking out from under it because the
-          measured height didn't quite match in practice). Ordinary scrolling
-          content has none of those failure modes, so that's what it is now. */}
-      <Animated.View
-        style={[styles.heroContent, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
-        onLayout={(e) => {
-          const measured = e.nativeEvent.layout.height;
-          if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
-        }}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Text style={styles.headerTitle}>{headerTitleText}</Text>
-          <CurrencyBalanceButton variant="outline" />
-        </View>
-      </Animated.View>
+      {homeContent}
 
       <UserProfileModal
         userId={profileUserId}
@@ -519,30 +428,6 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
-  // Fills the WHOLE screen so there's never a visible bottom edge to the
-  // gradient - a box that stopped partway down the screen showed a hard
-  // seam (canvas-colored gradient above a flat cutoff line below it),
-  // especially obvious where it sliced straight through the bottom glow.
-  // FADE_DISTANCE still governs how much scrolling it takes for the
-  // translate/fade to play out - that's independent of how tall this box
-  // physically is.
-  bgLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'hidden',
-    // Explicit zIndex/elevation, not just paint order - see the comment
-    // above FADE_DISTANCE for why this matters on Android.
-    zIndex: 0,
-    elevation: 0,
-  },
-  glowTopRight: { position: 'absolute', top: -80, right: -80 },
-  // Anchored from the top (not bottom) since bgLayer fills the whole screen
-  // - "bottom: -100" would otherwise push this glow far down past where
-  // it's meant to cluster near the top alongside glowTopRight.
-  glowBottomLeft: { position: 'absolute', top: 340, left: -70 },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -551,25 +436,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
-
-  // Wraps the scrolling feed content (posts/widgets/caught-up) - fills the
-  // screen, painted above bgLayer via explicit zIndex/elevation (matching
-  // AdminDashboard.tsx's scrollFlex) rather than relying on JSX order alone.
-  outerWrap: { flex: 1, zIndex: 1, elevation: 1 },
-
-  // Deliberately NOT full-screen (no bottom:0) - only as tall as its own
-  // content (header + composer), unlike bgLayer/outerWrap. zIndex above
-  // both of them so it's always the real touch target for its own taps,
-  // and being short means it never physically overlaps the list further
-  // down the screen, so it can't block scrolling there either.
-  heroContent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-    elevation: 2,
-  },
 
   composer: {
     flexDirection: 'row',
