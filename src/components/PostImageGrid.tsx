@@ -33,7 +33,7 @@ interface Props {
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = 420, width, radius }: Props) {
   if (!images || images.length === 0) return null;
 
   const W = width ?? GRID_WIDTH;
@@ -62,8 +62,12 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
+    // 4:3 (width:height), same ratio as the composer's own preview crop -
+    // capped by maxHeight only as a sane ceiling for very wide screens
+    // (tablets), not the everyday driver of the shape the way a tighter
+    // cap tuned for the old, narrower inset card width used to be.
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05), borderRadius: R }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * (3 / 4)), borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
