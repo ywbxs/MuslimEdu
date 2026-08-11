@@ -398,7 +398,9 @@ const styles = StyleSheet.create({
   // --- New-post (photo-first) layout ---
   newBody: { paddingBottom: 24 },
   previewWrap: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
-  preview: { width: '100%', aspectRatio: 4 / 3, borderRadius: 14, backgroundColor: PLACEHOLDER },
+  // aspectRatio is width/height - 3/4 gives the standard portrait 4:3 photo
+  // crop (taller than wide), matching the feed's own display crop.
+  preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: 14, backgroundColor: PLACEHOLDER },
   previewEmpty: { alignItems: 'center', justifyContent: 'center' },
   strip: { paddingHorizontal: 16, paddingBottom: 16, gap: 10, backgroundColor: '#FFFFFF' },
   thumbWrap: { width: 62, height: 62, borderRadius: 10, borderWidth: 2, borderColor: 'transparent' },

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,17 +47,28 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// The header + composer used to be a position:'absolute' layer with its own
-// parallax translate/opacity (same technique as DashboardShell.tsx's hero),
-// meant to sit BEHIND the scrolling feed. On Android, an animated transform
-// can promote a view to its own compositing layer and paint it above later
-// siblings regardless of JSX order (see AdminDashboard.tsx's bgLayer zIndex
-// fix for the same issue) - here that meant the header and composer stayed
-// visibly floating on top of the post list underneath them instead of
-// scrolling away or receding behind it. Simplest fix that can't regress the
-// same way again: no absolute positioning or animated transforms at all -
-// header and composer are now the FlatList's own ListHeaderComponent, so
-// they're ordinary scrolling content like every post below them.
+// Parallax background, done the way DashboardShell.tsx/AdminDashboard.tsx do
+// it: the gradient is its OWN separate absolutely-positioned layer behind
+// everything, with explicit zIndex/elevation pinning it there - not just
+// paint order. The header/composer/posts are ordinary scrolling content on
+// top (the FlatList's own ListHeaderComponent + items), never inside an
+// animated-transform view themselves.
+//
+// The header+composer used to BE that animated layer directly - on Android,
+// an animated transform can promote a view to its own compositing layer and
+// paint it above later siblings regardless of JSX order (the exact bug the
+// explicit zIndex/elevation below exists to prevent), so instead of receding
+// behind the feed they stayed visibly floating on top of the scrolled posts
+// underneath them. Keeping the animated transform confined to a background-
+// only decorative layer, with real content never inside it, avoids that
+// failure mode entirely.
+const BG_HEIGHT = 260;
+const PARALLAX_FACTOR = 0.5;
+
+// Cast needed because Animated.createAnimatedComponent widens FlatList's
+// prop/ref types - this keeps `listRef.current?.scrollToOffset(...)` and
+// the `<DeckItem>` generic working exactly like the plain FlatList did.
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -116,6 +128,21 @@ export default function FeedScreen() {
 
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
+
+  // Drives the background layer's parallax translate/fade only - see
+  // BG_HEIGHT's comment above. Native driver is fine here because nothing
+  // but that decorative layer's transform/opacity depends on this value.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const bgTranslateY = scrollY.interpolate({
+    inputRange: [0, BG_HEIGHT],
+    outputRange: [0, -BG_HEIGHT * PARALLAX_FACTOR],
+    extrapolate: 'clamp',
+  });
+  const bgOpacity = scrollY.interpolate({
+    inputRange: [0, BG_HEIGHT * 0.7, BG_HEIGHT],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,9 +342,8 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
-  // Ordinary scrolling content now, as the FlatList's own ListHeaderComponent
-  // - see the comment near the top of this file for why that replaced the
-  // previous position:'absolute' + parallax approach.
+  // Ordinary scrolling content, as the FlatList's own ListHeaderComponent -
+  // the parallax lives entirely in the background layer below, not here.
   const listHeader = (
     <>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -352,13 +378,15 @@ export default function FeedScreen() {
           <PostCardSkeleton withImage style={styles.feedPostCard} />
         </View>
       ) : (
-        <FlatList
+        <AnimatedFlatList
           ref={listRef}
           data={deckData}
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+          scrollEventThrottle={16}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
@@ -407,12 +435,23 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
-      <LinearGradient
-        colors={[CANVAS_SOFT, CANVAS]}
-        start={{ x: 0.3, y: 0 }}
-        end={{ x: 0.7, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Decorative background only - pinned behind everything with explicit
+          zIndex/elevation (not just paint order), same as AdminDashboard.tsx's
+          bgLayer. No real content ever lives inside this animated View, which
+          is what keeps this parallax safe from the Android compositing bug
+          described above. */}
+      <Animated.View
+        style={[styles.bgLayer, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={[CANVAS_SOFT, CANVAS]}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
       <View style={styles.outerWrap}>{homeContent}</View>
 
       <UserProfileModal
@@ -431,6 +470,17 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
+  bgLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: BG_HEIGHT,
+    // Explicit zIndex/elevation, not just paint order - see the comment
+    // above BG_HEIGHT for why this matters on Android.
+    zIndex: 0,
+    elevation: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -441,9 +491,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
-  // Wraps the Home/Shop/Charity vertical pager - fills whatever's left
-  // below the header.
-  outerWrap: { flex: 1 },
+  // Wraps the header/composer/feed content - fills the screen, painted above
+  // bgLayer via explicit zIndex/elevation (matching AdminDashboard.tsx's
+  // scrollFlex) rather than relying on JSX order alone.
+  outerWrap: { flex: 1, zIndex: 1, elevation: 1 },
 
   composer: {
     flexDirection: 'row',
