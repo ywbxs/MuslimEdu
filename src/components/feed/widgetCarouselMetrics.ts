@@ -19,6 +19,11 @@ import { useWindowDimensions } from 'react-native';
 export const EDGE = 16;
 export const GAP = 12;
 export const END_PAD = 16;
+// Shared row height for every card in the carousel (Prayer Times +
+// announcement images) - both must use this SAME value (not their own
+// guessed heights) or whichever card is taller than the other's assumed
+// height gets clipped instead of properly filling the row.
+export const ROW_HEIGHT = 260;
 
 export function useWidgetCardMetrics() {
   const { width: screenW } = useWindowDimensions();

@@ -5,9 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchActiveWidgetAnnouncements, WidgetAnnouncement } from '../../services/widgetAnnouncementService';
 import { RADIUS, SHADOW } from '../../theme/glass';
 import PrayerTimesCard from './PrayerTimesCard';
-import { useWidgetCardMetrics, EDGE, GAP, END_PAD } from './widgetCarouselMetrics';
-
-const ROW_HEIGHT = 210;
+import { useWidgetCardMetrics, EDGE, GAP, END_PAD, ROW_HEIGHT } from './widgetCarouselMetrics';
 
 type WidgetItem = { kind: 'prayer' } | { kind: 'announcement'; announcement: WidgetAnnouncement };
 
@@ -65,6 +63,11 @@ export default function WidgetCarousel() {
         data={items}
         keyExtractor={(item) => (item.kind === 'prayer' ? 'prayer' : `announcement-${item.announcement.id}`)}
         horizontal
+        // Required on Android for a horizontal list nested inside a vertical
+        // one to actually receive the swipe gesture - without it, the outer
+        // vertical feed list claims the touch first and this carousel never
+        // scrolls at all.
+        nestedScrollEnabled
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         snapToInterval={SNAP}

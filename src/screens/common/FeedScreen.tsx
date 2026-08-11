@@ -349,10 +349,26 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
+  // Ordinary scrolling content, as the list's own ListHeaderComponent - see
+  // the comment above heroContent in the return JSX for why the composer
+  // lives here instead of in that separately-measured overlay.
+  const listHeader = canPost ? (
+    <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+      <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+      <Text style={styles.composerPlaceholder} numberOfLines={1}>
+        {t('feed.composer_placeholder', 'Share a photo...')}
+      </Text>
+      <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+        <PhotoIcon />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ) : null;
+
   const homeContent = (
     <View style={[styles.deckWrap, { paddingTop: heroHeight }]}>
       {loading ? (
         <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
+          {listHeader}
           <PostCardSkeleton withImage style={styles.feedPostCard} />
           <PostCardSkeleton style={styles.feedPostCard} />
           <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -364,6 +380,7 @@ export default function FeedScreen() {
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
+          ListHeaderComponent={listHeader}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
@@ -458,17 +475,21 @@ export default function FeedScreen() {
 
       <View style={styles.outerWrap}>{homeContent}</View>
 
-      {/* "Home", the currency button, and the composer - a SEPARATE overlay
-          from bgLayer, not full-screen (sized to just this content). The
-          list's own content starts below it via a static paddingTop
-          (deckWrap, see heroHeight above) rather than sharing this screen
-          space, so the two never physically overlap: the composer/currency
-          button stay reliably tappable (nothing from the list is ever
-          rendered on top of them), scrolling is unaffected (nothing here
-          touches the list's gesture handling), and posts always end up
-          visually above the hero once it's gone, never the other way
-          around. Shares bgLayer's exact opacity/translateY so it recedes/
-          fades in lockstep with the background behind it. */}
+      {/* "Home" and the currency button only - a SEPARATE overlay from
+          bgLayer, not full-screen (sized to just this content). The list's
+          own content starts below it via a static paddingTop (deckWrap, see
+          heroHeight above) rather than sharing this screen space, so the two
+          never physically overlap: the currency button stays reliably
+          tappable, scrolling is unaffected, and posts always end up
+          visually above the hero once it's gone. Shares bgLayer's exact
+          opacity/translateY so it recedes/fades in lockstep with the
+          background behind it.
+          The composer is deliberately NOT in here (see listHeader in
+          homeContent below) - every attempt to keep it in this
+          separately-measured overlay hit a different bug (untappable,
+          scroll broken, post content peeking out from under it because the
+          measured height didn't quite match in practice). Ordinary scrolling
+          content has none of those failure modes, so that's what it is now. */}
       <Animated.View
         style={[styles.heroContent, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
         onLayout={(e) => {
@@ -480,18 +501,6 @@ export default function FeedScreen() {
           <Text style={styles.headerTitle}>{headerTitleText}</Text>
           <CurrencyBalanceButton variant="outline" />
         </View>
-
-        {canPost && (
-          <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-            <Text style={styles.composerPlaceholder} numberOfLines={1}>
-              {t('feed.composer_placeholder', 'Share a photo...')}
-            </Text>
-            <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-              <PhotoIcon />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
       </Animated.View>
 
       <UserProfileModal
@@ -565,6 +574,7 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 8,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: RADIUS.lg,

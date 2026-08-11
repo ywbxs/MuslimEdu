@@ -14,7 +14,7 @@ import {
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
 import { Skeleton, SkeletonCircle } from '../Skeleton';
-import { useWidgetCardMetrics } from './widgetCarouselMetrics';
+import { useWidgetCardMetrics, ROW_HEIGHT } from './widgetCarouselMetrics';
 
 const GRADIENT_TOP = '#0F3D2E';
 const GRADIENT_BOTTOM = '#062318';
@@ -106,7 +106,7 @@ export default function PrayerTimesCard({ token }: { token: string }) {
 
   if (loading) {
     return (
-      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, { width: CARD_W }]}>
+      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, { width: CARD_W, height: ROW_HEIGHT }]}>
         <View style={styles.headerRow}>
           <SkeletonCircle size={38} baseColor={SKELETON_BASE} />
           <View style={{ flex: 1, marginLeft: 10 }}>
@@ -123,7 +123,7 @@ export default function PrayerTimesCard({ token }: { token: string }) {
   // UpcomingClassesCard - a passive widget, not a user action, so no Alert.
   if (error || !result || !next) {
     return (
-      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, { width: CARD_W }]}>
+      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, { width: CARD_W, height: ROW_HEIGHT }]}>
         <View style={styles.headerRow}>
           <View style={styles.iconBox}>
             <MoonIcon />
@@ -138,8 +138,13 @@ export default function PrayerTimesCard({ token }: { token: string }) {
   }
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={openDetail} style={{ width: CARD_W }}>
-      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+    <TouchableOpacity activeOpacity={0.9} onPress={openDetail} style={{ width: CARD_W, height: ROW_HEIGHT }}>
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_BOTTOM]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.card, { height: ROW_HEIGHT }]}
+      >
         <View style={styles.headerRow}>
           <View style={styles.iconBox}>
             <MoonIcon />
@@ -153,6 +158,10 @@ export default function PrayerTimesCard({ token }: { token: string }) {
           </View>
         </View>
 
+        {/* flex:1 + centered content, instead of relying on natural content
+            height to happen to match ROW_HEIGHT (the shared row height with
+            AnnouncementImageCard) - fills whatever space is actually left
+            below the header row regardless of exact card height. */}
         <View style={styles.hero}>
           <Text style={styles.heroLabel}>Next Prayer</Text>
           <View style={styles.heroRow}>
@@ -196,7 +205,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  hero: { marginTop: 16, alignItems: 'center', paddingVertical: 10 },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   heroLabel: { fontSize: 11, color: FAINT, textTransform: 'uppercase', letterSpacing: 0.5 },
   heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
   heroName: { fontSize: 24, fontWeight: '800', color: WHITE },
