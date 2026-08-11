@@ -49,15 +49,14 @@ const GLASS_FILL = 'rgba(255,255,255,0.4)';
 // Parallax background/hero, done the way DashboardShell.tsx/AdminDashboard.tsx
 // do it: a separate absolutely-positioned layer behind everything, with
 // explicit zIndex/elevation pinning it there - not just paint order. That
-// explicit zIndex is what makes it safe to put REAL content (the "Home"
-// title + currency button) inside this animated layer: on Android, an
-// animated transform can promote a view to its own compositing layer and
-// paint it above later siblings regardless of JSX order, which is exactly
-// what explicit zIndex/elevation (rather than relying on paint order alone)
-// prevents. The composer/posts/widgets/caught-up are ordinary scrolling
-// content on top (the FlatList's own ListHeaderComponent + items) that never
-// sit inside an animated-transform view themselves - they scroll over this
-// hero as it recedes and fades out from underneath them.
+// explicit zIndex is what makes it safe to put REAL content ("Home", the
+// currency button, and the composer) inside this animated layer: on
+// Android, an animated transform can promote a view to its own compositing
+// layer and paint it above later siblings regardless of JSX order, which is
+// exactly what explicit zIndex/elevation (rather than relying on paint
+// order alone) prevents. Posts/widgets/caught-up are the only ordinary
+// scrolling content (the FlatList's own items) - they scroll over this hero
+// as it recedes and fades out from underneath them.
 //
 // Tall enough that the recede+fade plays out over a real chunk of scrolling
 // instead of finishing inside the first flick - at 260 it was resolving
@@ -130,11 +129,12 @@ export default function FeedScreen() {
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
 
-  // The foreground (composer/posts/widgets) needs top clearance equal to the
-  // hero's real rendered height, so it starts right below "Home"/the
-  // currency button instead of overlapping them at scroll position 0.
-  // Measured rather than guessed since the header's height isn't a fixed
-  // constant (safe-area inset varies by device).
+  // The foreground (posts/widgets/caught-up) needs top clearance equal to
+  // the hero's real rendered height (title + currency button + composer),
+  // so it starts right below the hero instead of overlapping it at scroll
+  // position 0. Measured rather than guessed since that height isn't a
+  // fixed constant (safe-area inset varies by device, composer only shows
+  // for roles that canPost).
   const [heroHeight, setHeroHeight] = useState(180);
 
   // Drives the background layer's parallax translate/fade only - see
@@ -350,32 +350,10 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
-  // Ordinary scrolling content, as the FlatList's own ListHeaderComponent -
-  // "Home" and the currency button live in the background hero layer below
-  // instead (see the comment there), so this starts straight at the
-  // composer/posts/widgets/caught-up, which are the only things that
-  // actually scroll.
-  const listHeader = (
-    <>
-      {canPost && (
-        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-          <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', 'Share a photo...')}
-          </Text>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PhotoIcon />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-    </>
-  );
-
   const homeContent = (
     <View style={styles.deckWrap}>
       {loading ? (
         <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
-          {listHeader}
           <PostCardSkeleton withImage style={styles.feedPostCard} />
           <PostCardSkeleton style={styles.feedPostCard} />
           <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -394,7 +372,6 @@ export default function FeedScreen() {
           onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-          ListHeaderComponent={listHeader}
           renderItem={({ item }) =>
             item.kind === 'caughtUp' ? (
               <CaughtUpCard visible={caughtUpVisible} />
@@ -440,13 +417,13 @@ export default function FeedScreen() {
     <View style={styles.flex}>
       {/* Background/hero layer - pinned behind the scrolling feed with
           explicit zIndex/elevation (not just paint order), same as
-          AdminDashboard.tsx's bgLayer. "Home" and the currency button live
-          HERE (not in the scrolling list) so they recede/fade with the rest
-          of this layer instead of scrolling away with the feed - the
-          composer/posts/widgets/caught-up below are the only things that
+          AdminDashboard.tsx's bgLayer. "Home", the currency button, and the
+          composer all live HERE (not in the scrolling list) so they recede/
+          fade with the rest of this layer instead of scrolling away with
+          the feed - posts/widgets/caught-up below are the only things that
           actually scroll, "floating" over this layer as it fades out from
           underneath them. pointerEvents="box-none" (not "none") so the
-          currency button inside it still receives taps despite the plain
+          currency button and composer inside it still receive taps despite the plain
           gradient/glow Views around it not needing any. */}
       <Animated.View
         style={[styles.bgLayer, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
@@ -486,14 +463,30 @@ export default function FeedScreen() {
         </Svg>
 
         <View
-          style={[styles.header, { paddingTop: insets.top + 12 }]}
           onLayout={(e) => {
             const measured = e.nativeEvent.layout.height;
             if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
           }}
         >
-          <Text style={styles.headerTitle}>{headerTitleText}</Text>
-          <CurrencyBalanceButton variant="outline" />
+          <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+            <Text style={styles.headerTitle}>{headerTitleText}</Text>
+            <CurrencyBalanceButton variant="outline" />
+          </View>
+
+          {/* Composer moved back into the hero alongside "Home"/currency -
+              per feedback it should recede with them, not scroll as
+              foreground content the way posts/widgets/caught-up do. */}
+          {canPost && (
+            <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+              <Text style={styles.composerPlaceholder} numberOfLines={1}>
+                {t('feed.composer_placeholder', 'Share a photo...')}
+              </Text>
+              <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+                <PhotoIcon />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.View>
 
@@ -550,9 +543,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
 
-  // Wraps the header/composer/feed content - fills the screen, painted above
-  // bgLayer via explicit zIndex/elevation (matching AdminDashboard.tsx's
-  // scrollFlex) rather than relying on JSX order alone.
+  // Wraps the scrolling feed content (posts/widgets/caught-up) - fills the
+  // screen, painted above bgLayer via explicit zIndex/elevation (matching
+  // AdminDashboard.tsx's scrollFlex) rather than relying on JSX order alone.
   outerWrap: { flex: 1, zIndex: 1, elevation: 1 },
 
   composer: {
