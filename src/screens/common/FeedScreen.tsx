@@ -46,21 +46,19 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// Parallax background, done the way DashboardShell.tsx/AdminDashboard.tsx do
-// it: the gradient is its OWN separate absolutely-positioned layer behind
-// everything, with explicit zIndex/elevation pinning it there - not just
-// paint order. The header/composer/posts are ordinary scrolling content on
-// top (the FlatList's own ListHeaderComponent + items), never inside an
-// animated-transform view themselves.
+// Parallax background/hero, done the way DashboardShell.tsx/AdminDashboard.tsx
+// do it: a separate absolutely-positioned layer behind everything, with
+// explicit zIndex/elevation pinning it there - not just paint order. That
+// explicit zIndex is what makes it safe to put REAL content (the "Home"
+// title + currency button) inside this animated layer: on Android, an
+// animated transform can promote a view to its own compositing layer and
+// paint it above later siblings regardless of JSX order, which is exactly
+// what explicit zIndex/elevation (rather than relying on paint order alone)
+// prevents. The composer/posts/widgets/caught-up are ordinary scrolling
+// content on top (the FlatList's own ListHeaderComponent + items) that never
+// sit inside an animated-transform view themselves - they scroll over this
+// hero as it recedes and fades out from underneath them.
 //
-// The header+composer used to BE that animated layer directly - on Android,
-// an animated transform can promote a view to its own compositing layer and
-// paint it above later siblings regardless of JSX order (the exact bug the
-// explicit zIndex/elevation below exists to prevent), so instead of receding
-// behind the feed they stayed visibly floating on top of the scrolled posts
-// underneath them. Keeping the animated transform confined to a background-
-// only decorative layer, with real content never inside it, avoids that
-// failure mode entirely.
 // Tall enough that the recede+fade plays out over a real chunk of scrolling
 // instead of finishing inside the first flick - at 260 it was resolving
 // almost instantly (posts run tall now with the 4:3 crop), which read as
@@ -131,6 +129,13 @@ export default function FeedScreen() {
 
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
+
+  // The foreground (composer/posts/widgets) needs top clearance equal to the
+  // hero's real rendered height, so it starts right below "Home"/the
+  // currency button instead of overlapping them at scroll position 0.
+  // Measured rather than guessed since the header's height isn't a fixed
+  // constant (safe-area inset varies by device).
+  const [heroHeight, setHeroHeight] = useState(180);
 
   // Drives the background layer's parallax translate/fade only - see
   // BG_HEIGHT's comment above. Native driver is fine here because nothing
@@ -346,16 +351,12 @@ export default function FeedScreen() {
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
   // Ordinary scrolling content, as the FlatList's own ListHeaderComponent -
-  // the parallax lives entirely in the background layer below, not here.
+  // "Home" and the currency button live in the background hero layer below
+  // instead (see the comment there), so this starts straight at the
+  // composer/posts/widgets/caught-up, which are the only things that
+  // actually scroll.
   const listHeader = (
     <>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>{headerTitleText}</Text>
-        <View style={styles.headerActions}>
-          <CurrencyBalanceButton variant="outline" />
-        </View>
-      </View>
-
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
@@ -437,30 +438,35 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
-      {/* Decorative background only - pinned behind everything with explicit
-          zIndex/elevation (not just paint order), same as AdminDashboard.tsx's
-          bgLayer. No real content ever lives inside this animated View, which
-          is what keeps this parallax safe from the Android compositing bug
-          described above. */}
+      {/* Background/hero layer - pinned behind the scrolling feed with
+          explicit zIndex/elevation (not just paint order), same as
+          AdminDashboard.tsx's bgLayer. "Home" and the currency button live
+          HERE (not in the scrolling list) so they recede/fade with the rest
+          of this layer instead of scrolling away with the feed - the
+          composer/posts/widgets/caught-up below are the only things that
+          actually scroll, "floating" over this layer as it fades out from
+          underneath them. pointerEvents="box-none" (not "none") so the
+          currency button inside it still receives taps despite the plain
+          gradient/glow Views around it not needing any. */}
       <Animated.View
         style={[styles.bgLayer, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
-        pointerEvents="none"
+        pointerEvents="box-none"
       >
         <LinearGradient
           colors={[CANVAS_SOFT, CANVAS]}
           start={{ x: 0.3, y: 0 }}
           end={{ x: 0.7, y: 1 }}
           style={StyleSheet.absoluteFill}
+          pointerEvents="none"
         />
         {/* CANVAS_SOFT/CANVAS are both pale near-white tints - too close to
             each other (and to feedPostCard's own translucent white) for the
             gradient alone to make this layer's movement/fade actually
             visible while scrolling. A true radial gradient (bright teal core
             fading smoothly to nothing) reads as an actual glow; a flat-
-            opacity circle just looks like a plain tinted disc with a hard
-            edge. Both glows sit inside this same animated bgLayer, so they
-            still recede/fade with the rest of the parallax on scroll. */}
-        <Svg style={styles.glowTopRight} width={320} height={320}>
+            opacity circle just looked like a plain tinted disc with a hard
+            edge. */}
+        <Svg style={styles.glowTopRight} width={320} height={320} pointerEvents="none">
           <Defs>
             <RadialGradient id="glowTeal" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor={EMERALD} stopOpacity={0.55} />
@@ -469,7 +475,7 @@ export default function FeedScreen() {
           </Defs>
           <Circle cx={160} cy={160} r={160} fill="url(#glowTeal)" />
         </Svg>
-        <Svg style={styles.glowBottomLeft} width={300} height={300}>
+        <Svg style={styles.glowBottomLeft} width={300} height={300} pointerEvents="none">
           <Defs>
             <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor="#2AB4DB" stopOpacity={0.45} />
@@ -478,9 +484,20 @@ export default function FeedScreen() {
           </Defs>
           <Circle cx={150} cy={150} r={150} fill="url(#glowBlue)" />
         </Svg>
+
+        <View
+          style={[styles.header, { paddingTop: insets.top + 12 }]}
+          onLayout={(e) => {
+            const measured = e.nativeEvent.layout.height;
+            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+          }}
+        >
+          <Text style={styles.headerTitle}>{headerTitleText}</Text>
+          <CurrencyBalanceButton variant="outline" />
+        </View>
       </Animated.View>
 
-      <View style={styles.outerWrap}>{homeContent}</View>
+      <View style={[styles.outerWrap, { paddingTop: heroHeight }]}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -520,7 +537,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   // Wraps the header/composer/feed content - fills the screen, painted above
   // bgLayer via explicit zIndex/elevation (matching AdminDashboard.tsx's
