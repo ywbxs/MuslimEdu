@@ -378,15 +378,6 @@ export default function FeedScreen() {
           keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.listContent, { paddingTop: heroHeight, paddingBottom: 20 + tabBarHeight }]}
-          // The list's own bounds span the full screen (its content is just
-          // padded down by heroHeight, not physically offset - see the
-          // comment above heroHeight), so without this its empty top
-          // padding area sits directly over the hero and swallows taps meant
-          // for the composer/currency button underneath. box-none lets
-          // touches over that empty padding pass through to the hero, while
-          // real list items (and drags starting on them) still scroll
-          // normally.
-          pointerEvents="box-none"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
@@ -437,26 +428,20 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.flex}>
-      {/* Background/hero layer - pinned behind the scrolling feed with
-          explicit zIndex/elevation (not just paint order), same as
-          AdminDashboard.tsx's bgLayer. "Home", the currency button, and the
-          composer all live HERE (not in the scrolling list) so they recede/
-          fade with the rest of this layer instead of scrolling away with
-          the feed - posts/widgets/caught-up below are the only things that
-          actually scroll, "floating" over this layer as it fades out from
-          underneath them. pointerEvents="box-none" (not "none") so the
-          currency button and composer inside it still receive taps despite the plain
-          gradient/glow Views around it not needing any. */}
+      {/* Background layer - purely decorative (gradient + glows), pinned
+          behind everything with explicit zIndex/elevation (not just paint
+          order), same as AdminDashboard.tsx's bgLayer. pointerEvents="none"
+          since nothing interactive lives in here - see heroContent below
+          for why the composer/currency button moved out of this layer. */}
       <Animated.View
         style={[styles.bgLayer, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
-        pointerEvents="box-none"
+        pointerEvents="none"
       >
         <LinearGradient
           colors={[CANVAS_SOFT, CANVAS]}
           start={{ x: 0.3, y: 0 }}
           end={{ x: 0.7, y: 1 }}
           style={StyleSheet.absoluteFill}
-          pointerEvents="none"
         />
         {/* CANVAS_SOFT/CANVAS are both pale near-white tints - too close to
             each other (and to feedPostCard's own translucent white) for the
@@ -465,7 +450,7 @@ export default function FeedScreen() {
             fading smoothly to nothing) reads as an actual glow; a flat-
             opacity circle just looked like a plain tinted disc with a hard
             edge. */}
-        <Svg style={styles.glowTopRight} width={320} height={320} pointerEvents="none">
+        <Svg style={styles.glowTopRight} width={320} height={320}>
           <Defs>
             <RadialGradient id="glowTeal" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor={EMERALD} stopOpacity={0.55} />
@@ -474,7 +459,7 @@ export default function FeedScreen() {
           </Defs>
           <Circle cx={160} cy={160} r={160} fill="url(#glowTeal)" />
         </Svg>
-        <Svg style={styles.glowBottomLeft} width={300} height={300} pointerEvents="none">
+        <Svg style={styles.glowBottomLeft} width={300} height={300}>
           <Defs>
             <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor="#2AB4DB" stopOpacity={0.45} />
@@ -483,36 +468,44 @@ export default function FeedScreen() {
           </Defs>
           <Circle cx={150} cy={150} r={150} fill="url(#glowBlue)" />
         </Svg>
-
-        <View
-          onLayout={(e) => {
-            const measured = e.nativeEvent.layout.height;
-            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
-          }}
-        >
-          <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-            <Text style={styles.headerTitle}>{headerTitleText}</Text>
-            <CurrencyBalanceButton variant="outline" />
-          </View>
-
-          {/* Composer moved back into the hero alongside "Home"/currency -
-              per feedback it should recede with them, not scroll as
-              foreground content the way posts/widgets/caught-up do. */}
-          {canPost && (
-            <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-              <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-              <Text style={styles.composerPlaceholder} numberOfLines={1}>
-                {t('feed.composer_placeholder', 'Share a photo...')}
-              </Text>
-              <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-                <PhotoIcon />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          )}
-        </View>
       </Animated.View>
 
       <View style={styles.outerWrap}>{homeContent}</View>
+
+      {/* "Home", the currency button, and the composer - a SEPARATE overlay
+          from bgLayer, not full-screen (sized to just this content), and
+          painted with a higher zIndex than the scrolling list below. That's
+          what makes the composer/currency button reliably tappable: RN hit-
+          tests by paint order, and since this overlay only covers the small
+          top slice of the screen it actually uses (not the whole screen the
+          way bgLayer/the list do), it never sits over any of the list below
+          it, so nothing here can block scrolling further down. Shares
+          bgLayer's exact opacity/translateY so it recedes/fades in lockstep
+          with the background behind it. */}
+      <Animated.View
+        style={[styles.heroContent, { opacity: bgOpacity, transform: [{ translateY: bgTranslateY }] }]}
+        onLayout={(e) => {
+          const measured = e.nativeEvent.layout.height;
+          if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+        }}
+      >
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <Text style={styles.headerTitle}>{headerTitleText}</Text>
+          <CurrencyBalanceButton variant="outline" />
+        </View>
+
+        {canPost && (
+          <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+            <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+            <Text style={styles.composerPlaceholder} numberOfLines={1}>
+              {t('feed.composer_placeholder', 'Share a photo...')}
+            </Text>
+            <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+              <PhotoIcon />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -569,6 +562,20 @@ const styles = StyleSheet.create({
   // screen, painted above bgLayer via explicit zIndex/elevation (matching
   // AdminDashboard.tsx's scrollFlex) rather than relying on JSX order alone.
   outerWrap: { flex: 1, zIndex: 1, elevation: 1 },
+
+  // Deliberately NOT full-screen (no bottom:0) - only as tall as its own
+  // content (header + composer), unlike bgLayer/outerWrap. zIndex above
+  // both of them so it's always the real touch target for its own taps,
+  // and being short means it never physically overlaps the list further
+  // down the screen, so it can't block scrolling there either.
+  heroContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    elevation: 2,
+  },
 
   composer: {
     flexDirection: 'row',
