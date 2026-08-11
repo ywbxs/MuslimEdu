@@ -8,7 +8,6 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,18 +46,17 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// Same parallax technique as DashboardShell.tsx/AdminDashboard.tsx: the
-// header sits behind the scrollable content (position:'absolute', lower in
-// paint order) and recedes at half the scroll speed while fading out, so it
-// reads as a background layer the feed scrolls "past" rather than a header
-// that just scrolls away at the same 1:1 rate as everything else.
-const HEADER_HEIGHT = 92;
-const PARALLAX_FACTOR = 0.5;
-
-// Cast needed because Animated.createAnimatedComponent widens FlatList's
-// prop/ref types - this keeps `listRef.current?.scrollToOffset(...)` and
-// the `<DeckItem>` generic working exactly like the plain FlatList did.
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
+// The header + composer used to be a position:'absolute' layer with its own
+// parallax translate/opacity (same technique as DashboardShell.tsx's hero),
+// meant to sit BEHIND the scrolling feed. On Android, an animated transform
+// can promote a view to its own compositing layer and paint it above later
+// siblings regardless of JSX order (see AdminDashboard.tsx's bgLayer zIndex
+// fix for the same issue) - here that meant the header and composer stayed
+// visibly floating on top of the post list underneath them instead of
+// scrolling away or receding behind it. Simplest fix that can't regress the
+// same way again: no absolute positioning or animated transforms at all -
+// header and composer are now the FlatList's own ListHeaderComponent, so
+// they're ordinary scrolling content like every post below them.
 
 // ---- Inline icons (react-native-svg) --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
@@ -118,20 +116,6 @@ export default function FeedScreen() {
 
   // --- Home feed (the actual posts), vertical -----------------------
   const listRef = useRef<FlatList<DeckItem>>(null);
-
-  // Parallax header - see HEADER_HEIGHT's comment above.
-  const [headerHeight, setHeaderHeight] = useState(HEADER_HEIGHT);
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, headerHeight],
-    outputRange: [0, -headerHeight * PARALLAX_FACTOR],
-    extrapolate: 'clamp',
-  });
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, headerHeight * 0.6, headerHeight],
-    outputRange: [1, 1, 0],
-    extrapolate: 'clamp',
-  });
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -331,13 +315,19 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
-  const homeContent = (
+  // Ordinary scrolling content now, as the FlatList's own ListHeaderComponent
+  // - see the comment near the top of this file for why that replaced the
+  // previous position:'absolute' + parallax approach.
+  const listHeader = (
     <>
-      {/* Scrolls at the feed's own normal speed (not tied to the header's
-          parallax translate/fade) - at rest it sits right over the gradient
-          background like the header does, then scrolls away with everything
-          else as a normal list item once you scroll, instead of receding
-          and fading in lockstep with the title/currency balance. */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.headerTitle}>{headerTitleText}</Text>
+        <View style={styles.headerActions}>
+          <LanguageSwitcherButton />
+          <CurrencyBalanceButton />
+        </View>
+      </View>
+
       {canPost && (
         <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
           <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
@@ -349,68 +339,70 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       )}
-
-      <View style={styles.deckWrap}>
-        {loading ? (
-          <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
-            <PostCardSkeleton withImage style={styles.feedPostCard} />
-            <PostCardSkeleton style={styles.feedPostCard} />
-            <PostCardSkeleton withImage style={styles.feedPostCard} />
-          </View>
-        ) : (
-          <AnimatedFlatList
-            ref={listRef}
-            data={deckData}
-            keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-            scrollEventThrottle={16}
-            onEndReached={onEndReached}
-            onEndReachedThreshold={0.5}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            renderItem={({ item }) =>
-              item.kind === 'caughtUp' ? (
-                <CaughtUpCard visible={caughtUpVisible} />
-              ) : item.kind === 'widgets' ? (
-                <WidgetCarousel />
-              ) : (
-                <PostCard
-                  post={item.post}
-                  onToggleLike={handleToggleLike}
-                  onPressComment={handleComment}
-                  onPressRepost={handleRepost}
-                  onDelete={handleDelete}
-                  onEdit={handleEdit}
-                  onChangePrivacy={handleChangePrivacy}
-                  onPressAuthor={setProfileUserId}
-                  onPressImage={(images, imgIndex) =>
-                    (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
-                  }
-                  containerStyle={styles.feedPostCard}
-                  edgeToEdgeImages
-                  edgeToEdgeInset={16}
-                />
-              )
-            }
-            ListFooterComponent={
-              loadingMore ? (
-                <View style={styles.footerLoading}>
-                  <ActivityIndicator color={EMERALD} />
-                </View>
-              ) : null
-            }
-            ListEmptyComponent={
-              <View style={styles.centerFill}>
-                <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
-              </View>
-            }
-          />
-        )}
-      </View>
     </>
+  );
+
+  const homeContent = (
+    <View style={styles.deckWrap}>
+      {loading ? (
+        <View style={[styles.skeletonStack, { paddingBottom: tabBarHeight }]}>
+          {listHeader}
+          <PostCardSkeleton withImage style={styles.feedPostCard} />
+          <PostCardSkeleton style={styles.feedPostCard} />
+          <PostCardSkeleton withImage style={styles.feedPostCard} />
+        </View>
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={deckData}
+          keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + tabBarHeight }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.5}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          ListHeaderComponent={listHeader}
+          renderItem={({ item }) =>
+            item.kind === 'caughtUp' ? (
+              <CaughtUpCard visible={caughtUpVisible} />
+            ) : item.kind === 'widgets' ? (
+              <WidgetCarousel />
+            ) : (
+              <PostCard
+                post={item.post}
+                onToggleLike={handleToggleLike}
+                onPressComment={handleComment}
+                onPressRepost={handleRepost}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onChangePrivacy={handleChangePrivacy}
+                onPressAuthor={setProfileUserId}
+                onPressImage={(images, imgIndex) =>
+                  (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
+                }
+                containerStyle={styles.feedPostCard}
+                edgeToEdgeImages
+                edgeToEdgeInset={16}
+              />
+            )
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={EMERALD} />
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.centerFill}>
+              <Text style={styles.emptyText}>{t('feed.empty', 'No posts yet. Be the first to share something!')}</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 
   return (
@@ -421,33 +413,7 @@ export default function FeedScreen() {
         end={{ x: 0.7, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      {/* Parallax header - sits behind the feed (position:'absolute', lower
-          in paint order than outerWrap below), receding at half the feed's
-          scroll speed and fading out as you scroll, same technique as
-          DashboardShell.tsx's hero. outerWrap's paddingTop below holds it
-          at its resting spot; the header's own translateY/opacity only
-          affect how it looks, not the feed's layout. */}
-      <Animated.View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + 12, opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
-        ]}
-        onLayout={(e) => {
-          const measured = e.nativeEvent.layout.height;
-          if (Math.abs(measured - headerHeight) > 1) setHeaderHeight(measured);
-        }}
-        pointerEvents="box-none"
-      >
-        <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle}>{headerTitleText}</Text>
-          <View style={styles.headerActions}>
-            <LanguageSwitcherButton />
-            <CurrencyBalanceButton />
-          </View>
-        </View>
-      </Animated.View>
-
-      <View style={[styles.outerWrap, { paddingTop: headerHeight }]}>{homeContent}</View>
+      <View style={styles.outerWrap}>{homeContent}</View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -466,17 +432,11 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
   headerTitle: { fontSize: 34, fontWeight: '800', color: INK, letterSpacing: -0.5 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
