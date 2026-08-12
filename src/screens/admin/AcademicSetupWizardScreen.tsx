@@ -97,6 +97,20 @@ function BuildingIcon() {
   );
 }
 
+function SparkleIcon({ size = 40 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"
+        stroke={EMERALD}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+      />
+      <Circle cx={19} cy={5} r={1.4} fill={EMERALD} />
+    </Svg>
+  );
+}
+
 // Bento-style selectable tile - replaces a vertical list of radio rows with
 // a 2-column grid of big, tappable cards. Same selection state/handler as
 // before (onPress just flips whichever useState the caller passes in) -
@@ -129,6 +143,7 @@ export default function AcademicSetupWizardScreen() {
   const { t } = useLocale();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SetupStatus | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -344,6 +359,50 @@ export default function AcademicSetupWizardScreen() {
         <GlassBackground variant="canvas" />
         <View style={styles.centerLoading}>
           <ActivityIndicator color={EMERALD} size="large" />
+        </View>
+      </View>
+    );
+  }
+
+  // One-time orientation before the stepper itself - the wizard used to
+  // appear cold the instant a newly-approved admin's first login landed on
+  // AdminDashboard, no framing at all. Local-only state (not persisted) -
+  // it only needs to survive this single mount, not a relaunch, since
+  // dismissing it just reveals step 0 of the same already-loaded wizard.
+  if (showWelcome) {
+    return (
+      <View style={styles.flex}>
+        <GlassBackground variant="canvas" />
+        <View style={styles.welcomeWrap}>
+          <View style={styles.welcomeIconWrap}>
+            <SparkleIcon />
+          </View>
+          <Text style={styles.welcomeTitle}>
+            {t('academic_setup_wizard.welcome_title', 'Welcome to MuslimEdu!')}
+          </Text>
+          <Text style={styles.welcomeBody}>
+            {t(
+              'academic_setup_wizard.welcome_body',
+              '{school} has been approved. Let’s get it set up - just a few quick steps before your Admin, Teacher, and Student portals go live.',
+            ).replace('{school}', status.school.name || t('academic_setup_wizard.welcome_school_fallback', 'Your school'))}
+          </Text>
+
+          <GlassCard surface="light" radius={RADIUS.lg} style={styles.welcomePreviewCard}>
+            {STEP_LABELS.map((step_, i) => (
+              <View key={step_.key} style={styles.welcomePreviewRow}>
+                <View style={styles.welcomePreviewDot}>
+                  <Text style={styles.welcomePreviewDotText}>{i + 1}</Text>
+                </View>
+                <Text style={styles.welcomePreviewLabel}>{t(`academic_setup_wizard.step_${step_.key}`, step_.label)}</Text>
+              </View>
+            ))}
+          </GlassCard>
+
+          <GlassButton
+            label={t('academic_setup_wizard.get_started', 'Get Started')}
+            onPress={() => setShowWelcome(false)}
+            style={styles.welcomeButton}
+          />
         </View>
       </View>
     );
@@ -677,4 +736,30 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingBottom: 4 },
   backButton: { flex: 1 },
   nextButton: { flex: 2 },
+
+  welcomeWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  welcomeIconWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  welcomeTitle: { fontSize: 24, fontWeight: '800', color: INK, textAlign: 'center', marginBottom: 10 },
+  welcomeBody: { fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
+  welcomePreviewCard: { width: '100%', marginBottom: 28 },
+  welcomePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  welcomePreviewDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomePreviewDotText: { fontSize: 11.5, fontWeight: '800', color: BRAND.emeraldDeep },
+  welcomePreviewLabel: { fontSize: 14, fontWeight: '600', color: INK },
+  welcomeButton: { width: '100%' },
 });
