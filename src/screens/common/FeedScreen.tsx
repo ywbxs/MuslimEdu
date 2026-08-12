@@ -382,7 +382,7 @@ export default function FeedScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
-          <LanguageSwitcherButton />
+          <LanguageSwitcherButton variant="pill" />
           <CurrencyBalanceButton />
         </View>
       </View>
