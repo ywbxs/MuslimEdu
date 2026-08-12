@@ -470,7 +470,7 @@ export default function LoginScreen() {
               <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
               <Text style={styles.topbarTitle}>MuslimEdu</Text>
               <View style={{ flex: 1 }} />
-              <LanguageSwitcherButton />
+              <LanguageSwitcherButton variant="pill" />
             </View>
           ) : (
             <View style={styles.topbar}>
