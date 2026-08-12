@@ -136,7 +136,18 @@ async function postJson(path: string, body: Record<string, any>, token: string) 
  */
 async function describeNetworkError(url: string, err: unknown): Promise<Error> {
   const raw = err instanceof Error ? err.message : String(err);
-  console.error('[schoolRegistrationService] network failure', { url, error: err });
+  // Logging the raw Error object prints "{}" - Error's message/stack/name
+  // are non-enumerable and don't survive RN LogBox's serialization. Pull
+  // out the fields that actually matter (including `cause`, which is
+  // where a native TLS/socket error sometimes ends up) into a plain
+  // object instead.
+  console.error('[schoolRegistrationService] network failure', {
+    url,
+    name: err instanceof Error ? err.name : typeof err,
+    message: raw,
+    cause: err instanceof Error ? (err as any).cause : undefined,
+    stack: err instanceof Error ? err.stack : undefined,
+  });
 
   let netState: NetInfoState | null = null;
   try {
