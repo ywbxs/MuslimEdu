@@ -54,6 +54,11 @@ jobs:
       - name: Copy Firebase config (Cloud Messaging)
         run: cp source-files/android-config/google-services.json MuslimEdu/android/app/google-services.json
 
+      - name: Copy custom fonts
+        run: |
+          mkdir -p MuslimEdu/android/app/src/main/assets/fonts
+          cp source-files/android-fonts/*.ttf MuslimEdu/android/app/src/main/assets/fonts/
+
       - name: Wire up the Google Services Gradle plugin
         run: |
           sed -i '/classpath("com.facebook.react:react-native-gradle-plugin")/a\        classpath("com.google.gms:google-services:4.4.2")' MuslimEdu/android/build.gradle

@@ -739,11 +739,13 @@ const styles = StyleSheet.create({
   hero: { marginTop: 16 },
   title: { fontSize: 34, fontWeight: '800', color: INK, lineHeight: 39, letterSpacing: -0.5 },
   titleGreen: { color: ACCENT },
-  // Approximates the mockup's Playfair Display italic flourish on "upon
-  // you!" using the system italic - RN would need a bundled custom font
-  // family (+ native linking) for the real serif face, not worth the CI/
-  // native-build overhead for one accent word.
-  titleAccentItalic: { color: ACCENT, fontStyle: 'italic' },
+  // The mockup's Playfair Display italic flourish on "upon you!" - see
+  // android-fonts/README.md for how this .ttf gets into the build.
+  // fontWeight is pinned to '400' (not inherited '800' from titleCompact)
+  // because this asset is a single fixed-weight (600) instance; letting a
+  // heavier requested weight through would make Android look for a
+  // "PlayfairDisplay-SemiBoldItalic-Bold" variant that doesn't exist.
+  titleAccentItalic: { color: ACCENT, fontFamily: 'PlayfairDisplay-SemiBoldItalic', fontWeight: '400' },
 
   heroRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 10 },
   heroTextCol: { flex: 1 },
