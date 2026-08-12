@@ -109,7 +109,7 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E927E" translucent />
+      <StatusBar barStyle="light-content" translucent />
 
       {/* Base + drifting gradient background */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>

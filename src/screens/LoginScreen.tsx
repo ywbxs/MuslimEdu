@@ -453,7 +453,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="dark-content" translucent />
       <LinearGradient
         colors={[CANVAS_SOFT, CANVAS]}
         start={{ x: 0.3, y: 0 }}
