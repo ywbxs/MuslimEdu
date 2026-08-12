@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,8 +51,44 @@ const INSTITUTION_OPTIONS: InstitutionOption[] = [
   { id: 5, type: 'orphanage', name: 'Orphan School' },
 ];
 
+// Every type except "orphanage" gets the same full academic toolkit -
+// classes, gradebook, exams, fees, enrollment (see ACADEMIC_ROUTES /
+// isOrphanSchoolUser in utils/orphanSchool.ts, the actual source of truth
+// this list has to stay honest to). Markaz is the one exception that adds
+// something on top (Quran/Hifz tracking is gated to markaz only - see
+// isQuranTrackingSchoolUser). Orphan School swaps the whole academic
+// module out for orphan-care features instead - it has no class-based
+// curriculum at all.
+const STANDARD_ACADEMIC_FEATURES = [
+  'Classes, attendance & gradebook',
+  'Exams, grading & report cards',
+  'Fee collection & student enrollment',
+];
+const INSTITUTION_META: Record<InstitutionType, { tagline: string; features: string[] }> = {
+  mahad: {
+    tagline: 'Islamic seminary or full-time program',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  madrasa: {
+    tagline: 'Part-time or weekend Islamic school',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  markaz: {
+    tagline: 'Community learning center',
+    features: [...STANDARD_ACADEMIC_FEATURES, 'Quran memorization (Hifz) tracking'],
+  },
+  regular_school: {
+    tagline: 'Full curriculum school',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  orphanage: {
+    tagline: 'Orphan care institution - no class-based curriculum',
+    features: ['Orphan child profiles & care records', 'Monthly progress reports from teachers & admin', 'Sponsorship & donor management'],
+  },
+};
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STEP_LABELS = ['School', 'Admin', 'Verify', 'Review'];
+const STEP_LABELS = ['Type', 'School', 'Admin', 'Verify', 'Review'];
 
 interface PickedPhoto {
   uri: string;
@@ -103,6 +141,63 @@ function CameraSmallIcon({ color = '#FFFFFF', size = 16 }: { color?: string; siz
     </Svg>
   );
 }
+function FeatureCheckIcon({ color = BRAND.emerald, size = 14 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={10} fill={color} opacity={0.14} />
+      <Path d="M7.5 12.5l3 3 6-6.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/**
+ * Feature-reveal card shown under the institution-type grid - the whole
+ * point is to answer "what do I actually get" right where the choice is
+ * made, instead of leaving it to be discovered later. Re-plays its
+ * fade/slide-in every time `type` changes (not a one-shot animation) so
+ * switching between tiles keeps feeling responsive rather than static
+ * after the first pick.
+ */
+function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
+  const { t } = useLocale();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    if (!type) return;
+    opacity.setValue(0);
+    translateY.setValue(10);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [type, opacity, translateY]);
+
+  if (!type) {
+    return (
+      <View style={preview.hintCard}>
+        <Text style={preview.hintText}>
+          {t('school_registration.type_hint', 'Pick an institution type above to see what it comes with.')}
+        </Text>
+      </View>
+    );
+  }
+
+  const meta = INSTITUTION_META[type];
+
+  return (
+    <Animated.View style={[preview.card, { opacity, transform: [{ translateY }] }]}>
+      <Text style={preview.tagline}>{t(`school_registration.tagline_${type}`, meta.tagline)}</Text>
+      <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
+      {meta.features.map((feature, i) => (
+        <View key={feature} style={preview.row}>
+          <FeatureCheckIcon />
+          <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
 
 /* ========================= MAIN SCREEN ========================= */
 
@@ -112,24 +207,26 @@ export default function SchoolRegistrationScreen() {
   const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [submitted, setSubmitted] = useState(false);
 
-  // Step 1 - School info
-  const [schoolName, setSchoolName] = useState('');
+  // Step 1 - Institution type
   const [institutionTypeId, setInstitutionTypeId] = useState<number | null>(null);
+
+  // Step 2 - School info
+  const [schoolName, setSchoolName] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
   const [schoolEmail, setSchoolEmail] = useState('');
   const [schoolPhone, setSchoolPhone] = useState('');
 
-  // Step 2 - Admin info
+  // Step 3 - Admin info
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Step 3 - Verification
+  // Step 4 - Verification
   const [idDocument, setIdDocument] = useState<PickedPhoto | null>(null);
   const [selfie, setSelfie] = useState<PickedPhoto | null>(null);
   const [pickingId, setPickingId] = useState(false);
@@ -140,13 +237,14 @@ export default function SchoolRegistrationScreen() {
 
   const institutionType = INSTITUTION_OPTIONS.find((o) => o.id === institutionTypeId)?.type ?? null;
 
-  const step1Valid = schoolName.trim().length > 0 && institutionType !== null;
-  const step2Valid =
+  const step1Valid = institutionType !== null;
+  const step2Valid = schoolName.trim().length > 0;
+  const step3Valid =
     adminName.trim().length > 0 &&
     EMAIL_RE.test(adminEmail.trim()) &&
     password.length >= 8 &&
     password === confirmPassword;
-  const step3Valid = !!idDocument && !!selfie;
+  const step4Valid = !!idDocument && !!selfie;
 
   const pickIdDocument = () => {
     Alert.alert(t('school_registration.id_source_title', 'Upload ID'), undefined, [
@@ -185,8 +283,8 @@ export default function SchoolRegistrationScreen() {
   // this step, not a picture of a picture.
   const captureSelfie = () => capturePhoto('selfie', 'camera');
 
-  const goNext = () => setStep((s) => (Math.min(4, s + 1) as 1 | 2 | 3 | 4));
-  const goBackStep = () => setStep((s) => (Math.max(1, s - 1) as 1 | 2 | 3 | 4));
+  const goNext = () => setStep((s) => (Math.min(5, s + 1) as 1 | 2 | 3 | 4 | 5));
+  const goBackStep = () => setStep((s) => (Math.max(1, s - 1) as 1 | 2 | 3 | 4 | 5));
 
   const submit = async () => {
     if (!institutionType || !idDocument || !selfie || submitting) return;
@@ -256,15 +354,6 @@ export default function SchoolRegistrationScreen() {
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
             <>
-              <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
-              <TextInput
-                style={form.input}
-                value={schoolName}
-                onChangeText={setSchoolName}
-                placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
-                placeholderTextColor={SUBTLE}
-              />
-
               <BentoOptionGrid
                 label={t('school_registration.institution_type', 'Institution Type') + ' *'}
                 options={INSTITUTION_OPTIONS}
@@ -272,6 +361,21 @@ export default function SchoolRegistrationScreen() {
                 onChange={setInstitutionTypeId}
                 icon={(_, color) => <SchoolTypeIcon color={color} />}
                 theme={theme}
+              />
+
+              <InstitutionFeaturePreview type={institutionType} />
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
+              <TextInput
+                style={form.input}
+                value={schoolName}
+                onChangeText={setSchoolName}
+                placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
+                placeholderTextColor={SUBTLE}
               />
 
               <FieldLabel>{t('school_registration.school_address', 'Address')}</FieldLabel>
@@ -307,7 +411,7 @@ export default function SchoolRegistrationScreen() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <FieldLabel required>{t('school_registration.admin_name', 'Your Full Name')}</FieldLabel>
               <TextInput
@@ -364,7 +468,7 @@ export default function SchoolRegistrationScreen() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               <Text style={verify.intro}>
                 {t(
@@ -417,7 +521,7 @@ export default function SchoolRegistrationScreen() {
             </>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <>
               <Text style={verify.sectionTitle}>{t('school_registration.review_school', 'School')}</Text>
               <View style={review.card}>
@@ -450,11 +554,11 @@ export default function SchoolRegistrationScreen() {
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-          {step < 4 ? (
+          {step < 5 ? (
             <GradientButton
               label={t('school_registration.next', 'Next')}
               onPress={goNext}
-              disabled={step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid}
+              disabled={step === 1 ? !step1Valid : step === 2 ? !step2Valid : step === 3 ? !step3Valid : !step4Valid}
             />
           ) : (
             <GradientButton label={t('school_registration.submit', 'Submit Application')} onPress={submit} loading={submitting} />
@@ -524,6 +628,30 @@ const verify = StyleSheet.create({
     paddingVertical: 6,
   },
   retakeBadgeText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
+});
+
+const preview = StyleSheet.create({
+  hintCard: {
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderStyle: 'dashed',
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    marginTop: 16,
+  },
+  hintText: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
+  card: {
+    backgroundColor: COLORS.emeraldSoft,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(43,203,176,0.25)',
+    padding: 16,
+    marginTop: 16,
+  },
+  tagline: { fontSize: 12.5, fontWeight: '600', color: BRAND.emeraldDeep, marginBottom: 8 },
+  title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
 });
 
 const review = StyleSheet.create({
