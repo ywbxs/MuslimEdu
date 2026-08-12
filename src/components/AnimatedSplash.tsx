@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, StatusBar, Easing, useWindowDimensions } from 'react-native';
+import { View, Animated, StyleSheet, Easing, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 
 /* ------------------------------------------------------------------ *
@@ -109,8 +109,6 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" translucent />
-
       {/* Base + drifting gradient background */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
         <Defs>
