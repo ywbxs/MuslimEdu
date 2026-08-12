@@ -778,11 +778,6 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     backgroundColor: SURFACE,
-    shadowColor: '#0B3D2E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
   },
 
   fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
