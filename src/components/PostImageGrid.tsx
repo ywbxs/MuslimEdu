@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Lays out 1-6 images the way most feed apps do:
- *   1 image  -> full width, natural-ish tall rectangle
+ *   1 image  -> full width, 4:3
  *   2 images -> side by side, even split
  *   3 images -> one big on the left, two stacked on the right
  *   4 images -> even 2x2 grid
@@ -57,7 +57,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 1) {
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05) }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 0.75) }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );

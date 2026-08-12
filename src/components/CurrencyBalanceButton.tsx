@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
-import LinearGradient from 'react-native-linear-gradient';
 import { useLocale } from '../context/LocaleContext';
-import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
+import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -51,9 +50,10 @@ export default function CurrencyBalanceButton({
   variant = 'light',
 }: {
   style?: object;
-  // 'light' (default) - solid emerald gradient pill, for a white/light page
-  // background. 'dark' - translucent white pill, for sitting on top of a
-  // dark hero where a solid emerald pill would blend in too much.
+  // 'light' (default) - white pill with an emerald icon/label, matching
+  // LanguageSwitcherButton's pill variant. 'dark' - translucent white pill
+  // with white icon/label, for sitting on top of a dark hero where the
+  // light variant's white-on-white would have no contrast.
   variant?: 'light' | 'dark';
 }) {
   const { t } = useLocale();
@@ -69,15 +69,10 @@ export default function CurrencyBalanceButton({
             <Text style={styles.pillText}>{t('currency_balance.label', '₱0')}</Text>
           </View>
         ) : (
-          <LinearGradient
-            colors={[BRAND.emerald, BRAND.emeraldDeep]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.pill}
-          >
-            <WalletIcon />
-            <Text style={styles.pillText}>{t('currency_balance.label', '₱0')}</Text>
-          </LinearGradient>
+          <View style={styles.pill}>
+            <WalletIcon color={EMERALD} />
+            <Text style={[styles.pillText, styles.pillTextLight]}>{t('currency_balance.label', '₱0')}</Text>
+          </View>
         )}
       </TouchableOpacity>
 
@@ -117,10 +112,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
     ...SHADOW.level1,
   },
   pillDark: { backgroundColor: 'rgba(255,255,255,0.18)' },
   pillText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  pillTextLight: { color: EMERALD },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   backdropTouch: { ...StyleSheet.absoluteFill },

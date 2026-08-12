@@ -734,8 +734,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
   },
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.
