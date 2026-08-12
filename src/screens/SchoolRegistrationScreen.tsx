@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -141,6 +142,30 @@ function CameraSmallIcon({ color = '#FFFFFF', size = 16 }: { color?: string; siz
     </Svg>
   );
 }
+function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function CameraSourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+function LibrarySourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={4} width={18} height={16} rx={2} stroke={color} strokeWidth={1.8} />
+      <Circle cx={8.5} cy={9.5} r={1.6} stroke={color} strokeWidth={1.8} />
+      <Path d="M4 16.5l5-5 4 4 3-3 4 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function FeatureCheckIcon({ color = BRAND.emerald, size = 14 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -235,6 +260,8 @@ export default function SchoolRegistrationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [idSourceSheetVisible, setIdSourceSheetVisible] = useState(false);
+
   const institutionType = INSTITUTION_OPTIONS.find((o) => o.id === institutionTypeId)?.type ?? null;
 
   const step1Valid = institutionType !== null;
@@ -246,12 +273,11 @@ export default function SchoolRegistrationScreen() {
     password === confirmPassword;
   const step4Valid = !!idDocument && !!selfie;
 
-  const pickIdDocument = () => {
-    Alert.alert(t('school_registration.id_source_title', 'Upload ID'), undefined, [
-      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-      { text: t('school_registration.take_photo', 'Take Photo'), onPress: () => capturePhoto('id', 'camera') },
-      { text: t('school_registration.choose_library', 'Choose from Library'), onPress: () => capturePhoto('id', 'library') },
-    ]);
+  const pickIdDocument = () => setIdSourceSheetVisible(true);
+
+  const chooseIdSource = (source: 'camera' | 'library') => {
+    setIdSourceSheetVisible(false);
+    capturePhoto('id', source);
   };
 
   const capturePhoto = async (target: 'id' | 'selfie', source: 'camera' | 'library') => {
@@ -565,6 +591,41 @@ export default function SchoolRegistrationScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <Modal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
+        <View style={sheet.backdrop}>
+          <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
+          <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <View style={sheet.handle} />
+            <View style={sheet.headerRow}>
+              <Text style={sheet.title}>{t('school_registration.id_source_title', 'Upload ID')}</Text>
+              <TouchableOpacity onPress={() => setIdSourceSheetVisible(false)} hitSlop={12} style={sheet.closeBtn}>
+                <CloseIcon />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={sheet.row} activeOpacity={0.7} onPress={() => chooseIdSource('camera')}>
+              <View style={sheet.iconWrap}>
+                <CameraSourceIcon />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={sheet.rowLabel}>{t('school_registration.take_photo', 'Take Photo')}</Text>
+                <Text style={sheet.rowDesc}>{t('school_registration.take_photo_desc', 'Use your camera right now')}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={sheet.row} activeOpacity={0.7} onPress={() => chooseIdSource('library')}>
+              <View style={sheet.iconWrap}>
+                <LibrarySourceIcon />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={sheet.rowLabel}>{t('school_registration.choose_library', 'Choose from Library')}</Text>
+                <Text style={sheet.rowDesc}>{t('school_registration.choose_library_desc', 'Pick an existing photo')}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -652,6 +713,26 @@ const preview = StyleSheet.create({
   title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
+});
+
+const sheet = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
+  backdropTouch: { flex: 1 },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginBottom: 14 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  title: { fontSize: 17, fontWeight: '800', color: INK },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.canvas, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: BORDER },
+  iconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { fontSize: 15, fontWeight: '700', color: INK },
+  rowDesc: { fontSize: 12, color: SUBTLE, marginTop: 2 },
 });
 
 const review = StyleSheet.create({
