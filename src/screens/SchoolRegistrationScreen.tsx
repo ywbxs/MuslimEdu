@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Animated,
+  Easing,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,8 +52,44 @@ const INSTITUTION_OPTIONS: InstitutionOption[] = [
   { id: 5, type: 'orphanage', name: 'Orphan School' },
 ];
 
+// Every type except "orphanage" gets the same full academic toolkit -
+// classes, gradebook, exams, fees, enrollment (see ACADEMIC_ROUTES /
+// isOrphanSchoolUser in utils/orphanSchool.ts, the actual source of truth
+// this list has to stay honest to). Markaz is the one exception that adds
+// something on top (Quran/Hifz tracking is gated to markaz only - see
+// isQuranTrackingSchoolUser). Orphan School swaps the whole academic
+// module out for orphan-care features instead - it has no class-based
+// curriculum at all.
+const STANDARD_ACADEMIC_FEATURES = [
+  'Classes, attendance & gradebook',
+  'Exams, grading & report cards',
+  'Fee collection & student enrollment',
+];
+const INSTITUTION_META: Record<InstitutionType, { tagline: string; features: string[] }> = {
+  mahad: {
+    tagline: 'Islamic seminary or full-time program',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  madrasa: {
+    tagline: 'Part-time or weekend Islamic school',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  markaz: {
+    tagline: 'Community learning center',
+    features: [...STANDARD_ACADEMIC_FEATURES, 'Quran memorization (Hifz) tracking'],
+  },
+  regular_school: {
+    tagline: 'Full curriculum school',
+    features: STANDARD_ACADEMIC_FEATURES,
+  },
+  orphanage: {
+    tagline: 'Orphan care institution - no class-based curriculum',
+    features: ['Orphan child profiles & care records', 'Monthly progress reports from teachers & admin', 'Sponsorship & donor management'],
+  },
+};
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STEP_LABELS = ['School', 'Admin', 'Verify', 'Review'];
+const STEP_LABELS = ['Type', 'School', 'Admin', 'Verify', 'Review'];
 
 interface PickedPhoto {
   uri: string;
@@ -103,6 +142,87 @@ function CameraSmallIcon({ color = '#FFFFFF', size = 16 }: { color?: string; siz
     </Svg>
   );
 }
+function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function CameraSourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+function LibrarySourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={4} width={18} height={16} rx={2} stroke={color} strokeWidth={1.8} />
+      <Circle cx={8.5} cy={9.5} r={1.6} stroke={color} strokeWidth={1.8} />
+      <Path d="M4 16.5l5-5 4 4 3-3 4 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function FeatureCheckIcon({ color = BRAND.emerald, size = 14 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={10} fill={color} opacity={0.14} />
+      <Path d="M7.5 12.5l3 3 6-6.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/**
+ * Feature-reveal card shown under the institution-type grid - the whole
+ * point is to answer "what do I actually get" right where the choice is
+ * made, instead of leaving it to be discovered later. Re-plays its
+ * fade/slide-in every time `type` changes (not a one-shot animation) so
+ * switching between tiles keeps feeling responsive rather than static
+ * after the first pick.
+ */
+function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
+  const { t } = useLocale();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    if (!type) return;
+    opacity.setValue(0);
+    translateY.setValue(10);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [type, opacity, translateY]);
+
+  if (!type) {
+    return (
+      <View style={preview.hintCard}>
+        <Text style={preview.hintText}>
+          {t('school_registration.type_hint', 'Pick an institution type above to see what it comes with.')}
+        </Text>
+      </View>
+    );
+  }
+
+  const meta = INSTITUTION_META[type];
+
+  return (
+    <Animated.View style={[preview.card, { opacity, transform: [{ translateY }] }]}>
+      <Text style={preview.tagline}>{t(`school_registration.tagline_${type}`, meta.tagline)}</Text>
+      <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
+      {meta.features.map((feature, i) => (
+        <View key={feature} style={preview.row}>
+          <FeatureCheckIcon />
+          <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
 
 /* ========================= MAIN SCREEN ========================= */
 
@@ -112,24 +232,26 @@ export default function SchoolRegistrationScreen() {
   const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [submitted, setSubmitted] = useState(false);
 
-  // Step 1 - School info
-  const [schoolName, setSchoolName] = useState('');
+  // Step 1 - Institution type
   const [institutionTypeId, setInstitutionTypeId] = useState<number | null>(null);
+
+  // Step 2 - School info
+  const [schoolName, setSchoolName] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
   const [schoolEmail, setSchoolEmail] = useState('');
   const [schoolPhone, setSchoolPhone] = useState('');
 
-  // Step 2 - Admin info
+  // Step 3 - Admin info
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Step 3 - Verification
+  // Step 4 - Verification
   const [idDocument, setIdDocument] = useState<PickedPhoto | null>(null);
   const [selfie, setSelfie] = useState<PickedPhoto | null>(null);
   const [pickingId, setPickingId] = useState(false);
@@ -138,22 +260,24 @@ export default function SchoolRegistrationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [idSourceSheetVisible, setIdSourceSheetVisible] = useState(false);
+
   const institutionType = INSTITUTION_OPTIONS.find((o) => o.id === institutionTypeId)?.type ?? null;
 
-  const step1Valid = schoolName.trim().length > 0 && institutionType !== null;
-  const step2Valid =
+  const step1Valid = institutionType !== null;
+  const step2Valid = schoolName.trim().length > 0;
+  const step3Valid =
     adminName.trim().length > 0 &&
     EMAIL_RE.test(adminEmail.trim()) &&
     password.length >= 8 &&
     password === confirmPassword;
-  const step3Valid = !!idDocument && !!selfie;
+  const step4Valid = !!idDocument && !!selfie;
 
-  const pickIdDocument = () => {
-    Alert.alert(t('school_registration.id_source_title', 'Upload ID'), undefined, [
-      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-      { text: t('school_registration.take_photo', 'Take Photo'), onPress: () => capturePhoto('id', 'camera') },
-      { text: t('school_registration.choose_library', 'Choose from Library'), onPress: () => capturePhoto('id', 'library') },
-    ]);
+  const pickIdDocument = () => setIdSourceSheetVisible(true);
+
+  const chooseIdSource = (source: 'camera' | 'library') => {
+    setIdSourceSheetVisible(false);
+    capturePhoto('id', source);
   };
 
   const capturePhoto = async (target: 'id' | 'selfie', source: 'camera' | 'library') => {
@@ -185,8 +309,8 @@ export default function SchoolRegistrationScreen() {
   // this step, not a picture of a picture.
   const captureSelfie = () => capturePhoto('selfie', 'camera');
 
-  const goNext = () => setStep((s) => (Math.min(4, s + 1) as 1 | 2 | 3 | 4));
-  const goBackStep = () => setStep((s) => (Math.max(1, s - 1) as 1 | 2 | 3 | 4));
+  const goNext = () => setStep((s) => (Math.min(5, s + 1) as 1 | 2 | 3 | 4 | 5));
+  const goBackStep = () => setStep((s) => (Math.max(1, s - 1) as 1 | 2 | 3 | 4 | 5));
 
   const submit = async () => {
     if (!institutionType || !idDocument || !selfie || submitting) return;
@@ -256,15 +380,6 @@ export default function SchoolRegistrationScreen() {
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
             <>
-              <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
-              <TextInput
-                style={form.input}
-                value={schoolName}
-                onChangeText={setSchoolName}
-                placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
-                placeholderTextColor={SUBTLE}
-              />
-
               <BentoOptionGrid
                 label={t('school_registration.institution_type', 'Institution Type') + ' *'}
                 options={INSTITUTION_OPTIONS}
@@ -272,6 +387,21 @@ export default function SchoolRegistrationScreen() {
                 onChange={setInstitutionTypeId}
                 icon={(_, color) => <SchoolTypeIcon color={color} />}
                 theme={theme}
+              />
+
+              <InstitutionFeaturePreview type={institutionType} />
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
+              <TextInput
+                style={form.input}
+                value={schoolName}
+                onChangeText={setSchoolName}
+                placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
+                placeholderTextColor={SUBTLE}
               />
 
               <FieldLabel>{t('school_registration.school_address', 'Address')}</FieldLabel>
@@ -300,14 +430,14 @@ export default function SchoolRegistrationScreen() {
                 style={form.input}
                 value={schoolPhone}
                 onChangeText={setSchoolPhone}
-                placeholder="+1 555 123 4567"
+                placeholder="+63 912 345 6789"
                 placeholderTextColor={SUBTLE}
                 keyboardType="phone-pad"
               />
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <FieldLabel required>{t('school_registration.admin_name', 'Your Full Name')}</FieldLabel>
               <TextInput
@@ -334,7 +464,7 @@ export default function SchoolRegistrationScreen() {
                 style={form.input}
                 value={adminPhone}
                 onChangeText={setAdminPhone}
-                placeholder="+1 555 123 4567"
+                placeholder="+63 912 345 6789"
                 placeholderTextColor={SUBTLE}
                 keyboardType="phone-pad"
               />
@@ -364,7 +494,7 @@ export default function SchoolRegistrationScreen() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               <Text style={verify.intro}>
                 {t(
@@ -417,7 +547,7 @@ export default function SchoolRegistrationScreen() {
             </>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <>
               <Text style={verify.sectionTitle}>{t('school_registration.review_school', 'School')}</Text>
               <View style={review.card}>
@@ -450,17 +580,52 @@ export default function SchoolRegistrationScreen() {
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-          {step < 4 ? (
+          {step < 5 ? (
             <GradientButton
               label={t('school_registration.next', 'Next')}
               onPress={goNext}
-              disabled={step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid}
+              disabled={step === 1 ? !step1Valid : step === 2 ? !step2Valid : step === 3 ? !step3Valid : !step4Valid}
             />
           ) : (
             <GradientButton label={t('school_registration.submit', 'Submit Application')} onPress={submit} loading={submitting} />
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <Modal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
+        <View style={sheet.backdrop}>
+          <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
+          <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <View style={sheet.handle} />
+            <View style={sheet.headerRow}>
+              <Text style={sheet.title}>{t('school_registration.id_source_title', 'Upload ID')}</Text>
+              <TouchableOpacity onPress={() => setIdSourceSheetVisible(false)} hitSlop={12} style={sheet.closeBtn}>
+                <CloseIcon />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={sheet.row} activeOpacity={0.7} onPress={() => chooseIdSource('camera')}>
+              <View style={sheet.iconWrap}>
+                <CameraSourceIcon />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={sheet.rowLabel}>{t('school_registration.take_photo', 'Take Photo')}</Text>
+                <Text style={sheet.rowDesc}>{t('school_registration.take_photo_desc', 'Use your camera right now')}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={sheet.row} activeOpacity={0.7} onPress={() => chooseIdSource('library')}>
+              <View style={sheet.iconWrap}>
+                <LibrarySourceIcon />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={sheet.rowLabel}>{t('school_registration.choose_library', 'Choose from Library')}</Text>
+                <Text style={sheet.rowDesc}>{t('school_registration.choose_library_desc', 'Pick an existing photo')}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -524,6 +689,50 @@ const verify = StyleSheet.create({
     paddingVertical: 6,
   },
   retakeBadgeText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
+});
+
+const preview = StyleSheet.create({
+  hintCard: {
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderStyle: 'dashed',
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    marginTop: 16,
+  },
+  hintText: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
+  card: {
+    backgroundColor: COLORS.emeraldSoft,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(43,203,176,0.25)',
+    padding: 16,
+    marginTop: 16,
+  },
+  tagline: { fontSize: 12.5, fontWeight: '600', color: BRAND.emeraldDeep, marginBottom: 8 },
+  title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
+});
+
+const sheet = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
+  backdropTouch: { flex: 1 },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginBottom: 14 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  title: { fontSize: 17, fontWeight: '800', color: INK },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.canvas, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: BORDER },
+  iconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { fontSize: 15, fontWeight: '700', color: INK },
+  rowDesc: { fontSize: 12, color: SUBTLE, marginTop: 2 },
 });
 
 const review = StyleSheet.create({

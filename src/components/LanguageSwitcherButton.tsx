@@ -40,11 +40,17 @@ function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
 }
 
 /**
- * Icon-only quick language switch - English/Arabic today, matching the
- * two languages AccountSettingsScreen's fuller language picker always
- * offers (see LANGUAGE_LABELS there). Self-contained like
- * CurrencyBalanceButton: owns its own modal state, so any screen just
- * drops in <LanguageSwitcherButton /> with no wiring.
+ * Quick language switch - English/Arabic today, matching the two
+ * languages AccountSettingsScreen's fuller language picker always offers
+ * (see LANGUAGE_LABELS there). Self-contained like CurrencyBalanceButton:
+ * owns its own modal state, so any screen just drops in
+ * <LanguageSwitcherButton /> with no wiring.
+ *
+ * Two looks: 'icon' (default) is the small solid-emerald circle used on
+ * the feed header, next to the currency pill. 'pill' is the white
+ * globe+code pill (e.g. "EN") used on the login screen's top bar - same
+ * pill language as CurrencyBalanceButton, just showing the active locale
+ * instead of a balance.
  *
  * Persists the same way AccountSettingsScreen's save does (best-effort -
  * a failed save still flips the in-session locale via refresh(), it just
@@ -52,7 +58,13 @@ function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
  * when the pick flips RTL-ness, since I18nManager only takes full visual
  * effect on the next app launch (see LocaleContext.tsx).
  */
-export default function LanguageSwitcherButton({ style }: { style?: object }) {
+export default function LanguageSwitcherButton({
+  style,
+  variant = 'icon',
+}: {
+  style?: object;
+  variant?: 'icon' | 'pill';
+}) {
   const { token } = useAuth();
   const { locale, isRTL, refresh } = useLocale();
   const [visible, setVisible] = useState(false);
@@ -79,9 +91,16 @@ export default function LanguageSwitcherButton({ style }: { style?: object }) {
 
   return (
     <>
-      <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
-        <GlobeIcon />
-      </TouchableOpacity>
+      {variant === 'pill' ? (
+        <TouchableOpacity style={[styles.pill, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+          <GlobeIcon color={INK} size={18} />
+          <Text style={styles.pillText}>{locale.toUpperCase()}</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+          <GlobeIcon />
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <View style={styles.backdrop}>
@@ -124,6 +143,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOW.level1,
   },
+
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    ...SHADOW.level1,
+  },
+  pillText: { fontSize: 14, fontWeight: '800', color: INK, letterSpacing: 0.3 },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   backdropTouch: { ...StyleSheet.absoluteFill },

@@ -1,3 +1,4 @@
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { API_BASE_URL, absoluteUrl } from '../config/api';
 
 /**
@@ -82,7 +83,7 @@ async function postForm(path: string, form: FormData, token?: string) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Request timed out. Check your connection and try again.');
     }
-    throw err;
+    throw await describeNetworkError(`${API_BASE_URL}${path}`, err);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -110,7 +111,7 @@ async function postJson(path: string, body: Record<string, any>, token: string) 
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Request timed out. Check your connection and try again.');
     }
-    throw err;
+    throw await describeNetworkError(`${API_BASE_URL}${path}`, err);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -120,6 +121,46 @@ async function postJson(path: string, body: Record<string, any>, token: string) 
     throw new Error(data?.message ?? `Request failed (${response.status})`);
   }
   return data;
+}
+
+/**
+ * fetch() throwing means the request never got a response at all - no
+ * status code, nothing to parse - which "Request failed (xxx)" above
+ * can't describe. That's a genuinely different failure class (device
+ * offline, DNS, a broken/expired TLS cert, or the server being down)
+ * than a route/table that exists but errors, so it needs its own
+ * diagnosis: logs the real request + raw error (visible in Metro/logcat
+ * for remote debugging) and tells NetInfo apart from the alternative -
+ * "your device has no internet" vs "your device is online but the
+ * server didn't answer" are different problems with different fixes.
+ */
+async function describeNetworkError(url: string, err: unknown): Promise<Error> {
+  const raw = err instanceof Error ? err.message : String(err);
+  // Logging the raw Error object prints "{}" - Error's message/stack/name
+  // are non-enumerable and don't survive RN LogBox's serialization. Pull
+  // out the fields that actually matter (including `cause`, which is
+  // where a native TLS/socket error sometimes ends up) into a plain
+  // object instead.
+  console.error('[schoolRegistrationService] network failure', {
+    url,
+    name: err instanceof Error ? err.name : typeof err,
+    message: raw,
+    cause: err instanceof Error ? (err as any).cause : undefined,
+    stack: err instanceof Error ? err.stack : undefined,
+  });
+
+  let netState: NetInfoState | null = null;
+  try {
+    netState = await NetInfo.fetch();
+  } catch {
+    // NetInfo itself failing tells us nothing extra - fall through to the
+    // generic message below rather than letting this mask the original error.
+  }
+
+  if (netState && (!netState.isConnected || netState.isInternetReachable === false)) {
+    return new Error(`No internet connection. Check your Wi-Fi or mobile data and try again. (${raw})`);
+  }
+  return new Error(`Could not reach the server. It may be down, or there's a certificate problem. (${raw})`);
 }
 
 function toFilePart(img: PickedRegistrationImage, fallbackName: string) {
