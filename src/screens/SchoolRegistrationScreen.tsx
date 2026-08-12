@@ -430,7 +430,7 @@ export default function SchoolRegistrationScreen() {
                 style={form.input}
                 value={schoolPhone}
                 onChangeText={setSchoolPhone}
-                placeholder="+1 555 123 4567"
+                placeholder="+63 912 345 6789"
                 placeholderTextColor={SUBTLE}
                 keyboardType="phone-pad"
               />
