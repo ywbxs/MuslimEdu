@@ -3,10 +3,11 @@ import { View, Image, StyleSheet, TouchableOpacity, Text, Dimensions } from 'rea
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-// PostCard's image sits inside the card's own padding, which is already
-// inset from the screen by the card's marginHorizontal. Match both so the
-// image never touches or overflows the card's rounded edges.
-const H_PADDING = 16 + 18; // card marginHorizontal + card paddingHorizontal
+// Images bleed edge-to-edge within the card (Facebook/Twitter-style),
+// breaking out of the card's own inner padding - PostCard cancels that
+// padding out (see imageWrap's negative marginHorizontal) so this only
+// needs to match the card's outer gap from the screen.
+const H_PADDING = 16; // card marginHorizontal
 const GRID_WIDTH = SCREEN_WIDTH - H_PADDING * 2;
 const GAP = 3;
 const IMAGE_RADIUS = 18;

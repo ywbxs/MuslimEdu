@@ -715,7 +715,11 @@ const styles = StyleSheet.create({
   time: { fontSize: 12.5, color: SUBTLE },
   dot: { fontSize: 12, color: SUBTLE },
   content: { fontSize: 15.5, color: INK, lineHeight: 22, marginTop: 14 },
-  imageWrap: { marginTop: 12, alignItems: 'center' },
+  // marginHorizontal cancels out the card's own paddingHorizontal (18, see
+  // `card` below) so the image bleeds to the card's edges instead of
+  // sitting inset a second time - matches PostImageGrid's own width calc,
+  // which only accounts for the card's outer marginHorizontal.
+  imageWrap: { marginTop: 12, alignItems: 'center', marginHorizontal: -18 },
   quoteBox: {
     marginTop: 12,
     backgroundColor: CANVAS,
