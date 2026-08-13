@@ -39,16 +39,14 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
     style,
     index,
     overlayCount,
-    resizeMode = 'cover',
   }: {
     uri: string;
     style: any;
     index: number;
     overlayCount?: number;
-    resizeMode?: 'cover' | 'contain';
   }) => (
     <TouchableOpacity activeOpacity={0.9} style={style} onPress={() => tap(index)}>
-      <Image source={{ uri }} style={styles.fill} resizeMode={resizeMode} />
+      <Image source={{ uri }} style={styles.fill} resizeMode="cover" />
       {!!overlayCount && (
         <View style={styles.overlay}>
           <Text style={styles.overlayText}>+{overlayCount}</Text>
@@ -58,14 +56,9 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
-    // 'contain' (not 'cover') - a single image is often a tall graphic/
-    // screenshot rather than an ordinary photo, and cropping its top/
-    // bottom to fill a fixed 4:3 box loses content (see the widget
-    // announcement posts). Letterboxed against `wrap`'s own background
-    // instead of cropped.
     return (
       <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 0.75) }]}>
-        <Tile uri={images[0]} style={styles.fill} index={0} resizeMode="contain" />
+        <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
   }
