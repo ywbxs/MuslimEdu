@@ -715,11 +715,12 @@ const styles = StyleSheet.create({
   time: { fontSize: 12.5, color: SUBTLE },
   dot: { fontSize: 12, color: SUBTLE },
   content: { fontSize: 15.5, color: INK, lineHeight: 22, marginTop: 14 },
-  // marginHorizontal cancels out the card's own paddingHorizontal (18, see
-  // `card` below) so the image bleeds to the card's edges instead of
-  // sitting inset a second time - matches PostImageGrid's own width calc,
-  // which only accounts for the card's outer marginHorizontal.
-  imageWrap: { marginTop: 12, alignItems: 'center', marginHorizontal: -18 },
+  // marginHorizontal cancels out BOTH the card's own paddingHorizontal (18)
+  // AND its outer marginHorizontal from the screen (16, see `card` below),
+  // so the image bleeds all the way to the actual screen edges rather than
+  // stopping at the card's rounded boundary. `card` has no overflow:hidden,
+  // so this overflow isn't clipped - matches PostImageGrid's own width calc.
+  imageWrap: { marginTop: 12, alignItems: 'center', marginHorizontal: -(18 + 16) },
   quoteBox: {
     marginTop: 12,
     backgroundColor: CANVAS,
