@@ -297,28 +297,31 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
-  const homeContent = (
-    <>
-      {canPost && (
-        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-          <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', 'Share a photo...')}
-          </Text>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PhotoIcon />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+  // Scrolls away with the rest of the feed instead of staying pinned above
+  // it - rendered as the list's own ListHeaderComponent below, and reused
+  // above the loading skeleton so it doesn't disappear while posts load.
+  const composer = canPost ? (
+    <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+      <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+      <Text style={styles.composerPlaceholder} numberOfLines={1}>
+        {t('feed.composer_placeholder', 'Share a photo...')}
+      </Text>
+      <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+        <PhotoIcon />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ) : null;
 
-      <View style={styles.deckWrap}>
-        {loading ? (
-          <View style={styles.skeletonStack}>
-            <PostCardSkeleton withImage style={styles.feedPostCard} />
-            <PostCardSkeleton style={styles.feedPostCard} />
-            <PostCardSkeleton withImage style={styles.feedPostCard} />
-          </View>
-        ) : (
+  const homeContent = (
+    <View style={styles.deckWrap}>
+      {loading ? (
+        <View style={styles.skeletonStack}>
+          {composer}
+          <PostCardSkeleton withImage style={styles.feedPostCard} />
+          <PostCardSkeleton style={styles.feedPostCard} />
+          <PostCardSkeleton withImage style={styles.feedPostCard} />
+        </View>
+      ) : (
           <FlatList
             ref={listRef}
             data={deckData}
@@ -326,6 +329,7 @@ export default function FeedScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
+            ListHeaderComponent={composer}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.5}
             onViewableItemsChanged={onViewableItemsChanged}
@@ -367,7 +371,6 @@ export default function FeedScreen() {
           />
         )}
       </View>
-    </>
   );
 
   return (
