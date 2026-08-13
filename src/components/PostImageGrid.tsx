@@ -9,7 +9,9 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 // negative marginHorizontal, so there's nothing left to reserve here.
 const GRID_WIDTH = SCREEN_WIDTH;
 const GAP = 3;
-const IMAGE_RADIUS = 18;
+// Flush with the screen edges now (see GRID_WIDTH above), so rounding the
+// corners would look like a mistake rather than a card - straight edges.
+const IMAGE_RADIUS = 0;
 // A single image's box follows its own natural aspect ratio (see below)
 // rather than a fixed crop - this only bounds how tall that can get, so a
 // portrait screenshot/poster can't push the rest of the feed off-screen.
