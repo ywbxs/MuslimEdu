@@ -13,8 +13,9 @@ import {
   PrayerLocation,
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
+import { RADIUS, SHADOW } from '../../theme/glass';
 import { Skeleton, SkeletonCircle } from '../Skeleton';
-import { useWidgetCardMetrics } from './widgetCarouselMetrics';
+import { ROW_HEIGHT, useWidgetCardMetrics } from './widgetCarouselMetrics';
 
 const GRADIENT_TOP = '#0F3D2E';
 const GRADIENT_BOTTOM = '#062318';
@@ -167,14 +168,15 @@ export default function PrayerTimesCard({ token }: { token: string }) {
 }
 
 const styles = StyleSheet.create({
+  // Same radius, shadow, and fixed height as AnnouncementImageCard
+  // (WidgetCarousel.tsx) so every card in the row reads as one family,
+  // regardless of which state (loading/error/loaded) this one is in.
   card: {
-    borderRadius: 22,
+    height: ROW_HEIGHT,
+    justifyContent: 'center',
+    borderRadius: RADIUS.lg,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...SHADOW.level2,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   iconBox: {

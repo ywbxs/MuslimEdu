@@ -5,9 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchActiveWidgetAnnouncements, WidgetAnnouncement } from '../../services/widgetAnnouncementService';
 import { RADIUS, SHADOW } from '../../theme/glass';
 import PrayerTimesCard from './PrayerTimesCard';
-import { useWidgetCardMetrics, EDGE, GAP, END_PAD } from './widgetCarouselMetrics';
-
-const ROW_HEIGHT = 210;
+import { useWidgetCardMetrics, EDGE, GAP, END_PAD, ROW_HEIGHT } from './widgetCarouselMetrics';
 
 type WidgetItem = { kind: 'prayer' } | { kind: 'announcement'; announcement: WidgetAnnouncement };
 
