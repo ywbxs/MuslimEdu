@@ -147,20 +147,13 @@ export default function PrayerTimesCard({ token }: { token: string }) {
           </View>
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.title}>Currently {next.current.name}</Text>
-            <Text style={styles.subtitle}>{result.gregorianLabel}</Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              Next {next.next.name} · {next.next.timeLabel} · {formatCountdown(next.msRemaining)}
+            </Text>
           </View>
           <View style={styles.arrowCircle}>
             <ArrowRightIcon />
           </View>
-        </View>
-
-        <View style={styles.hero}>
-          <Text style={styles.heroLabel}>Next Prayer</Text>
-          <View style={styles.heroRow}>
-            <Text style={styles.heroName}>{next.next.name}</Text>
-            <Text style={styles.heroTime}>{next.next.timeLabel}</Text>
-          </View>
-          <Text style={styles.countdown}>{formatCountdown(next.msRemaining)}</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -197,11 +190,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  hero: { marginTop: 16, alignItems: 'center', paddingVertical: 10 },
-  heroLabel: { fontSize: 11, color: FAINT, textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
-  heroName: { fontSize: 24, fontWeight: '800', color: WHITE },
-  heroTime: { fontSize: 15, color: FAINT, fontWeight: '600' },
-  countdown: { fontSize: 13, color: WHITE, fontWeight: '700', marginTop: 8, letterSpacing: 1 },
 });

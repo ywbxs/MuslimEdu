@@ -21,7 +21,7 @@ export const GAP = 12;
 export const END_PAD = 16;
 // Shared by every card in the row (PrayerTimesCard, AnnouncementImageCard)
 // so they all read as the same widget family regardless of their own content.
-export const ROW_HEIGHT = 210;
+export const ROW_HEIGHT = 105;
 
 export function useWidgetCardMetrics() {
   const { width: screenW } = useWindowDimensions();
