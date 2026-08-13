@@ -8,7 +8,6 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   Animated,
-  StatusBar,
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -72,7 +71,6 @@ export default function ImageViewerScreen() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar hidden />
       <FlatList
         ref={listRef}
         data={images}
