@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 // PostCard's image sits inside the card's own padding, which is already
 // inset from the screen by the card's marginHorizontal. Match both so the
 // image never touches or overflows the card's rounded edges.
@@ -9,6 +10,10 @@ const H_PADDING = 16 + 18; // card marginHorizontal + card paddingHorizontal
 const GRID_WIDTH = SCREEN_WIDTH - H_PADDING * 2;
 const GAP = 3;
 const IMAGE_RADIUS = 18;
+// A single image's box follows its own natural aspect ratio (see below)
+// rather than a fixed crop - this only bounds how tall that can get, so a
+// portrait screenshot/poster can't push the rest of the feed off-screen.
+const DEFAULT_MAX_SINGLE_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.85;
 
 interface Props {
   images: string[];
@@ -22,13 +27,42 @@ interface Props {
 
 /**
  * Lays out 1-6 images the way most feed apps do:
- *   1 image  -> full width, 4:3
+ *   1 image  -> full width, natural aspect ratio (capped height)
  *   2 images -> side by side, even split
  *   3 images -> one big on the left, two stacked on the right
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = DEFAULT_MAX_SINGLE_IMAGE_HEIGHT, width }: Props) {
+  // A single image shows at its real proportions instead of being cropped
+  // into a fixed box (like Facebook's own "cover photo" posts) - needs the
+  // source's natural size, which only `Image.getSize` can tell us for a
+  // remote uri. Hooks can't sit after the early-return below, so this runs
+  // unconditionally and just no-ops when there isn't exactly one image.
+  const singleUri = images && images.length === 1 ? images[0] : null;
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!singleUri) {
+      setNaturalRatio(null);
+      return;
+    }
+    setNaturalRatio(null);
+    let cancelled = false;
+    Image.getSize(
+      singleUri,
+      (w, h) => {
+        if (!cancelled && w > 0 && h > 0) setNaturalRatio(h / w);
+      },
+      () => {
+        // Falls back to the 4:3-ish guess below and just stays there.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [singleUri]);
+
   if (!images || images.length === 0) return null;
 
   const W = width ?? GRID_WIDTH;
@@ -56,8 +90,9 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
+    const ratio = naturalRatio ?? 0.75; // 4:3-ish guess until Image.getSize resolves
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 0.75) }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, ratio * W) }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
