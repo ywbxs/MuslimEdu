@@ -30,7 +30,6 @@ import PostCard from '../../components/PostCard';
 import PostCardSkeleton from '../../components/feed/PostCardSkeleton';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
-import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
 import { RADIUS } from '../../theme/glass';
 
@@ -382,7 +381,6 @@ export default function FeedScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
-          <LanguageSwitcherButton variant="pill" />
           <CurrencyBalanceButton />
         </View>
       </View>
