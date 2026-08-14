@@ -439,6 +439,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: 20,
+    // Fixed breathing room between each icon, on top of the flex:1 spacing
+    // tabItem already gives them - see BottomNavBar.tsx (keep in sync).
+    columnGap: 10,
     // No `elevation` here on purpose: this View has no backgroundColor (the
     // fill is the notch Svg behind it), and Android's elevation shadow is
     // cast from the view's rectangular bounds, so it draws a straight shadow

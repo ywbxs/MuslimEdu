@@ -209,6 +209,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: 20,
+    // Fixed breathing room between each icon, on top of the flex:1 spacing
+    // tabItem already gives them - see MainTabs.tsx's TabBar (keep in sync).
+    columnGap: 10,
     // No `elevation` - see MainTabs.tsx's tabBar for why (rectangular
     // Android shadow cutting straight across the notch dip).
     shadowColor: '#0D1E1C',
