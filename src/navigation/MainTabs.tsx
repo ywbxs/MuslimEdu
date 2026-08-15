@@ -140,19 +140,12 @@ const CENTER_ROUTE_CANDIDATES = ['Admission', 'Scan'];
 const ENROLLMENT_GATE_CACHE_KEY = '@enrollment_gate_completed_v1';
 
 // --- Inline tab icons (react-native-svg) ---
-// Active side-tab icons render FILLED instead of outline-only (matching
-// iOS's own filled/outline tab pair convention, e.g. house vs house.fill) -
-// same path reused for both: the door/window notch is already carved into
-// the path's own outline (the same technique the nav bar's own notch uses),
-// so simply filling it instead of stroking it renders correctly with no
-// separate "filled" artwork needed.
-function HomeIcon({ color, filled }: { color: string; filled?: boolean }) {
+function HomeIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"
-        fill={filled ? color : 'none'}
-        stroke={filled ? 'none' : color}
+        stroke={color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
@@ -179,39 +172,34 @@ function ProfileIcon({ color }: { color: string }) {
     </Svg>
   );
 }
-function ChatIcon({ color, filled }: { color: string; filled?: boolean }) {
+function ChatIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z"
-        fill={filled ? color : 'none'}
-        stroke={filled ? 'none' : color}
+        stroke={color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
     </Svg>
   );
 }
-function MenuIcon({ color, filled }: { color: string; filled?: boolean }) {
-  const shared = filled
-    ? { fill: color, stroke: 'none' as const }
-    : { fill: 'none' as const, stroke: color, strokeWidth: 1.9 };
+function MenuIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="4" width="7" height="7" rx="1.6" {...shared} />
-      <Rect x="13" y="4" width="7" height="7" rx="1.6" {...shared} />
-      <Rect x="4" y="13" width="7" height="7" rx="1.6" {...shared} />
-      <Rect x="13" y="13" width="7" height="7" rx="1.6" {...shared} />
+      <Rect x="4" y="4" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
+      <Rect x="13" y="4" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
+      <Rect x="4" y="13" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
+      <Rect x="13" y="13" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
     </Svg>
   );
 }
-function BellIcon({ color, filled }: { color: string; filled?: boolean }) {
+function BellIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
-        fill={filled ? color : 'none'}
-        stroke={filled ? 'none' : color}
+        stroke={color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
@@ -234,14 +222,14 @@ function ScanIcon({ color }: { color: string }) {
   );
 }
 
-const ICONS: Record<string, (color: string, filled?: boolean) => React.ReactElement> = {
-  Home: (c, f) => <HomeIcon color={c} filled={f} />,
+const ICONS: Record<string, (color: string) => React.ReactElement> = {
+  Home: (c) => <HomeIcon color={c} />,
   Admission: (c) => <AdmissionIcon color={c} />,
   MyProgress: (c) => <ProfileIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
-  Chat: (c, f) => <ChatIcon color={c} filled={f} />,
-  Alerts: (c, f) => <BellIcon color={c} filled={f} />,
-  Menu: (c, f) => <MenuIcon color={c} filled={f} />,
+  Chat: (c) => <ChatIcon color={c} />,
+  Alerts: (c) => <BellIcon color={c} />,
+  Menu: (c) => <MenuIcon color={c} />,
 };
 
 // Docked bar attached to the bottom edge of the screen - full width, square
@@ -354,7 +342,7 @@ function TabBar({ state, navigation, isStudent }: any) {
                 scaleTo={0.88}
               >
                 <View style={styles.iconWrap}>
-                  {renderIcon && renderIcon(color, isRouteFocused)}
+                  {renderIcon && renderIcon(color)}
                   {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
                 </View>
               </PressableScale>
