@@ -35,13 +35,16 @@ const CENTER_BTN_BG = '#16211F';
 // edits to the CI workflow files that actually build this app, which
 // don't read package.json directly, and there was no way to verify a
 // native build succeeds from this environment; reverted) - approximated
-// with a translucent white fill instead, same tradeoff every other
-// "glass" surface in this app makes. 60% opacity read as a solid white
-// pill rather than glass - dropped to match the same low-opacity values
-// (7-10%) MonthlyReportsCard.tsx and every other "glass on a hero"
-// surface in this app already use; the border (BAR_STROKE below) is what
-// carries the visible edge at this opacity, not the fill itself.
-const BAR_BG = 'rgba(255,255,255,0.12)';
+// with a translucent fill instead, same tradeoff every other "glass"
+// surface in this app makes. A WHITE fill (even at low opacity) is
+// indistinguishable from a plain white/light screen behind it - there's
+// no color there for it to reveal, so it just reads as solid white
+// regardless of the opacity number. A dark-tinted fill instead gives it a
+// visible cool-gray cast against a light background (the same trick
+// iOS's own "light" blur material uses - it isn't pure white either),
+// while still reading as light/glassy overall, and still shows clear
+// color bleed-through over dark content.
+const BAR_BG = 'rgba(13,30,28,0.07)';
 // Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
 // it stays visible against a similarly light background even with no
 // shadow defining its silhouette - see the no-shadow/elevation note on
