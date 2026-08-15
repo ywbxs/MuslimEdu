@@ -484,6 +484,12 @@ export default function PostCard({
                 width={contentWidth}
                 radius={squareImages ? 0 : undefined}
                 aspectRatio={squareImages ? 3 / 4 : undefined}
+                // PostImageGrid's own maxHeight default (320) is well under
+                // what a 3:4 portrait crop needs at full phone width (~1.33x
+                // width) and would silently clip it back down to a shorter
+                // box. Only lifted for squareImages - every other caller
+                // keeps the 320 default unchanged.
+                maxHeight={squareImages ? 9999 : undefined}
                 onPressImage={(i) => onPressImage?.(post.images, i)}
               />
             </View>
