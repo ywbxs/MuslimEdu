@@ -59,9 +59,16 @@ const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
  * Rounded-rect pill outline with a smooth curved dip at the top-center for
  * the raised button to nest into. Built directly in the bar's own pixel
  * dimensions (no stretched viewBox) so there's no non-uniform scaling to
- * throw the curve or corners off. Both notch curves settle into the apex
- * with a vertical tangent (their control point shares the apex's x) so it
- * reads as a smooth round basin rather than meeting on a flat shelf.
+ * throw the curve or corners off.
+ *
+ * Both notch curves reach the apex with a HORIZONTAL tangent (their control
+ * point shares the apex's own y) - a true rounded minimum, like the bottom
+ * of a parabola. An earlier version gave both curves a control point at the
+ * SAME (x, y) as each other, which put them at exactly opposite tangent
+ * directions right at the apex (one arriving straight down, the other
+ * departing straight up) - mathematically a cusp, not a curve, which
+ * rendered as a visible spike/glitch once the notch was made deep enough
+ * for it to be noticeable.
  */
 function buildBarPath(width: number, height: number): string {
   const r = CORNER_RADIUS;
@@ -69,11 +76,31 @@ function buildBarPath(width: number, height: number): string {
   const left = cx - NOTCH_HALF_WIDTH;
   const right = cx + NOTCH_HALF_WIDTH;
   const armX = NOTCH_HALF_WIDTH * 0.6;
+  const apexArmX = NOTCH_HALF_WIDTH * 0.35;
   return [
     `M ${r},0`,
     `L ${left},0`,
-    `C ${left + armX},0 ${cx},${NOTCH_DEPTH - 14} ${cx},${NOTCH_DEPTH}`,
-    `C ${cx},${NOTCH_DEPTH - 14} ${right - armX},0 ${right},0`,
+    `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
+    `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
+    `L ${width - r},0`,
+    `Q ${width},0 ${width},${r}`,
+    `L ${width},${height - r}`,
+    `Q ${width},${height} ${width - r},${height}`,
+    `L ${r},${height}`,
+    `Q 0,${height} 0,${height - r}`,
+    `L 0,${r}`,
+    `Q 0,0 ${r},0`,
+    'Z',
+  ].join(' ');
+}
+
+/** Plain rounded-rect outline (no notch) - used only for the stroke, so
+ * the visible border traces the pill's outer edge but not the notch
+ * cutout's own curve. */
+function buildOuterRectPath(width: number, height: number): string {
+  const r = CORNER_RADIUS;
+  return [
+    `M ${r},0`,
     `L ${width - r},0`,
     `Q ${width},0 ${width},${r}`,
     `L ${width},${height - r}`,
@@ -200,6 +227,7 @@ export default function BottomNavBar() {
   const bottomInset = Math.max(insets.bottom, 8);
   const barWidth = windowWidth - OUTER_MARGIN_H * 2;
   const barPath = buildBarPath(barWidth, BAR_HEIGHT);
+  const outerRectPath = buildOuterRectPath(barWidth, BAR_HEIGHT);
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   const isTeacherRole = user?.role === 'teacher';
   const isStudentRole = user?.role === 'student';
@@ -232,7 +260,12 @@ export default function BottomNavBar() {
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
         <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1} />
+          {/* Fill (includes the notch cutout shape) and border (plain outer
+              rect, no notch) are two separate paths - a single stroked path
+              would trace the notch's own curve too, giving it a visible
+              outline instead of reading as a clean, un-bordered gap. */}
+          <Path d={barPath} fill={BAR_BG} />
+          <Path d={outerRectPath} fill="none" stroke={BAR_STROKE} strokeWidth={1} />
         </Svg>
         {sideTabs.map((name, i) => {
           const isActive = activeName === name;
