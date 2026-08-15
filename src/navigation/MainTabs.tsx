@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,9 +21,11 @@ import {
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
-// LoginScreen.tsx's own local-palette precedent. Translucent docked bar
-// with a raised circular center button for whichever tab is this role's
-// "primary action" (Admission for admin/superadmin, Scan for teacher).
+// LoginScreen.tsx's own local-palette precedent. Floating pill bar (margin
+// on all sides, not docked edge-to-edge) with a raised circular center
+// button for whichever tab is this role's "primary action" (Admission for
+// admin/superadmin, Scan for teacher), nesting into a curved notch cut into
+// the pill's top edge.
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
@@ -35,27 +37,65 @@ const CENTER_BTN_BG = '#16211F';
 // build succeeds from here) - approximated with a translucent white fill
 // instead, same tradeoff every other "glass" surface in this app makes.
 const BAR_BG = 'rgba(255,255,255,0.6)';
-// Historical note: an earlier version drew a curved "notch" cutout (an SVG
-// Path) for the center button to nest into, with a glass gradient fill and
-// tab icons positioned by hand to dodge the curve. It kept producing bugs -
-// a shadow bleeding into the transparent cutout, icons drifting into the
-// notch's flare - and never fully resolved, so it's gone: the bar is now
-// flat, and a plain flex row is enough since there's no curve left to
-// align around.
-//
-// Geometry here is still COMPUTED, never measured, though - don't
-// reintroduce onLayout for the bar's own sizing.
+
+// Floating pill, not edge-to-edge - margin on all sides instead of docking
+// flush to the screen.
+const OUTER_MARGIN_H = 16;
+const OUTER_MARGIN_BOTTOM = 12;
+const CORNER_RADIUS = 26;
+
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
-const BAR_PADDING_HORIZONTAL = 20;
-// Reserved empty gap between Chat and Alerts for the raised center button to
-// float over. Four tabs evenly spread across the full row (flex:1 each) put
-// Chat and Alerts a full 25% of the row's width apart - a wide empty
-// stretch in the middle with nothing but the button in it, which reads as
-// a "notch" cut into the bar even though there's no actual cutout shape. A
-// dedicated, button-sized gap keeps Chat/Alerts pulled in close to it
-// instead, matching a standard 4-tab + FAB layout.
-const CENTER_GAP = 80;
+const ICON_SIZE = 24;
+const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
+
+const CENTER_BTN_SIZE = 52;
+const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
+// How deep the bar's notch cuts in, and how wide its opening is at the
+// bar's top edge. Kept deliberately smaller than the button's own radius/
+// diameter so the cutout stays fully hidden behind the opaque button
+// sitting on top of it - the button's own bottom rim always covers the
+// notch's deepest point, so there's no exposed transparent gap peeking out
+// around it (that's what turned into a "shadow bleeds into the cutout" bug
+// last time this bar had a full-width notch with a lot of exposed empty
+// space around a comparatively small button).
+const NOTCH_DEPTH = CENTER_BTN_RADIUS - 4;
+const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 8;
+// Reserved gap between Chat and Alerts, matching the notch's opening width,
+// so they sit pulled in close to the button instead of the wide empty
+// stretch four evenly-flexed tabs would otherwise leave in the middle.
+const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
+
+/**
+ * Rounded-rect pill outline with a smooth curved dip at the top-center for
+ * the raised button to nest into. Built directly in the bar's own pixel
+ * dimensions (no stretched viewBox) so there's no non-uniform scaling to
+ * throw the curve or corners off. Both notch curves settle into the apex
+ * with a vertical tangent (their control point shares the apex's x) so it
+ * reads as a smooth round basin rather than meeting on a flat shelf.
+ */
+function buildBarPath(width: number, height: number): string {
+  const r = CORNER_RADIUS;
+  const cx = width / 2;
+  const left = cx - NOTCH_HALF_WIDTH;
+  const right = cx + NOTCH_HALF_WIDTH;
+  const armX = NOTCH_HALF_WIDTH * 0.6;
+  return [
+    `M ${r},0`,
+    `L ${left},0`,
+    `C ${left + armX},0 ${cx},${NOTCH_DEPTH - 14} ${cx},${NOTCH_DEPTH}`,
+    `C ${cx},${NOTCH_DEPTH - 14} ${right - armX},0 ${right},0`,
+    `L ${width - r},0`,
+    `Q ${width},0 ${width},${r}`,
+    `L ${width},${height - r}`,
+    `Q ${width},${height} ${width - r},${height}`,
+    `L ${r},${height}`,
+    `Q 0,${height} 0,${height - r}`,
+    `L 0,${r}`,
+    `Q 0,0 ${r},0`,
+    'Z',
+  ].join(' ');
+}
 
 const Tab = createBottomTabNavigator();
 
@@ -179,7 +219,10 @@ function TabBadge({ count }: { count: number }) {
 function TabBar({ state, navigation, isStudent }: any) {
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
+  const { width: windowWidth } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 8);
+  const barWidth = windowWidth - OUTER_MARGIN_H * 2;
+  const barPath = buildBarPath(barWidth, BAR_HEIGHT);
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -211,7 +254,7 @@ function TabBar({ state, navigation, isStudent }: any) {
   };
 
   return (
-    <View style={styles.tabBarWrap}>
+    <View style={[styles.tabBarWrap, { marginBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
       {centerRouteName && (
         <TouchableOpacity
           style={styles.centerBtn}
@@ -235,7 +278,10 @@ function TabBar({ state, navigation, isStudent }: any) {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
+      <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
+        <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Path d={barPath} fill={BAR_BG} />
+        </Svg>
         {visibleRoutes.map((route: any, i: number) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
@@ -413,18 +459,22 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  // Edge-to-edge, no side margins - full-width docked bar. No padding on the
-  // wrap itself - the safe-area inset lives on tabBar's own paddingBottom.
+  // Floating pill - marginBottom lifts it off the safe-area edge, the bar
+  // itself carries its own marginHorizontal below.
   tabBarWrap: {},
-  // Translucent glass fill (see BAR_BG above), no shadow/elevation, no
-  // notch cutout shape - just a plain flex row, so there's no curve left to
-  // align icons around or accidentally paint over.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: BAR_PADDING_TOP,
-    paddingHorizontal: BAR_PADDING_HORIZONTAL,
-    backgroundColor: BAR_BG,
+    paddingHorizontal: 12,
+    borderRadius: CORNER_RADIUS,
+    // borderRadius (not overflow:hidden - that would also clip the Svg's
+    // notch/shadow) lets Android's elevation shadow follow the pill's
+    // rounded corners instead of a plain rectangle's.
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 10,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
@@ -438,12 +488,12 @@ const styles = StyleSheet.create({
   },
   centerBtn: {
     position: 'absolute',
-    top: -15,
+    top: -CENTER_BTN_RADIUS,
     left: '50%',
-    marginLeft: -24,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    marginLeft: -CENTER_BTN_RADIUS,
+    width: CENTER_BTN_SIZE,
+    height: CENTER_BTN_SIZE,
+    borderRadius: CENTER_BTN_RADIUS,
     backgroundColor: CENTER_BTN_BG,
     alignItems: 'center',
     justifyContent: 'center',
