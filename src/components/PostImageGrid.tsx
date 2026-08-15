@@ -64,8 +64,10 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
+    // 4:3 (height = 3/4 of width) instead of the near-square ratio this used
+    // to default to.
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05), borderRadius: R }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 0.75), borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
