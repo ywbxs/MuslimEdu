@@ -31,12 +31,17 @@ const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
 // No real backdrop-blur without a native masking library (@react-native-
-// community/blur was considered - it needs both a native dependency add
-// and edits to the CI workflow files that actually build this app, which
-// don't read package.json directly, and there's no way to verify a native
-// build succeeds from here) - approximated with a translucent white fill
-// instead, same tradeoff every other "glass" surface in this app makes.
-const BAR_BG = 'rgba(255,255,255,0.6)';
+// community/blur was tried - it needs both a native dependency add and
+// edits to the CI workflow files that actually build this app, which
+// don't read package.json directly, and there was no way to verify a
+// native build succeeds from this environment; reverted) - approximated
+// with a translucent white fill instead, same tradeoff every other
+// "glass" surface in this app makes. 60% opacity read as a solid white
+// pill rather than glass - dropped to match the same low-opacity values
+// (7-10%) MonthlyReportsCard.tsx and every other "glass on a hero"
+// surface in this app already use; the border (BAR_STROKE below) is what
+// carries the visible edge at this opacity, not the fill itself.
+const BAR_BG = 'rgba(255,255,255,0.12)';
 // Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
 // it stays visible against a similarly light background even with no
 // shadow defining its silhouette - see the no-shadow/elevation note on

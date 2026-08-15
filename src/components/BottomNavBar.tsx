@@ -17,7 +17,12 @@ const CENTER_BTN_BG = '#16211F';
 // No real backdrop-blur without a native masking library (a full writeup of
 // why lives in MainTabs.tsx) - approximated with a translucent white fill
 // instead, same tradeoff every other "glass" surface in this app makes.
-const BAR_BG = 'rgba(255,255,255,0.6)';
+// 60% opacity read as a solid white pill rather than glass - dropped to
+// match the same low-opacity values (7-10%) MonthlyReportsCard.tsx and
+// every other "glass on a hero" surface in this app already use; the
+// border (BAR_STROKE below) is what carries the visible edge at this
+// opacity, not the fill itself.
+const BAR_BG = 'rgba(255,255,255,0.12)';
 // Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
 // it stays visible against a similarly light background even with no
 // shadow defining its silhouette - see the no-shadow/elevation note on
