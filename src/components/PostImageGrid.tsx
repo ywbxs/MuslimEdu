@@ -1,13 +1,6 @@
 import React from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-// PostCard's image bleeds edge-to-edge within the card (PostCard's
-// imageWrap cancels the card's own paddingHorizontal with a negative
-// margin), so only the card's outer marginHorizontal needs to be
-// subtracted here - not its inner padding too.
-const H_PADDING = 16; // card marginHorizontal
-const GRID_WIDTH = SCREEN_WIDTH - H_PADDING * 2;
 const GAP = 3;
 const IMAGE_RADIUS = 18;
 
@@ -15,9 +8,16 @@ interface Props {
   images: string[];
   onPressImage?: (index: number) => void;
   maxHeight?: number;
-  // Overrides GRID_WIDTH for callers that don't use the default full-width
-  // vertical card (e.g. the fixed-width feed deck card) - omit to keep
-  // today's behavior exactly as-is.
+  // Explicit pixel width for callers that know their own fixed container
+  // width up front (e.g. a fixed-width card). Omit to fill the parent's own
+  // width instead - the default, and the only thing every current caller
+  // actually uses. A previous version computed its own pixel width from
+  // Dimensions.get('window').width minus an assumed card margin, which
+  // silently went stale the moment a caller (the Home feed) overrode that
+  // margin independently - the image rendered narrower than the space it
+  // actually had, leaving a gap on one side. Filling the parent can't drift
+  // out of sync like that, since it's not duplicating an assumption about
+  // what the parent's own layout is doing.
   width?: number;
   // Overrides IMAGE_RADIUS - the Home feed's edge-to-edge cards square this
   // off to 0 so a full-bleed photo doesn't show rounded corners floating
@@ -38,7 +38,7 @@ interface Props {
 export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius }: Props) {
   if (!images || images.length === 0) return null;
 
-  const W = width ?? GRID_WIDTH;
+  const W: number | `${number}%` = width ?? '100%';
   const R = radius ?? IMAGE_RADIUS;
   const tap = (index: number) => onPressImage?.(index);
 
@@ -64,10 +64,10 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
-    // 4:3 (height = 3/4 of width) instead of the near-square ratio this used
-    // to default to.
+    // aspectRatio (not a computed pixel height) so this holds a 4:3 shape
+    // regardless of whether W ends up a number or a '100%' string.
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 0.75), borderRadius: R }]}>
+      <View style={[styles.wrap, { width: W, aspectRatio: 4 / 3, maxHeight, borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
@@ -118,7 +118,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: GRID_WIDTH, overflow: 'hidden', backgroundColor: '#F0F1F2' },
+  wrap: { overflow: 'hidden', backgroundColor: '#F0F1F2' },
   row: { flexDirection: 'row', width: '100%', height: '100%' },
   half: { flex: 1, position: 'relative', overflow: 'hidden' },
   fill: { width: '100%', height: '100%', position: 'relative' },
