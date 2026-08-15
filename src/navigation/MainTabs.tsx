@@ -521,11 +521,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 9,
+    // No shadow/elevation. The button's own drop shadow used to bleed into
+    // the transparent notch gap around it - a cast shadow needs a surface to
+    // land on, and where the notch is genuinely transparent (revealing the
+    // screen behind the bar) it just showed up as an isolated gray blob
+    // instead of blending into anything. The button's solid dark fill
+    // against the white pill gives it enough definition without one.
   },
   badge: {
     position: 'absolute',
