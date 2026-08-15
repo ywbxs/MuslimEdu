@@ -315,7 +315,14 @@ const styles = StyleSheet.create({
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {
     position: 'absolute',
-    top: -CENTER_BTN_RADIUS,
+    // RN's position:absolute is relative to the parent's BORDER box, not its
+    // padding box (unlike standard CSS) - so tabBarWrap's WRAP_PADDING_TOP
+    // (added for the white backdrop panel) does NOT shift this button the
+    // way it shifts tabBar (a normal-flow child). Without adding it back in
+    // here explicitly, the button stays pinned near the wrap's outer top
+    // edge while the pill moves down, opening a gap between them instead of
+    // the button nesting into the notch.
+    top: WRAP_PADDING_TOP - CENTER_BTN_RADIUS,
     left: '50%',
     marginLeft: -CENTER_BTN_RADIUS,
     width: CENTER_BTN_SIZE,
