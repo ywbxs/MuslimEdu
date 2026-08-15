@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import PressableScale from '../components/PressableScale';
 import MenuScreen from '../screens/common/MenuScreen';
 import FeedScreen from '../screens/common/FeedScreen';
 import NotificationsScreen from '../screens/common/NotificationsScreen';
@@ -139,12 +140,19 @@ const CENTER_ROUTE_CANDIDATES = ['Admission', 'Scan'];
 const ENROLLMENT_GATE_CACHE_KEY = '@enrollment_gate_completed_v1';
 
 // --- Inline tab icons (react-native-svg) ---
-function HomeIcon({ color }: { color: string }) {
+// Active side-tab icons render FILLED instead of outline-only (matching
+// iOS's own filled/outline tab pair convention, e.g. house vs house.fill) -
+// same path reused for both: the door/window notch is already carved into
+// the path's own outline (the same technique the nav bar's own notch uses),
+// so simply filling it instead of stroking it renders correctly with no
+// separate "filled" artwork needed.
+function HomeIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"
-        stroke={color}
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
@@ -171,34 +179,39 @@ function ProfileIcon({ color }: { color: string }) {
     </Svg>
   );
 }
-function ChatIcon({ color }: { color: string }) {
+function ChatIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z"
-        stroke={color}
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
     </Svg>
   );
 }
-function MenuIcon({ color }: { color: string }) {
+function MenuIcon({ color, filled }: { color: string; filled?: boolean }) {
+  const shared = filled
+    ? { fill: color, stroke: 'none' as const }
+    : { fill: 'none' as const, stroke: color, strokeWidth: 1.9 };
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="4" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
-      <Rect x="13" y="4" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
-      <Rect x="4" y="13" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
-      <Rect x="13" y="13" width="7" height="7" rx="1.6" stroke={color} strokeWidth={1.9} />
+      <Rect x="4" y="4" width="7" height="7" rx="1.6" {...shared} />
+      <Rect x="13" y="4" width="7" height="7" rx="1.6" {...shared} />
+      <Rect x="4" y="13" width="7" height="7" rx="1.6" {...shared} />
+      <Rect x="13" y="13" width="7" height="7" rx="1.6" {...shared} />
     </Svg>
   );
 }
-function BellIcon({ color }: { color: string }) {
+function BellIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
-        stroke={color}
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
@@ -221,14 +234,14 @@ function ScanIcon({ color }: { color: string }) {
   );
 }
 
-const ICONS: Record<string, (color: string) => React.ReactElement> = {
-  Home: (c) => <HomeIcon color={c} />,
+const ICONS: Record<string, (color: string, filled?: boolean) => React.ReactElement> = {
+  Home: (c, f) => <HomeIcon color={c} filled={f} />,
   Admission: (c) => <AdmissionIcon color={c} />,
   MyProgress: (c) => <ProfileIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
-  Chat: (c) => <ChatIcon color={c} />,
-  Alerts: (c) => <BellIcon color={c} />,
-  Menu: (c) => <MenuIcon color={c} />,
+  Chat: (c, f) => <ChatIcon color={c} filled={f} />,
+  Alerts: (c, f) => <BellIcon color={c} filled={f} />,
+  Menu: (c, f) => <MenuIcon color={c} filled={f} />,
 };
 
 // Docked bar attached to the bottom edge of the screen - full width, square
@@ -285,26 +298,26 @@ function TabBar({ state, navigation, isStudent }: any) {
   return (
     <View style={[styles.tabBarWrap, { marginBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
       {centerRouteName && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.centerBtn}
-          activeOpacity={0.85}
+          scaleTo={0.9}
           onPress={() => goToRoute(state.routes[centerIndex], centerFocused)}
           accessibilityRole="button"
           accessibilityLabel={centerRouteName}
         >
           {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
-        </TouchableOpacity>
+        </PressableScale>
       )}
       {showStudentCenter && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.centerBtn}
-          activeOpacity={0.85}
+          scaleTo={0.9}
           onPress={() => (navigation.getParent() ?? navigation).navigate('MyProgress')}
           accessibilityRole="button"
           accessibilityLabel="My Progress"
         >
           {ICONS.MyProgress('#FFFFFF')}
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
@@ -333,18 +346,18 @@ function TabBar({ state, navigation, isStudent }: any) {
           return (
             <React.Fragment key={route.key}>
               {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
-              <TouchableOpacity
+              <PressableScale
                 accessibilityRole="button"
                 accessibilityState={isRouteFocused ? { selected: true } : {}}
                 onPress={() => goToRoute(route, isRouteFocused)}
                 style={styles.tabItem}
-                activeOpacity={0.7}
+                scaleTo={0.88}
               >
                 <View style={styles.iconWrap}>
-                  {renderIcon && renderIcon(color)}
+                  {renderIcon && renderIcon(color, isRouteFocused)}
                   {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             </React.Fragment>
           );
         })}

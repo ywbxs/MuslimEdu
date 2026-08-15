@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import PressableScale from './PressableScale';
 
 // Mirrors MainTabs.tsx's TabBar (same icons/order/colors/pill+notch shape)
 // so screens pushed on the root stack still give one-tap access back to the
@@ -109,10 +110,22 @@ function buildBarPath(width: number, height: number): string {
 // covered with margin to spare.
 const NOTCH_CAP_BUFFER = 6;
 
-function HomeIcon({ color }: { color: string }) {
+// Active side-tab icons render FILLED instead of outline-only (matching
+// iOS's own filled/outline tab pair convention, e.g. house vs house.fill) -
+// same path reused for both: the door/window notch is already carved into
+// the path's own outline (the same technique the nav bar's own notch uses),
+// so simply filling it instead of stroking it renders correctly with no
+// separate "filled" artwork needed.
+function HomeIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 11l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
+      <Path
+        d="M3 11l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
+        strokeWidth={1.9}
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
@@ -149,19 +162,26 @@ function ProfileIcon({ color }: { color: string }) {
     </Svg>
   );
 }
-function ChatIcon({ color }: { color: string }) {
+function ChatIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
+      <Path
+        d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z"
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
+        strokeWidth={1.9}
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
-function BellIcon({ color }: { color: string }) {
+function BellIcon({ color, filled }: { color: string; filled?: boolean }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
         d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
-        stroke={color}
+        fill={filled ? color : 'none'}
+        stroke={filled ? 'none' : color}
         strokeWidth={1.9}
         strokeLinejoin="round"
       />
@@ -169,25 +189,28 @@ function BellIcon({ color }: { color: string }) {
     </Svg>
   );
 }
-function MenuIcon({ color }: { color: string }) {
+function MenuIcon({ color, filled }: { color: string; filled?: boolean }) {
+  const shared = filled
+    ? { fill: color, stroke: 'none' as const }
+    : { fill: 'none' as const, stroke: color, strokeWidth: 1.9 };
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={4} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={13} y={4} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={4} y={13} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={13} y={13} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
+      <Rect x={4} y={4} width={7} height={7} rx={1.6} {...shared} />
+      <Rect x={13} y={4} width={7} height={7} rx={1.6} {...shared} />
+      <Rect x={4} y={13} width={7} height={7} rx={1.6} {...shared} />
+      <Rect x={13} y={13} width={7} height={7} rx={1.6} {...shared} />
     </Svg>
   );
 }
 
-const ICONS: Record<string, (color: string) => React.ReactElement> = {
-  Home: (c) => <HomeIcon color={c} />,
+const ICONS: Record<string, (color: string, filled?: boolean) => React.ReactElement> = {
+  Home: (c, f) => <HomeIcon color={c} filled={f} />,
   Admission: (c) => <AdmissionIcon color={c} />,
   Scan: (c) => <ScanIcon color={c} />,
   MyProgress: (c) => <ProfileIcon color={c} />,
-  Chat: (c) => <ChatIcon color={c} />,
-  Alerts: (c) => <BellIcon color={c} />,
-  Menu: (c) => <MenuIcon color={c} />,
+  Chat: (c, f) => <ChatIcon color={c} filled={f} />,
+  Alerts: (c, f) => <BellIcon color={c} filled={f} />,
+  Menu: (c, f) => <MenuIcon color={c} filled={f} />,
 };
 
 // Best-effort read of the currently focused tab inside MainTabs so we can
@@ -248,9 +271,9 @@ export default function BottomNavBar() {
   return (
     <View style={[styles.tabBarWrap, { marginBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
       {centerName && (
-        <TouchableOpacity style={styles.centerBtn} activeOpacity={0.85} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
+        <PressableScale style={styles.centerBtn} scaleTo={0.9} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
           {ICONS[centerName]('#FFFFFF')}
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
@@ -276,9 +299,9 @@ export default function BottomNavBar() {
           return (
             <React.Fragment key={name}>
               {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
-              <TouchableOpacity style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
+              <PressableScale style={styles.tabItem} scaleTo={0.88} onPress={() => goTo(name)}>
                 <View style={styles.iconWrap}>
-                  {ICONS[name](color)}
+                  {ICONS[name](color, isActive)}
                   {name === 'Alerts' && unreadCount > 0 && (
                     <View style={styles.badge} pointerEvents="none">
                       <Text style={styles.badgeText} numberOfLines={1}>
@@ -287,7 +310,7 @@ export default function BottomNavBar() {
                     </View>
                   )}
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             </React.Fragment>
           );
         })}
