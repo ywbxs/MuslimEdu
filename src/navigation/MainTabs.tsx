@@ -37,6 +37,13 @@ const CENTER_BTN_BG = '#16211F';
 // build succeeds from here) - approximated with a translucent white fill
 // instead, same tradeoff every other "glass" surface in this app makes.
 const BAR_BG = 'rgba(255,255,255,0.6)';
+// Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
+// it stays visible against a similarly light background even with no
+// shadow defining its silhouette - see the no-shadow/elevation note on
+// tabBar below for why there's no other definition. A white stroke here
+// would blend into the equally-white fill and background; only a darker
+// (even if faint) line actually shows up against them.
+const BAR_STROKE = 'rgba(13,30,28,0.14)';
 
 // Floating pill, not edge-to-edge - margin on all sides instead of docking
 // flush to the screen.
@@ -280,7 +287,7 @@ function TabBar({ state, navigation, isStudent }: any) {
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
         <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Path d={barPath} fill={BAR_BG} />
+          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1} />
         </Svg>
         {visibleRoutes.map((route: any, i: number) => {
           const index = state.routes.indexOf(route);
@@ -462,18 +469,25 @@ const styles = StyleSheet.create({
   // Floating pill - marginBottom lifts it off the safe-area edge, the bar
   // itself carries its own marginHorizontal below.
   tabBarWrap: {},
-  // No shadow*/elevation here - this View has no backgroundColor of its own
-  // (the fill is the notch Svg, a child), and Android's elevation paints in
-  // an opaque backing surface for the shadow to sit on when the View itself
-  // has none, which covered up BOTH the translucent 60%-opacity fill (the
-  // pill looked fully solid) and the notch cutout (it looked completely
-  // filled in, no visible dip) - the same class of bug already learned the
-  // hard way on the earlier flat-bar version of this component.
+  // shadow* (iOS) but deliberately no `elevation` (Android) - RN's shadow*
+  // props and `elevation` are two entirely separate systems (Android only
+  // reacts to elevation, iOS only to shadow*), and it was specifically
+  // elevation that painted an opaque backing surface behind this View
+  // (which has no backgroundColor of its own - the fill is the notch Svg,
+  // a child) when the View itself had none, covering up BOTH the
+  // translucent 60%-opacity fill and the notch cutout entirely. shadow*
+  // alone is a no-op on Android, so it's safe to keep for iOS. The pill's
+  // own SVG stroke (see BAR_STROKE) is what gives Android a visible edge
+  // instead, since it can't have a real shadow here.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     borderRadius: CORNER_RADIUS,
+    shadowColor: '#0D1E1C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
