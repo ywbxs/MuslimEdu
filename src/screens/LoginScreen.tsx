@@ -453,7 +453,10 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      {/* barStyle only - no backgroundColor/translucent, see AnimatedSplash.tsx
+          for why: those two props trigger a native setColor() call that
+          crashes the app on a build where that native method is missing. */}
+      <StatusBar barStyle="dark-content" />
       <LinearGradient
         colors={[CANVAS_SOFT, CANVAS]}
         start={{ x: 0.3, y: 0 }}

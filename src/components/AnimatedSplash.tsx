@@ -109,7 +109,14 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E927E" translucent />
+      {/* barStyle only - no backgroundColor/translucent. Those two props
+          make RN's StatusBar component call the Android native module's
+          setColor() as a side effect, and on some installed builds that
+          method isn't there (native/JS version mismatch), which throws
+          "undefined is not a function" and crashes the whole app before
+          it even finishes mounting the splash screen. barStyle alone
+          doesn't touch that call. */}
+      <StatusBar barStyle="light-content" />
 
       {/* Base + drifting gradient background */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
