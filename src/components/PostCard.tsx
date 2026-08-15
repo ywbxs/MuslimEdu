@@ -207,6 +207,12 @@ interface Props {
   // ExpandableText "See more" (expanding in place wouldn't fit over a
   // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
+  // Squares off this post's own image grid (not the quoted repost's, which
+  // keeps its rounded corners inside its bordered quote box regardless) -
+  // for the Home feed's edge-to-edge cards, where a full-bleed photo should
+  // meet the card's own square edges instead of floating mid-image with
+  // rounded corners. Omit to keep the default rounded corners.
+  squareImages?: boolean;
 }
 
 const PRIVACY_MENU_OPTIONS: { key: Post['privacy']; label: string }[] = [
@@ -229,6 +235,7 @@ export default function PostCard({
   contentWidth,
   clipContent,
   bodyNumberOfLines,
+  squareImages,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const [menuVisible, setMenuVisible] = useState(false);
@@ -468,7 +475,12 @@ export default function PostCard({
           {/* Own images */}
           {!quoted && post.images.length > 0 && (
             <View style={styles.imageWrap}>
-              <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
+              <PostImageGrid
+                images={post.images}
+                width={contentWidth}
+                radius={squareImages ? 0 : undefined}
+                onPressImage={(i) => onPressImage?.(post.images, i)}
+              />
             </View>
           )}
 

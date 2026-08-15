@@ -19,6 +19,12 @@ interface Props {
   // vertical card (e.g. the fixed-width feed deck card) - omit to keep
   // today's behavior exactly as-is.
   width?: number;
+  // Overrides IMAGE_RADIUS - the Home feed's edge-to-edge cards square this
+  // off to 0 so a full-bleed photo doesn't show rounded corners floating
+  // mid-image against the card's own square edges. Omit to keep the default
+  // rounded look every other caller (moderation queue, profile modal, quoted
+  // reposts) already has.
+  radius?: number;
 }
 
 /**
@@ -29,10 +35,11 @@ interface Props {
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius }: Props) {
   if (!images || images.length === 0) return null;
 
   const W = width ?? GRID_WIDTH;
+  const R = radius ?? IMAGE_RADIUS;
   const tap = (index: number) => onPressImage?.(index);
 
   const Tile = ({
@@ -46,7 +53,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
     index: number;
     overlayCount?: number;
   }) => (
-    <TouchableOpacity activeOpacity={0.9} style={style} onPress={() => tap(index)}>
+    <TouchableOpacity activeOpacity={0.9} style={[style, { borderRadius: R }]} onPress={() => tap(index)}>
       <Image source={{ uri }} style={styles.fill} resizeMode="cover" />
       {!!overlayCount && (
         <View style={styles.overlay}>
@@ -58,7 +65,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 1) {
     return (
-      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05) }]}>
+      <View style={[styles.wrap, { width: W, height: Math.min(maxHeight, W * 1.05), borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );
@@ -66,7 +73,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 2) {
     return (
-      <View style={[styles.wrap, styles.row, { width: W, height: 200 }]}>
+      <View style={[styles.wrap, styles.row, { width: W, height: 200, borderRadius: R }]}>
         <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <Tile uri={images[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
       </View>
@@ -75,7 +82,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 
   if (images.length === 3) {
     return (
-      <View style={[styles.wrap, styles.row, { width: W, height: 240 }]}>
+      <View style={[styles.wrap, styles.row, { width: W, height: 240, borderRadius: R }]}>
         <Tile uri={images[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <View style={[styles.half, { marginLeft: GAP / 2 }]}>
           <Tile uri={images[1]} style={[styles.fill, { marginBottom: GAP / 2 }]} index={1} />
@@ -90,7 +97,7 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   const remaining = images.length - 4;
 
   return (
-    <View style={[styles.wrap, { width: W, height: 240 }]}>
+    <View style={[styles.wrap, { width: W, height: 240, borderRadius: R }]}>
       <View style={[styles.row, { flex: 1, marginBottom: GAP / 2 }]}>
         <Tile uri={visible[0]} style={[styles.half, { marginRight: GAP / 2 }]} index={0} />
         <Tile uri={visible[1]} style={[styles.half, { marginLeft: GAP / 2 }]} index={1} />
@@ -109,9 +116,9 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: GRID_WIDTH, borderRadius: IMAGE_RADIUS, overflow: 'hidden', backgroundColor: '#F0F1F2' },
+  wrap: { width: GRID_WIDTH, overflow: 'hidden', backgroundColor: '#F0F1F2' },
   row: { flexDirection: 'row', width: '100%', height: '100%' },
-  half: { flex: 1, position: 'relative', overflow: 'hidden', borderRadius: IMAGE_RADIUS },
+  half: { flex: 1, position: 'relative', overflow: 'hidden' },
   fill: { width: '100%', height: '100%', position: 'relative' },
   overlay: {
     ...StyleSheet.absoluteFill,

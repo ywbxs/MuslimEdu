@@ -31,7 +31,6 @@ import PostCardSkeleton from '../../components/feed/PostCardSkeleton';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
-import { RADIUS } from '../../theme/glass';
 
 // Teal/mint palette matching the login + feed mockup redesign - see
 // LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
@@ -349,6 +348,7 @@ export default function FeedScreen() {
                     (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
                   }
                   containerStyle={styles.feedPostCard}
+                  squareImages
                 />
               )
             }
@@ -417,19 +417,19 @@ const styles = StyleSheet.create({
   // below the header.
   outerWrap: { flex: 1 },
 
+  // Flat, edge-to-edge row instead of a bordered floating white card - same
+  // "integrated into the page, not a separate layer" treatment feedPostCard
+  // already uses below it, so the composer reads as the first row of the
+  // feed rather than a distinct floating element sitting on top of it.
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 10,
-    overflow: 'hidden',
+    backgroundColor: GLASS_FILL,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
   },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },

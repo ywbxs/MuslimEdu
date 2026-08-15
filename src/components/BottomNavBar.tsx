@@ -1,49 +1,22 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
-// Mirrors MainTabs.tsx's TabBar (same icons/order/colors/notch treatment)
-// so screens pushed on the root stack still give one-tap access back to the
-// app's main sections, and look like the same nav bar.
+// Mirrors MainTabs.tsx's TabBar (same icons/order/colors) so screens pushed
+// on the root stack still give one-tap access back to the app's main
+// sections, and look like the same nav bar.
 
 const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
-// No true backdrop-blur without a native masking library (see MainTabs.tsx's
-// TabBar), so the "glass" look is faked with a translucent gradient fill -
-// defined as an SVG <LinearGradient> (GLASS_GRADIENT_ID below) and used AS
-// the notch Path's own fill, not a separate overlay. A separate RN
-// LinearGradient layered on top of the Svg was tried and reverted: it's a
-// plain rectangle with no awareness of the notch shape, so it painted over
-// the whole bar and visually erased the curve instead of following it.
-const GLASS_TOP = 'rgba(255,255,255,0.88)';
-const GLASS_BOTTOM = 'rgba(255,255,255,0.68)';
-const GLASS_GRADIENT_ID = 'navBarGlass';
 const CENTER_BTN_BG = '#16211F';
-// Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
-// either changes. Both curves settle into the center apex with a vertical
-// tangent (control points share the apex's x) so the dip reads as a
-// smooth round basin instead of meeting on a flat horizontal shelf.
-const NOTCH_PATH = 'M0,0 L300,0 C390,0 410,210 460,270 C475,288 486,300 500,300 C514,300 525,288 540,270 C590,210 610,0 700,0 L1000,0 L1000,1000 L0,1000 Z';
-// The notch's flare (where the curve dips away from the flat edge) spans
-// x=300..700 of the 1000-unit box above, i.e. the middle 40% of the bar's
-// width. Side-tab x-positions are chosen as fractions of window width so
-// Chat/Alerts land clear outside that flare instead of drifting into it.
-// Kept in sync with MainTabs.tsx's TabBar.
-const TAB_X_FRACTION: Record<string, number> = { Home: 0.1, Chat: 0.24, Alerts: 0.76, Menu: 0.9 };
-const TAB_HIT_SIZE = 52;
-// Computed, never measured - see MainTabs.tsx for the full story on why
-// onLayout must not come back here.
-const ICON_SIZE = 24;
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
-// Centers the (taller, for a roomier tap target) hit box on the same point
-// the icon itself used to sit on when it was vertically centered by flex.
-const TAB_ITEM_TOP = BAR_PADDING_TOP + ICON_SIZE / 2 - TAB_HIT_SIZE / 2;
+const BAR_PADDING_HORIZONTAL = 20;
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -152,12 +125,10 @@ function useActiveTabName(): string | null {
 export default function BottomNavBar() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const activeName = useActiveTabName();
   const bottomInset = Math.max(insets.bottom, 8);
-  const barHeight = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM + bottomInset;
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   const isTeacherRole = user?.role === 'teacher';
   const isStudentRole = user?.role === 'student';
@@ -188,29 +159,12 @@ export default function BottomNavBar() {
         </TouchableOpacity>
       )}
 
-      <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
-        <View style={styles.barBackground} pointerEvents="none">
-          <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
-            <Defs>
-              <SvgGradient id={GLASS_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={GLASS_TOP} />
-                <Stop offset="1" stopColor={GLASS_BOTTOM} />
-              </SvgGradient>
-            </Defs>
-            <Path d={NOTCH_PATH} fill={`url(#${GLASS_GRADIENT_ID})`} />
-          </Svg>
-        </View>
+      <View style={[styles.tabBar, { paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
         {sideTabs.map((name) => {
           const isActive = activeName === name;
           const color = isActive ? ACTIVE : INACTIVE;
-          const left = TAB_X_FRACTION[name] * windowWidth - TAB_HIT_SIZE / 2;
           return (
-            <TouchableOpacity
-              key={name}
-              style={[styles.tabItem, { left }]}
-              activeOpacity={0.7}
-              onPress={() => goTo(name)}
-            >
+            <TouchableOpacity key={name} style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
               <View style={styles.iconWrap}>
                 {ICONS[name](color)}
                 {name === 'Alerts' && unreadCount > 0 && (
@@ -230,32 +184,24 @@ export default function BottomNavBar() {
 }
 
 const styles = StyleSheet.create({
-  // Edge-to-edge, no side margins/rounded pill - matches MainTabs.tsx.
-  // No padding on the wrap at all - the safe-area inset lives on tabBar's
-  // own paddingBottom below, so the glass fill reaches the literal screen
-  // edge instead of leaving a gap of bare canvas underneath the bar.
+  // Edge-to-edge, no side margins/rounded pill. No padding on the wrap
+  // itself - the safe-area inset lives on tabBar's own paddingBottom below.
   tabBarWrap: {},
-  // No shadow* props here (and no `elevation`, see MainTabs.tsx's tabBar for
-  // why) - this View has no backgroundColor of its own (the fill is the
-  // notch Svg, a child), and without a custom shadow path (which RN doesn't
-  // expose via style) both Android's elevation and iOS's shadow* compute
-  // from the View's full RECTANGULAR bounds, not the notch's actual
-  // silhouette - a shadow "layer" would bleed into the notch's transparent
-  // cutout above the flat bar, where nothing should render at all.
-  tabBar: {},
-  barBackground: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
-  // Positioned absolutely (left/top set per-item from TAB_X_FRACTION) rather
-  // than flex-distributed across the row - flex division put Chat/Alerts
-  // right in the notch's flare zone since it has no notion of that curve's
-  // width, only the shell padding did (which only ever moved Home/Menu).
-  tabItem: {
-    position: 'absolute',
-    top: TAB_ITEM_TOP,
-    width: TAB_HIT_SIZE,
-    height: TAB_HIT_SIZE,
+  // Transparent - no backgroundColor, no shadow/elevation, no notch cutout.
+  // Whatever's behind the screen's tab-bar area shows straight through
+  // instead of a solid docked white rectangle, and a plain flex row means
+  // there's no curve left to align icons around or accidentally paint over.
+  tabBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: BAR_PADDING_TOP,
+    paddingHorizontal: BAR_PADDING_HORIZONTAL,
+    backgroundColor: 'transparent',
   },
+  // flex:1 per item + centered content - even horizontal distribution and
+  // vertical centering both come straight from flexbox, no manual pixel
+  // math to keep in sync with anything else.
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {
     position: 'absolute',
@@ -274,8 +220,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 9,
-    // No ring border - see MainTabs.tsx's centerBtn (it read as a grey
-    // halo over the notch cutout).
   },
   badge: {
     position: 'absolute',
