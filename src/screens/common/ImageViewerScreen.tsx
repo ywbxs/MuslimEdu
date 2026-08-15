@@ -8,7 +8,6 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   Animated,
-  StatusBar,
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -72,7 +71,10 @@ export default function ImageViewerScreen() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar hidden />
+      {/* No <StatusBar hidden /> here - see AnimatedSplash.tsx for why RN's
+          StatusBar is avoided app-wide: the native module backing it is
+          missing methods on this build and crashes the app when any
+          <StatusBar> mounts, regardless of which props it's given. */}
       <FlatList
         ref={listRef}
         data={images}
