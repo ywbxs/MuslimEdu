@@ -113,6 +113,32 @@ function buildBarPath(width: number, height: number): string {
   ].join(' ');
 }
 
+/**
+ * Solid-white cap for JUST the notch cutout (same bezier control points as
+ * buildBarPath's notch, closed off with a straight line back along y=0),
+ * drawn behind the main outline. Without this, the notch is genuinely
+ * transparent and shows whatever the screen behind the bar is doing - most
+ * of these screens use a near-white but not-quite-white background
+ * (`#f9fafb`), which reads as a visible gray tint right at the edge of the
+ * crisp white pill. This backs just the notch's own silhouette in white
+ * instead of the screen's background, without adding any padding/height to
+ * the bar itself (see tabBarWrap below for why that full-panel approach was
+ * tried and reverted).
+ */
+function buildNotchCapPath(width: number): string {
+  const cx = width / 2;
+  const left = cx - NOTCH_HALF_WIDTH;
+  const right = cx + NOTCH_HALF_WIDTH;
+  const armX = NOTCH_HALF_WIDTH * 0.6;
+  const apexArmX = NOTCH_HALF_WIDTH * 0.35;
+  return [
+    `M ${left},0`,
+    `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
+    `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
+    'Z',
+  ].join(' ');
+}
+
 const Tab = createBottomTabNavigator();
 
 // Whichever of these routes is present becomes the raised center button
@@ -239,6 +265,7 @@ function TabBar({ state, navigation, isStudent }: any) {
   const bottomInset = Math.max(insets.bottom, 8);
   const barWidth = windowWidth - OUTER_MARGIN_H * 2;
   const barPath = buildBarPath(barWidth, BAR_HEIGHT);
+  const notchCapPath = buildNotchCapPath(barWidth);
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -296,6 +323,9 @@ function TabBar({ state, navigation, isStudent }: any) {
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
         <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* Notch backing first (behind), so it only ever shows through the
+              genuinely-transparent cutout - see buildNotchCapPath above. */}
+          <Path d={notchCapPath} fill={BAR_BG} />
           {/* One path for both fill and stroke, so the border and the
               filled shape are always exactly the same silhouette - see
               BAR_BG above for why this used to be two separate paths. */}
