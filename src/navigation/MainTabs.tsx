@@ -58,19 +58,21 @@ const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
 
 const CENTER_BTN_SIZE = 52;
 const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
-// The notch is a true semicircle, CONCENTRIC with the button: same center
-// point (the button's own center always lands exactly on the pill's top
-// edge - see centerBtn's `top: -CENTER_BTN_RADIUS` below, which makes that
-// true by construction regardless of any other spacing value). Its radius is
-// the button's radius plus a small fixed gap, so the cutout traces the
-// button's exact curvature at a uniform distance all the way around instead
-// of a wider/shallower shape that only roughly frames it.
-const NOTCH_GAP = 6;
-const NOTCH_RADIUS = CENTER_BTN_RADIUS + NOTCH_GAP;
+// How deep the bar's notch cuts in, and how wide its opening is at the
+// bar's top edge. Deliberately a bit WIDER and DEEPER than the button's own
+// radius so the curve is actually visible peeking out past the button's
+// silhouette at a normal viewing scale - sizing it to hide entirely behind
+// the button (as an earlier version of this did) made it effectively
+// invisible except under heavy zoom. There's no View-level shadow on this
+// bar (see the note on tabBar below), so the small sliver of exposed
+// transparent gap this leaves around the button doesn't risk the "shadow
+// bleeds into the cutout" bug from the earlier full-width notch attempt.
+const NOTCH_DEPTH = CENTER_BTN_RADIUS + 6;
+const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
 // Reserved gap between Chat and Alerts, matching the notch's opening width,
 // so they sit pulled in close to the button instead of the wide empty
 // stretch four evenly-flexed tabs would otherwise leave in the middle.
-const CENTER_GAP = NOTCH_RADIUS * 2;
+const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
 // Clearance above the pill inside tabBarWrap's own white backing panel (see
 // tabBarWrap below) - tall enough for the button's full height above the
 // pill's top edge PLUS its shadow blur (shadowRadius 10) to still land on
@@ -79,32 +81,32 @@ const CENTER_GAP = NOTCH_RADIUS * 2;
 const WRAP_PADDING_TOP = CENTER_BTN_RADIUS + 14;
 
 /**
- * Rounded-rect pill outline with a true semicircular notch cut into the
- * top-center for the raised button to nest into. Built directly in the
- * bar's own pixel dimensions (no stretched viewBox) so there's no
- * non-uniform scaling to throw the curve or corners off.
+ * Rounded-rect pill outline with a smooth curved dip at the top-center for
+ * the raised button to nest into. Built directly in the bar's own pixel
+ * dimensions (no stretched viewBox) so there's no non-uniform scaling to
+ * throw the curve or corners off.
  *
- * The notch is drawn with a single elliptical-arc command (rx=ry=NOTCH_RADIUS)
- * rather than a pair of cubic beziers - an earlier version approximated the
- * dip with two bezier curves, which was both wider/shallower than the button
- * (leaving an uneven gap) and prone to a tangent mismatch at the apex if the
- * two curves' control points weren't set up exactly right. A real circular
- * arc has neither problem: it's exactly as round as the button by
- * definition, everywhere along it.
+ * Both notch curves reach the apex with a HORIZONTAL tangent (their control
+ * point shares the apex's own y) - a true rounded minimum, like the bottom
+ * of a parabola. An earlier version gave both curves a control point at the
+ * SAME (x, y) as each other, which put them at exactly opposite tangent
+ * directions right at the apex (one arriving straight down, the other
+ * departing straight up) - mathematically a cusp, not a curve, which
+ * rendered as a visible spike/glitch once the notch was made deep enough
+ * for it to be noticeable.
  */
 function buildBarPath(width: number, height: number): string {
   const r = CORNER_RADIUS;
   const cx = width / 2;
-  const R = NOTCH_RADIUS;
-  const left = cx - R;
-  const right = cx + R;
+  const left = cx - NOTCH_HALF_WIDTH;
+  const right = cx + NOTCH_HALF_WIDTH;
+  const armX = NOTCH_HALF_WIDTH * 0.6;
+  const apexArmX = NOTCH_HALF_WIDTH * 0.35;
   return [
     `M ${r},0`,
     `L ${left},0`,
-    // sweep-flag 0 traces the arc through the BOTTOM of the circle centered
-    // at (cx, 0) - i.e. dipping down into the pill - rather than the top
-    // (which would bulge up and out of it).
-    `A ${R},${R} 0 0 0 ${right},0`,
+    `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
+    `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
     `L ${width - r},0`,
     `Q ${width},0 ${width},${r}`,
     `L ${width},${height - r}`,
