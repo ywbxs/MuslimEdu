@@ -235,14 +235,14 @@ const styles = StyleSheet.create({
   // own paddingBottom below, so the glass fill reaches the literal screen
   // edge instead of leaving a gap of bare canvas underneath the bar.
   tabBarWrap: {},
-  tabBar: {
-    // No `elevation` - see MainTabs.tsx's tabBar for why (rectangular
-    // Android shadow cutting straight across the notch dip).
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-  },
+  // No shadow* props here (and no `elevation`, see MainTabs.tsx's tabBar for
+  // why) - this View has no backgroundColor of its own (the fill is the
+  // notch Svg, a child), and without a custom shadow path (which RN doesn't
+  // expose via style) both Android's elevation and iOS's shadow* compute
+  // from the View's full RECTANGULAR bounds, not the notch's actual
+  // silhouette - a shadow "layer" would bleed into the notch's transparent
+  // cutout above the flat bar, where nothing should render at all.
+  tabBar: {},
   barBackground: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
   // Positioned absolutely (left/top set per-item from TAB_X_FRACTION) rather
   // than flex-distributed across the row - flex division put Chat/Alerts

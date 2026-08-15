@@ -2,10 +2,11 @@ import React from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-// PostCard's image sits inside the card's own padding, which is already
-// inset from the screen by the card's marginHorizontal. Match both so the
-// image never touches or overflows the card's rounded edges.
-const H_PADDING = 16 + 18; // card marginHorizontal + card paddingHorizontal
+// PostCard's image bleeds edge-to-edge within the card (PostCard's
+// imageWrap cancels the card's own paddingHorizontal with a negative
+// margin), so only the card's outer marginHorizontal needs to be
+// subtracted here - not its inner padding too.
+const H_PADDING = 16; // card marginHorizontal
 const GRID_WIDTH = SCREEN_WIDTH - H_PADDING * 2;
 const GAP = 3;
 const IMAGE_RADIUS = 18;

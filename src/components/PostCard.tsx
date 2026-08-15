@@ -715,7 +715,10 @@ const styles = StyleSheet.create({
   time: { fontSize: 12.5, color: SUBTLE },
   dot: { fontSize: 12, color: SUBTLE },
   content: { fontSize: 15.5, color: INK, lineHeight: 22, marginTop: 14 },
-  imageWrap: { marginTop: 12, alignItems: 'center' },
+  // Bleeds edge-to-edge within the card - marginHorizontal cancels out the
+  // card's own paddingHorizontal (18) so the image reaches the card's inner
+  // edge instead of sitting inset with visible margin on both sides.
+  imageWrap: { marginTop: 12, marginHorizontal: -18 },
   quoteBox: {
     marginTop: 12,
     backgroundColor: CANVAS,
@@ -734,8 +737,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
   },
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.
