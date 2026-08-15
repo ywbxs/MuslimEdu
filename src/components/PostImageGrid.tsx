@@ -3,6 +3,11 @@ import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
 
 const GAP = 3;
 const IMAGE_RADIUS = 18;
+// Default single-image shape: a slightly-taller-than-wide rectangle (the
+// original ratio this always had). The Home feed overrides this to a true
+// 4:3 via the aspectRatio prop below - scoped there only, since other
+// callers (moderation queue, profile modal, quoted reposts) keep this look.
+const DEFAULT_ASPECT_RATIO = 1 / 1.05;
 
 interface Props {
   images: string[];
@@ -25,6 +30,10 @@ interface Props {
   // rounded look every other caller (moderation queue, profile modal, quoted
   // reposts) already has.
   radius?: number;
+  // Overrides DEFAULT_ASPECT_RATIO for the single-image case only (2+ image
+  // layouts already use fixed pixel heights, unaffected by this). The Home
+  // feed passes 4/3 here; omit to keep the default ratio.
+  aspectRatio?: number;
 }
 
 /**
@@ -35,11 +44,12 @@ interface Props {
  *   4 images -> even 2x2 grid
  *   5-6      -> 2x2 grid of the first 3, "+N" overlay on the 4th tile
  */
-export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius }: Props) {
+export default function PostImageGrid({ images, onPressImage, maxHeight = 320, width, radius, aspectRatio }: Props) {
   if (!images || images.length === 0) return null;
 
   const W: number | `${number}%` = width ?? '100%';
   const R = radius ?? IMAGE_RADIUS;
+  const AR = aspectRatio ?? DEFAULT_ASPECT_RATIO;
   const tap = (index: number) => onPressImage?.(index);
 
   const Tile = ({
@@ -64,10 +74,10 @@ export default function PostImageGrid({ images, onPressImage, maxHeight = 320, w
   );
 
   if (images.length === 1) {
-    // aspectRatio (not a computed pixel height) so this holds a 4:3 shape
+    // aspectRatio (not a computed pixel height) so this holds its shape
     // regardless of whether W ends up a number or a '100%' string.
     return (
-      <View style={[styles.wrap, { width: W, aspectRatio: 4 / 3, maxHeight, borderRadius: R }]}>
+      <View style={[styles.wrap, { width: W, aspectRatio: AR, maxHeight, borderRadius: R }]}>
         <Tile uri={images[0]} style={styles.fill} index={0} />
       </View>
     );

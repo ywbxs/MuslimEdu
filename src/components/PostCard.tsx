@@ -207,11 +207,12 @@ interface Props {
   // ExpandableText "See more" (expanding in place wouldn't fit over a
   // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
-  // Squares off this post's own image grid (not the quoted repost's, which
-  // keeps its rounded corners inside its bordered quote box regardless) -
-  // for the Home feed's edge-to-edge cards, where a full-bleed photo should
-  // meet the card's own square edges instead of floating mid-image with
-  // rounded corners. Omit to keep the default rounded corners.
+  // Squares off this post's own image grid and switches a single image to a
+  // 4:3 crop (not the quoted repost's, which keeps its rounded corners and
+  // default ratio inside its bordered quote box regardless) - for the Home
+  // feed's edge-to-edge cards, where a full-bleed photo should meet the
+  // card's own square edges instead of floating mid-image with rounded
+  // corners. Omit to keep the default rounded corners and aspect ratio.
   squareImages?: boolean;
 }
 
@@ -479,6 +480,7 @@ export default function PostCard({
                 images={post.images}
                 width={contentWidth}
                 radius={squareImages ? 0 : undefined}
+                aspectRatio={squareImages ? 4 / 3 : undefined}
                 onPressImage={(i) => onPressImage?.(post.images, i)}
               />
             </View>
