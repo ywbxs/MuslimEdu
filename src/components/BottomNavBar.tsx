@@ -256,19 +256,18 @@ const styles = StyleSheet.create({
   // Floating pill - marginBottom lifts it off the safe-area edge, the bar
   // itself carries its own marginHorizontal below.
   tabBarWrap: {},
+  // No shadow*/elevation here - this View has no backgroundColor of its own
+  // (the fill is the notch Svg, a child), and Android's elevation paints in
+  // an opaque backing surface for the shadow to sit on when the View itself
+  // has none, which covered up BOTH the translucent 60%-opacity fill (the
+  // pill looked fully solid) and the notch cutout (it looked completely
+  // filled in, no visible dip) - the same class of bug already learned the
+  // hard way on the earlier flat-bar version of this component.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     borderRadius: CORNER_RADIUS,
-    // borderRadius (not overflow:hidden - that would also clip the Svg's
-    // notch/shadow) lets Android's elevation shadow follow the pill's
-    // rounded corners instead of a plain rectangle's.
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    elevation: 10,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
