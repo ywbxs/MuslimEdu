@@ -14,7 +14,7 @@ import {
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
 import { Skeleton, SkeletonCircle } from '../Skeleton';
-import { useWidgetCardMetrics } from './widgetCarouselMetrics';
+import { useWidgetCardMetrics, ROW_HEIGHT } from './widgetCarouselMetrics';
 
 const GRADIENT_TOP = '#0F3D2E';
 const GRADIENT_BOTTOM = '#062318';
@@ -170,6 +170,13 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 22,
     padding: 16,
+    // Fixed to the carousel row's height and self-centered, matching
+    // AnnouncementImageCard's sibling sizing - it used to size to its own
+    // (shorter) content and rely on the FlatList row to center it, which
+    // didn't hold up once a taller sibling (or the row's own fixed height)
+    // was in play, leaving uneven space above/below.
+    height: ROW_HEIGHT,
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowRadius: 16,

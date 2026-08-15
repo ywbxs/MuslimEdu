@@ -19,6 +19,7 @@ import { useWindowDimensions } from 'react-native';
 export const EDGE = 16;
 export const GAP = 12;
 export const END_PAD = 16;
+export const ROW_HEIGHT = 210;
 
 export function useWidgetCardMetrics() {
   const { width: screenW } = useWindowDimensions();
