@@ -192,8 +192,10 @@ interface Props {
   // clip and shadow) and needs PostCard to render as plain transparent
   // content inside it. Omit to keep today's standalone vertical-card look.
   containerStyle?: StyleProp<ViewStyle>;
-  // Forwarded to PostImageGrid (own + quoted images) - omit to keep the
-  // default full-width image grid sizing.
+  // Forwarded to PostImageGrid as an explicit pixel width for this post's
+  // own image grid only (not the quoted repost's, which always fills its
+  // own bordered quote box regardless) - omit to let the image grid fill
+  // its parent's actual width instead.
   contentWidth?: number;
   // Used by the feed deck card (fixed-height, swipe-only pager): switches
   // to a big magazine-style card - a photo (or a plain color for a
@@ -502,11 +504,11 @@ export default function PostCard({
               {!!quoted.content && <Text style={styles.quoteContent}>{quoted.content}</Text>}
               {quoted.images.length > 0 && (
                 <View style={{ marginTop: 8 }}>
-                  <PostImageGrid
-                    images={quoted.images}
-                    width={contentWidth != null ? contentWidth - 28 : undefined}
-                    onPressImage={(i) => onPressImage?.(quoted.images, i)}
-                  />
+                  {/* No width override - this sits inside quoteBox's own
+                      padding and should just fill that parent (PostImageGrid's
+                      own '100%' default), independent of whatever contentWidth
+                      the OUTER post's own image grid is using below. */}
+                  <PostImageGrid images={quoted.images} onPressImage={(i) => onPressImage?.(quoted.images, i)} />
                 </View>
               )}
             </TouchableOpacity>

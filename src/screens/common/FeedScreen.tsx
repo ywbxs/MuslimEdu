@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,6 +88,14 @@ export default function FeedScreen() {
   const { t } = useLocale();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  // Passed straight through to PostCard/PostImageGrid as an explicit pixel
+  // width for this screen's edge-to-edge post images, instead of leaving
+  // them to resolve '100%' through several nested views (imageWrap's
+  // negative margin, the card's own containerStyle override, etc). An
+  // explicit number can't be thrown off by any of that - it's just the
+  // window's own width, which is exactly what an edge-to-edge image should
+  // render at on this screen.
+  const { width: windowWidth } = useWindowDimensions();
 
   // Admins and teachers can author new posts (or edit their own). Students
   // (and other non-staff roles) can still repost from the feed, but never
@@ -356,6 +365,7 @@ export default function FeedScreen() {
                   }
                   containerStyle={styles.feedPostCard}
                   squareImages
+                  contentWidth={windowWidth}
                 />
               )
             }
