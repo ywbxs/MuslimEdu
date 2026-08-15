@@ -14,24 +14,20 @@ const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-// No real backdrop-blur without a native masking library (a full writeup of
-// why lives in MainTabs.tsx) - approximated with a translucent fill
-// instead, same tradeoff every other "glass" surface in this app makes.
-// A WHITE fill (even at low opacity) is indistinguishable from a plain
-// white/light screen behind it - there's no color there for it to reveal,
-// so it just reads as solid white regardless of the opacity number. A
-// dark-tinted fill instead gives it a visible cool-gray cast against a
-// light background (the same trick iOS's own "light" blur material uses -
-// it isn't pure white either), while still reading as light/glassy
-// overall, and still shows clear color bleed-through over dark content.
-const BAR_BG = 'rgba(13,30,28,0.07)';
-// Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
-// it stays visible against a similarly light background even with no
-// shadow defining its silhouette - see the no-shadow/elevation note on
-// tabBar below for why there's no other definition. A white stroke here
-// would blend into the equally-white fill and background; only a darker
-// (even if faint) line actually shows up against them.
-const BAR_STROKE = 'rgba(13,30,28,0.14)';
+// Solid white pill - no translucency/glass. An earlier version split the
+// fill and border into two separate SVG paths (fill traced the notch
+// shape, border traced a plain notch-less rect) specifically so the
+// border wouldn't outline the notch cutout - but that meant the two
+// layers had different silhouettes, which is exactly what read as a
+// "nested pill" / nested-layer look: the border line ran straight across
+// where the fill actually dipped down for the notch. Both now use the
+// SAME path (see barPath), so there's only ever one shape.
+const BAR_BG = '#FFFFFF';
+// Subtle edge so the pill still separates cleanly from a similarly light
+// screen behind it even with no shadow defining its silhouette - see the
+// no-shadow/elevation note on tabBar below for why there's no other
+// definition.
+const BAR_STROKE = 'rgba(13,30,28,0.1)';
 
 // Floating pill, not edge-to-edge - margin on all sides instead of docking
 // flush to the screen.
@@ -89,25 +85,6 @@ function buildBarPath(width: number, height: number): string {
     `L ${left},0`,
     `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
     `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
-    `L ${width - r},0`,
-    `Q ${width},0 ${width},${r}`,
-    `L ${width},${height - r}`,
-    `Q ${width},${height} ${width - r},${height}`,
-    `L ${r},${height}`,
-    `Q 0,${height} 0,${height - r}`,
-    `L 0,${r}`,
-    `Q 0,0 ${r},0`,
-    'Z',
-  ].join(' ');
-}
-
-/** Plain rounded-rect outline (no notch) - used only for the stroke, so
- * the visible border traces the pill's outer edge but not the notch
- * cutout's own curve. */
-function buildOuterRectPath(width: number, height: number): string {
-  const r = CORNER_RADIUS;
-  return [
-    `M ${r},0`,
     `L ${width - r},0`,
     `Q ${width},0 ${width},${r}`,
     `L ${width},${height - r}`,
@@ -234,7 +211,6 @@ export default function BottomNavBar() {
   const bottomInset = Math.max(insets.bottom, 8);
   const barWidth = windowWidth - OUTER_MARGIN_H * 2;
   const barPath = buildBarPath(barWidth, BAR_HEIGHT);
-  const outerRectPath = buildOuterRectPath(barWidth, BAR_HEIGHT);
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   const isTeacherRole = user?.role === 'teacher';
   const isStudentRole = user?.role === 'student';
@@ -267,12 +243,10 @@ export default function BottomNavBar() {
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
         <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
-          {/* Fill (includes the notch cutout shape) and border (plain outer
-              rect, no notch) are two separate paths - a single stroked path
-              would trace the notch's own curve too, giving it a visible
-              outline instead of reading as a clean, un-bordered gap. */}
-          <Path d={barPath} fill={BAR_BG} />
-          <Path d={outerRectPath} fill="none" stroke={BAR_STROKE} strokeWidth={1} />
+          {/* One path for both fill and stroke, so the border and the
+              filled shape are always exactly the same silhouette - see
+              BAR_BG above for why this used to be two separate paths. */}
+          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1} />
         </Svg>
         {sideTabs.map((name, i) => {
           const isActive = activeName === name;
