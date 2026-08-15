@@ -296,23 +296,29 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
+  // Rendered as the FlatList's own ListHeaderComponent (not a sibling above
+  // it) so it's part of the same scrollable content and scrolls away with
+  // the rest of the feed - a separate sibling above the list stayed pinned
+  // in place while only the list scrolled beneath it, which read as a
+  // floating bar hovering over the feed.
+  const composer = canPost ? (
+    <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+      <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+      <Text style={styles.composerPlaceholder} numberOfLines={1}>
+        {t('feed.composer_placeholder', 'Share a photo...')}
+      </Text>
+      <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+        <PhotoIcon />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ) : null;
+
   const homeContent = (
     <>
-      {canPost && (
-        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-          <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', 'Share a photo...')}
-          </Text>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PhotoIcon />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-
       <View style={styles.deckWrap}>
         {loading ? (
           <View style={styles.skeletonStack}>
+            {composer}
             <PostCardSkeleton withImage style={styles.feedPostCard} />
             <PostCardSkeleton style={styles.feedPostCard} />
             <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -324,6 +330,7 @@ export default function FeedScreen() {
             keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            ListHeaderComponent={composer}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.5}
