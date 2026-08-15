@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'r
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { BlurView } from '@react-native-community/blur';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -15,14 +14,10 @@ const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-// Real backdrop blur (BlurView, native) does the actual "glass" work now -
-// this is just a light tint layered on top of it, not the primary
-// background like it was before BlurView existed here. BlurView only
-// clips to the pill's rounded corners (tabBar's own borderRadius +
-// overflow:hidden), not the notch cutout, so it stays deliberately faint
-// - a strong tint would make the un-clipped blur peeking through the
-// notch look like a visible rectangular smear instead of blending in.
-const BAR_BG = 'rgba(255,255,255,0.22)';
+// No real backdrop-blur without a native masking library (a full writeup of
+// why lives in MainTabs.tsx) - approximated with a translucent white fill
+// instead, same tradeoff every other "glass" surface in this app makes.
+const BAR_BG = 'rgba(255,255,255,0.6)';
 // Subtle dark edge on the pill itself (an SVG stroke, not a View border) so
 // it stays visible against a similarly light background even with no
 // shadow defining its silhouette - see the no-shadow/elevation note on
@@ -264,14 +259,6 @@ export default function BottomNavBar() {
       )}
 
       <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
-        {/* Real backdrop blur, clipped to the pill's rounded corners by
-            tabBar's own borderRadius + overflow:hidden. Doesn't clip to the
-            notch cutout itself (BlurView is a plain native rect) - that's
-            covered almost entirely by the button sitting on top of it, and
-            BAR_BG above is kept faint specifically so the small sliver of
-            un-clipped blur that peeks through around the button's edges
-            doesn't read as an obvious rectangular smear. */}
-        <BlurView style={StyleSheet.absoluteFill} blurType="light" blurAmount={20} />
         <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* Fill (includes the notch cutout shape) and border (plain outer
               rect, no notch) are two separate paths - a single stroked path
@@ -318,15 +305,11 @@ const styles = StyleSheet.create({
   // this View can't carry any shadow property at all while its fill lives
   // on a child Svg with no backgroundColor of its own. The pill's own SVG
   // stroke (see BAR_STROKE) is what gives it a visible edge instead.
-  // overflow:'hidden' clips the BlurView child to this View's own
-  // borderRadius, giving the blur rounded corners - safe now that there's
-  // no shadow left here for it to also clip away.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     borderRadius: CORNER_RADIUS,
-    overflow: 'hidden',
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel

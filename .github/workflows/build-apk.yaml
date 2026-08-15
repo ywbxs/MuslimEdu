@@ -93,8 +93,7 @@ jobs:
             "react-native-view-shot@^4.0.3" \
             "@react-native-community/geolocation@^3.4.0" \
             "@react-native-firebase/app@^21.6.1" \
-            "@react-native-firebase/messaging@^21.6.1" \
-            "@react-native-community/blur@^4.4.1"
+            "@react-native-firebase/messaging@^21.6.1"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu
