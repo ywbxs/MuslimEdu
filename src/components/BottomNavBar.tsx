@@ -14,9 +14,21 @@ const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
+// No real backdrop-blur without a native masking library (a full writeup of
+// why lives in MainTabs.tsx) - approximated with a translucent white fill
+// instead, same tradeoff every other "glass" surface in this app makes.
+const BAR_BG = 'rgba(255,255,255,0.6)';
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
 const BAR_PADDING_HORIZONTAL = 20;
+// Reserved empty gap between Chat and Alerts for the raised center button to
+// float over. Four tabs evenly spread across the full row (flex:1 each)
+// put Chat and Alerts a full 25% of the row's width apart - a wide empty
+// stretch in the middle with nothing but the button in it, which reads as
+// a "notch" cut into the bar even though there's no actual cutout shape.
+// A dedicated, button-sized gap keeps Chat/Alerts pulled in close to it
+// instead, matching a standard 4-tab + FAB layout.
+const CENTER_GAP = 80;
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -160,22 +172,25 @@ export default function BottomNavBar() {
       )}
 
       <View style={[styles.tabBar, { paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
-        {sideTabs.map((name) => {
+        {sideTabs.map((name, i) => {
           const isActive = activeName === name;
           const color = isActive ? ACTIVE : INACTIVE;
           return (
-            <TouchableOpacity key={name} style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
-              <View style={styles.iconWrap}>
-                {ICONS[name](color)}
-                {name === 'Alerts' && unreadCount > 0 && (
-                  <View style={styles.badge} pointerEvents="none">
-                    <Text style={styles.badgeText} numberOfLines={1}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
+            <React.Fragment key={name}>
+              {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
+              <TouchableOpacity style={styles.tabItem} activeOpacity={0.7} onPress={() => goTo(name)}>
+                <View style={styles.iconWrap}>
+                  {ICONS[name](color)}
+                  {name === 'Alerts' && unreadCount > 0 && (
+                    <View style={styles.badge} pointerEvents="none">
+                      <Text style={styles.badgeText} numberOfLines={1}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </React.Fragment>
           );
         })}
       </View>
@@ -187,21 +202,22 @@ const styles = StyleSheet.create({
   // Edge-to-edge, no side margins/rounded pill. No padding on the wrap
   // itself - the safe-area inset lives on tabBar's own paddingBottom below.
   tabBarWrap: {},
-  // Transparent - no backgroundColor, no shadow/elevation, no notch cutout.
-  // Whatever's behind the screen's tab-bar area shows straight through
-  // instead of a solid docked white rectangle, and a plain flex row means
-  // there's no curve left to align icons around or accidentally paint over.
+  // Translucent glass fill (see BAR_BG above), no shadow/elevation, no
+  // notch cutout shape - just a plain flex row, so there's no curve left to
+  // align icons around or accidentally paint over.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: BAR_PADDING_HORIZONTAL,
-    backgroundColor: 'transparent',
+    backgroundColor: BAR_BG,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
-  // math to keep in sync with anything else.
+  // math to keep in sync with anything else. Home/Chat split the space left
+  // of centerSpacer, Alerts/Menu split the space right of it.
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerSpacer: { width: CENTER_GAP },
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {
     position: 'absolute',

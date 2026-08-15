@@ -21,26 +21,41 @@ import {
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
-// LoginScreen.tsx's own local-palette precedent. Transparent docked bar
+// LoginScreen.tsx's own local-palette precedent. Translucent docked bar
 // with a raised circular center button for whichever tab is this role's
 // "primary action" (Admission for admin/superadmin, Scan for teacher).
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
+// No real backdrop-blur without a native masking library (@react-native-
+// community/blur was considered - it needs both a native dependency add
+// and edits to the CI workflow files that actually build this app, which
+// don't read package.json directly, and there's no way to verify a native
+// build succeeds from here) - approximated with a translucent white fill
+// instead, same tradeoff every other "glass" surface in this app makes.
+const BAR_BG = 'rgba(255,255,255,0.6)';
 // Historical note: an earlier version drew a curved "notch" cutout (an SVG
 // Path) for the center button to nest into, with a glass gradient fill and
 // tab icons positioned by hand to dodge the curve. It kept producing bugs -
 // a shadow bleeding into the transparent cutout, icons drifting into the
 // notch's flare - and never fully resolved, so it's gone: the bar is now
-// flat and transparent, and a plain flex row is enough since there's no
-// curve left to align around.
+// flat, and a plain flex row is enough since there's no curve left to
+// align around.
 //
 // Geometry here is still COMPUTED, never measured, though - don't
 // reintroduce onLayout for the bar's own sizing.
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
 const BAR_PADDING_HORIZONTAL = 20;
+// Reserved empty gap between Chat and Alerts for the raised center button to
+// float over. Four tabs evenly spread across the full row (flex:1 each) put
+// Chat and Alerts a full 25% of the row's width apart - a wide empty
+// stretch in the middle with nothing but the button in it, which reads as
+// a "notch" cut into the bar even though there's no actual cutout shape. A
+// dedicated, button-sized gap keeps Chat/Alerts pulled in close to it
+// instead, matching a standard 4-tab + FAB layout.
+const CENTER_GAP = 80;
 
 const Tab = createBottomTabNavigator();
 
@@ -221,26 +236,28 @@ function TabBar({ state, navigation, isStudent }: any) {
       )}
 
       <View style={[styles.tabBar, { paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
-        {visibleRoutes.map((route: any) => {
+        {visibleRoutes.map((route: any, i: number) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
           const renderIcon = ICONS[route.name];
           const color = isRouteFocused ? ACTIVE : SUBTLE;
 
           return (
-            <TouchableOpacity
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isRouteFocused ? { selected: true } : {}}
-              onPress={() => goToRoute(route, isRouteFocused)}
-              style={styles.tabItem}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconWrap}>
-                {renderIcon && renderIcon(color)}
-                {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
-              </View>
-            </TouchableOpacity>
+            <React.Fragment key={route.key}>
+              {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={isRouteFocused ? { selected: true } : {}}
+                onPress={() => goToRoute(route, isRouteFocused)}
+                style={styles.tabItem}
+                activeOpacity={0.7}
+              >
+                <View style={styles.iconWrap}>
+                  {renderIcon && renderIcon(color)}
+                  {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+                </View>
+              </TouchableOpacity>
+            </React.Fragment>
           );
         })}
       </View>
@@ -399,21 +416,22 @@ const styles = StyleSheet.create({
   // Edge-to-edge, no side margins - full-width docked bar. No padding on the
   // wrap itself - the safe-area inset lives on tabBar's own paddingBottom.
   tabBarWrap: {},
-  // Transparent - no backgroundColor, no shadow/elevation, no notch cutout.
-  // Whatever's behind the screen's tab-bar area shows straight through
-  // instead of a solid docked white rectangle, and a plain flex row means
-  // there's no curve left to align icons around or accidentally paint over.
+  // Translucent glass fill (see BAR_BG above), no shadow/elevation, no
+  // notch cutout shape - just a plain flex row, so there's no curve left to
+  // align icons around or accidentally paint over.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: BAR_PADDING_HORIZONTAL,
-    backgroundColor: 'transparent',
+    backgroundColor: BAR_BG,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
-  // math to keep in sync with anything else.
+  // math to keep in sync with anything else. Home/Chat split the space left
+  // of centerSpacer, Alerts/Menu split the space right of it.
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerSpacer: { width: CENTER_GAP },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
