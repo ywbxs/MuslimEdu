@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import MenuScreen from '../screens/common/MenuScreen';
@@ -28,18 +29,22 @@ import { isOrphanSchoolUser } from '../utils/orphanSchool';
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
-// No backdrop-blur equivalent without a masking library (see TabBar's
-// notch rendering), so this needs to be opaque enough on its own to keep
-// icons legible over whatever's scrolling underneath - higher than a
-// typical "glass" alpha would be if it were sitting on real blur.
-const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// No true backdrop-blur without a native masking library (see TabBar's
+// notch rendering), so the "glass" look is faked with a translucent fill
+// plus a gradient sheen layered on top (GLASS_SHEEN below) instead of flat
+// opacity alone.
+const GLASS_FILL = 'rgba(255,255,255,0.72)';
+const GLASS_SHEEN = ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.08)'];
 // Shape of the tab bar's top edge: flat, dips into a shallow curved notch
 // for the raised center button to nest into, flat again to the far edge -
 // same silhouette as the login/feed mockups' SVG clipPath, expressed as a
 // fillable Path instead (RN has no clip-path equivalent for arbitrary
 // View shapes). Coordinates are in a 0-1000 unit box; stretched to the
-// bar's actual pixel size by the Svg's width/height="100%".
-const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
+// bar's actual pixel size by the Svg's width/height="100%". Both curves
+// settle into the center apex with a vertical tangent (control points
+// share the apex's x) so the dip reads as a smooth round basin instead of
+// meeting on a flat horizontal shelf.
+const NOTCH_PATH = 'M0,0 L300,0 C390,0 410,210 460,270 C475,288 486,300 500,300 C514,300 525,288 540,270 C590,210 610,0 700,0 L1000,0 L1000,1000 L0,1000 Z';
 const CENTER_BTN_BG = '#16211F';
 
 // The bar's geometry is COMPUTED, never measured.
@@ -242,16 +247,23 @@ function TabBar({ state, navigation, isStudent }: any) {
       <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
         {/* A rectangular BlurView can't be clipped to this curved shape
             without a masking library, so the "glass" here is a translucent
-            fill + shadow rather than a true backdrop blur - same tradeoff
-            noted on centerBtn. preserveAspectRatio="none" stretches the
-            path non-uniformly to fill the bar, the same way the mockup's
-            objectBoundingBox clipPath did. The plain View wrapper is what
-            takes it out of the row's flow - relying on the Svg's own style
-            for that is what let it drive the parent's height before. */}
+            fill + gradient sheen rather than a true backdrop blur - same
+            tradeoff noted on centerBtn. preserveAspectRatio="none" stretches
+            the path non-uniformly to fill the bar, the same way the
+            mockup's objectBoundingBox clipPath did. The plain View wrapper
+            is what takes it out of the row's flow - relying on the Svg's
+            own style for that is what let it drive the parent's height
+            before. */}
         <View style={styles.barBackground} pointerEvents="none">
           <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
             <Path d={NOTCH_PATH} fill={GLASS_FILL} />
           </Svg>
+          <LinearGradient
+            colors={GLASS_SHEEN}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         </View>
         {visibleRoutes.map((route: any) => {
           const index = state.routes.indexOf(route);
@@ -438,7 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
     // No `elevation` here on purpose: this View has no backgroundColor (the
     // fill is the notch Svg behind it), and Android's elevation shadow is
     // cast from the view's rectangular bounds, so it draws a straight shadow

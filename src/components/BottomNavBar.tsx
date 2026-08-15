@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'r
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -13,13 +14,17 @@ import { useNotifications } from '../context/NotificationContext';
 const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
-// No backdrop-blur equivalent for a curved shape without a masking library
-// (see MainTabs.tsx's TabBar) - opaque enough on its own to stay legible.
-const GLASS_FILL = 'rgba(255,255,255,0.82)';
+// No true backdrop-blur without a native masking library (see MainTabs.tsx's
+// TabBar), so the "glass" look is faked with a translucent fill plus a
+// gradient sheen layered on top (GLASS_SHEEN below) instead of flat opacity.
+const GLASS_FILL = 'rgba(255,255,255,0.72)';
+const GLASS_SHEEN = ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.08)'];
 const CENTER_BTN_BG = '#16211F';
 // Same notch silhouette as MainTabs.tsx's TabBar - keep these in sync if
-// either changes.
-const NOTCH_PATH = 'M0,0 L329,0 C400,0 430,460 500,460 C570,460 600,0 671,0 L1000,0 L1000,1000 L0,1000 Z';
+// either changes. Both curves settle into the center apex with a vertical
+// tangent (control points share the apex's x) so the dip reads as a
+// smooth round basin instead of meeting on a flat horizontal shelf.
+const NOTCH_PATH = 'M0,0 L300,0 C390,0 410,210 460,270 C475,288 486,300 500,300 C514,300 525,288 540,270 C590,210 610,0 700,0 L1000,0 L1000,1000 L0,1000 Z';
 // Computed, never measured - see MainTabs.tsx for the full story on why
 // onLayout must not come back here.
 const ICON_SIZE = 24;
@@ -174,6 +179,12 @@ export default function BottomNavBar() {
           <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
             <Path d={NOTCH_PATH} fill={GLASS_FILL} />
           </Svg>
+          <LinearGradient
+            colors={GLASS_SHEEN}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         </View>
         {sideTabs.map((name) => {
           const isActive = activeName === name;
@@ -208,7 +219,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: BAR_PADDING_TOP,
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
     // No `elevation` - see MainTabs.tsx's tabBar for why (rectangular
     // Android shadow cutting straight across the notch dip).
     shadowColor: '#0D1E1C',
