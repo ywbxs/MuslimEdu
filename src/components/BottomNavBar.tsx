@@ -40,15 +40,16 @@ const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
 const CENTER_BTN_SIZE = 52;
 const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
 // How deep the bar's notch cuts in, and how wide its opening is at the
-// bar's top edge. Kept deliberately smaller than the button's own radius/
-// diameter so the cutout stays fully hidden behind the opaque button
-// sitting on top of it - the button's own bottom rim always covers the
-// notch's deepest point, so there's no exposed transparent gap peeking out
-// around it (that's what turned into a "shadow bleeds into the cutout" bug
-// last time this bar had a full-width notch with a lot of exposed empty
-// space around a comparatively small button).
-const NOTCH_DEPTH = CENTER_BTN_RADIUS - 4;
-const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 8;
+// bar's top edge. Deliberately a bit WIDER and DEEPER than the button's own
+// radius so the curve is actually visible peeking out past the button's
+// silhouette at a normal viewing scale - sizing it to hide entirely behind
+// the button (as an earlier version of this did) made it effectively
+// invisible except under heavy zoom. There's no View-level shadow on this
+// bar (see the note on tabBar below), so the small sliver of exposed
+// transparent gap this leaves around the button doesn't risk the "shadow
+// bleeds into the cutout" bug from the earlier full-width notch attempt.
+const NOTCH_DEPTH = CENTER_BTN_RADIUS + 6;
+const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
 // Reserved gap between Chat and Alerts, matching the notch's opening width,
 // so they sit pulled in close to the button instead of the wide empty
 // stretch four evenly-flexed tabs would otherwise leave in the middle.
@@ -263,25 +264,19 @@ const styles = StyleSheet.create({
   // Floating pill - marginBottom lifts it off the safe-area edge, the bar
   // itself carries its own marginHorizontal below.
   tabBarWrap: {},
-  // shadow* (iOS) but deliberately no `elevation` (Android) - RN's shadow*
-  // props and `elevation` are two entirely separate systems (Android only
-  // reacts to elevation, iOS only to shadow*), and it was specifically
-  // elevation that painted an opaque backing surface behind this View
-  // (which has no backgroundColor of its own - the fill is the notch Svg,
-  // a child) when the View itself had none, covering up BOTH the
-  // translucent 60%-opacity fill and the notch cutout entirely. shadow*
-  // alone is a no-op on Android, so it's safe to keep for iOS. The pill's
-  // own SVG stroke (see BAR_STROKE) is what gives Android a visible edge
-  // instead, since it can't have a real shadow here.
+  // No shadow* or elevation here at all. shadow*-only (no elevation) was
+  // tried on the theory that Android only reacts to elevation and shadow*
+  // is a no-op there - but on this build, adding shadow* back brought the
+  // exact same symptoms as elevation had (the translucent fill and notch
+  // cutout both disappeared again), so whatever the precise mechanism,
+  // this View can't carry any shadow property at all while its fill lives
+  // on a child Svg with no backgroundColor of its own. The pill's own SVG
+  // stroke (see BAR_STROKE) is what gives it a visible edge instead.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     borderRadius: CORNER_RADIUS,
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
