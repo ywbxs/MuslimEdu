@@ -86,19 +86,6 @@ function buildBarPath(width: number, height: number): string {
   ].join(' ');
 }
 
-// Buffer added around the notch cutout's own extent when backing it in white
-// (see NOTCH_CAP below) - a plain rect a few px larger on every side than
-// the actual cutout, rather than a shape tracing the exact bezier curve.
-// Trying to match the curve precisely left a visible seam (two independently
-// anti-aliased edges that are SUPPOSED to align exactly don't always
-// perfectly agree pixel-for-pixel), which read as a thin gray line right
-// where they met. A generously oversized rect sidesteps that: everywhere it
-// extends past the actual cutout is simply hidden under the outline's own
-// opaque white fill (same color, so even overlapping it's invisible), and
-// the only place it's ever actually visible is the cutout itself, fully
-// covered with margin to spare.
-const NOTCH_CAP_BUFFER = 6;
-
 function HomeIcon({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -249,19 +236,11 @@ export default function BottomNavBar() {
 
       <View style={[styles.tabBar, { width: barWidth, height: totalBarHeight, paddingBottom: bottomInset }]}>
         <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
-          {/* Notch backing first (behind) - a generously oversized rect, not
-              a shape tracing the cutout's exact curve - see NOTCH_CAP_BUFFER
-              above for why. */}
-          <Rect
-            x={barWidth / 2 - NOTCH_HALF_WIDTH - NOTCH_CAP_BUFFER}
-            y={0}
-            width={(NOTCH_HALF_WIDTH + NOTCH_CAP_BUFFER) * 2}
-            height={NOTCH_DEPTH + NOTCH_CAP_BUFFER}
-            fill={BAR_BG}
-          />
-          {/* Fill only, no stroke/border - the bar now docks flush to the
-              screen edges, so there's no gap around it that a border would
-              be defining. */}
+          {/* The notch cutout is genuinely transparent - no white backing
+              shape behind it - so it shows whatever's actually behind the
+              bar there instead of an opaque fill. Fill only, no stroke/
+              border - the bar docks flush to the screen edges, so there's
+              no gap around it that a border would be defining. */}
           <Path d={barPath} fill={BAR_BG} />
         </Svg>
         {sideTabs.map((name, i) => {
