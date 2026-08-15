@@ -22,35 +22,21 @@ import {
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
-// LoginScreen.tsx's own local-palette precedent. Floating pill bar (margin
-// on all sides, not docked edge-to-edge) with a raised circular center
-// button for whichever tab is this role's "primary action" (Admission for
-// admin/superadmin, Scan for teacher), nesting into a curved notch cut into
-// the pill's top edge.
+// LoginScreen.tsx's own local-palette precedent. Edge-to-edge docked bar
+// (not a floating pill) with a raised circular center button for whichever
+// tab is this role's "primary action" (Admission for admin/superadmin, Scan
+// for teacher), nesting into a curved notch cut into the bar's top edge.
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-// Solid white pill - no translucency/glass. An earlier version split the
-// fill and border into two separate SVG paths (fill traced the notch
-// shape, border traced a plain notch-less rect) specifically so the
-// border wouldn't outline the notch cutout - but that meant the two
-// layers had different silhouettes, which is exactly what read as a
-// "nested pill" / nested-layer look: the border line ran straight across
-// where the fill actually dipped down for the notch. Both now use the
-// SAME path (see barPath), so there's only ever one shape.
 const BAR_BG = '#FFFFFF';
-// Subtle edge so the pill still separates cleanly from a similarly light
-// screen behind it even with no shadow defining its silhouette - see the
-// no-shadow/elevation note on tabBar below for why there's no other
-// definition.
-const BAR_STROKE = 'rgba(13,30,28,0.1)';
 
-// Floating pill, not edge-to-edge - margin on all sides instead of docking
-// flush to the screen.
-const OUTER_MARGIN_H = 16;
-const OUTER_MARGIN_BOTTOM = 12;
-const CORNER_RADIUS = 26;
+// Edge-to-edge docked bar, not a floating pill - full screen width, square
+// corners, no margin lifting it off the bottom edge, no border. Side padding
+// for the icons only (no outer margin, since the bar itself now reaches the
+// screen edges).
+const BAR_SIDE_PADDING = 20;
 
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
@@ -76,10 +62,10 @@ const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
 const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
 
 /**
- * Rounded-rect pill outline with a smooth curved dip at the top-center for
- * the raised button to nest into. Built directly in the bar's own pixel
- * dimensions (no stretched viewBox) so there's no non-uniform scaling to
- * throw the curve or corners off.
+ * Full-width rectangle with a smooth curved dip at the top-center for the
+ * raised button to nest into - square corners, edge to edge, no rounding.
+ * Built directly in the bar's own pixel dimensions (no stretched viewBox) so
+ * there's no non-uniform scaling to throw the curve off.
  *
  * Both notch curves reach the apex with a HORIZONTAL tangent (their control
  * point shares the apex's own y) - a true rounded minimum, like the bottom
@@ -91,25 +77,19 @@ const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
  * for it to be noticeable.
  */
 function buildBarPath(width: number, height: number): string {
-  const r = CORNER_RADIUS;
   const cx = width / 2;
   const left = cx - NOTCH_HALF_WIDTH;
   const right = cx + NOTCH_HALF_WIDTH;
   const armX = NOTCH_HALF_WIDTH * 0.6;
   const apexArmX = NOTCH_HALF_WIDTH * 0.35;
   return [
-    `M ${r},0`,
+    `M 0,0`,
     `L ${left},0`,
     `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
     `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
-    `L ${width - r},0`,
-    `Q ${width},0 ${width},${r}`,
-    `L ${width},${height - r}`,
-    `Q ${width},${height} ${width - r},${height}`,
-    `L ${r},${height}`,
-    `Q 0,${height} 0,${height - r}`,
-    `L 0,${r}`,
-    `Q 0,0 ${r},0`,
+    `L ${width},0`,
+    `L ${width},${height}`,
+    `L 0,${height}`,
     'Z',
   ].join(' ');
 }
@@ -251,8 +231,12 @@ function TabBar({ state, navigation, isStudent }: any) {
   const { unreadCount } = useNotifications();
   const { width: windowWidth } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 8);
-  const barWidth = windowWidth - OUTER_MARGIN_H * 2;
-  const barPath = buildBarPath(barWidth, BAR_HEIGHT);
+  const barWidth = windowWidth;
+  // The bar's own rendered height covers the icon row PLUS the safe-area
+  // gutter below it, so the white fill reaches the true screen edge instead
+  // of leaving a gap that would expose the screen's background there.
+  const totalBarHeight = BAR_HEIGHT + bottomInset;
+  const barPath = buildBarPath(barWidth, totalBarHeight);
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -284,7 +268,7 @@ function TabBar({ state, navigation, isStudent }: any) {
   };
 
   return (
-    <View style={[styles.tabBarWrap, { marginBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
+    <View style={styles.tabBarWrap}>
       {centerRouteName && (
         <PressableScale
           style={styles.centerBtn}
@@ -308,8 +292,8 @@ function TabBar({ state, navigation, isStudent }: any) {
         </PressableScale>
       )}
 
-      <View style={[styles.tabBar, { width: barWidth, height: BAR_HEIGHT, marginHorizontal: OUTER_MARGIN_H }]}>
-        <Svg width={barWidth} height={BAR_HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[styles.tabBar, { width: barWidth, height: totalBarHeight, paddingBottom: bottomInset }]}>
+        <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* Notch backing first (behind) - a generously oversized rect, not
               a shape tracing the cutout's exact curve - see NOTCH_CAP_BUFFER
               above for why. */}
@@ -320,10 +304,10 @@ function TabBar({ state, navigation, isStudent }: any) {
             height={NOTCH_DEPTH + NOTCH_CAP_BUFFER}
             fill={BAR_BG}
           />
-          {/* One path for both fill and stroke, so the border and the
-              filled shape are always exactly the same silhouette - see
-              BAR_BG above for why this used to be two separate paths. */}
-          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1} />
+          {/* Fill only, no stroke/border - the bar now docks flush to the
+              screen edges, so there's no gap around it that a border would
+              be defining. */}
+          <Path d={barPath} fill={BAR_BG} />
         </Svg>
         {visibleRoutes.map((route: any, i: number) => {
           const index = state.routes.indexOf(route);
@@ -503,25 +487,20 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   // No backgroundColor here - this wrapper is just a positioning box for the
-  // pill and the button, not a second white surface behind them. Only the
-  // pill's own SVG fill (BAR_BG) is white; wrapping it in an additional
-  // opaque backdrop was tried and reverted - it fixed the screen background
-  // showing through the margin gutter, but made the floating footer visibly
-  // taller/more padded than intended.
+  // bar and the button, not a second white surface behind them. Only the
+  // bar's own SVG fill (BAR_BG) is white.
   tabBarWrap: {},
   // No shadow* or elevation here at all. shadow*-only (no elevation) was
   // tried on the theory that Android only reacts to elevation and shadow*
   // is a no-op there - but on this build, adding shadow* back brought the
-  // exact same symptoms as elevation had (the translucent fill and notch
-  // cutout both disappeared again), so whatever the precise mechanism,
-  // this View can't carry any shadow property at all while its fill lives
-  // on a child Svg with no backgroundColor of its own. The pill's own SVG
-  // stroke (see BAR_STROKE) is what gives it a visible edge instead.
+  // exact same symptoms as elevation had (the fill and notch cutout both
+  // disappeared again), so whatever the precise mechanism, this View can't
+  // carry any shadow property at all while its fill lives on a child Svg
+  // with no backgroundColor of its own.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    borderRadius: CORNER_RADIUS,
+    paddingHorizontal: BAR_SIDE_PADDING,
   },
   // flex:1 per item + centered content - even horizontal distribution and
   // vertical centering both come straight from flexbox, no manual pixel
