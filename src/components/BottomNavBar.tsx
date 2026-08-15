@@ -57,13 +57,6 @@ const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
 // so they sit pulled in close to the button instead of the wide empty
 // stretch four evenly-flexed tabs would otherwise leave in the middle.
 const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
-// Clearance above the pill inside tabBarWrap's own white backing panel (see
-// tabBarWrap below) - tall enough for the button's full height above the
-// pill's top edge PLUS its shadow blur (shadowRadius 10) to still land on
-// white, not spill past the panel's edge onto whatever the screen behind it
-// is doing.
-const WRAP_PADDING_TOP = CENTER_BTN_RADIUS + 14;
-
 /**
  * Rounded-rect pill outline with a smooth curved dip at the top-center for
  * the raised button to nest into. Built directly in the bar's own pixel
@@ -240,7 +233,7 @@ export default function BottomNavBar() {
   };
 
   return (
-    <View style={[styles.tabBarWrap, { paddingTop: WRAP_PADDING_TOP, paddingBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
+    <View style={[styles.tabBarWrap, { marginBottom: OUTER_MARGIN_BOTTOM + bottomInset }]}>
       {centerName && (
         <TouchableOpacity style={styles.centerBtn} activeOpacity={0.85} onPress={() => goTo(centerName)} accessibilityRole="button" accessibilityLabel={centerName}>
           {ICONS[centerName]('#FFFFFF')}
@@ -281,17 +274,13 @@ export default function BottomNavBar() {
 }
 
 const styles = StyleSheet.create({
-  // Opaque white backing panel for the whole floating-pill footer area, not
-  // just the pill itself. Without this, the screen's own background (e.g.
-  // FeedScreen's CANVAS_SOFT->CANVAS gradient) shows through the transparent
-  // margin gutter around the pill and above the raised center button - that
-  // gutter reads as a distinct gray/tinted shape hugging the white pill's
-  // silhouette, which looks exactly like an unwanted second layer even
-  // though nothing extra is actually being drawn. Making this wrapper itself
-  // solid white (full width, from above the button down to the safe-area
-  // edge via paddingTop/paddingBottom below) means the pill always floats on
-  // white no matter what the screen behind it does.
-  tabBarWrap: { backgroundColor: '#FFFFFF' },
+  // No backgroundColor here - this wrapper is just a positioning box for the
+  // pill and the button, not a second white surface behind them. Only the
+  // pill's own SVG fill (BAR_BG) is white; wrapping it in an additional
+  // opaque backdrop was tried and reverted - it fixed the screen background
+  // showing through the margin gutter, but made the floating footer visibly
+  // taller/more padded than intended.
+  tabBarWrap: {},
   // No shadow* or elevation here at all. shadow*-only (no elevation) was
   // tried on the theory that Android only reacts to elevation and shadow*
   // is a no-op there - but on this build, adding shadow* back brought the
@@ -315,14 +304,7 @@ const styles = StyleSheet.create({
   iconWrap: { alignItems: 'center', justifyContent: 'center' },
   centerBtn: {
     position: 'absolute',
-    // RN's position:absolute is relative to the parent's BORDER box, not its
-    // padding box (unlike standard CSS) - so tabBarWrap's WRAP_PADDING_TOP
-    // (added for the white backdrop panel) does NOT shift this button the
-    // way it shifts tabBar (a normal-flow child). Without adding it back in
-    // here explicitly, the button stays pinned near the wrap's outer top
-    // edge while the pill moves down, opening a gap between them instead of
-    // the button nesting into the notch.
-    top: WRAP_PADDING_TOP - CENTER_BTN_RADIUS,
+    top: -CENTER_BTN_RADIUS,
     left: '50%',
     marginLeft: -CENTER_BTN_RADIUS,
     width: CENTER_BTN_SIZE,
