@@ -32,7 +32,8 @@ interface Props {
   radius?: number;
   // Overrides DEFAULT_ASPECT_RATIO for the single-image case only (2+ image
   // layouts already use fixed pixel heights, unaffected by this). The Home
-  // feed passes 4/3 here; omit to keep the default ratio.
+  // feed passes 3/4 (portrait 4:3, taller than wide) here; omit to keep
+  // the default ratio.
   aspectRatio?: number;
 }
 
