@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
-import { ChevronLeft, X, Check } from 'lucide-react-native';
+import { ChevronLeft, X, Check, ChevronRight, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherList, fetchTeacherProfile, StaffSummary, TeacherProfile } from '../../services/adminTeacherService';
@@ -17,7 +17,6 @@ import GlassBackground from '../../components/glass/GlassBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
-const EMERALD = COLORS.emerald;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const SURFACE = COLORS.surface;
@@ -32,12 +31,21 @@ function IconClose({ color, size = 18 }: { color: string; size?: number }) {
 function IconCheck({ color, size = 15 }: { color: string; size?: number }) {
   return <Check size={size} color={color} strokeWidth={3} />;
 }
+function IconChevronRight({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
+  return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
+}
+function IconUsers({ color = SUBTLE, size = 30 }: { color?: string; size?: number }) {
+  return <Users size={size} color={color} strokeWidth={1.6} />;
+}
 
-function TileSkeleton() {
+function RowSkeleton({ isLast }: { isLast?: boolean }) {
   return (
-    <View style={styles.tile}>
-      <SkeletonCircle size={48} />
-      <Skeleton width="70%" height={12} style={{ marginTop: 10 }} />
+    <View style={[styles.row, !isLast && styles.rowDivider]}>
+      <SkeletonCircle size={44} />
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Skeleton width="55%" height={13} style={{ marginBottom: 6, borderRadius: 4 }} />
+        <Skeleton width="35%" height={10} style={{ borderRadius: 4 }} />
+      </View>
     </View>
   );
 }
@@ -185,8 +193,10 @@ export default function StaffIdCardsScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.grid}>
-          {[0, 1, 2, 3].map((i) => <TileSkeleton key={i} />)}
+        <View style={styles.listContent}>
+          <View style={styles.listCardWrap}>
+            {[0, 1, 2, 3].map((i) => <RowSkeleton key={i} isLast={i === 3} />)}
+          </View>
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -195,26 +205,34 @@ export default function StaffIdCardsScreen() {
             <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
+      ) : rows.length === 0 ? (
+        <View style={styles.center}>
+          <View style={styles.emptyIconWrap}>
+            <IconUsers />
+          </View>
+          <Text style={styles.emptyText}>{t('staff_id_cards.empty', 'No staff found.')}</Text>
+        </View>
       ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(item) => `${item.role}-${item.id}`}
-          numColumns={2}
-          contentContainerStyle={styles.listContent}
-          columnWrapperStyle={styles.row}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyText}>{t('staff_id_cards.empty', 'No staff found.')}</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.tile} activeOpacity={0.85} onPress={() => setSelected(item)}>
-              <UserAvatar name={item.name} photo={item.photo} size={48} dotColor={null} />
-              <Text style={styles.tileName} numberOfLines={1}>{item.name}</Text>
-              {item.code ? <Text style={styles.tileCode} numberOfLines={1}>{item.code}</Text> : null}
-            </TouchableOpacity>
-          )}
-        />
+        <View style={styles.listCardWrap}>
+          <FlatList
+            data={rows}
+            keyExtractor={(item) => `${item.role}-${item.id}`}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[styles.row, index !== rows.length - 1 && styles.rowDivider]}
+                activeOpacity={0.7}
+                onPress={() => setSelected(item)}
+              >
+                <UserAvatar name={item.name} photo={item.photo} size={44} dotColor={null} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
+                  {item.code ? <Text style={styles.rowCode} numberOfLines={1}>{item.code}</Text> : null}
+                </View>
+                <IconChevronRight />
+              </TouchableOpacity>
+            )}
+          />
+        </View>
       )}
 
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
@@ -308,22 +326,36 @@ const styles = StyleSheet.create({
   errorText: { color: COLORS.danger, textAlign: 'center', marginBottom: 12 },
   retryBtn: { backgroundColor: '#F2F2F7', paddingVertical: 10, paddingHorizontal: 20, borderRadius: RADIUS.sm },
   retryText: { color: INK, fontWeight: '600' },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.emeraldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
   emptyText: { color: SUBTLE, fontSize: 14 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: SPACING.md, gap: SPACING.sm },
+  // A single grouped card of hairline-divided rows (Contacts-app style)
+  // instead of a 2-column tile grid - the grid left a large dead gap
+  // whenever the list had an odd count (a single result, as in the
+  // screenshot, stretched into one lonely full-width tile).
   listContent: { padding: SPACING.md },
-  row: { gap: SPACING.sm },
-  tile: {
+  listCardWrap: {
     flex: 1,
+    marginHorizontal: SPACING.md,
     backgroundColor: SURFACE,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
     ...SHADOW.level1,
   },
-  tileName: { fontSize: 13, fontWeight: '700', color: INK, marginTop: 8, textAlign: 'center' },
-  tileCode: { fontSize: 11, color: SUBTLE, marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  rowName: { fontSize: 15, fontWeight: '700', color: INK },
+  rowCode: { fontSize: 12, color: SUBTLE, marginTop: 2 },
 
   // The card now floats directly on the dark backdrop, Apple Wallet-pass
   // style, instead of sitting nested inside a second white rounded box -
