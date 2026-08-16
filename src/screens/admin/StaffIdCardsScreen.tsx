@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
-import { ChevronLeft, X } from 'lucide-react-native';
+import { ChevronLeft, X, Check } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherList, fetchTeacherProfile, StaffSummary, TeacherProfile } from '../../services/adminTeacherService';
@@ -15,7 +15,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SHADOW, SPACING } from '../../theme/glass';
+import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
 const EMERALD = COLORS.emerald;
 const INK = COLORS.ink;
@@ -28,6 +28,9 @@ function IconChevronLeft({ color, size = 22 }: { color: string; size?: number })
 }
 function IconClose({ color, size = 18 }: { color: string; size?: number }) {
   return <X size={size} color={color} strokeWidth={2.2} />;
+}
+function IconCheck({ color, size = 15 }: { color: string; size?: number }) {
+  return <Check size={size} color={color} strokeWidth={3} />;
 }
 
 function TileSkeleton() {
@@ -216,52 +219,54 @@ export default function StaffIdCardsScreen() {
 
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelected(null)} hitSlop={10}>
-              <IconClose color={SUBTLE} />
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelected(null)} hitSlop={10} activeOpacity={0.8}>
+            <IconClose color="#FFFFFF" />
+          </TouchableOpacity>
 
-            {selected ? (
-              <View style={styles.modalCardWrap} ref={cardRef} collapsable={false}>
-                <StudentIdCard
-                  student={{
-                    name: selected.name,
-                    nameAr: selectedProfile?.name_ar,
-                    photo: selected.photo,
-                    code: selected.code ?? String(selected.id),
-                    personType: 'staff',
-                    schoolName,
-                    schoolAddress,
-                    schoolLogoUrl: schoolLogo,
-                    dob: (selectedProfile as TeacherProfile | CashierProfile)?.birthday,
-                    address: (selectedProfile as TeacherProfile | CashierProfile)?.address,
-                    emergencyContactName: selectedProfile?.emergency_contact_name,
-                    emergencyContactPhone: selectedProfile?.emergency_contact_phone,
-                    signatureUrl: selectedProfile?.signature,
-                  }}
-                  theme={theme}
-                  backgroundImageUrl={schoolBackground}
-                />
-              </View>
-            ) : null}
+          {selected ? (
+            <View style={styles.modalCardWrap} ref={cardRef} collapsable={false}>
+              <StudentIdCard
+                student={{
+                  name: selected.name,
+                  nameAr: selectedProfile?.name_ar,
+                  photo: selected.photo,
+                  code: selected.code ?? String(selected.id),
+                  personType: 'staff',
+                  schoolName,
+                  schoolAddress,
+                  schoolLogoUrl: schoolLogo,
+                  dob: (selectedProfile as TeacherProfile | CashierProfile)?.birthday,
+                  address: (selectedProfile as TeacherProfile | CashierProfile)?.address,
+                  emergencyContactName: selectedProfile?.emergency_contact_name,
+                  emergencyContactPhone: selectedProfile?.emergency_contact_phone,
+                  signatureUrl: selectedProfile?.signature,
+                }}
+                theme={theme}
+                backgroundImageUrl={schoolBackground}
+              />
+            </View>
+          ) : null}
 
-            {schoolBackground ? null : (
-              <View style={styles.themeRow}>
-                {CARD_THEMES.map((th) => (
-                  <TouchableOpacity
-                    key={th.key}
-                    style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}
-                    onPress={() => setTheme(th)}
-                    activeOpacity={0.85}
-                  />
-                ))}
-              </View>
-            )}
+          {schoolBackground ? null : (
+            <View style={styles.themeRow}>
+              {CARD_THEMES.map((th) => (
+                <TouchableOpacity
+                  key={th.key}
+                  style={styles.themeSwatchWrap}
+                  onPress={() => setTheme(th)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}>
+                    {theme.key === th.key ? <IconCheck color="#FFFFFF" /> : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-            <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.85} disabled={isExporting}>
-              {isExporting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.exportBtnText}>{t('staff_id_cards.export', 'Save to Device')}</Text>}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.85} disabled={isExporting}>
+            {isExporting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.exportBtnText}>{t('staff_id_cards.export', 'Save to Device')}</Text>}
+          </TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -293,7 +298,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
-  tabActive: { backgroundColor: EMERALD, borderColor: EMERALD },
+  // BRAND.emeraldDeep, not EMERALD - white text on the raw #1FAE64 measures
+  // 2.88:1, below WCAG AA's 4.5:1 minimum. Deep emerald measures 5.42:1.
+  tabActive: { backgroundColor: BRAND.emeraldDeep, borderColor: BRAND.emeraldDeep },
   tabText: { fontSize: 13, fontWeight: '700', color: SUBTLE },
   tabTextActive: { color: '#FFFFFF' },
 
@@ -318,15 +325,36 @@ const styles = StyleSheet.create({
   tileName: { fontSize: 13, fontWeight: '700', color: INK, marginTop: 8, textAlign: 'center' },
   tileCode: { fontSize: 11, color: SUBTLE, marginTop: 2 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: SURFACE, borderRadius: RADIUS.lg, padding: 20, alignItems: 'center', width: '100%' },
-  modalCloseBtn: { alignSelf: 'flex-end', marginBottom: 8 },
-  modalCardWrap: { marginBottom: SPACING.md },
+  // The card now floats directly on the dark backdrop, Apple Wallet-pass
+  // style, instead of sitting nested inside a second white rounded box -
+  // that nesting doubled the rounding/shadow and buried the card's own
+  // presentation under a redundant layer of chrome.
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(10,20,15,0.72)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCardWrap: { marginBottom: SPACING.lg },
 
-  themeRow: { flexDirection: 'row', gap: 12, marginBottom: SPACING.md },
-  themeSwatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: 'transparent' },
-  themeSwatchActive: { borderColor: EMERALD },
+  themeRow: { flexDirection: 'row', gap: 14, marginBottom: SPACING.lg },
+  themeSwatchWrap: { padding: 3 },
+  themeSwatch: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  themeSwatchActive: { borderColor: '#FFFFFF' },
 
-  exportBtn: { alignSelf: 'stretch', backgroundColor: EMERALD, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center' },
+  exportBtn: {
+    alignSelf: 'stretch',
+    maxWidth: 288,
+    backgroundColor: BRAND.emeraldDeep,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
   exportBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14.5 },
 });
