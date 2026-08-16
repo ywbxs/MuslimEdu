@@ -24,28 +24,12 @@ const CENTER_BTN_BG = '#16211F';
 // where the fill actually dipped down for the notch. Both now use the
 // SAME path (see barPath), so there's only ever one shape.
 const BAR_BG = '#FFFFFF';
-// A genuinely transparent notch has no color of its own - whether it reads
-// as a visible curve at all depends entirely on how much contrast the page
-// behind the bar happens to have against BAR_BG, which varies screen to
-// screen and can be low enough that the "cutout" is structurally correct
-// but effectively invisible. This subtle stroke traces the curve itself
-// (and the rest of the bar's outline) so the notch stays legible
-// regardless of what's behind it - on the SAME single path as the fill
-// (see the note above) so it can't develop the fill/border silhouette
-// mismatch that caused the earlier "nested pill" bug.
-const BAR_STROKE = 'rgba(13,30,28,0.14)';
 
-// Edge-to-edge docked bar, not a floating pill - full screen width, no
-// margin lifting it off the bottom edge, no border. Side padding for the
-// icons only (no outer margin, since the bar itself now reaches the screen
-// edges).
+// Edge-to-edge docked bar, not a floating pill - full screen width, square
+// corners, no margin lifting it off the bottom edge, no border. Side
+// padding for the icons only (no outer margin, since the bar itself now
+// reaches the screen edges).
 const BAR_SIDE_PADDING = 20;
-// Top corners only (the bottom edge is flush with the true screen edge, so
-// rounding it would never be visible anyway). Matches the center button's
-// own radius family instead of meeting it at a hard 90-degree corner - one
-// shape language (rounded) across the whole bar instead of mixing square
-// and circular silhouettes.
-const TOP_CORNER_RADIUS = 24;
 
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
@@ -54,52 +38,41 @@ const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
 
 const CENTER_BTN_SIZE = 52;
 const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
-// How deep the bar's notch cuts in, and how wide its opening is at the
-// bar's top edge. Deliberately a bit WIDER and DEEPER than the button's own
-// radius so the curve is actually visible peeking out past the button's
-// silhouette at a normal viewing scale - sizing it to hide entirely behind
-// the button (as an earlier version of this did) made it effectively
-// invisible except under heavy zoom. There's no View-level shadow on this
-// bar (see the note on tabBar below), so the small sliver of exposed
-// transparent gap this leaves around the button doesn't risk the "shadow
-// bleeds into the cutout" bug from the earlier full-width notch attempt.
-const NOTCH_DEPTH = CENTER_BTN_RADIUS + 6;
-const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
+// The notch is a true semicircle, CONCENTRIC with the button: same center
+// point (the button's own center always lands exactly on the pill's top
+// edge - see centerBtn's `top: -CENTER_BTN_RADIUS` below, which makes that
+// true by construction regardless of any other spacing value). Its radius
+// is the button's own radius plus a small fixed gap, so the cutout traces
+// the button's exact circular curvature at a uniform distance all the way
+// around - a perfect circle, not an approximated wider/shallower dip.
+const NOTCH_GAP = 6;
+const NOTCH_RADIUS = CENTER_BTN_RADIUS + NOTCH_GAP;
 // Reserved gap between Chat and Alerts, matching the notch's opening width,
 // so they sit pulled in close to the button instead of the wide empty
 // stretch four evenly-flexed tabs would otherwise leave in the middle.
-const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
+const CENTER_GAP = NOTCH_RADIUS * 2;
 /**
- * Full-width rectangle with rounded TOP corners only (bottom is flush with
- * the true screen edge, never visible) and a smooth curved dip at the
- * top-center for the raised button to nest into. Built directly in the
- * bar's own pixel dimensions (no stretched viewBox) so there's no
- * non-uniform scaling to throw either curve off.
- *
- * Both notch curves reach the apex with a HORIZONTAL tangent (their control
- * point shares the apex's own y) - a true rounded minimum, like the bottom
- * of a parabola. An earlier version gave both curves a control point at the
- * SAME (x, y) as each other, which put them at exactly opposite tangent
- * directions right at the apex (one arriving straight down, the other
- * departing straight up) - mathematically a cusp, not a curve, which
- * rendered as a visible spike/glitch once the notch was made deep enough
- * for it to be noticeable.
+ * Full-width rectangle, square corners, with a true semicircular notch cut
+ * into the top-center for the raised button to nest into - drawn with a
+ * single SVG elliptical-arc command (rx=ry=NOTCH_RADIUS), not an
+ * approximated bezier dip, so it's exactly as round as the button by
+ * definition, everywhere along the curve. Built directly in the bar's own
+ * pixel dimensions (no stretched viewBox) so there's no non-uniform
+ * scaling to throw the curve off.
  */
 function buildBarPath(width: number, height: number): string {
-  const r = TOP_CORNER_RADIUS;
   const cx = width / 2;
-  const left = cx - NOTCH_HALF_WIDTH;
-  const right = cx + NOTCH_HALF_WIDTH;
-  const armX = NOTCH_HALF_WIDTH * 0.6;
-  const apexArmX = NOTCH_HALF_WIDTH * 0.35;
+  const R = NOTCH_RADIUS;
+  const left = cx - R;
+  const right = cx + R;
   return [
-    `M 0,${r}`,
-    `Q 0,0 ${r},0`,
+    `M 0,0`,
     `L ${left},0`,
-    `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
-    `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
-    `L ${width - r},0`,
-    `Q ${width},0 ${width},${r}`,
+    // sweep-flag 0 traces the arc through the BOTTOM of the circle centered
+    // at (cx, 0) - i.e. dipping down into the bar - rather than the top
+    // (which would bulge up and out of it).
+    `A ${R},${R} 0 0 0 ${right},0`,
+    `L ${width},0`,
     `L ${width},${height}`,
     `L 0,${height}`,
     'Z',
@@ -257,12 +230,9 @@ export default function BottomNavBar() {
       <View style={[styles.tabBar, { width: barWidth, height: totalBarHeight, paddingBottom: bottomInset }]}>
         <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* The notch cutout is genuinely transparent - no white backing
-              shape behind it - so it shows whatever's actually behind the
-              bar there. The stroke traces this same path (see BAR_STROKE
-              above) so the notch curve stays visible even where the page
-              behind it is too close to BAR_BG in color to show a cutout on
-              its own. */}
-          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1.5} />
+              shape and no border - it shows whatever's actually behind the
+              bar there. */}
+          <Path d={barPath} fill={BAR_BG} />
         </Svg>
         {sideTabs.map((name, i) => {
           const isActive = activeName === name;
