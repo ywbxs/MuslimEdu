@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChartNoAxesColumn, ArrowRight as ArrowRightGlyph, Users, CalendarCheck, GraduationCap, Layers, BookOpen, School as SchoolGlyph } from 'lucide-react-native';
+import { ChartNoAxesColumn, ArrowRight as ArrowRightGlyph, Users, CalendarCheck, GraduationCap, Layers, BookOpen, School as SchoolGlyph, Pencil } from 'lucide-react-native';
 import { fetchAcademicAnalytics, Analytics } from '../services/academicAnalyticsService';
 import { fetchSetupStatus, SchoolProfile } from '../services/academicSetupService';
 import { Skeleton } from './Skeleton';
@@ -42,6 +42,9 @@ function SectionsIcon({ color }: { color: string }) {
 }
 function SubjectsIcon({ color }: { color: string }) {
   return <BookOpen color={color} size={15} strokeWidth={1.8} />;
+}
+function PencilIcon({ color }: { color: string }) {
+  return <Pencil color={color} size={15} strokeWidth={1.8} />;
 }
 
 /** Circular icon button that scales down slightly on press - identical to
@@ -109,7 +112,7 @@ function schoolInitials(name: string | null): string {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-function SchoolIdentityStrip({ school }: { school: SchoolProfile }) {
+function SchoolIdentityStrip({ school, onEdit }: { school: SchoolProfile; onEdit: () => void }) {
   const institutionLabel = school.institution_type ? INSTITUTION_LABELS[school.institution_type] : null;
   return (
     <View style={styles.schoolStrip}>
@@ -130,6 +133,14 @@ function SchoolIdentityStrip({ school }: { school: SchoolProfile }) {
         </Text>
         {institutionLabel ? <Text style={styles.schoolType}>{institutionLabel}</Text> : null}
       </View>
+      <Pressable
+        onPress={onEdit}
+        hitSlop={10}
+        android_ripple={{ color: 'rgba(255,255,255,0.15)', radius: 18 }}
+        style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.7 }]}
+      >
+        <PencilIcon color={PALE_GREEN} />
+      </Pressable>
     </View>
   );
 }
@@ -194,6 +205,7 @@ export default function AnalyticsCard({ token }: { token: string }) {
   });
 
   const goToAnalytics = () => (navigation as any).navigate('AcademicAnalytics');
+  const editSchoolProfile = () => (navigation as any).navigate('InstitutionProfile');
 
   if (isLoading) {
     return (
@@ -228,7 +240,7 @@ export default function AnalyticsCard({ token }: { token: string }) {
 
   return (
     <Animated.View style={[styles.card, { opacity: fadeIn }]}>
-      {school ? <SchoolIdentityStrip school={school} /> : null}
+      {school ? <SchoolIdentityStrip school={school} onEdit={editSchoolProfile} /> : null}
 
       <TouchableOpacity style={styles.headerRow} activeOpacity={0.85} onPress={goToAnalytics}>
         <View style={styles.iconBox}>
@@ -333,6 +345,17 @@ const styles = StyleSheet.create({
   schoolInitials: { color: PALE_GREEN, fontSize: 14, fontWeight: '800' },
   schoolName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   schoolType: { color: 'rgba(255,255,255,0.6)', fontSize: 11.5, fontWeight: '600', marginTop: 2 },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
 
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   iconBox: {
