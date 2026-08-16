@@ -9,6 +9,7 @@ import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
 import HeroGlow from '../../components/HeroGlow';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
+import AnalyticsCard from '../../components/AnalyticsCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
@@ -838,6 +839,13 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             // placeholder card (no live counts). See MuslimEdu-Status-8.
             <MonthlyReportsCard token={token} />
           ) : null}
+
+          {/* Non-orphan schools' equivalent of the hero card above - every
+              institution type except orphanage has the class-based academic
+              subsystem (attendance, grades, enrollment) this reports on,
+              same boundary isOrphanSchool already draws for the rest of the
+              academic tile set. */}
+          {!isOrphanSchool && token ? <AnalyticsCard token={token} /> : null}
         </View>
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
