@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { House, MessageSquare, Bell, LayoutGrid, Plus, ScanLine, User } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import PressableScale from './PressableScale';
@@ -42,85 +42,22 @@ const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
 // action, but not so big it needs to be raised out of the bar to fit.
 const CENTER_BTN_SIZE = 40;
 
-function HomeIcon({ color }: { color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 11l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
-    </Svg>
-  );
-}
-// Admin center button (orphan-type and regular school type alike) - a plain
-// plus, matching MainTabs.tsx's TabBar.
-function AdmissionIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function ScanIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Rect x={9} y={9} width={6} height={6} rx={1} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
-}
-// Student center button - opens their status report (classes, attendance,
-// grades - see MyProgressScreen/StudentProgressScreen.tsx).
-function ProfileIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={3.4} stroke={color} strokeWidth={1.9} />
-      <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function ChatIcon({ color }: { color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
-    </Svg>
-  );
-}
-function BellIcon({ color }: { color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
-        stroke={color}
-        strokeWidth={1.9}
-        strokeLinejoin="round"
-      />
-      <Circle cx={12} cy={20} r={1.4} fill={color} />
-    </Svg>
-  );
-}
-function MenuIcon({ color }: { color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={4} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={13} y={4} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={4} y={13} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-      <Rect x={13} y={13} width={7} height={7} rx={1.6} stroke={color} strokeWidth={1.9} />
-    </Svg>
-  );
-}
-
+// Icons from lucide-react-native (already a react-native-svg peer, already
+// installed) instead of hand-rolled SVG paths - one maintained, consistent
+// icon family instead of one-off drawn glyphs per icon.
 const ICONS: Record<string, (color: string) => React.ReactElement> = {
-  Home: (c) => <HomeIcon color={c} />,
-  Admission: (c) => <AdmissionIcon color={c} />,
-  Scan: (c) => <ScanIcon color={c} />,
-  MyProgress: (c) => <ProfileIcon color={c} />,
-  Chat: (c) => <ChatIcon color={c} />,
-  Alerts: (c) => <BellIcon color={c} />,
-  Menu: (c) => <MenuIcon color={c} />,
+  Home: (c) => <House color={c} size={24} strokeWidth={2} />,
+  // Admin center action (orphan-type and regular school type alike) - a
+  // plain plus, not a person-related glyph, per the request that the admin
+  // center icon simply read as "add/admission".
+  Admission: (c) => <Plus color={c} size={22} strokeWidth={2.3} />,
+  Scan: (c) => <ScanLine color={c} size={20} strokeWidth={2} />,
+  // Student center action - opens their status report (classes,
+  // attendance, grades - see MyProgressScreen/StudentProgressScreen.tsx).
+  MyProgress: (c) => <User color={c} size={20} strokeWidth={2} />,
+  Chat: (c) => <MessageSquare color={c} size={24} strokeWidth={2} />,
+  Alerts: (c) => <Bell color={c} size={24} strokeWidth={2} />,
+  Menu: (c) => <LayoutGrid color={c} size={24} strokeWidth={2} />,
 };
 
 // Best-effort read of the currently focused tab inside MainTabs so we can
