@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, ActivityIndi
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
 import Svg, { Path } from 'react-native-svg';
-import { ChevronLeft, Image as ImageIcon, X } from 'lucide-react-native';
+import { ChevronLeft, Image as ImageIcon, X, ChevronRight, Users, Check } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, fetchChildProfile, StudentSummary, ChildProfile } from '../../services/adminService';
@@ -14,9 +14,8 @@ import UserAvatar from '../../components/UserAvatar';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SHADOW, SPACING } from '../../theme/glass';
+import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
-const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -40,12 +39,24 @@ function IconCheckCircle({ color, filled, size = 20 }: { color: string; filled: 
     </Svg>
   );
 }
+function IconChevronRight({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
+  return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
+}
+function IconUsers({ color = SUBTLE, size = 30 }: { color?: string; size?: number }) {
+  return <Users size={size} color={color} strokeWidth={1.6} />;
+}
+function IconCheck({ color, size = 15 }: { color: string; size?: number }) {
+  return <Check size={size} color={color} strokeWidth={3} />;
+}
 
-function TileSkeleton() {
+function RowSkeleton({ isLast }: { isLast?: boolean }) {
   return (
-    <View style={styles.tile}>
-      <SkeletonCircle size={48} />
-      <Skeleton width="70%" height={12} style={{ marginTop: 10 }} />
+    <View style={[styles.row, !isLast && styles.rowDivider]}>
+      <SkeletonCircle size={44} />
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Skeleton width="55%" height={13} style={{ marginBottom: 6, borderRadius: 4 }} />
+        <Skeleton width="35%" height={10} style={{ borderRadius: 4 }} />
+      </View>
     </View>
   );
 }
@@ -229,8 +240,10 @@ export default function StudentIdCardsScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.grid}>
-          {[0, 1, 2, 3, 4, 5].map((i) => <TileSkeleton key={i} />)}
+        <View style={styles.listContent}>
+          <View style={styles.listCardWrap}>
+            {[0, 1, 2, 3, 4].map((i) => <RowSkeleton key={i} isLast={i === 4} />)}
+          </View>
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -239,38 +252,43 @@ export default function StudentIdCardsScreen() {
             <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
           </TouchableOpacity>
         </View>
+      ) : students.length === 0 ? (
+        <View style={styles.center}>
+          <View style={styles.emptyIconWrap}>
+            <IconUsers />
+          </View>
+          <Text style={styles.emptyText}>{t('student_id_cards.empty', 'No students found.')}</Text>
+        </View>
       ) : (
-        <FlatList
-          data={students}
-          keyExtractor={(item) => String(item.id)}
-          numColumns={2}
-          contentContainerStyle={[styles.listContent, isSelectMode && { paddingBottom: 100 }]}
-          columnWrapperStyle={styles.row}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyText}>{t('student_id_cards.empty', 'No students found.')}</Text>
-            </View>
-          }
-          renderItem={({ item }) => {
-            const isChecked = selectedIds.has(item.id);
-            return (
-              <TouchableOpacity
-                style={styles.tile}
-                activeOpacity={0.85}
-                onPress={() => (isSelectMode ? toggleSelected(item.id) : setSelected(item))}
-              >
-                {isSelectMode ? (
-                  <View style={styles.checkBadge}>
-                    <IconCheckCircle color={EMERALD} filled={isChecked} />
+        <View style={styles.listCardWrap}>
+          <FlatList
+            data={students}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={isSelectMode ? { paddingBottom: 100 } : undefined}
+            renderItem={({ item, index }) => {
+              const isChecked = selectedIds.has(item.id);
+              return (
+                <TouchableOpacity
+                  style={[styles.row, index !== students.length - 1 && styles.rowDivider]}
+                  activeOpacity={0.7}
+                  onPress={() => (isSelectMode ? toggleSelected(item.id) : setSelected(item))}
+                >
+                  {isSelectMode ? (
+                    <View style={styles.checkBadge}>
+                      <IconCheckCircle color={BRAND.emeraldDeep} filled={isChecked} />
+                    </View>
+                  ) : null}
+                  <UserAvatar name={item.name} photo={item.photo} size={44} dotColor={null} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
+                    {item.code ? <Text style={styles.rowCode} numberOfLines={1}>{item.code}</Text> : null}
                   </View>
-                ) : null}
-                <UserAvatar name={item.name} photo={item.photo} size={48} dotColor={null} />
-                <Text style={styles.tileName} numberOfLines={1}>{item.name}</Text>
-                {item.code ? <Text style={styles.tileCode} numberOfLines={1}>{item.code}</Text> : null}
-              </TouchableOpacity>
-            );
-          }}
-        />
+                  {!isSelectMode ? <IconChevronRight /> : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       )}
 
       {isSelectMode && selectedIds.size > 0 ? (
@@ -294,54 +312,51 @@ export default function StudentIdCardsScreen() {
 
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelected(null)} hitSlop={10}>
-              <IconClose color={SUBTLE} />
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelected(null)} hitSlop={10} activeOpacity={0.8}>
+            <IconClose color="#FFFFFF" />
+          </TouchableOpacity>
 
-            {selected ? (
-              <View style={styles.modalCardWrap} ref={cardRef} collapsable={false}>
-                <StudentIdCard
-                  student={{
-                    name: selected.name,
-                    nameAr: selectedProfile?.name_ar ?? selected.name_ar,
-                    photo: selected.photo,
-                    code: selected.code ?? String(selected.id),
-                    personType: 'student',
-                    className: selected.class_name,
-                    sectionName: selected.section_name,
-                    schoolName,
-                    schoolAddress,
-                    schoolLogoUrl: schoolLogo,
-                    dob: selectedProfile?.birthday,
-                    address: selectedProfile?.address ?? selected.address,
-                    emergencyContactName: selectedProfile?.emergency_contact_name,
-                    emergencyContactPhone: selectedProfile?.emergency_contact_phone,
-                    signatureUrl: selectedProfile?.signature,
-                  }}
-                  theme={theme}
-                  backgroundImageUrl={schoolBackground}
-                />
-              </View>
-            ) : null}
+          {selected ? (
+            <View style={styles.modalCardWrap} ref={cardRef} collapsable={false}>
+              <StudentIdCard
+                student={{
+                  name: selected.name,
+                  nameAr: selectedProfile?.name_ar ?? selected.name_ar,
+                  photo: selected.photo,
+                  code: selected.code ?? String(selected.id),
+                  personType: 'student',
+                  className: selected.class_name,
+                  sectionName: selected.section_name,
+                  schoolName,
+                  schoolAddress,
+                  schoolLogoUrl: schoolLogo,
+                  dob: selectedProfile?.birthday,
+                  address: selectedProfile?.address ?? selected.address,
+                  emergencyContactName: selectedProfile?.emergency_contact_name,
+                  emergencyContactPhone: selectedProfile?.emergency_contact_phone,
+                  signatureUrl: selectedProfile?.signature,
+                }}
+                theme={theme}
+                backgroundImageUrl={schoolBackground}
+              />
+            </View>
+          ) : null}
 
-            {schoolBackground ? null : (
-              <View style={styles.themeRow}>
-                {CARD_THEMES.map((th) => (
-                  <TouchableOpacity
-                    key={th.key}
-                    style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}
-                    onPress={() => setTheme(th)}
-                    activeOpacity={0.85}
-                  />
-                ))}
-              </View>
-            )}
+          {schoolBackground ? null : (
+            <View style={styles.themeRow}>
+              {CARD_THEMES.map((th) => (
+                <TouchableOpacity key={th.key} style={styles.themeSwatchWrap} onPress={() => setTheme(th)} activeOpacity={0.85}>
+                  <View style={[styles.themeSwatch, { backgroundColor: th.colors[1] }, theme.key === th.key && styles.themeSwatchActive]}>
+                    {theme.key === th.key ? <IconCheck color="#FFFFFF" /> : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-            <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.85} disabled={isExporting}>
-              {isExporting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.exportBtnText}>{t('student_id_cards.export', 'Save to Device')}</Text>}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.85} disabled={isExporting}>
+            {isExporting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.exportBtnText}>{t('student_id_cards.export', 'Save to Device')}</Text>}
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -389,30 +404,46 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK, flex: 1, marginLeft: 8 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerIconBtn: {},
-  selectToggleText: { color: EMERALD, fontWeight: '700', fontSize: 14 },
+  // BRAND.emeraldDeep, not EMERALD - EMERALD (#1FAE64) text on the white
+  // header measures 2.88:1, below WCAG AA's 4.5:1 minimum. Deep emerald
+  // measures 5.42:1.
+  selectToggleText: { color: BRAND.emeraldDeep, fontWeight: '700', fontSize: 14 },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   errorText: { color: COLORS.danger, textAlign: 'center', marginBottom: 12 },
   retryBtn: { backgroundColor: '#F2F2F7', paddingVertical: 10, paddingHorizontal: 20, borderRadius: RADIUS.sm },
   retryText: { color: INK, fontWeight: '600' },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
   emptyText: { color: SUBTLE, fontSize: 14 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: SPACING.md, gap: SPACING.sm },
-  listContent: { padding: SPACING.md },
-  row: { gap: SPACING.sm },
-  tile: {
+  // A single grouped card of hairline-divided rows (Contacts-app style)
+  // instead of a 2-column tile grid - the grid left a dead gap whenever
+  // the result count was odd, and buried the select-mode checkbox in a
+  // tiny corner badge instead of a proper leading row control.
+  listContent: { paddingTop: SPACING.md, flex: 1 },
+  listCardWrap: {
     flex: 1,
+    marginHorizontal: SPACING.md,
     backgroundColor: SURFACE,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    position: 'relative',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
     ...SHADOW.level1,
   },
-  tileName: { fontSize: 13, fontWeight: '700', color: INK, marginTop: 8, textAlign: 'center' },
-  tileCode: { fontSize: 11, color: SUBTLE, marginTop: 2 },
-  checkBadge: { position: 'absolute', top: 8, right: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  rowName: { fontSize: 15, fontWeight: '700', color: INK },
+  rowCode: { fontSize: 12, color: SUBTLE, marginTop: 2 },
+  checkBadge: { marginRight: 12 },
 
   selectBar: {
     position: 'absolute',
@@ -430,19 +461,40 @@ const styles = StyleSheet.create({
     ...SHADOW.level2,
   },
   selectBarText: { fontSize: 13.5, fontWeight: '700', color: INK },
-  selectBarBtn: { backgroundColor: EMERALD, borderRadius: RADIUS.pill, paddingHorizontal: 18, paddingVertical: 11 },
+  selectBarBtn: { backgroundColor: BRAND.emeraldDeep, borderRadius: RADIUS.pill, paddingHorizontal: 18, paddingVertical: 11 },
   selectBarBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13.5 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: SURFACE, borderRadius: RADIUS.lg, padding: 20, alignItems: 'center', width: '100%' },
-  modalCloseBtn: { alignSelf: 'flex-end', marginBottom: 8 },
-  modalCardWrap: { marginBottom: SPACING.md },
+  // The card floats directly on the dark backdrop (Apple Wallet-pass
+  // style) instead of nesting inside a second white rounded box, which
+  // doubled the rounding/shadow and buried the card under redundant
+  // chrome.
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(10,20,15,0.72)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCardWrap: { marginBottom: SPACING.lg },
 
-  themeRow: { flexDirection: 'row', gap: 12, marginBottom: SPACING.md },
-  themeSwatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: 'transparent' },
-  themeSwatchActive: { borderColor: EMERALD },
+  themeRow: { flexDirection: 'row', gap: 14, marginBottom: SPACING.lg },
+  themeSwatchWrap: { padding: 3 },
+  themeSwatch: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  themeSwatchActive: { borderColor: '#FFFFFF' },
 
-  exportBtn: { alignSelf: 'stretch', backgroundColor: EMERALD, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center' },
+  exportBtn: {
+    alignSelf: 'stretch',
+    maxWidth: 288,
+    backgroundColor: BRAND.emeraldDeep,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
   exportBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14.5 },
 
   batchCaptureWrap: { position: 'absolute', top: -2000, left: 0 },

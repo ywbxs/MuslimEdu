@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   // instead of a 2-column tile grid - the grid left a large dead gap
   // whenever the list had an odd count (a single result, as in the
   // screenshot, stretched into one lonely full-width tile).
-  listContent: { padding: SPACING.md },
+  listContent: { paddingTop: SPACING.md, flex: 1 },
   listCardWrap: {
     flex: 1,
     marginHorizontal: SPACING.md,
