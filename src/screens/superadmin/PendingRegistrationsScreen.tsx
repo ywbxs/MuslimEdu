@@ -40,17 +40,25 @@ import {
 import { Skeleton } from '../../components/Skeleton';
 import PhotoLightbox from '../../components/PhotoLightbox';
 import PressableScale from '../../components/PressableScale';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
-const DANGER = COLORS.danger;
 const DANGER_SOFT = 'rgba(239,68,68,0.10)';
-const AMBER = '#B45309';
 const AMBER_SOFT = 'rgba(180,83,9,0.10)';
+
+// A brand surface colour and a readable brand *label* colour are not the same
+// thing, and every label here was using the surface one. Measured against WCAG
+// AA (4.5:1 at these text sizes): white on #1FAE64 is 2.9:1, #EF4444 on its own
+// 10% tint is 3.3:1, #1FAE64 on its own 12% tint is 2.6:1 - all failing, the
+// primary CTA worst of all. Labels now use the deep member of the same family;
+// fills and tints keep the brand hue, so the palette is unchanged.
+const EMERALD_INK = BRAND.emeraldDeep; // #0F7A3D - on 12% emerald 4.8:1, white on it 5.4:1
+const DANGER_INK = '#B91C1C'; //          on 10% red     5.7:1, white on it 6.5:1
+const AMBER_INK = '#92400E'; //           on 10% amber
 
 const INSTITUTION_LABELS: Record<string, string> = {
   mahad: 'Mahad',
@@ -94,10 +102,10 @@ function formatDate(value: string): string {
 function StatusChip({ status }: { status: RegistrationStatus }) {
   const meta =
     status === 'approved'
-      ? { bg: EMERALD_SOFT, fg: EMERALD, label: 'Approved', Icon: CircleCheck }
+      ? { bg: EMERALD_SOFT, fg: EMERALD_INK, label: 'Approved', Icon: CircleCheck }
       : status === 'rejected'
-      ? { bg: DANGER_SOFT, fg: DANGER, label: 'Rejected', Icon: CircleX }
-      : { bg: AMBER_SOFT, fg: AMBER, label: 'Pending', Icon: Clock };
+      ? { bg: DANGER_SOFT, fg: DANGER_INK, label: 'Rejected', Icon: CircleX }
+      : { bg: AMBER_SOFT, fg: AMBER_INK, label: 'Pending', Icon: Clock };
   const { Icon } = meta;
   return (
     <View style={[styles.statusChip, { backgroundColor: meta.bg }]}>
@@ -235,6 +243,10 @@ function RegistrationCard({
         </View>
       )}
 
+      {/* Deliberately unequal. Two identical half-width blocks gave a
+          destructive action the same pull as the primary one; the affirming
+          action is wider and solid, the destructive one quiet but still
+          unmistakably red. */}
       {isPending && (
         <View style={styles.actionRow}>
           <PressableScale
@@ -242,11 +254,12 @@ function RegistrationCard({
             scaleTo={0.97}
             onPress={() => onReject(item)}
             disabled={isBusy}
-            accessibilityLabel="Reject application"
+            accessibilityRole="button"
+            accessibilityLabel={`Reject ${item.school_name}`}
           >
             <View style={styles.btnInner}>
               {isBusy && busy?.action === 'reject' ? (
-                <ActivityIndicator size="small" color={DANGER} />
+                <ActivityIndicator size="small" color={DANGER_INK} />
               ) : (
                 <Text style={styles.rejectBtnText}>Reject</Text>
               )}
@@ -257,14 +270,15 @@ function RegistrationCard({
             scaleTo={0.97}
             onPress={() => onApprove(item)}
             disabled={isBusy}
-            accessibilityLabel="Approve application"
+            accessibilityRole="button"
+            accessibilityLabel={`Approve ${item.school_name}`}
           >
             <View style={styles.btnInner}>
               {isBusy && busy?.action === 'approve' ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Check size={15} color="#FFFFFF" strokeWidth={2.8} />
+                  <Check size={16} color="#FFFFFF" strokeWidth={3} />
                   <Text style={styles.approveBtnText}>Approve</Text>
                 </>
               )}
@@ -296,7 +310,7 @@ function ApproveSheet({
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
           <View style={[styles.sheetIcon, { backgroundColor: EMERALD_SOFT }]}>
-            <CircleCheck size={26} color={EMERALD} strokeWidth={2} />
+            <CircleCheck size={26} color={EMERALD_INK} strokeWidth={2} />
           </View>
           <Text style={styles.sheetTitle}>Approve this school?</Text>
           <Text style={styles.sheetBody}>This creates the school and an admin login immediately.</Text>
@@ -373,7 +387,7 @@ function RejectSheet({
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
             <View style={[styles.sheetIcon, { backgroundColor: DANGER_SOFT }]}>
-              <CircleX size={26} color={DANGER} strokeWidth={2} />
+              <CircleX size={26} color={DANGER_INK} strokeWidth={2} />
             </View>
             <Text style={styles.sheetTitle}>Reject {item?.school_name}?</Text>
             <Text style={styles.sheetBody}>Tell them why, so they can correct it and reapply.</Text>
@@ -439,9 +453,9 @@ function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => 
         <View style={styles.resultCard}>
           <View style={[styles.sheetIcon, { backgroundColor: approved ? EMERALD_SOFT : DANGER_SOFT }]}>
             {approved ? (
-              <CircleCheck size={30} color={EMERALD} strokeWidth={2} />
+              <CircleCheck size={30} color={EMERALD_INK} strokeWidth={2} />
             ) : (
-              <CircleX size={30} color={DANGER} strokeWidth={2} />
+              <CircleX size={30} color={DANGER_INK} strokeWidth={2} />
             )}
           </View>
 
@@ -765,7 +779,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monogramText: { fontSize: 19, fontWeight: '800', color: EMERALD },
+  monogramText: { fontSize: 19, fontWeight: '800', color: EMERALD_INK },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   schoolName: { flex: 1, fontSize: 17, fontWeight: '800', color: INK, lineHeight: 22 },
   chipRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 7 },
@@ -775,7 +789,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  typeChipText: { fontSize: 11, fontWeight: '700', color: EMERALD },
+  typeChipText: { fontSize: 11, fontWeight: '700', color: EMERALD_INK },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -858,19 +872,20 @@ const styles = StyleSheet.create({
   reasonText: { fontSize: 13, color: INK, lineHeight: 18 },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  // Fixed height, so swapping the label for a spinner can't nudge the layout.
   actionBtn: {
-    flex: 1,
-    paddingVertical: 13,
+    height: 50,
     borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Lives on an inner View, not the button itself - see ProofThumb's comment.
-  btnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  rejectBtn: { backgroundColor: DANGER_SOFT },
-  rejectBtnText: { color: DANGER, fontWeight: '800', fontSize: 14 },
-  approveBtn: { backgroundColor: EMERALD },
-  approveBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  btnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  rejectBtn: { flex: 1, backgroundColor: DANGER_SOFT },
+  // Slightly positive tracking: small type reads too tight without it.
+  rejectBtnText: { color: DANGER_INK, fontWeight: '700', fontSize: 15, letterSpacing: 0.2 },
+  approveBtn: { flex: 1.5, backgroundColor: EMERALD_INK },
+  approveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, letterSpacing: 0.2 },
 
   // --- sheets ---
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', justifyContent: 'flex-end' },
@@ -922,9 +937,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  quickChipActive: { borderColor: DANGER, backgroundColor: DANGER_SOFT },
+  quickChipActive: { borderColor: DANGER_INK, backgroundColor: DANGER_SOFT },
   quickChipText: { fontSize: 13, color: INK, fontWeight: '600' },
-  quickChipTextActive: { color: DANGER, fontWeight: '700' },
+  quickChipTextActive: { color: DANGER_INK, fontWeight: '700' },
   reasonInput: {
     marginTop: 10,
     marginBottom: 4,
@@ -941,16 +956,16 @@ const styles = StyleSheet.create({
   sheetActions: { flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' },
   sheetBtn: {
     flex: 1,
-    paddingVertical: 14,
+    height: 52,
     borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sheetBtnGhost: { backgroundColor: 'rgba(17,24,39,0.06)' },
-  sheetBtnGhostText: { color: INK, fontWeight: '700', fontSize: 14 },
-  sheetBtnPrimary: { backgroundColor: EMERALD },
-  sheetBtnPrimaryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  sheetBtnDanger: { backgroundColor: DANGER },
+  sheetBtnGhostText: { color: INK, fontWeight: '700', fontSize: 15, letterSpacing: 0.2 },
+  sheetBtnPrimary: { backgroundColor: EMERALD_INK },
+  sheetBtnPrimaryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, letterSpacing: 0.2 },
+  sheetBtnDanger: { backgroundColor: DANGER_INK },
 
   resultBackdrop: {
     flex: 1,
