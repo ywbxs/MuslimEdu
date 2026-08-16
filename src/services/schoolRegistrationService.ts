@@ -209,10 +209,23 @@ function normalizeRegistration(raw: any): PendingRegistration {
   };
 }
 
-/** POST /superadmin_school_registration_list */
+/**
+ * POST /superadmin_school_registration_list
+ *
+ * JSON, not multipart - this call has no fields to send, and an EMPTY
+ * FormData body never leaves the device on Android: RN's NetworkingModule
+ * hands the (zero) parts to OkHttp's MultipartBody.Builder, whose build()
+ * rejects a body with no parts. fetch() then rejects before any socket is
+ * opened, which surfaces as a bare "Network request failed" - i.e. it looks
+ * exactly like the server being down or having a bad cert, when in fact the
+ * request was never sent. Every other superadmin endpoint posts JSON (see
+ * superAdminService.ts's authedPost, which sends {} for its own no-arg
+ * calls); this one is the only one that didn't, and the only one that failed.
+ *
+ * submit() below still uses postForm - it genuinely uploads files.
+ */
 export async function fetchPendingSchoolRegistrations(token: string): Promise<PendingRegistration[]> {
-  const form = new FormData();
-  const data = await postForm('/superadmin_school_registration_list', form, token);
+  const data = await postJson('/superadmin_school_registration_list', {}, token);
   return (data.registrations ?? []).map(normalizeRegistration);
 }
 
