@@ -23,7 +23,7 @@ export interface DirectionMeta {
 // same mapping as before, used whenever a caller doesn't pass its own
 // (school-configured) directionMeta.
 const DEFAULT_DIRECTION_META: Record<SwipeDirection, DirectionMeta> = {
-  right: { code: 'present', label: 'Present', color: '#2BCBB0' },
+  right: { code: 'present', label: 'Present', color: '#1FAE64' },
   left: { code: 'absent', label: 'Absent', color: '#E5484D' },
   up: { code: 'excused', label: 'Excused', color: '#4C6EF5' },
   down: { code: 'late', label: 'Late', color: '#B8860B' },
@@ -204,7 +204,7 @@ export default function BigAttendanceCard({
         </View>
       ) : null}
 
-      <LinearGradient colors={['#0B3D2E', '#2BCBB0', '#2BCBB0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBand} />
+      <LinearGradient colors={['#0B3D2E', '#1FAE64', '#1FAE64']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBand} />
 
       <View style={styles.photoWrap}>
         <UserAvatar name={name} photo={photo} size={120} dotColor={null} ringColor="#FFFFFF" />

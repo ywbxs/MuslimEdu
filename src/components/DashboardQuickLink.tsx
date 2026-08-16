@@ -27,7 +27,7 @@ const DashboardQuickLink: React.FC<Props> = ({
   title,
   subtitle,
   glyph = '>',
-  tint = '#1E927E',
+  tint = '#0F7A3D',
   badge = null,
   onPress,
   disabled = false,

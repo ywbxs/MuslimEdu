@@ -28,7 +28,7 @@ const C = {
   ink: '#12211C',
   muted: '#6B7C76',
   line: '#E3EAE7',
-  green: '#1E927E',
+  green: '#0F7A3D',
   greenSoft: '#E7F4EF',
   amber: '#B4790B',
   amberSoft: '#FDF3DF',

@@ -24,7 +24,7 @@ import { checkImageModeration, ModeratedContentError } from '../../services/cont
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';

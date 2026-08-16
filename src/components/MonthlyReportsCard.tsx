@@ -5,7 +5,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchReportOverview, ReportOverview } from '../services/adminOrphanReportService';
 import { Skeleton } from './Skeleton';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const PALE_GREEN = '#7FD9A8';
 const DANGER_SOFT = '#F4A7A7';
 // Same faux-glass values used by StudentDashboard's Profile card and

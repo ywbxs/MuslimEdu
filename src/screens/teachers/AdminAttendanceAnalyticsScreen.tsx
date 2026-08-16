@@ -18,7 +18,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -29,7 +29,7 @@ const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 const STATUS_META: Record<keyof AttendanceStatusCounts, { label: string; color: string }> = {
-  present: { label: 'Present', color: '#2BCBB0' },
+  present: { label: 'Present', color: '#1FAE64' },
   late: { label: 'Late', color: '#B8860B' },
   absent: { label: 'Absent', color: '#E5484D' },
   excused: { label: 'Excused', color: '#4C6EF5' },
@@ -91,7 +91,7 @@ function TrendChart({ trend }: { trend: AttendanceAnalytics['daily_trend'] }) {
       {trend.map((day, i) => {
         const pct = pctFor(day);
         const barHeight = Math.max(pct * (height - 8), 2);
-        const color = pct >= 0.9 ? '#2BCBB0' : pct >= 0.75 ? '#B8860B' : '#E5484D';
+        const color = pct >= 0.9 ? '#1FAE64' : pct >= 0.75 ? '#B8860B' : '#E5484D';
         return (
           <Rect
             key={day.date}

@@ -36,7 +36,7 @@ import WidgetCarousel from '../../components/feed/WidgetCarousel';
 // Teal/mint palette matching the login + feed mockup redesign - see
 // LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
 // soft gradient backdrop instead of a flat color, same as login.
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const INK = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const CANVAS = '#E8F4F2';

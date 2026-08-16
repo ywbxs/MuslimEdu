@@ -12,21 +12,21 @@
 import { Platform } from 'react-native';
 
 export const BRAND = {
-  emerald: '#2BCBB0',
-  emeraldLight: '#2AB4DB',
-  emeraldDeep: '#1E927E',
+  emerald: '#1FAE64',
+  emeraldLight: '#4CAF50',
+  emeraldDeep: '#0F7A3D',
   gold: '#D4A64A',
 };
 
 // Background wash stops (used by <GlassBackground variant="canvas"/>) — a
 // near-white page background with a whisper of green, not a mesh.
 export const MESH = {
-  base: ['#0B3D2E', '#2BCBB0', '#E9F7EF'] as const,
+  base: ['#0B3D2E', '#1FAE64', '#E9F7EF'] as const,
   baseAngle: { start: { x: 0.1, y: 0 }, end: { x: 0.9, y: 1 } },
   blobs: [
-    { color: 'rgba(43,203,176, 0.55)', size: 260, top: -80, left: -60 },
+    { color: 'rgba(31,174,100, 0.55)', size: 260, top: -80, left: -60 },
     { color: 'rgba(212, 166, 74, 0.35)', size: 220, top: 120, left: 250 },
-    { color: 'rgba(43,203,176, 0.45)', size: 300, top: 480, left: -100 },
+    { color: 'rgba(31,174,100, 0.45)', size: 300, top: 480, left: -100 },
   ],
 };
 
@@ -50,7 +50,7 @@ export const GLASS = {
 
 export const COLORS = {
   emerald: BRAND.emerald,
-  emeraldSoft: 'rgba(43,203,176,0.12)',
+  emeraldSoft: 'rgba(31,174,100,0.12)',
   ink: '#111827',
   subtle: '#6B7280',
   onGlass: '#FFFFFF',
@@ -59,7 +59,7 @@ export const COLORS = {
   canvas: '#F7FAF8',
   border: '#E5E7EB',
   danger: '#EF4444',
-  success: '#1E927E',
+  success: '#0F7A3D',
 };
 
 export const RADIUS = {

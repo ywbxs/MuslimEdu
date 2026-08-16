@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 
-const TOP_RIGHT_COLOR = '#2BCBB0';
-const BOTTOM_LEFT_COLOR = '#2AB4DB';
+const TOP_RIGHT_COLOR = '#1FAE64';
+const BOTTOM_LEFT_COLOR = '#4CAF50';
 const TOP_RIGHT_SIZE = 220;
 const BOTTOM_LEFT_SIZE = 180;
 

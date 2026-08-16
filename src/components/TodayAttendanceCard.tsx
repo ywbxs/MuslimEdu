@@ -5,7 +5,7 @@ import Svg, { Path, Rect, Line } from 'react-native-svg';
 import { fetchStudentAttendance } from '../services/studentAcademicService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -27,7 +27,7 @@ function bucketStatus(raw: unknown): StatusKey {
 }
 
 const STATUS_STYLE: Record<StatusKey, { color: string; soft: string; label: string }> = {
-  present: { color: '#2BCBB0', soft: '#E5F8F5', label: 'Present' },
+  present: { color: '#1FAE64', soft: '#E5F8F5', label: 'Present' },
   late: { color: '#B8860B', soft: '#FBF2DE', label: 'Late' },
   excused: { color: '#3B82F6', soft: '#EAF1FE', label: 'Excused' },
   absent: { color: '#E5484D', soft: '#FCEDED', label: 'Absent' },

@@ -32,7 +32,7 @@ import {
 import { useLocale } from '../../context/LocaleContext';
 
 const STATUS_COLORS: Record<AttendanceStatusKey, string> = {
-  present: '#1E927E',
+  present: '#0F7A3D',
   late: '#C77700',
   excused: '#2563EB',
   absent: '#C62828',
@@ -200,7 +200,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
                   <View
                     style={[
                       styles.trendBar,
-                      { height, backgroundColor: isCurrent ? '#1E927E' : '#CBD5D1' },
+                      { height, backgroundColor: isCurrent ? '#0F7A3D' : '#CBD5D1' },
                     ]}
                   />
                   <Text style={styles.trendLabel}>{point.label.split(' ')[0]}</Text>
@@ -218,7 +218,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
   if (loading && !data) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1E927E" />
+        <ActivityIndicator size="large" color="#0F7A3D" />
         <Text style={styles.centerText}>{t('attendance_calendar.loading', 'Loading your attendance...')}</Text>
       </View>
     );
@@ -256,7 +256,7 @@ const StudentAttendanceScreen: React.FC<Props> = () => {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={() => load(month, year, true)}
-          colors={['#1E927E']}
+          colors={['#0F7A3D']}
         />
       }
     />
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#F7F8FA' },
   centerText: { marginTop: 12, color: '#6B7280', textAlign: 'center', fontSize: 14 },
   errorTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
-  retry: { marginTop: 20, backgroundColor: '#1E927E', paddingHorizontal: 24, paddingVertical: 11, borderRadius: 8 },
+  retry: { marginTop: 20, backgroundColor: '#0F7A3D', paddingHorizontal: 24, paddingVertical: 11, borderRadius: 8 },
   retryText: { color: '#FFFFFF', fontWeight: '600' },
 
   monthBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   bannerText: { color: '#8A5A00', fontSize: 12.5, lineHeight: 18 },
 
   rateCard: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 20, alignItems: 'center', marginBottom: 12 },
-  rateValue: { fontSize: 40, fontWeight: '800', color: '#1E927E' },
+  rateValue: { fontSize: 40, fontWeight: '800', color: '#0F7A3D' },
   rateLabel: { fontSize: 14, color: '#374151', marginTop: 4, fontWeight: '600' },
   rateSub: { fontSize: 12, color: '#9AA1AB', marginTop: 2 },
 

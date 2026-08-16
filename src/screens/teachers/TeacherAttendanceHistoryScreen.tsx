@@ -16,7 +16,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
 const HAIRLINE = '#EDEEF0';
@@ -26,7 +26,7 @@ const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 const STATUS_META: Record<AttendanceStatus, { label: string; color: string; soft: string }> = {
-  present: { label: 'Present', color: '#2BCBB0', soft: '#E5F8F5' },
+  present: { label: 'Present', color: '#1FAE64', soft: '#E5F8F5' },
   late: { label: 'Late', color: '#B8860B', soft: '#FBF2DE' },
   absent: { label: 'Absent', color: '#E5484D', soft: '#FCEDED' },
   excused: { label: 'Excused', color: '#4C6EF5', soft: '#EAEDFC' },

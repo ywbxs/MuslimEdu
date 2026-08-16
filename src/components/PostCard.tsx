@@ -15,8 +15,8 @@ import { RADIUS, SHADOW } from '../theme/glass';
 // recolor is intentionally global to the component - a repost icon that's
 // teal in the feed but green everywhere else would look like two different
 // apps stitched together.
-const EMERALD = '#2BCBB0';
-const EMERALD_SOFT = 'rgba(43,203,176,0.08)';
+const EMERALD = '#1FAE64';
+const EMERALD_SOFT = 'rgba(31,174,100,0.08)';
 const INK = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const HAIRLINE = 'rgba(13,30,28,0.08)';

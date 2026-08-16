@@ -31,7 +31,7 @@ import MonthlyReportSkeleton from '../../components/reports/MonthlyReportSkeleto
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';

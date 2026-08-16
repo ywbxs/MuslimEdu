@@ -35,7 +35,7 @@ import {
 import { createEnrollmentStage } from '../../services/enrollmentWorkflowService';
 
 const EMERALD = BRAND.emerald;
-const EMERALD_SOFT = 'rgba(43,203,176,0.14)';
+const EMERALD_SOFT = 'rgba(31,174,100,0.14)';
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const ERROR = '#BA1A1A';

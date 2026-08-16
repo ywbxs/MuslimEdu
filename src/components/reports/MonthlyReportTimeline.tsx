@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import Svg, { Path, Polyline, Rect, Line } from 'react-native-svg';
 
-const EMERALD = '#2BCBB0';
-const EMERALD_DEEP = '#1E927E';
-const EMERALD_SOFT = 'rgba(43,203,176,0.1)';
+const EMERALD = '#1FAE64';
+const EMERALD_DEEP = '#0F7A3D';
+const EMERALD_SOFT = 'rgba(31,174,100,0.1)';
 const GOLD = '#B8912F';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';

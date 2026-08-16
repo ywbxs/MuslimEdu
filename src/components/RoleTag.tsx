@@ -27,7 +27,7 @@ function roleConfig(role?: string | null): { label: string; color: string; bg: s
     case 'superadmin':
       return { label: 'Admin', color: BRAND.gold, bg: 'rgba(212,166,74,0.16)' };
     case 'teacher':
-      return { label: 'Teacher', color: BRAND.emerald, bg: 'rgba(43,203,176,0.14)' };
+      return { label: 'Teacher', color: BRAND.emerald, bg: 'rgba(31,174,100,0.14)' };
     case 'shop':
       return { label: 'Shop', color: BRAND.gold, bg: 'rgba(212,166,74,0.16)' };
     case 'charity':

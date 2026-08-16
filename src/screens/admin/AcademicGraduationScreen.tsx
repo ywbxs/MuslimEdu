@@ -20,7 +20,7 @@ const C = {
   ink: '#12211C',
   muted: '#6B7C76',
   line: '#E3EAE7',
-  green: '#1E927E',
+  green: '#0F7A3D',
   red: '#C0392B',
   amber: '#B7791F',
 };

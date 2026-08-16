@@ -705,7 +705,7 @@ const preview = StyleSheet.create({
     backgroundColor: COLORS.emeraldSoft,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(43,203,176,0.25)',
+    borderColor: 'rgba(31,174,100,0.25)',
     padding: 16,
     marginTop: 16,
   },

@@ -6,7 +6,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { fetchStudentAttendance, AttendanceItem, AttendanceSummary } from '../../services/studentProgressService';
 import { Skeleton } from '../../components/Skeleton';
 
-const GREEN = '#2BCBB0'; const SOFT = '#E5F8F5'; const INK = '#1C1C1E'; const SUBTLE = '#8A9099';
+const GREEN = '#1FAE64'; const SOFT = '#E5F8F5'; const INK = '#1C1C1E'; const SUBTLE = '#8A9099';
 function Stat({ label, value }: { label: string; value: string | number }) { return <View style={styles.stat}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>; }
 export default function StudentAttendanceScreen() {
   const navigation = useNavigation(); const { token } = useAuth(); const { t } = useLocale(); const now = new Date();
