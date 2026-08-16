@@ -96,7 +96,7 @@ function CameraIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: n
 function LockIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
   return <Lock size={size} color={color} strokeWidth={2} />;
 }
-function ArrowRight({ color, size = 18 }: { color: string; size?: number }) {
+function ArrowRightIcon({ color, size = 18 }: { color: string; size?: number }) {
   return <ArrowRight size={size} color={color} strokeWidth={2} />;
 }
 
@@ -782,7 +782,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
                   </Text>
                   <View style={styles.cardArrowRow}>
                     <View style={[styles.cardArrow, solid ? styles.cardArrowSolid : styles.cardArrowSoft]}>
-                      <ArrowRight color={fg} size={16} />
+                      <ArrowRightIcon color={fg} size={16} />
                     </View>
                   </View>
                 </TouchableOpacity>
