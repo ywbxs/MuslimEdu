@@ -14,12 +14,12 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Check, Landmark } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
-import { RADIUS } from '../../theme/glass';
+import { RADIUS, BRAND } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import {
   prepareProfilePhoto,
@@ -54,9 +54,14 @@ import {
  * optional server-side, so re-saving the full form here is safe and never
  * clobbers a field the form doesn't show).
  *
- * Entry point: a "Profile" header button on AcademicYearsScreen, same
- * pattern as EnrollmentStagesScreen's "Students" button — this and
- * years/terms are the same Academic Setup module.
+ * Entry point: a "Profile" header button on AcademicYearsScreen, plus the
+ * edit pencil on the admin dashboard's AnalyticsCard school-identity strip.
+ *
+ * Visual language (redesign): grouped "Settings app" style cards — one
+ * hairline-divided card per section instead of a flat sequence of boxed
+ * fields — a big circular logo hero instead of two equal photo slots, and
+ * a pinned bottom save bar instead of a button buried at the end of a long
+ * scroll. Same state/handlers/endpoint as before; layout only.
  */
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -99,6 +104,15 @@ interface PendingPhoto {
 
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
+}
+function IconPencil({ color, size = 14 }: { color: string; size?: number }) {
+  return <Pencil size={size} color={color} strokeWidth={2.2} />;
+}
+function IconCheck({ color }: { color: string }) {
+  return <Check size={13} color={color} strokeWidth={3} />;
+}
+function IconLandmark({ color }: { color: string }) {
+  return <Landmark size={26} color={color} strokeWidth={1.8} />;
 }
 
 export default function InstitutionProfileScreen() {
@@ -275,6 +289,11 @@ export default function InstitutionProfileScreen() {
     );
   }
 
+  const logoUri = newLogo?.uri ?? existingLogoUrl;
+  const sealUri = newSeal?.uri ?? existingSealUrl;
+  const changeText = t('institution_profile.change', 'Change');
+  const addText = t('institution_profile.add', 'Add');
+
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
@@ -282,12 +301,15 @@ export default function InstitutionProfileScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Institution Profile</Text>
+        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('institution_profile.title', 'Institution Profile')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: 96 + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+        >
           {error ? (
             <View style={styles.errorBanner}>
               <Text style={styles.errorBannerText}>{error}</Text>
@@ -297,27 +319,67 @@ export default function InstitutionProfileScreen() {
             </View>
           ) : null}
 
-          {/* Branding */}
-          <Text style={styles.sectionTitle}>{t('institution_profile.branding', 'Branding')}</Text>
-          <View style={styles.brandingRow}>
-            <PhotoSlot
-              label={t('institution_profile.logo', 'Logo')}
-              uri={newLogo?.uri ?? existingLogoUrl}
-              busy={pickingField === 'logo'}
+          {/* Hero — logo as a big circular avatar, tap to change */}
+          <View style={styles.hero}>
+            <TouchableOpacity
               onPress={() => pickPhoto('logo')}
-              theme={theme}
-              changeText={t('institution_profile.change', 'Change')}
-              addText={t('institution_profile.add', 'Add')}
-            />
-            <PhotoSlot
-              label={t('institution_profile.official_seal', 'Official Seal')}
-              uri={newSeal?.uri ?? existingSealUrl}
-              busy={pickingField === 'seal'}
+              activeOpacity={0.85}
+              disabled={pickingField === 'logo'}
+              style={styles.avatarWrap}
+            >
+              <View style={styles.avatarCircle}>
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={styles.avatarImage} resizeMode="cover" />
+                ) : (
+                  <IconLandmark color={theme.textMuted} />
+                )}
+                {pickingField === 'logo' ? (
+                  <View style={styles.avatarBusy}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.avatarEditBadge}>
+                <IconPencil color={theme.onAccent} />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.heroName} numberOfLines={1}>
+              {name || t('institution_profile.institution_name', 'Institution Name')}
+            </Text>
+            <Text style={styles.heroHint}>{t('institution_profile.logo_hint', 'Tap the logo to change it')}</Text>
+          </View>
+
+          {/* Branding — seal */}
+          <Text style={styles.sectionTitle}>{t('institution_profile.branding', 'Branding')}</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.sealRow}
+              activeOpacity={0.75}
               onPress={() => pickPhoto('seal')}
-              theme={theme}
-              changeText={t('institution_profile.change', 'Change')}
-              addText={t('institution_profile.add', 'Add')}
-            />
+              disabled={pickingField === 'seal'}
+            >
+              <View style={styles.sealThumb}>
+                {sealUri ? (
+                  <Image source={{ uri: sealUri }} style={styles.sealImage} resizeMode="contain" />
+                ) : (
+                  <Text style={styles.sealPlus}>+</Text>
+                )}
+                {pickingField === 'seal' ? (
+                  <View style={styles.avatarBusy}>
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                ) : null}
+              </View>
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={styles.sealTitle}>{t('institution_profile.official_seal', 'Official Seal')}</Text>
+                <Text style={styles.sealSubtitle}>
+                  {sealUri
+                    ? t('institution_profile.seal_uploaded', 'Uploaded')
+                    : t('institution_profile.seal_not_added', 'Not added yet')}
+                </Text>
+              </View>
+              <Text style={styles.sealAction}>{sealUri ? changeText : addText}</Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.hint}>
             {t('institution_profile.photo_hint', 'Max {size} - larger images are compressed automatically. JPG, JPEG, or PNG.').replace('{size}', formatBytes(MAX_PHOTO_BYTES))}
@@ -326,89 +388,110 @@ export default function InstitutionProfileScreen() {
 
           {/* Basic info */}
           <Text style={styles.sectionTitle}>{t('institution_profile.basic_information', 'Basic Information')}</Text>
-          <Field label={t('institution_profile.institution_name', 'Institution Name')} value={name} onChangeText={setName} placeholder={t('institution_profile.institution_name_placeholder', 'Institution name')} theme={theme} styles={styles} />
-          <Field label={t('institution_profile.arabic_name', 'Arabic Name (optional)')} value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" theme={theme} styles={styles} />
-          <Field label={t('institution_profile.email', 'Email (optional)')} value={email} onChangeText={setEmail} placeholder="school@example.com" keyboardType="email-address" theme={theme} styles={styles} />
-          <Field label={t('institution_profile.phone', 'Phone (optional)')} value={phone} onChangeText={setPhone} placeholder={t('institution_profile.phone_placeholder', 'Phone number')} keyboardType="phone-pad" theme={theme} styles={styles} />
-          <Field label={t('institution_profile.address', 'Address (optional)')} value={address} onChangeText={setAddress} placeholder={t('institution_profile.address_placeholder', 'Address')} multiline theme={theme} styles={styles} />
-          <Field label={t('institution_profile.description', 'Description (optional)')} value={description} onChangeText={setDescription} placeholder={t('institution_profile.description_placeholder', 'Institution description')} multiline theme={theme} styles={styles} />
+          <View style={styles.card}>
+            <FieldRow label={t('institution_profile.institution_name', 'Institution Name')} value={name} onChangeText={setName} placeholder={t('institution_profile.institution_name_placeholder', 'Institution name')} theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.arabic_name', 'Arabic Name (optional)')} value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.email', 'Email (optional)')} value={email} onChangeText={setEmail} placeholder="school@example.com" keyboardType="email-address" theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.phone', 'Phone (optional)')} value={phone} onChangeText={setPhone} placeholder={t('institution_profile.phone_placeholder', 'Phone number')} keyboardType="phone-pad" theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.address', 'Address (optional)')} value={address} onChangeText={setAddress} placeholder={t('institution_profile.address_placeholder', 'Address')} multiline theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.description', 'Description (optional)')} value={description} onChangeText={setDescription} placeholder={t('institution_profile.description_placeholder', 'Institution description')} multiline theme={theme} styles={styles} isLast />
+          </View>
 
           {/* Institution type */}
           <Text style={styles.sectionTitle}>{t('institution_profile.institution_type', 'Institution Type')}</Text>
-          <View style={styles.chipRow}>
-            {status.institution_types.map((type) => (
-              <Chip
-                key={type}
-                label={institutionTypeLabel(type)}
-                selected={institutionType === type}
-                onPress={() => setInstitutionType(type)}
-                styles={styles}
-              />
-            ))}
+          <View style={styles.card}>
+            <View style={styles.chipRow}>
+              {status.institution_types.map((type) => (
+                <Chip
+                  key={type}
+                  label={institutionTypeLabel(type)}
+                  selected={institutionType === type}
+                  onPress={() => setInstitutionType(type)}
+                  styles={styles}
+                />
+              ))}
+            </View>
+            {institutionType === 'markaz' ? (
+              <>
+                <RowDivider theme={theme} />
+                <Text style={styles.label}>{t('institution_profile.program_duration', 'Program Duration')}</Text>
+                <View style={styles.chipRow}>
+                  {status.program_durations.map((d) => (
+                    <Chip key={d} label={programDurationLabel(d)} selected={programDuration === d} onPress={() => setProgramDuration(d)} styles={styles} />
+                  ))}
+                </View>
+              </>
+            ) : null}
           </View>
           <Text style={styles.hint}>{t('institution_profile.institution_type_hint', 'Only sets editable starting defaults - nothing here is hardcoded to this choice.')}</Text>
 
-          {institutionType === 'markaz' ? (
-            <>
-              <Text style={styles.label}>{t('institution_profile.program_duration', 'Program Duration')}</Text>
-              <View style={styles.chipRow}>
-                {status.program_durations.map((d) => (
-                  <Chip key={d} label={programDurationLabel(d)} selected={programDuration === d} onPress={() => setProgramDuration(d)} styles={styles} />
-                ))}
-              </View>
-            </>
-          ) : null}
-
           {/* Localization & calendar */}
           <Text style={styles.sectionTitle}>{t('institution_profile.localization_calendar', 'Localization & Calendar')}</Text>
-          <Field label={t('institution_profile.timezone', 'Timezone')} value={timezone} onChangeText={setTimezone} placeholder="e.g. Asia/Karachi" theme={theme} styles={styles} />
-          <Field label={t('institution_profile.default_language', 'Default Language')} value={defaultLanguage} onChangeText={setDefaultLanguage} placeholder="e.g. en" theme={theme} styles={styles} />
-          <Field label={t('institution_profile.secondary_language', 'Secondary Language (optional)')} value={secondaryLanguage} onChangeText={setSecondaryLanguage} placeholder="e.g. ar" theme={theme} styles={styles} />
-          <Text style={styles.label}>{t('institution_profile.calendar_type', 'Calendar Type')}</Text>
-          <View style={styles.chipRow}>
-            {status.calendar_types.map((type) => (
-              <Chip key={type} label={calendarTypeLabel(type)} selected={calendarType === type} onPress={() => setCalendarType(type)} styles={styles} />
-            ))}
+          <View style={styles.card}>
+            <FieldRow label={t('institution_profile.timezone', 'Timezone')} value={timezone} onChangeText={setTimezone} placeholder="e.g. Asia/Karachi" theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.default_language', 'Default Language')} value={defaultLanguage} onChangeText={setDefaultLanguage} placeholder="e.g. en" theme={theme} styles={styles} />
+            <RowDivider theme={theme} />
+            <FieldRow label={t('institution_profile.secondary_language', 'Secondary Language (optional)')} value={secondaryLanguage} onChangeText={setSecondaryLanguage} placeholder="e.g. ar" theme={theme} styles={styles} isLast />
+          </View>
+          <View style={[styles.card, { marginTop: 12 }]}>
+            <Text style={styles.label}>{t('institution_profile.calendar_type', 'Calendar Type')}</Text>
+            <View style={styles.chipRow}>
+              {status.calendar_types.map((type) => (
+                <Chip key={type} label={calendarTypeLabel(type)} selected={calendarType === type} onPress={() => setCalendarType(type)} styles={styles} />
+              ))}
+            </View>
           </View>
 
           {/* Schedule */}
           <Text style={styles.sectionTitle}>{t('institution_profile.working_days_hours', 'Working Days & Hours')}</Text>
-          <View style={styles.chipRow}>
-            {DAY_KEYS.map((key, i) => (
-              <Chip key={key} label={dayLabel(i)} selected={workingDays.includes(i)} onPress={() => toggleDay(i)} styles={styles} />
-            ))}
-          </View>
-          <View style={styles.hoursRow}>
-            <View style={styles.hoursField}>
-              <Text style={styles.label}>{t('institution_profile.start_24h', 'Start (24h)')}</Text>
-              <TextInput
-                style={styles.input}
-                value={hoursStart}
-                onChangeText={setHoursStart}
-                placeholder="08:00"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
+          <View style={styles.card}>
+            <View style={styles.chipRow}>
+              {DAY_KEYS.map((key, i) => (
+                <Chip key={key} label={dayLabel(i)} selected={workingDays.includes(i)} onPress={() => toggleDay(i)} styles={styles} />
+              ))}
             </View>
-            <View style={styles.hoursField}>
-              <Text style={styles.label}>{t('institution_profile.end_24h', 'End (24h)')}</Text>
-              <TextInput
-                style={styles.input}
-                value={hoursEnd}
-                onChangeText={setHoursEnd}
-                placeholder="15:00"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
+            <RowDivider theme={theme} />
+            <View style={styles.hoursRow}>
+              <View style={styles.hoursField}>
+                <Text style={styles.label}>{t('institution_profile.start_24h', 'Start (24h)')}</Text>
+                <TextInput
+                  style={styles.hoursInput}
+                  value={hoursStart}
+                  onChangeText={setHoursStart}
+                  placeholder="08:00"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="numbers-and-punctuation"
+                />
+              </View>
+              <View style={styles.hoursDivider} />
+              <View style={styles.hoursField}>
+                <Text style={styles.label}>{t('institution_profile.end_24h', 'End (24h)')}</Text>
+                <TextInput
+                  style={styles.hoursInput}
+                  value={hoursEnd}
+                  onChangeText={setHoursEnd}
+                  placeholder="15:00"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="numbers-and-punctuation"
+                />
+              </View>
             </View>
           </View>
 
           {/* Academic year structure */}
           <Text style={styles.sectionTitle}>{t('institution_profile.academic_year_structure', 'Academic Year Structure')}</Text>
-          <View style={styles.chipRow}>
-            {status.academic_year_structures.map((s) => (
-              <Chip key={s} label={yearStructureLabel(s)} selected={yearStructure === s} onPress={() => setYearStructure(s)} styles={styles} />
-            ))}
+          <View style={styles.card}>
+            <View style={styles.chipRow}>
+              {status.academic_year_structures.map((s) => (
+                <Chip key={s} label={yearStructureLabel(s)} selected={yearStructure === s} onPress={() => setYearStructure(s)} styles={styles} />
+              ))}
+            </View>
           </View>
           <Text style={styles.hint}>
             {t(
@@ -416,21 +499,24 @@ export default function InstitutionProfileScreen() {
               'Changing this only affects new academic years going forward - existing years and terms keep the structure they were created with.',
             )}
           </Text>
-
-          <TouchableOpacity
-            style={[styles.saveButton, submitting && styles.saveButtonDisabled]}
-            disabled={submitting}
-            onPress={onSave}
-          >
-            {submitting ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.saveButtonText}>{t('institution_profile.save_changes', 'Save Changes')}</Text>}
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        <TouchableOpacity
+          style={[styles.saveButton, submitting && styles.saveButtonDisabled]}
+          disabled={submitting}
+          onPress={onSave}
+          activeOpacity={0.85}
+        >
+          {submitting ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.saveButtonText}>{t('institution_profile.save_changes', 'Save Changes')}</Text>}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-function Field({
+function FieldRow({
   label,
   value,
   onChangeText,
@@ -439,6 +525,7 @@ function Field({
   styles,
   keyboardType,
   multiline,
+  isLast,
 }: {
   label: string;
   value: string;
@@ -448,12 +535,13 @@ function Field({
   styles: ReturnType<typeof makeStyles>;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numbers-and-punctuation';
   multiline?: boolean;
+  isLast?: boolean;
 }) {
   return (
-    <>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.fieldRow, isLast && styles.fieldRowLast]}>
+      <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
-        style={[styles.input, multiline && styles.inputMultiline]}
+        style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -461,8 +549,12 @@ function Field({
         keyboardType={keyboardType ?? 'default'}
         multiline={multiline}
       />
-    </>
+    </View>
   );
+}
+
+function RowDivider({ theme }: { theme: AcademicGlassTheme }) {
+  return <View style={{ height: 1, backgroundColor: theme.border, marginLeft: 16 }} />;
 }
 
 function Chip({
@@ -478,72 +570,15 @@ function Chip({
 }) {
   return (
     <TouchableOpacity style={[styles.chip, selected && styles.chipSelected]} onPress={onPress} activeOpacity={0.8}>
+      {selected ? (
+        <View style={styles.chipCheck}>
+          <IconCheck color={styles.chipTextSelected.color as string} />
+        </View>
+      ) : null}
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
     </TouchableOpacity>
   );
 }
-
-function PhotoSlot({
-  label,
-  uri,
-  busy,
-  onPress,
-  theme,
-  changeText,
-  addText,
-}: {
-  label: string;
-  uri: string | null;
-  busy: boolean;
-  onPress: () => void;
-  theme: AcademicGlassTheme;
-  changeText: string;
-  addText: string;
-}) {
-  return (
-    <TouchableOpacity style={slotStyles.wrap} onPress={onPress} activeOpacity={0.85} disabled={busy}>
-      <View style={[slotStyles.box, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-        {uri ? (
-          <Image source={{ uri }} style={slotStyles.image} resizeMode="contain" />
-        ) : (
-          <Text style={[slotStyles.plus, { color: theme.textMuted }]}>+</Text>
-        )}
-        {busy ? (
-          <View style={slotStyles.busyOverlay}>
-            <ActivityIndicator color="#fff" />
-          </View>
-        ) : null}
-      </View>
-      <Text style={[slotStyles.label, { color: theme.textSecondary }]}>{uri ? `${changeText} ${label}` : `${addText} ${label}`}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const slotStyles = StyleSheet.create({
-  wrap: { alignItems: 'center', flex: 1 },
-  box: {
-    width: 96,
-    height: 96,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  image: { width: '100%', height: '100%' },
-  plus: { fontSize: 30, fontWeight: '300' },
-  busyOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: { fontSize: 12, fontWeight: '600', marginTop: 8, textAlign: 'center' },
-});
 
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
@@ -559,13 +594,13 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: theme.textPrimary },
+    headerTitle: { fontSize: 17, fontWeight: '700', color: theme.textPrimary, textAlign: 'center' },
     headerTitleFlex: { flex: 1, marginLeft: 8 },
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-    content: { padding: 20, paddingBottom: 48 },
+    content: { padding: 20 },
 
     errorBanner: {
       flexDirection: 'row',
@@ -573,62 +608,145 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       alignItems: 'center',
       backgroundColor: theme.dangerSoft,
       padding: 12,
-      borderRadius: RADIUS.md ?? 10,
+      borderRadius: RADIUS.sm,
       marginBottom: 16,
     },
     errorBannerText: { color: theme.danger, fontSize: 13, flex: 1, marginRight: 8 },
     retryText: { color: theme.danger, fontWeight: '700', fontSize: 13 },
     errorText: { color: theme.danger, fontSize: 12.5, marginTop: 8, textAlign: 'center' },
 
+    // Hero avatar
+    hero: { alignItems: 'center', marginBottom: 28 },
+    avatarWrap: { alignItems: 'center' },
+    avatarCircle: {
+      width: 108,
+      height: 108,
+      borderRadius: 54,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: { width: '100%', height: '100%' },
+    avatarBusy: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarEditBadge: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      // Deeper emerald than theme.accent (#1FAE64) - white-on-accent only
+      // measures 2.88:1, below WCAG AA's 4.5:1 minimum for the pencil icon
+      // to read reliably. BRAND.emeraldDeep measures 5.42:1.
+      backgroundColor: BRAND.emeraldDeep,
+      borderWidth: 3,
+      borderColor: theme.background === 'transparent' ? theme.surface : theme.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    heroName: { fontSize: 18, fontWeight: '700', color: theme.textPrimary, marginTop: 14, maxWidth: 280 },
+    heroHint: { fontSize: 12.5, color: theme.textSecondary, marginTop: 4 },
+
     sectionTitle: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.textPrimary,
-      marginTop: 26,
-      marginBottom: 12,
+      color: theme.textSecondary,
+      marginTop: 24,
+      marginBottom: 8,
+      marginLeft: 4,
       textTransform: 'uppercase',
       letterSpacing: 0.4,
     },
+    hint: { fontSize: 12, color: theme.textSecondary, lineHeight: 17, marginTop: 8, paddingHorizontal: 4 },
 
-    brandingRow: { flexDirection: 'row', gap: 20, justifyContent: 'center' },
-    hint: { fontSize: 12, color: theme.textSecondary, lineHeight: 17, marginTop: 8, textAlign: 'center' },
-
-    label: { fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, marginBottom: 6, marginTop: 14 },
-    input: {
-      height: 48,
+    // Grouped card (Settings-style)
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.md,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: RADIUS.sm,
-      paddingHorizontal: 16,
-      fontSize: 15,
-      backgroundColor: theme.surface,
-      color: theme.textPrimary,
+      overflow: 'hidden',
+      padding: 4,
     },
-    inputMultiline: { height: 88, paddingTop: 12, textAlignVertical: 'top' },
 
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    // Seal row
+    sealRow: { flexDirection: 'row', alignItems: 'center', padding: 12 },
+    sealThumb: {
+      width: 52,
+      height: 52,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.background === 'transparent' ? 'rgba(0,0,0,0.02)' : theme.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    sealImage: { width: '80%', height: '80%' },
+    sealPlus: { fontSize: 22, fontWeight: '300', color: theme.textMuted },
+    sealTitle: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
+    sealSubtitle: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
+    sealAction: { fontSize: 13.5, fontWeight: '700', color: BRAND.emeraldDeep, marginLeft: 10 },
+
+    // Grouped field row (label above, input below, card supplies the border)
+    fieldRow: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10 },
+    fieldRowLast: { paddingBottom: 12 },
+    fieldLabel: { fontSize: 12, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 },
+    fieldInput: { fontSize: 15.5, color: theme.textPrimary, padding: 0 },
+    fieldInputMultiline: { minHeight: 44, textAlignVertical: 'top' },
+
+    label: { fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, marginBottom: 8, marginTop: 4, marginLeft: 8 },
+
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 8 },
     chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.border,
-      backgroundColor: theme.surface,
+      backgroundColor: theme.background === 'transparent' ? 'rgba(0,0,0,0.02)' : theme.background,
       paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
+      paddingVertical: 9,
+      borderRadius: RADIUS.pill,
     },
-    chipSelected: { backgroundColor: theme.accent, borderColor: theme.accent },
+    chipSelected: { backgroundColor: BRAND.emeraldDeep, borderColor: BRAND.emeraldDeep },
+    chipCheck: { marginRight: 5 },
     chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
     chipTextSelected: { color: theme.onAccent },
 
-    hoursRow: { flexDirection: 'row', gap: 14, marginTop: 4 },
+    hoursRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
     hoursField: { flex: 1 },
+    hoursDivider: { width: 1, height: 40, backgroundColor: theme.border, marginHorizontal: 16 },
+    hoursInput: { fontSize: 15.5, color: theme.textPrimary, padding: 0 },
 
+    footer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.surface,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+    },
     saveButton: {
-      backgroundColor: theme.accent,
-      borderRadius: RADIUS.sm,
-      height: 50,
+      backgroundColor: BRAND.emeraldDeep,
+      borderRadius: RADIUS.pill,
+      height: 52,
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 36,
     },
     saveButtonDisabled: { opacity: 0.5 },
     saveButtonText: { color: theme.onAccent, fontSize: 15.5, fontWeight: '700' },
