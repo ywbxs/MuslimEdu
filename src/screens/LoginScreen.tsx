@@ -22,6 +22,7 @@ import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import LanguageSwitcherButton from '../components/LanguageSwitcherButton';
+import HeroGlow from '../components/HeroGlow';
 
 // ============================================================================
 // Login-specific teal/mint palette (deliberately its own thing, not the
@@ -547,6 +548,10 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.card}>
+              {/* Same emerald-green radial glow used on the dashboard hero
+                  headers (HeroGlow) - card has overflow:'hidden' so the
+                  circles get clipped to its rounded corners automatically. */}
+              <HeroGlow />
               {step === 1 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
