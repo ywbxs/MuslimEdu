@@ -37,6 +37,12 @@ const BAR_BG = '#FFFFFF';
 // for the icons only (no outer margin, since the bar itself now reaches the
 // screen edges).
 const BAR_SIDE_PADDING = 20;
+// Top corners only (the bottom edge is flush with the true screen edge, so
+// rounding it would never be visible anyway). Matches the center button's
+// own radius family instead of meeting it at a hard 90-degree corner - one
+// shape language (rounded) across the whole bar instead of mixing square
+// and circular silhouettes.
+const TOP_CORNER_RADIUS = 24;
 
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
@@ -62,10 +68,11 @@ const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
 const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
 
 /**
- * Full-width rectangle with a smooth curved dip at the top-center for the
- * raised button to nest into - square corners, edge to edge, no rounding.
- * Built directly in the bar's own pixel dimensions (no stretched viewBox) so
- * there's no non-uniform scaling to throw the curve off.
+ * Full-width rectangle with rounded TOP corners only (bottom is flush with
+ * the true screen edge, never visible) and a smooth curved dip at the
+ * top-center for the raised button to nest into. Built directly in the
+ * bar's own pixel dimensions (no stretched viewBox) so there's no
+ * non-uniform scaling to throw either curve off.
  *
  * Both notch curves reach the apex with a HORIZONTAL tangent (their control
  * point shares the apex's own y) - a true rounded minimum, like the bottom
@@ -77,17 +84,20 @@ const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
  * for it to be noticeable.
  */
 function buildBarPath(width: number, height: number): string {
+  const r = TOP_CORNER_RADIUS;
   const cx = width / 2;
   const left = cx - NOTCH_HALF_WIDTH;
   const right = cx + NOTCH_HALF_WIDTH;
   const armX = NOTCH_HALF_WIDTH * 0.6;
   const apexArmX = NOTCH_HALF_WIDTH * 0.35;
   return [
-    `M 0,0`,
+    `M 0,${r}`,
+    `Q 0,0 ${r},0`,
     `L ${left},0`,
     `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
     `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
-    `L ${width},0`,
+    `L ${width - r},0`,
+    `Q ${width},0 ${width},${r}`,
     `L ${width},${height}`,
     `L 0,${height}`,
     'Z',
