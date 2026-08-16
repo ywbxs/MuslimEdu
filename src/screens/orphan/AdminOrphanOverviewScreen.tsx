@@ -12,7 +12,8 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Circle, Path, Line, Polyline } from 'react-native-svg';
+import Svg, { Circle, Line } from 'react-native-svg';
+import { Check, ChevronLeft, ChevronRight, FileText, Search, SlidersHorizontal, User, Users, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchReportOverview, ReportOverview, OverviewChild } from '../../services/adminOrphanReportService';
@@ -42,46 +43,19 @@ const MONTH_FALLBACKS = [
 
 // --- Icons --------------------------------------------------------------
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function SearchIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={17} color={color} strokeWidth={2} />;
 }
 function FilterIcon({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Line x1={5} y1={7} x2={19} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={5} y1={17} x2={19} y2={17} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={9} cy={7} r={2} fill="#FFFFFF" stroke={color} strokeWidth={1.6} />
-      <Circle cx={15} cy={12} r={2} fill="#FFFFFF" stroke={color} strokeWidth={1.6} />
-      <Circle cx={9} cy={17} r={2} fill="#FFFFFF" stroke={color} strokeWidth={1.6} />
-    </Svg>
-  );
+  return <SlidersHorizontal size={16} color={color} strokeWidth={2} />;
 }
 function ChevronRightIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
 function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 // Filled circle + X, used as the "clear search" affordance (matches the
 // Children screen's search bar, as opposed to the plain X used in sheets).
@@ -95,37 +69,16 @@ function CloseCircleIcon({ color }: { color: string }) {
   );
 }
 function CheckIcon({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 13 10 18 19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={14} color={color} strokeWidth={3} />;
 }
 function EmptyIcon() {
-  return (
-    <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke="#C4C9CF" strokeWidth={1.6} strokeLinejoin="round" />
-      <Path d="M9 12h6M9 16h4" stroke="#C4C9CF" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={56} color={"#C4C9CF"} strokeWidth={1.6} />;
 }
 function PeopleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3.4} stroke={color} strokeWidth={2} />
-      <Path d="M2.7 20c0-3.4 2.8-5.8 6.3-5.8s6.3 2.4 6.3 5.8" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M15.5 5a3.4 3.4 0 0 1 0 6.6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path d="M17.3 14.4c2.2.6 3.7 2.5 3.7 5.6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Users size={17} color={color} strokeWidth={2} />;
 }
 function PersonIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User size={17} color={color} strokeWidth={2} />;
 }
 
 type StatusFilter = 'all' | 'submitted' | 'missing';

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Line, Circle } from 'react-native-svg';
+import { GraduationCap, Heart, Image as ImageIcon, SquarePen } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchReportStatus, submitReport, PickedPhoto } from '../../services/orphanService';
@@ -22,32 +22,16 @@ const MONTH_NAMES = [
 ];
 
 function IconEdit() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={EMERALD} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <SquarePen size={20} color={EMERALD} strokeWidth={1.8} />;
 }
 function IconCap() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 9l10-4 10 4-10 4L2 9z" stroke={EMERALD} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={20} color={EMERALD} strokeWidth={1.8} />;
 }
 function IconHeart() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 20s-7-4.35-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.65 12 20 12 20z" stroke={EMERALD} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Heart size={20} color={EMERALD} strokeWidth={1.8} />;
 }
 function IconImage() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={EMERALD} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <ImageIcon size={20} color={EMERALD} strokeWidth={1.8} />;
 }
 
 /**

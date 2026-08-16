@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Rect, Path, Line, Circle } from 'react-native-svg';
+import { Activity, ArrowRight, BellRing, ClipboardCheck, Flag, Images, KeyRound, RotateCcwClock, School, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import DashboardShell, { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
@@ -9,94 +9,35 @@ import { fetchDashboardOverview, DashboardOverview } from '../../services/superA
 
 // --- Inline icons (matches the app's existing inline-SVG style) ---
 function SchoolIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 9.5L12 4l9 5.5-9 5.5-9-5.5z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M7 12v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <School size={22} color={color} strokeWidth={2} />;
 }
 function KeyIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={8} cy={15} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M11 12l8-8M16 5l3 3M13 8l2 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <KeyRound size={22} color={color} strokeWidth={2} />;
 }
 function PulseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 12h4l2-7 4 14 2-7h6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Activity size={22} color={color} strokeWidth={2} />;
 }
 function FlagIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 21V4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M5 4h13l-3 4 3 4H5" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Flag size={22} color={color} strokeWidth={2} />;
 }
 function ClockHistoryIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={13} r={8} stroke={color} strokeWidth={2} />
-      <Path d="M12 9v4l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 4v4h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <RotateCcwClock size={22} color={color} strokeWidth={2} />;
 }
 function TrashCanIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Trash2 size={22} color={color} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M14 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight size={16} color={color} strokeWidth={2} />;
 }
 function ImageStackIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={7} width={15} height={13} rx={2} stroke={color} strokeWidth={2} />
-      <Path d="M7 3h13a1 1 0 0 1 1 1v13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={9} cy={12} r={1.4} fill={color} />
-      <Path d="M5 18l3.5-4 3 3 2-2.5L18 18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Images size={22} color={color} strokeWidth={2} />;
 }
 function ClipboardCheckIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Rect x={5} y={4} width={14} height={17} rx={2} stroke={color} strokeWidth={2} />
-      <Path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M8.5 13l2.2 2.2L15.5 10.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ClipboardCheck size={22} color={color} strokeWidth={2} />;
 }
 
 function BellCogIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M5 16h11l-1.3-2A5.5 5.5 0 0 1 14 11V9a3.5 3.5 0 0 0-7 0v2a5.5 5.5 0 0 1-.7 3.5L5 16z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      <Circle cx={10.5} cy={18.5} r={1.3} fill={color} />
-      <Circle cx={18} cy={7} r={2.3} stroke={color} strokeWidth={1.8} />
-      <Path d="M18 4.3v.6M18 9.1v.6M15.3 7h.6M20.1 7h.6M16.1 5.1l.4.4M19.5 8.5l.4.4M16.1 8.9l.4-.4M19.5 5.5l.4-.4" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <BellRing size={22} color={color} strokeWidth={2} />;
 }
 
 function SuperAdminCard({
