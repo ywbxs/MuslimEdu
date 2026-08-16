@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
+import { Calendar, Check, ChevronLeft, ChevronRight, Funnel, Layers, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, StudentSummary, ChildStatus } from '../../services/adminService';
@@ -49,83 +49,34 @@ function formatJoined(dateStr?: string | null): string | null {
 
 // --- Inline stroke icons, matching the app's existing SVG icon style ---
 function IconPlus({ color }: { color: string }) {
-  return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={20} color={color} strokeWidth={2.2} />;
 }
 function IconSearch({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={18} color={color} strokeWidth={2} />;
 }
 function IconFilter({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16l-6.5 8v6l-3 1.5v-7.5L4 5z" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Funnel size={18} color={color} strokeWidth={2} />;
 }
 function IconCalendar({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v16H4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar size={13} color={color} strokeWidth={2} />;
 }
 function IconLayers({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l9 5-9 5-9-5 9-5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Layers size={13} color={color} strokeWidth={2} />;
 }
 function IconAlertTriangle({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4 2.5 20h19L12 4Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={12} y1={10} x2={12} y2={14.5} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={12} cy={17} r={0.9} fill={color} />
-    </Svg>
-  );
+  return <TriangleAlert size={13} color={color} strokeWidth={2} />;
 }
 function IconClose({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 13 10 18 19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={14} color={color} strokeWidth={3} />;
 }
 // --- Filter sheet -----------------------------------------------------
 type FilterValue = 'all' | ChildStatus;

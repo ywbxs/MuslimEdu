@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import Svg, { Polyline, Circle, Path, Line } from 'react-native-svg';
+import { CircleCheck, Clock, Lightbulb, LogOut } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -30,42 +30,16 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 };
 
 function CheckCircleIcon({ color, size = 40 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} fill={color} />
-      <Polyline points="7.5 12.5 10.5 15.5 16.5 9" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck size={size} color={"#FFFFFF"} strokeWidth={2.2} />;
 }
 function ClockIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v5l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock size={size} color={color} strokeWidth={2} />;
 }
 function BulbIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 18h6M10 21h4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path
-        d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 3z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Lightbulb size={size} color={color} strokeWidth={2} />;
 }
 function LogOutIcon({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Polyline points="16 17 21 12 16 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={21} y1={12} x2={9} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <LogOut size={size} color={color} strokeWidth={2} />;
 }
 
 function formatDate(value: string | null | undefined) {
