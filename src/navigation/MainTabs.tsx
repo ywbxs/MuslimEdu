@@ -30,7 +30,13 @@ const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-const BAR_BG = '#FFFFFF';
+// Fully transparent - the bar has no background of its own at all now, so
+// the icons and the center button float directly over whatever the screen
+// behind them is doing. The notch-cutout path (see buildBarPath) still
+// exists structurally but is a no-op visually while this is transparent -
+// left in place rather than ripped out so a solid fill can come back
+// later without rebuilding the shape.
+const BAR_BG = 'transparent';
 
 // Edge-to-edge docked bar, not a floating pill - full screen width, square
 // corners, no margin lifting it off the bottom edge, no border. Side

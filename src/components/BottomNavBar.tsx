@@ -15,15 +15,13 @@ const INACTIVE = '#6B8C88';
 const ACTIVE = '#0D1E1C';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-// Solid white pill - no translucency/glass. An earlier version split the
-// fill and border into two separate SVG paths (fill traced the notch
-// shape, border traced a plain notch-less rect) specifically so the
-// border wouldn't outline the notch cutout - but that meant the two
-// layers had different silhouettes, which is exactly what read as a
-// "nested pill" / nested-layer look: the border line ran straight across
-// where the fill actually dipped down for the notch. Both now use the
-// SAME path (see barPath), so there's only ever one shape.
-const BAR_BG = '#FFFFFF';
+// Fully transparent - the bar has no background of its own at all now, so
+// the icons and the center button float directly over whatever the screen
+// behind them is doing. The notch-cutout path (see buildBarPath) still
+// exists structurally but is a no-op visually while this is transparent -
+// left in place rather than ripped out so a solid fill can come back
+// later without rebuilding the shape.
+const BAR_BG = 'transparent';
 
 // Edge-to-edge docked bar, not a floating pill - full screen width, square
 // corners, no margin lifting it off the bottom edge, no border. Side
