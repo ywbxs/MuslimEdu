@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { Check, ChevronLeft, GraduationCap, School, Search } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 import GlassBackground from '../components/glass/GlassBackground';
@@ -51,42 +51,19 @@ const INSTITUTION_LABELS: Record<string, string> = {
 /* ========================= ICONS ========================= */
 
 function BackIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
 }
 function SearchIcon({ color = SUBTLE, size = 17 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Path d="M21 21l-4.8-4.8" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={size} color={color} strokeWidth={2} />;
 }
 function SchoolFallbackIcon({ color = BRAND.emerald, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 9.5L12 4l9 5.5-9 5.5-9-5.5z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M7 12v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <School size={size} color={color} strokeWidth={2} />;
 }
 function CapIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={size} color={color} strokeWidth={1.8} />;
 }
 function CheckSmallIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12.5l4.5 4.5L19 7" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={size} color={color} strokeWidth={2.6} />;
 }
 
 /* ========================= MAIN SCREEN ========================= */

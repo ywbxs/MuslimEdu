@@ -13,7 +13,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { Image as ImageIcon } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -44,20 +44,9 @@ const CANVAS_SOFT = '#F2FAF8';
 const GLASS_BORDER = 'rgba(255,255,255,0.5)';
 const GLASS_FILL = 'rgba(255,255,255,0.4)';
 
-// ---- Inline icons (react-native-svg) --------------------------------------
+// ---- Inline icons --------------------------------------
 function PhotoIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Circle cx={8.5} cy={9} r={1.4} fill={color} />
-    </Svg>
-  );
+  return <ImageIcon size={size} color={color} strokeWidth={1.8} />;
 }
 
 // Once pagination is exhausted, "All caught up" becomes its own card at the

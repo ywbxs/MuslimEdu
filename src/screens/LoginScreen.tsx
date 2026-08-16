@@ -18,7 +18,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { Check, ChevronLeft, ChevronRight, GraduationCap, Lock, Mail, School } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import LanguageSwitcherButton from '../components/LanguageSwitcherButton';
@@ -51,22 +52,11 @@ const STUDENTS_ILLUSTRATION = require('../assets/images/students-illustration-tr
 /* ========================= ICONS ========================= */
 
 function MailIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth={1.7} />
-      <Path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Mail size={size} color={color} strokeWidth={1.7} />;
 }
 
 function LockIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth={1.7} />
-      <Path d="M7 11V7a5 5 0 0110 0v4" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-      <Circle cx="12" cy="16" r="1" fill={color} />
-    </Svg>
-  );
+  return <Lock size={size} color={color} strokeWidth={1.7} />;
 }
 
 function EyeIcon({ open, color = MUTED, size = 20 }: { open: boolean; color?: string; size?: number }) {
@@ -83,45 +73,23 @@ function EyeIcon({ open, color = MUTED, size = 20 }: { open: boolean; color?: st
 }
 
 function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18l-6-6 6-6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.2} />;
 }
 
 function ChevronRightIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
 }
 
 function CheckIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 13l4 4 10-11" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={size} color={color} strokeWidth={2.6} />;
 }
 
 function SchoolIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 10l9-5 9 5-9 5-9-5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M7 12v5c0 1 2.2 2 5 2s5-1 5-2v-5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <School size={size} color={color} strokeWidth={1.8} />;
 }
 
 function AlumniIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={size} color={color} strokeWidth={1.8} />;
 }
 
 /* ========================= GRADIENT BUTTON ========================= */

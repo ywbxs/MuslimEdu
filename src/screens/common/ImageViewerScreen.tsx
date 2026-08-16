@@ -11,17 +11,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
-
+import { X } from 'lucide-react-native';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DOUBLE_TAP_MS = 260;
 
 function CloseIcon() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6 6 18" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={24} color={"#FFFFFF"} strokeWidth={2.2} />;
 }
 
 function ZoomableImage({ uri, active }: { uri: string; active: boolean }) {
