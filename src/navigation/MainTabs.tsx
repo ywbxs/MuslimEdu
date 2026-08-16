@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import PressableScale from '../components/PressableScale';
 import MenuScreen from '../screens/common/MenuScreen';
 import FeedScreen from '../screens/common/FeedScreen';
 import NotificationsScreen from '../screens/common/NotificationsScreen';
@@ -21,60 +22,77 @@ import {
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
-// LoginScreen.tsx's own local-palette precedent. Floating glass pill bar
-// with a raised circular center button for whichever tab is this role's
-// "primary action" (Admission for admin/superadmin, Scan for teacher),
-// instead of the old docked square bar with that tab inline.
+// LoginScreen.tsx's own local-palette precedent. Edge-to-edge docked bar
+// (not a floating pill) with a raised circular center button for whichever
+// tab is this role's "primary action" (Admission for admin/superadmin, Scan
+// for teacher), nesting into a curved notch cut into the bar's top edge.
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
-// No true backdrop-blur without a native masking library (see TabBar's
-// notch rendering), so the "glass" look is faked with a translucent gradient
-// fill - defined as an SVG <LinearGradient> (GLASS_GRADIENT_ID below) and
-// used AS the notch Path's own fill, not a separate overlay. A separate RN
-// LinearGradient layered on top of the Svg was tried and reverted: it's a
-// plain rectangle with no awareness of the notch shape, so it painted over
-// the whole bar and visually erased the curve instead of following it.
-const GLASS_TOP = 'rgba(255,255,255,0.88)';
-const GLASS_BOTTOM = 'rgba(255,255,255,0.68)';
-const GLASS_GRADIENT_ID = 'navBarGlass';
-// Shape of the tab bar's top edge: flat, dips into a shallow curved notch
-// for the raised center button to nest into, flat again to the far edge -
-// same silhouette as the login/feed mockups' SVG clipPath, expressed as a
-// fillable Path instead (RN has no clip-path equivalent for arbitrary
-// View shapes). Coordinates are in a 0-1000 unit box; stretched to the
-// bar's actual pixel size by the Svg's width/height="100%". Both curves
-// settle into the center apex with a vertical tangent (control points
-// share the apex's x) so the dip reads as a smooth round basin instead of
-// meeting on a flat horizontal shelf.
-const NOTCH_PATH = 'M0,0 L300,0 C390,0 410,210 460,270 C475,288 486,300 500,300 C514,300 525,288 540,270 C590,210 610,0 700,0 L1000,0 L1000,1000 L0,1000 Z';
-// The notch's flare spans x=300..700 of the 1000-unit box above, i.e. the
-// middle 40% of the bar's width. Side-tab x-positions are chosen as
-// fractions of window width so the inner two tabs land clear outside that
-// flare instead of drifting into it. Kept in sync with BottomNavBar.tsx.
-const TAB_X_FRACTION: Record<string, number> = { Home: 0.1, Chat: 0.24, Alerts: 0.76, Menu: 0.9 };
-const TAB_HIT_SIZE = 52;
 const CENTER_BTN_BG = '#16211F';
+const BAR_BG = '#FFFFFF';
 
-// The bar's geometry is COMPUTED, never measured.
-//
-// The bar once grew without bound until it swallowed the screen. The root
-// cause was that the notch Svg was never actually taken out of the row's
-// flow: it relied on `StyleSheet.absoluteFillObject`, which React Native
-// removed in 0.8x, so at runtime that style was `undefined` and RN silently
-// ignored it. The Svg therefore counted toward the row's height - and a
-// then-current onLayout that fed the measured height back into the Svg's own
-// height prop turned that into an unbounded feedback loop.
-//
-// Both dimensions are knowable without measuring: the bar is edge-to-edge so
-// its width IS the window width, and its height is just padding + icon. Keep
-// it that way; don't reintroduce onLayout here.
-const ICON_SIZE = 24;
+// Edge-to-edge docked bar, not a floating pill - full screen width, square
+// corners, no margin lifting it off the bottom edge, no border. Side padding
+// for the icons only (no outer margin, since the bar itself now reaches the
+// screen edges).
+const BAR_SIDE_PADDING = 20;
+
 const BAR_PADDING_TOP = 14;
 const BAR_PADDING_BOTTOM = 14;
-// Centers the (taller, for a roomier tap target) hit box on the same point
-// the icon itself used to sit on when it was vertically centered by flex.
-const TAB_ITEM_TOP = BAR_PADDING_TOP + ICON_SIZE / 2 - TAB_HIT_SIZE / 2;
+const ICON_SIZE = 24;
+const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
+
+const CENTER_BTN_SIZE = 52;
+const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
+// How deep the bar's notch cuts in, and how wide its opening is at the
+// bar's top edge. Deliberately a bit WIDER and DEEPER than the button's own
+// radius so the curve is actually visible peeking out past the button's
+// silhouette at a normal viewing scale - sizing it to hide entirely behind
+// the button (as an earlier version of this did) made it effectively
+// invisible except under heavy zoom. There's no View-level shadow on this
+// bar (see the note on tabBar below), so the small sliver of exposed
+// transparent gap this leaves around the button doesn't risk the "shadow
+// bleeds into the cutout" bug from the earlier full-width notch attempt.
+const NOTCH_DEPTH = CENTER_BTN_RADIUS + 6;
+const NOTCH_HALF_WIDTH = CENTER_BTN_RADIUS + 20;
+// Reserved gap between Chat and Alerts, matching the notch's opening width,
+// so they sit pulled in close to the button instead of the wide empty
+// stretch four evenly-flexed tabs would otherwise leave in the middle.
+const CENTER_GAP = NOTCH_HALF_WIDTH * 2;
+
+/**
+ * Full-width rectangle with a smooth curved dip at the top-center for the
+ * raised button to nest into - square corners, edge to edge, no rounding.
+ * Built directly in the bar's own pixel dimensions (no stretched viewBox) so
+ * there's no non-uniform scaling to throw the curve off.
+ *
+ * Both notch curves reach the apex with a HORIZONTAL tangent (their control
+ * point shares the apex's own y) - a true rounded minimum, like the bottom
+ * of a parabola. An earlier version gave both curves a control point at the
+ * SAME (x, y) as each other, which put them at exactly opposite tangent
+ * directions right at the apex (one arriving straight down, the other
+ * departing straight up) - mathematically a cusp, not a curve, which
+ * rendered as a visible spike/glitch once the notch was made deep enough
+ * for it to be noticeable.
+ */
+function buildBarPath(width: number, height: number): string {
+  const cx = width / 2;
+  const left = cx - NOTCH_HALF_WIDTH;
+  const right = cx + NOTCH_HALF_WIDTH;
+  const armX = NOTCH_HALF_WIDTH * 0.6;
+  const apexArmX = NOTCH_HALF_WIDTH * 0.35;
+  return [
+    `M 0,0`,
+    `L ${left},0`,
+    `C ${left + armX},0 ${cx - apexArmX},${NOTCH_DEPTH} ${cx},${NOTCH_DEPTH}`,
+    `C ${cx + apexArmX},${NOTCH_DEPTH} ${right - armX},0 ${right},0`,
+    `L ${width},0`,
+    `L ${width},${height}`,
+    `L 0,${height}`,
+    'Z',
+  ].join(' ');
+}
 
 const Tab = createBottomTabNavigator();
 
@@ -200,7 +218,12 @@ function TabBar({ state, navigation, isStudent }: any) {
   const { unreadCount } = useNotifications();
   const { width: windowWidth } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 8);
-  const barHeight = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM + bottomInset;
+  const barWidth = windowWidth;
+  // The bar's own rendered height covers the icon row PLUS the safe-area
+  // gutter below it, so the white fill reaches the true screen edge instead
+  // of leaving a gap that would expose the screen's background there.
+  const totalBarHeight = BAR_HEIGHT + bottomInset;
+  const barPath = buildBarPath(barWidth, totalBarHeight);
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -234,78 +257,59 @@ function TabBar({ state, navigation, isStudent }: any) {
   return (
     <View style={styles.tabBarWrap}>
       {centerRouteName && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.centerBtn}
-          activeOpacity={0.85}
+          scaleTo={0.9}
           onPress={() => goToRoute(state.routes[centerIndex], centerFocused)}
           accessibilityRole="button"
           accessibilityLabel={centerRouteName}
         >
           {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
-        </TouchableOpacity>
+        </PressableScale>
       )}
       {showStudentCenter && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.centerBtn}
-          activeOpacity={0.85}
+          scaleTo={0.9}
           onPress={() => (navigation.getParent() ?? navigation).navigate('MyProgress')}
           accessibilityRole="button"
           accessibilityLabel="My Progress"
         >
           {ICONS.MyProgress('#FFFFFF')}
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
-      <View style={[styles.tabBar, { height: barHeight, paddingBottom: BAR_PADDING_BOTTOM + bottomInset }]}>
-        {/* A rectangular BlurView can't be clipped to this curved shape
-            without a masking library, so the "glass" here is a translucent
-            gradient fill rather than a true backdrop blur - same tradeoff
-            noted on centerBtn. The gradient is defined as an SVG
-            <LinearGradient> and used as the Path's own fill (see
-            GLASS_GRADIENT_ID above) so it's naturally clipped to the notch
-            shape - a separate RN LinearGradient laid on top as a plain
-            rectangle was tried and reverted, since it painted over the
-            whole bar and erased the curve instead of following it.
-            preserveAspectRatio="none" stretches the path non-uniformly to
-            fill the bar, the same way the mockup's objectBoundingBox
-            clipPath did. The plain View wrapper is what takes it out of the
-            row's flow - relying on the Svg's own style for that is what let
-            it drive the parent's height before. */}
-        <View style={styles.barBackground} pointerEvents="none">
-          <Svg width={windowWidth} height={barHeight} viewBox="0 0 1000 1000" preserveAspectRatio="none">
-            <Defs>
-              <SvgGradient id={GLASS_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={GLASS_TOP} />
-                <Stop offset="1" stopColor={GLASS_BOTTOM} />
-              </SvgGradient>
-            </Defs>
-            <Path d={NOTCH_PATH} fill={`url(#${GLASS_GRADIENT_ID})`} />
-          </Svg>
-        </View>
-        {visibleRoutes.map((route: any) => {
+      <View style={[styles.tabBar, { width: barWidth, height: totalBarHeight, paddingBottom: bottomInset }]}>
+        <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* The notch cutout is genuinely transparent - no white backing
+              shape behind it - so it shows whatever's actually behind the
+              bar there instead of an opaque fill. Fill only, no stroke/
+              border - the bar docks flush to the screen edges, so there's
+              no gap around it that a border would be defining. */}
+          <Path d={barPath} fill={BAR_BG} />
+        </Svg>
+        {visibleRoutes.map((route: any, i: number) => {
           const index = state.routes.indexOf(route);
           const isRouteFocused = state.index === index;
           const renderIcon = ICONS[route.name];
           const color = isRouteFocused ? ACTIVE : SUBTLE;
-          // Falls back to dead-center if a route name isn't one of the four
-          // known side tabs - shouldn't happen, but keeps it on-screen
-          // instead of collapsing to x=0 if the tab set ever changes.
-          const left = (TAB_X_FRACTION[route.name] ?? 0.5) * windowWidth - TAB_HIT_SIZE / 2;
 
           return (
-            <TouchableOpacity
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isRouteFocused ? { selected: true } : {}}
-              onPress={() => goToRoute(route, isRouteFocused)}
-              style={[styles.tabItem, { left }]}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconWrap}>
-                {renderIcon && renderIcon(color)}
-                {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
-              </View>
-            </TouchableOpacity>
+            <React.Fragment key={route.key}>
+              {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityState={isRouteFocused ? { selected: true } : {}}
+                onPress={() => goToRoute(route, isRouteFocused)}
+                style={styles.tabItem}
+                scaleTo={0.88}
+              >
+                <View style={styles.iconWrap}>
+                  {renderIcon && renderIcon(color)}
+                  {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+                </View>
+              </PressableScale>
+            </React.Fragment>
           );
         })}
       </View>
@@ -461,64 +465,50 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  // Edge-to-edge, no side margins/rounded pill - full-width glass bar, same
-  // as the login/feed mockups' tab-bar-wrap (0 padding at all, including
-  // bottom - the safe-area inset lives on tabBar's own paddingBottom below
-  // instead, so the glass fill itself reaches the literal screen edge
-  // rather than leaving a gap of bare canvas underneath the bar).
+  // No backgroundColor here - this wrapper is just a positioning box for the
+  // bar and the button, not a second white surface behind them. Only the
+  // bar's own SVG fill (BAR_BG) is white.
   tabBarWrap: {},
+  // No shadow* or elevation here at all. shadow*-only (no elevation) was
+  // tried on the theory that Android only reacts to elevation and shadow*
+  // is a no-op there - but on this build, adding shadow* back brought the
+  // exact same symptoms as elevation had (the fill and notch cutout both
+  // disappeared again), so whatever the precise mechanism, this View can't
+  // carry any shadow property at all while its fill lives on a child Svg
+  // with no backgroundColor of its own.
   tabBar: {
-    // No `elevation` here on purpose: this View has no backgroundColor (the
-    // fill is the notch Svg behind it), and Android's elevation shadow is
-    // cast from the view's rectangular bounds, so it draws a straight shadow
-    // line straight across the notch dip instead of following the curve.
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-  },
-  // Holds the notch Svg out of the row's flow so it can never contribute to
-  // the bar's height.
-  barBackground: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
-  // Positioned absolutely (left set per-item from TAB_X_FRACTION, top fixed
-  // at TAB_ITEM_TOP) rather than flex-distributed across the row - flex
-  // division put the inner two tabs right in the notch's flare zone since
-  // it has no notion of that curve's width, only the shell padding did
-  // (which only ever moved the outer two tabs).
-  tabItem: {
-    position: 'absolute',
-    top: TAB_ITEM_TOP,
-    width: TAB_HIT_SIZE,
-    height: TAB_HIT_SIZE,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: BAR_SIDE_PADDING,
   },
+  // flex:1 per item + centered content - even horizontal distribution and
+  // vertical centering both come straight from flexbox, no manual pixel
+  // math to keep in sync with anything else. Home/Chat split the space left
+  // of centerSpacer, Alerts/Menu split the space right of it.
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerSpacer: { width: CENTER_GAP },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   centerBtn: {
     position: 'absolute',
-    top: -15,
+    top: -CENTER_BTN_RADIUS,
     left: '50%',
-    marginLeft: -24,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    marginLeft: -CENTER_BTN_RADIUS,
+    width: CENTER_BTN_SIZE,
+    height: CENTER_BTN_SIZE,
+    borderRadius: CENTER_BTN_RADIUS,
     backgroundColor: CENTER_BTN_BG,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
-    shadowColor: '#0D1E1C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 9,
-    // No ring border here: a translucent-white ring only reads as "white"
-    // over an opaque light bar. Over the notch cutout it blended with
-    // whatever showed through and came out as a grey halo around the
-    // button. The dark button already separates cleanly from the pale
-    // notch on contrast alone.
+    // No shadow/elevation. The button's own drop shadow used to bleed into
+    // the transparent notch gap around it - a cast shadow needs a surface to
+    // land on, and where the notch is genuinely transparent (revealing the
+    // screen behind the bar) it just showed up as an isolated gray blob
+    // instead of blending into anything. The button's solid dark fill
+    // against the white pill gives it enough definition without one.
   },
   badge: {
     position: 'absolute',

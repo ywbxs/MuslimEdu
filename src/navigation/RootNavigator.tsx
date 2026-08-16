@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, StatusBar } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '../theme/glass';
@@ -213,7 +213,10 @@ export default function RootNavigator() {
 
   return (
     <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
-      <StatusBar barStyle="dark-content" />
+      {/* No <StatusBar> here - see AnimatedSplash.tsx / LoginScreen.tsx for
+          why: RN's StatusBar calls the Android native module's setColor()
+          for any mounted instance regardless of props, and that method is
+          missing on this build, which crashes the whole app. */}
       <NavigationContainer theme={APP_NAV_THEME}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, animation: 'fade' }}

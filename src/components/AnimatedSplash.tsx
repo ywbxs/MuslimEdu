@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, StatusBar, Easing, useWindowDimensions } from 'react-native';
+import { View, Animated, StyleSheet, Easing, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 
 /* ------------------------------------------------------------------ *
@@ -109,7 +109,15 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E927E" translucent />
+      {/* No <StatusBar> here at all, not even barStyle-only. RN's StatusBar
+          component calls the Android native module's setColor() on mount
+          for ANY mounted instance - it merges in a default background
+          color even when one isn't explicitly passed - and on some
+          installed builds that native method isn't there (native/JS
+          version mismatch), which throws "undefined is not a function"
+          and crashes the whole app before it even finishes mounting the
+          splash screen. Dropping backgroundColor/translucent alone wasn't
+          enough to avoid that call, so the component is gone entirely. */}
 
       {/* Base + drifting gradient background */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,9 +31,7 @@ import PostCard from '../../components/PostCard';
 import PostCardSkeleton from '../../components/feed/PostCardSkeleton';
 import CaughtUpCard from '../../components/feed/CaughtUpCard';
 import CurrencyBalanceButton from '../../components/CurrencyBalanceButton';
-import LanguageSwitcherButton from '../../components/LanguageSwitcherButton';
 import WidgetCarousel from '../../components/feed/WidgetCarousel';
-import { RADIUS } from '../../theme/glass';
 
 // Teal/mint palette matching the login + feed mockup redesign - see
 // LoginScreen.tsx's own local-palette precedent. CANVAS/CANVAS_SOFT drive a
@@ -89,6 +88,14 @@ export default function FeedScreen() {
   const { t } = useLocale();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  // Passed straight through to PostCard/PostImageGrid as an explicit pixel
+  // width for this screen's edge-to-edge post images, instead of leaving
+  // them to resolve '100%' through several nested views (imageWrap's
+  // negative margin, the card's own containerStyle override, etc). An
+  // explicit number can't be thrown off by any of that - it's just the
+  // window's own width, which is exactly what an edge-to-edge image should
+  // render at on this screen.
+  const { width: windowWidth } = useWindowDimensions();
 
   // Admins and teachers can author new posts (or edit their own). Students
   // (and other non-staff roles) can still repost from the feed, but never
@@ -298,23 +305,29 @@ export default function FeedScreen() {
 
   const openCompose = () => (navigation as any).navigate('CreatePost');
 
+  // Rendered as the FlatList's own ListHeaderComponent (not a sibling above
+  // it) so it's part of the same scrollable content and scrolls away with
+  // the rest of the feed - a separate sibling above the list stayed pinned
+  // in place while only the list scrolled beneath it, which read as a
+  // floating bar hovering over the feed.
+  const composer = canPost ? (
+    <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
+      <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
+      <Text style={styles.composerPlaceholder} numberOfLines={1}>
+        {t('feed.composer_placeholder', 'Share a photo...')}
+      </Text>
+      <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
+        <PhotoIcon />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ) : null;
+
   const homeContent = (
     <>
-      {canPost && (
-        <TouchableOpacity style={styles.composer} activeOpacity={0.9} onPress={openCompose}>
-          <UserAvatar name={user?.name ?? ''} photo={user?.photo} size={36} />
-          <Text style={styles.composerPlaceholder} numberOfLines={1}>
-            {t('feed.composer_placeholder', 'Share a photo...')}
-          </Text>
-          <TouchableOpacity style={styles.composerIconBtn} activeOpacity={0.7} onPress={openCompose} hitSlop={6}>
-            <PhotoIcon />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-
       <View style={styles.deckWrap}>
         {loading ? (
           <View style={styles.skeletonStack}>
+            {composer}
             <PostCardSkeleton withImage style={styles.feedPostCard} />
             <PostCardSkeleton style={styles.feedPostCard} />
             <PostCardSkeleton withImage style={styles.feedPostCard} />
@@ -326,6 +339,7 @@ export default function FeedScreen() {
             keyExtractor={(item) => (item.kind === 'post' ? String(item.post.id) : item.kind === 'widgets' ? 'widgets' : 'caught-up')}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            ListHeaderComponent={composer}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.5}
@@ -350,6 +364,8 @@ export default function FeedScreen() {
                     (navigation as any).navigate('ImageViewer', { images, initialIndex: imgIndex })
                   }
                   containerStyle={styles.feedPostCard}
+                  squareImages
+                  contentWidth={windowWidth}
                 />
               )
             }
@@ -382,7 +398,6 @@ export default function FeedScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>{headerTitleText}</Text>
         <View style={styles.headerActions}>
-          <LanguageSwitcherButton />
           <CurrencyBalanceButton />
         </View>
       </View>
@@ -419,19 +434,19 @@ const styles = StyleSheet.create({
   // below the header.
   outerWrap: { flex: 1 },
 
+  // Flat, edge-to-edge row instead of a bordered floating white card - same
+  // "integrated into the page, not a separate layer" treatment feedPostCard
+  // already uses below it, so the composer reads as the first row of the
+  // feed rather than a distinct floating element sitting on top of it.
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 10,
-    overflow: 'hidden',
+    backgroundColor: GLASS_FILL,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
   },
   composerPlaceholder: { flex: 1, fontSize: 14.5, color: SUBTLE },
   composerIconBtn: { padding: 4 },

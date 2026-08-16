@@ -192,8 +192,10 @@ interface Props {
   // clip and shadow) and needs PostCard to render as plain transparent
   // content inside it. Omit to keep today's standalone vertical-card look.
   containerStyle?: StyleProp<ViewStyle>;
-  // Forwarded to PostImageGrid (own + quoted images) - omit to keep the
-  // default full-width image grid sizing.
+  // Forwarded to PostImageGrid as an explicit pixel width for this post's
+  // own image grid only (not the quoted repost's, which always fills its
+  // own bordered quote box regardless) - omit to let the image grid fill
+  // its parent's actual width instead.
   contentWidth?: number;
   // Used by the feed deck card (fixed-height, swipe-only pager): switches
   // to a big magazine-style card - a photo (or a plain color for a
@@ -207,6 +209,14 @@ interface Props {
   // ExpandableText "See more" (expanding in place wouldn't fit over a
   // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
+  // Squares off this post's own image grid and switches a single image to a
+  // portrait 4:3 crop, taller than wide (not the quoted repost's, which
+  // keeps its rounded corners and default ratio inside its bordered quote
+  // box regardless) - for the Home feed's edge-to-edge cards, where a
+  // full-bleed photo should meet the card's own square edges instead of
+  // floating mid-image with rounded
+  // corners. Omit to keep the default rounded corners and aspect ratio.
+  squareImages?: boolean;
 }
 
 const PRIVACY_MENU_OPTIONS: { key: Post['privacy']; label: string }[] = [
@@ -229,6 +239,7 @@ export default function PostCard({
   contentWidth,
   clipContent,
   bodyNumberOfLines,
+  squareImages,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const [menuVisible, setMenuVisible] = useState(false);
@@ -468,7 +479,19 @@ export default function PostCard({
           {/* Own images */}
           {!quoted && post.images.length > 0 && (
             <View style={styles.imageWrap}>
-              <PostImageGrid images={post.images} width={contentWidth} onPressImage={(i) => onPressImage?.(post.images, i)} />
+              <PostImageGrid
+                images={post.images}
+                width={contentWidth}
+                radius={squareImages ? 0 : undefined}
+                aspectRatio={squareImages ? 3 / 4 : undefined}
+                // PostImageGrid's own maxHeight default (320) is well under
+                // what a 3:4 portrait crop needs at full phone width (~1.33x
+                // width) and would silently clip it back down to a shorter
+                // box. Only lifted for squareImages - every other caller
+                // keeps the 320 default unchanged.
+                maxHeight={squareImages ? 9999 : undefined}
+                onPressImage={(i) => onPressImage?.(post.images, i)}
+              />
             </View>
           )}
 
@@ -488,11 +511,11 @@ export default function PostCard({
               {!!quoted.content && <Text style={styles.quoteContent}>{quoted.content}</Text>}
               {quoted.images.length > 0 && (
                 <View style={{ marginTop: 8 }}>
-                  <PostImageGrid
-                    images={quoted.images}
-                    width={contentWidth != null ? contentWidth - 28 : undefined}
-                    onPressImage={(i) => onPressImage?.(quoted.images, i)}
-                  />
+                  {/* No width override - this sits inside quoteBox's own
+                      padding and should just fill that parent (PostImageGrid's
+                      own '100%' default), independent of whatever contentWidth
+                      the OUTER post's own image grid is using below. */}
+                  <PostImageGrid images={quoted.images} onPressImage={(i) => onPressImage?.(quoted.images, i)} />
                 </View>
               )}
             </TouchableOpacity>
@@ -715,7 +738,10 @@ const styles = StyleSheet.create({
   time: { fontSize: 12.5, color: SUBTLE },
   dot: { fontSize: 12, color: SUBTLE },
   content: { fontSize: 15.5, color: INK, lineHeight: 22, marginTop: 14 },
-  imageWrap: { marginTop: 12, alignItems: 'center' },
+  // Bleeds edge-to-edge within the card - marginHorizontal cancels out the
+  // card's own paddingHorizontal (18) so the image reaches the card's inner
+  // edge instead of sitting inset with visible margin on both sides.
+  imageWrap: { marginTop: 12, marginHorizontal: -18 },
   quoteBox: {
     marginTop: 12,
     backgroundColor: CANVAS,
@@ -734,8 +760,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
   },
   // cardMagazine drops the base card's own paddingHorizontal (see above),
   // so the action bar needs its own to stay clear of the rounded corners.
