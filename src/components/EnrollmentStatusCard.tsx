@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import { ClipboardList, ArrowRight, Check, Clock, Calendar, BookOpen, User, DoorOpen } from 'lucide-react-native';
 import { fetchMySchedule, AcademicSchedule } from '../services/academicScheduleService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 import { COLORS, RADIUS, SHADOW, SPACING } from '../theme/glass';
@@ -15,70 +15,28 @@ const SUBTLE = COLORS.subtle;
 const SURFACE = COLORS.surface;
 
 function ClipboardIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M7 6h10a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M9 12h6M9 16h6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ClipboardList color={color} size={size} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color = EMERALD, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12h16M14 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight color={color} size={size} strokeWidth={2} />;
 }
 function CheckIcon({ color = '#FFFFFF', size = 10 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12.5l5 5L20 6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={color} size={size} strokeWidth={3} />;
 }
 function ClockIcon({ color = '#FFFFFF', size = 10 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={3} />
-      <Path d="M12 8v5l3 2" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock color={color} size={size} strokeWidth={3} />;
 }
 function CalendarIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar color={color} size={size} strokeWidth={2} />;
 }
 function BookIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v18H6.5A2.5 2.5 0 0 0 4 23.5v-18z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v18h5.5a2.5 2.5 0 0 1 2.5 2.5v-18z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <BookOpen color={color} size={size} strokeWidth={2} />;
 }
 function PersonIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User color={color} size={size} strokeWidth={2} />;
 }
 function DoorIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={6} y1={21} x2={20} y2={21} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={13} cy={13} r={0.8} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <DoorOpen color={color} size={size} strokeWidth={2} />;
 }
 
 interface StatusItem {
@@ -260,7 +218,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     borderWidth: 1,
   },
-  tileOk: { backgroundColor: EMERALD_SOFT, borderColor: 'rgba(43,203,176,0.18)' },
+  tileOk: { backgroundColor: EMERALD_SOFT, borderColor: 'rgba(31,174,100,0.18)' },
   tilePending: { backgroundColor: AMBER_SOFT, borderColor: 'rgba(180,83,9,0.16)' },
   tileTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badge: {

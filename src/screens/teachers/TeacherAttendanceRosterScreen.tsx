@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
+import { ChevronLeft, ChevronRight, CircleCheck, RotateCcwClock } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
@@ -30,7 +30,7 @@ import BigAttendanceCard, { SwipeDirection, DirectionMeta } from '../../componen
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -51,7 +51,7 @@ interface StatusMeta {
 // resolves (and for a school with no configured statuses at all, though the
 // backend already returns these same 5 defaults in that case too).
 const DEFAULT_STATUS_META: Record<string, StatusMeta> = {
-  present: { label: 'Present', short: 'P', color: '#2BCBB0', soft: '#E5F8F5' },
+  present: { label: 'Present', short: 'P', color: '#1FAE64', soft: '#E5F8F5' },
   late: { label: 'Late', short: 'L', color: '#B8860B', soft: '#FBF2DE' },
   absent: { label: 'Absent', short: 'A', color: '#E5484D', soft: '#FCEDED' },
   excused: { label: 'Excused', short: 'E', color: '#4C6EF5', soft: '#EAEDFC' },
@@ -98,35 +98,16 @@ function formatDateLabel(iso: string, t: (key: string, fallback?: string) => str
 }
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={size} color={color} strokeWidth={2.4} />;
 }
 function IconHistory({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={13} r={8} stroke={color} strokeWidth={2} />
-      <Polyline points="12 9 12 13 15 15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M5 5L3 7" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <RotateCcwClock size={20} color={color} strokeWidth={2} />;
 }
 function IconCheckCircle({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="8.5 12 11 14.5 15.5 9.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck size={16} color={color} strokeWidth={2} />;
 }
 
 // The first 4 configured statuses (by sort_order) map to the 4 swipe

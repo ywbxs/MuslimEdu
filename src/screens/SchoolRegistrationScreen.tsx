@@ -18,7 +18,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
+import { Camera, ChevronLeft, IdCard, Images, ScanFace, School, X } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 import GlassBackground from '../components/glass/GlassBackground';
@@ -100,71 +101,28 @@ interface PickedPhoto {
 /* ========================= ICONS ========================= */
 
 function BackIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
 }
 function SchoolTypeIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 9.5L12 4l9 5.5-9 5.5-9-5.5z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M7 12v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <School size={20} color={color} strokeWidth={2} />;
 }
 function IdCardIcon({ color = BRAND.emerald, size = 34 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={5} width={18} height={14} rx={2} stroke={color} strokeWidth={1.8} />
-      <Circle cx={8.5} cy={11} r={2} stroke={color} strokeWidth={1.8} />
-      <Path d="M5.5 16c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path d="M14 10h4M14 13h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <IdCard size={size} color={color} strokeWidth={1.8} />;
 }
 function FaceIcon({ color = BRAND.emerald, size = 34 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-      <Circle cx={9} cy={10.5} r={0.9} fill={color} />
-      <Circle cx={15} cy={10.5} r={0.9} fill={color} />
-      <Path d="M8.5 15c1 1 2.2 1.5 3.5 1.5s2.5-.5 3.5-1.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ScanFace size={size} color={color} strokeWidth={1.8} />;
 }
 function CameraSmallIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.2} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <Camera size={size} color={color} strokeWidth={2} />;
 }
 function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={size} color={color} strokeWidth={2.2} />;
 }
 function CameraSourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <Camera size={size} color={color} strokeWidth={1.8} />;
 }
 function LibrarySourceIcon({ color = BRAND.emerald, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={4} width={18} height={16} rx={2} stroke={color} strokeWidth={1.8} />
-      <Circle cx={8.5} cy={9.5} r={1.6} stroke={color} strokeWidth={1.8} />
-      <Path d="M4 16.5l5-5 4 4 3-3 4 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Images size={size} color={color} strokeWidth={1.8} />;
 }
 function FeatureCheckIcon({ color = BRAND.emerald, size = 14 }: { color?: string; size?: number }) {
   return (
@@ -705,7 +663,7 @@ const preview = StyleSheet.create({
     backgroundColor: COLORS.emeraldSoft,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(43,203,176,0.25)',
+    borderColor: 'rgba(31,174,100,0.25)',
     padding: 16,
     marginTop: 16,
   },

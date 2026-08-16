@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle } from 'react-native-svg';
+import { Camera, Settings } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import HeroGlow from '../../components/HeroGlow';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
@@ -36,30 +37,11 @@ const HERO_HEIGHT = 220;
 const PARALLAX_FACTOR = 0.5;
 
 function CameraIcon({ color = '#FFFFFF', size = 12 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2.2} />
-    </Svg>
-  );
+  return <Camera size={size} color={color} strokeWidth={2.2} />;
 }
 
 function GearIcon({ color = '#FFFFFF', size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 15a3 3 0 100-6 3 3 0 000 6z"
-        stroke={color}
-        strokeWidth={1.8}
-      />
-      <Path
-        d="M19.4 13a7.5 7.5 0 000-2l1.9-1.5-2-3.4-2.2.9a7.6 7.6 0 00-1.7-1L15 3.8h-4l-.4 2.2a7.6 7.6 0 00-1.7 1l-2.2-.9-2 3.4L6.6 11a7.5 7.5 0 000 2l-1.9 1.5 2 3.4 2.2-.9c.5.4 1.1.8 1.7 1l.4 2.2h4l.4-2.2c.6-.2 1.2-.6 1.7-1l2.2.9 2-3.4L19.4 13z"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Settings size={size} color={color} strokeWidth={1.8} />;
 }
 
 interface DashboardShellProps {

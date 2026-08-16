@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import Svg, { Path, Polyline, Line } from 'react-native-svg';
+import { ChevronRight, LogOut } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { getDashboardForRole } from '../../navigation/roleScreens';
@@ -11,20 +11,10 @@ const DANGER_SOFT = 'rgba(239,68,68,0.12)';
 const SUBTLE = COLORS.subtle;
 
 function LogOutIcon({ color = DANGER, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Polyline points="16 17 21 12 16 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={21} y1={12} x2={9} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <LogOut size={size} color={color} strokeWidth={2} />;
 }
 function ChevronIcon({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={size} color={color} strokeWidth={2} />;
 }
 
 /**

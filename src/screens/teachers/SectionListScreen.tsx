@@ -200,7 +200,7 @@ const SectionListScreen = () => {
                   styles.enrollmentFill,
                   {
                     width: `${Math.min(pct, 100)}%`,
-                    backgroundColor: pct > 90 ? theme.danger : pct > 75 ? '#f59e0b' : '#2BCBB0',
+                    backgroundColor: pct > 90 ? theme.danger : pct > 75 ? '#f59e0b' : '#1FAE64',
                   },
                 ]}
               />

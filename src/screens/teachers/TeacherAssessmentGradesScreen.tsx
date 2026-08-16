@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Polyline } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -29,11 +29,7 @@ const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 
 function bandColor(pct: number | null) {

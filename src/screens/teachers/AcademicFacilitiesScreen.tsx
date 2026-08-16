@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { Building2, ChevronLeft, DoorOpen } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
@@ -22,27 +22,13 @@ import { archiveBuilding, archiveRoom, Building, listBuildings, listRooms, Room 
  */
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5l-7 7 7 7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconBuilding({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h16M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M15 21v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Building2 size={20} color={color} strokeWidth={1.8} />;
 }
 function IconDoor({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 21h14" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={13} cy={13} r={0.9} fill={color} />
-    </Svg>
-  );
+  return <DoorOpen size={20} color={color} strokeWidth={2} />;
 }
 
 export default function AcademicFacilitiesScreen() {

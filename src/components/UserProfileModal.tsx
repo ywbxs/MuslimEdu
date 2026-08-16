@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
+import { X } from 'lucide-react-native';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostCard from './PostCard';
@@ -25,11 +25,7 @@ const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 
 function CloseIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6 6 18" stroke={INK} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color={INK} size={22} strokeWidth={2} />;
 }
 
 /**

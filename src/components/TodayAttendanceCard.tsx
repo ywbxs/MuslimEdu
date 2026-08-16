@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Rect, Line } from 'react-native-svg';
+import { CalendarCheck, ArrowRight } from 'lucide-react-native';
 import { fetchStudentAttendance } from '../services/studentAcademicService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -27,7 +27,7 @@ function bucketStatus(raw: unknown): StatusKey {
 }
 
 const STATUS_STYLE: Record<StatusKey, { color: string; soft: string; label: string }> = {
-  present: { color: '#2BCBB0', soft: '#E5F8F5', label: 'Present' },
+  present: { color: '#1FAE64', soft: '#E5F8F5', label: 'Present' },
   late: { color: '#B8860B', soft: '#FBF2DE', label: 'Late' },
   excused: { color: '#3B82F6', soft: '#EAF1FE', label: 'Excused' },
   absent: { color: '#E5484D', soft: '#FCEDED', label: 'Absent' },
@@ -35,23 +35,10 @@ const STATUS_STYLE: Record<StatusKey, { color: string; soft: string; label: stri
 };
 
 function CalendarCheckIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M8.5 13.5l2 2 4-4.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CalendarCheck color={color} size={size} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color = EMERALD, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M14 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight color={color} size={size} strokeWidth={2} />;
 }
 
 function todayISO(): string {

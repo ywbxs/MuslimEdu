@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, Path, Circle } from 'react-native-svg';
+import { ChevronLeft, CircleCheck, Download, Upload } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
@@ -34,35 +34,16 @@ const ACTION_LABELS: Record<QueuedActionKind, string> = {
 };
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconDownload({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3v12M7 10l5 5 5-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 19h16" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Download size={20} color={color} strokeWidth={2} />;
 }
 function IconUpload({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21V9M7 14l5-5 5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 5h16" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Upload size={20} color={color} strokeWidth={2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M8.5 12l2.5 2.5L15.5 9" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck size={16} color={color} strokeWidth={2} />;
 }
 
 function formatWhen(ms: number, t: (k: string, f: string) => string): string {

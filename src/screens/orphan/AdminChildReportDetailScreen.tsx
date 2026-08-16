@@ -27,7 +27,7 @@ import { PhotoPicker } from '../../components/ReportFormControls';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW } from '../../theme/spatial';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const GOLD = '#B8912F';
 const INK = '#14171A';

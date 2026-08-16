@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
+import { Building2, FileText } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme } from './academicGlassTheme';
@@ -10,19 +10,10 @@ import WizardShell, { WizardStep } from '../../components/glass/WizardShell';
 import { listBuildings, saveBuilding, updateBuilding } from '../../services/academicFacilitiesService';
 
 function IconBuilding({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h16M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M15 21v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Building2 size={26} color={color} strokeWidth={1.8} />;
 }
 function IconDoc({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M7 3h7l4 4v14H7V3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <FileText size={26} color={color} strokeWidth={2} />;
 }
 
 function SummaryRow({ label, value, theme }: { label: string; value: string; theme: ReturnType<typeof useAcademicGlassTheme> }) {

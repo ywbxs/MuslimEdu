@@ -3,7 +3,7 @@
 //
 // The rest of the app uses a flat "EMERALD / EMERALD_SOFT / INK / SUBTLE"
 // palette (see DashboardShell.tsx). Rather than replace that everywhere, this
-// file derives a proper MD3 tonal palette FROM that same seed color (#2BCBB0)
+// file derives a proper MD3 tonal palette FROM that same seed color (#1FAE64)
 // so the wizard feels native to the rest of Manhaje while gaining the
 // surface/elevation/state-layer vocabulary MD3 relies on.
 // -----------------------------------------------------------------------------
@@ -21,13 +21,13 @@ import { SHADOW, GLASS } from '../../../theme/glass';
 
 export const md3 = {
   color: {
-    primary: '#2BCBB0',
+    primary: '#1FAE64',
     onPrimary: '#FFFFFF',
-    primaryContainer: 'rgba(43,203,176,0.16)',
+    primaryContainer: 'rgba(31,174,100,0.16)',
     onPrimaryContainer: '#00391C',
 
     secondary: '#4C6358',
-    secondaryContainer: 'rgba(43,203,176,0.12)',
+    secondaryContainer: 'rgba(31,174,100,0.12)',
     onSecondaryContainer: '#082017',
 
     surface: 'rgba(255,255,255,0.55)',

@@ -18,10 +18,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { Check, ChevronLeft, ChevronRight, GraduationCap, Lock, Mail, School } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import LanguageSwitcherButton from '../components/LanguageSwitcherButton';
+import HeroGlow from '../components/HeroGlow';
 
 // ============================================================================
 // Login-specific teal/mint palette (deliberately its own thing, not the
@@ -38,11 +40,11 @@ const CANVAS_SOFT = '#F2FAF8';
 const SURFACE = '#F4FAFA';
 const PLACEHOLDER = '#9CA3AF';
 const DANGER = '#D9534F';
-const ACCENT = '#2BCBB0';
-const ACCENT_MID = '#1E927E';
-const ACCENT_LIGHT = '#2AB4DB';
-const ACCENT_GHOST = 'rgba(43,203,176,0.08)';
-const ACCENT_BORDER = 'rgba(43,203,176,0.15)';
+const ACCENT = '#1FAE64';
+const ACCENT_MID = '#0F7A3D';
+const ACCENT_LIGHT = '#4CAF50';
+const ACCENT_GHOST = 'rgba(31,174,100,0.08)';
+const ACCENT_BORDER = 'rgba(31,174,100,0.15)';
 
 const APP_ICON = require('../assets/images/app-icon.png');
 const STUDENTS_ILLUSTRATION = require('../assets/images/students-illustration-transparent.png');
@@ -50,22 +52,11 @@ const STUDENTS_ILLUSTRATION = require('../assets/images/students-illustration-tr
 /* ========================= ICONS ========================= */
 
 function MailIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth={1.7} />
-      <Path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Mail size={size} color={color} strokeWidth={1.7} />;
 }
 
 function LockIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth={1.7} />
-      <Path d="M7 11V7a5 5 0 0110 0v4" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-      <Circle cx="12" cy="16" r="1" fill={color} />
-    </Svg>
-  );
+  return <Lock size={size} color={color} strokeWidth={1.7} />;
 }
 
 function EyeIcon({ open, color = MUTED, size = 20 }: { open: boolean; color?: string; size?: number }) {
@@ -82,45 +73,23 @@ function EyeIcon({ open, color = MUTED, size = 20 }: { open: boolean; color?: st
 }
 
 function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18l-6-6 6-6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.2} />;
 }
 
 function ChevronRightIcon({ color = ACCENT, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
 }
 
 function CheckIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 13l4 4 10-11" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={size} color={color} strokeWidth={2.6} />;
 }
 
 function SchoolIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 10l9-5 9 5-9 5-9-5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M7 12v5c0 1 2.2 2 5 2s5-1 5-2v-5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <School size={size} color={color} strokeWidth={1.8} />;
 }
 
 function AlumniIcon({ color = ACCENT, size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={size} color={color} strokeWidth={1.8} />;
 }
 
 /* ========================= GRADIENT BUTTON ========================= */
@@ -546,7 +515,14 @@ export default function LoginScreen() {
               </View>
             )}
 
-            <View style={styles.card}>
+            <View style={styles.cardOuter}>
+              {/* Same emerald-green radial glow used on the dashboard hero
+                  headers (HeroGlow) - lives OUTSIDE the card (which keeps
+                  its own overflow:'hidden' for its own content) so the glow
+                  isn't clipped and actually extends past the card's edge
+                  into the page background instead of staying inside it. */}
+              <HeroGlow bottomLeft={false} />
+              <View style={styles.card}>
               {step === 1 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
@@ -681,6 +657,7 @@ export default function LoginScreen() {
                 <Text style={styles.getStartedLink}>{t('login.get_started', 'Get Started')}</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </Animated.View>
 
           <Footer />
@@ -775,19 +752,17 @@ const styles = StyleSheet.create({
   },
   emailChipText: { fontSize: 13, fontWeight: '700', color: ACCENT, flexShrink: 1 },
 
+  // Plain wrapper, no overflow:'hidden' - lets HeroGlow's circles (an
+  // absolutely-positioned sibling of `card` below) extend past the card's
+  // edge into the page background instead of getting clipped to it.
+  cardOuter: { marginTop: 20 },
   card: {
-    marginTop: 20,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.6)',
     padding: 20,
     overflow: 'hidden',
     backgroundColor: SURFACE,
-    shadowColor: '#0B3D2E',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 4,
   },
 
   fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },

@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import { ChevronLeft, House, Plus, Search, Trash2, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -40,50 +40,22 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function SearchIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={17} color={color} strokeWidth={2} />;
 }
 function PlusIcon({ color }: { color: string }) {
-  return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
 function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function EmptyIcon() {
-  return (
-    <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-      <Path d="M4.5 20.5L4.5 9 12 4l7.5 5v11.5" stroke="#C4C9CF" strokeWidth={1.6} strokeLinejoin="round" />
-      <Path d="M9.5 20.5V13h5v7.5" stroke="#C4C9CF" strokeWidth={1.6} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <House size={56} color={"#C4C9CF"} strokeWidth={1.6} />;
 }
 function TrashIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Trash2 size={17} color={color} strokeWidth={2} />;
 }
 
 const SchoolRow = React.memo(function SchoolRow({

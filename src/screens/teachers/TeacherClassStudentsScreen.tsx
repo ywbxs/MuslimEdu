@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import { ChevronLeft, ChevronRight, Mail, MapPin, Phone, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchClassStudents, ClassStudent } from '../../services/teacherClassService';
@@ -28,49 +28,22 @@ const HAIRLINE = COLORS.border;
 const CANVAS = COLORS.canvas;
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
 function IconClose({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function IconMail({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v14H4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M4 7l8 6 8-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Mail size={16} color={color} strokeWidth={2} />;
 }
 function IconPhone({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h3l1.5 4.5L8 9.5a12 12 0 0 0 6.5 6.5l2-2.5L21 15v3a2 2 0 0 1-2 2C10.5 20 4 13.5 4 5a2 2 0 0 1 2-2z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Phone size={16} color={color} strokeWidth={2} />;
 }
 function IconPin({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={12} cy={9.5} r={2.3} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <MapPin size={16} color={color} strokeWidth={2} />;
 }
 
 function DetailRow({ icon, label, value }: { icon: React.ReactElement; label: string; value?: string | null }) {

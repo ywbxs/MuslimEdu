@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, ScrollView, Platform, StyleProp, ViewStyle } from 'react-native';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { Heart, MessageCircle, Repeat2, EllipsisVertical, Lock, School, Globe, Pencil, Trash2, ChevronRight, X, Check, TextAlignStart } from 'lucide-react-native';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
@@ -15,8 +15,8 @@ import { RADIUS, SHADOW } from '../theme/glass';
 // recolor is intentionally global to the component - a repost icon that's
 // teal in the feed but green everywhere else would look like two different
 // apps stitched together.
-const EMERALD = '#2BCBB0';
-const EMERALD_SOFT = 'rgba(43,203,176,0.08)';
+const EMERALD = '#1FAE64';
+const EMERALD_SOFT = 'rgba(31,174,100,0.08)';
 const INK = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const HAIRLINE = 'rgba(13,30,28,0.08)';
@@ -35,133 +35,48 @@ const LETTER_PAPER = '#FBF6EC';
 const LETTER_FONT = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 
 function HeartIcon({ filled, color, size = 22 }: { filled: boolean; color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? color : 'none'}>
-      <Path
-        d="M12 20.5C12 20.5 3.5 15.4 3.5 9.4 3.5 6.6 5.7 4.5 8.4 4.5c1.6 0 3.1.8 3.6 2.1.5-1.3 2-2.1 3.6-2.1 2.7 0 4.9 2.1 4.9 4.9 0 6-8.5 11.1-8.5 11.1z"
-        stroke={color}
-        strokeWidth={filled ? 0 : 1.9}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Heart color={color} fill={filled ? color : 'none'} strokeWidth={1.9} size={size} />;
 }
 function CommentIcon({ color, size = 21 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17H9l-4.5 3.5V6.5A1.5 1.5 0 0 1 6 5z"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <MessageCircle color={color} size={size} strokeWidth={1.8} />;
 }
 function RepostIcon({ color, size = 21 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="m2 9 3-3 3 3" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
-      <Path
-        d="M13 18H7a2 2 0 0 1-2-2V6"
-        stroke={color}
-        strokeWidth={1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="m22 15-3 3-3-3" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
-      <Path
-        d="M11 6h6a2 2 0 0 1 2 2v10"
-        stroke={color}
-        strokeWidth={1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Repeat2 color={color} size={size} strokeWidth={1.9} />;
 }
 function MoreIcon({ color = SUBTLE, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Circle cx={12} cy={5} r={1.8} />
-      <Circle cx={12} cy={12} r={1.8} />
-      <Circle cx={12} cy={19} r={1.8} />
-    </Svg>
-  );
+  return <EllipsisVertical color={color} size={size} strokeWidth={2} />;
 }
 function PrivacyIcon({ privacy }: { privacy: string }) {
   const c = SUBTLE;
   if (privacy === 'private') {
-    return (
-      <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-        <Path d="M6 10V8a6 6 0 0 1 12 0v2" stroke={c} strokeWidth={2} strokeLinecap="round" />
-        <Path d="M5 10h14v10H5z" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-      </Svg>
-    );
+    return <Lock color={c} size={13} strokeWidth={2} />;
   }
   if (privacy === 'school') {
-    return (
-      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-        <Path d="M12 3l10 5-10 5L2 8l10-5z" stroke={c} strokeWidth={1.8} strokeLinejoin="round" />
-        <Path d="M6 10.5V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5" stroke={c} strokeWidth={1.8} strokeLinecap="round" />
-      </Svg>
-    );
+    return <School color={c} size={14} strokeWidth={1.8} />;
   }
   // public
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={c} strokeWidth={1.8} />
-      <Path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" stroke={c} strokeWidth={1.5} />
-    </Svg>
-  );
+  return <Globe color={c} size={13} strokeWidth={1.8} />;
 }
 
 function PencilIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Pencil color={color} size={17} strokeWidth={1.9} />;
 }
 function TrashIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Trash2 color={color} size={17} strokeWidth={1.9} />;
 }
 function ChevronRightIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 5l6 7-6 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight color={color} size={18} strokeWidth={2} />;
 }
 function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Line x1={5} y1={5} x2={17} y2={17} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={17} y1={5} x2={5} y2={17} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color={color} size={16} strokeWidth={2.2} />;
 }
 function CheckIcon({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12.5l5 5L20 6.5" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={color} size={16} strokeWidth={2.4} />;
 }
-// "Read the full caption" trigger - three lines of decreasing length reads
-// as "text/notes" at a glance, distinct from MoreIcon's three dots.
+// "Read the full caption" trigger - reads as "text/notes" at a glance,
+// distinct from MoreIcon's three dots.
 function CaptionLinesIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={7} x2={20} y2={7} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={4} y1={17} x2={13} y2={17} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <TextAlignStart color={color} size={size} strokeWidth={2} />;
 }
 
 function timeAgo(dateStr: string): string {

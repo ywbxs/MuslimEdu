@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import { Wallet, X, Sparkle } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
@@ -10,32 +10,13 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 
 function WalletIcon({ color = '#FFFFFF', size = 15 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={6} width={18} height={13} rx={2.5} stroke={color} strokeWidth={2} />
-      <Path d="M3 10h18" stroke={color} strokeWidth={2} />
-      <Circle cx={16} cy={14.5} r={1.4} fill={color} />
-    </Svg>
-  );
+  return <Wallet color={color} size={size} strokeWidth={2} />;
 }
 function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color={color} size={size} strokeWidth={2.2} />;
 }
 function SparkleIcon({ color = EMERALD, size = 30 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Sparkle color={color} size={size} strokeWidth={1.8} />;
 }
 
 /**

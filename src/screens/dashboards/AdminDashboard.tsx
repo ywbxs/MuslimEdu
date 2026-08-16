@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path } from 'react-native-svg';
+import { ArrowRight, BookOpen, CalendarCheck, Camera, ChevronRight, ClipboardCheck, FileText, GraduationCap, IdCard, LayoutList, ListOrdered, Lock, Megaphone, NotebookText, Presentation, Settings, Users, Workflow } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 import UserAvatar from '../../components/UserAvatar';
 import HeroGlow from '../../components/HeroGlow';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
+import AnalyticsCard from '../../components/AnalyticsCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
@@ -33,202 +35,73 @@ const PARALLAX_FACTOR = 0.5; // background moves at half the content's scroll sp
 
 // --- Inline icons (react-native-svg, matches the app's existing approach) ---
 function PeopleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx="9" cy="8" r="3.2" stroke={color} strokeWidth={1.8} />
-      <Path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path d="M16 6.2a3 3 0 0 1 0 5.6M18 19c0-2.2-1-4-2.6-4.6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Users size={22} color={color} strokeWidth={1.8} />;
 }
 function PresentationIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="4" width="18" height="12" rx="2" stroke={color} strokeWidth={1.8} />
-      <Path d="M8 20l4-4 4 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx="12" cy="10" r="2" stroke={color} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <Presentation size={22} color={color} strokeWidth={1.8} />;
 }
 function BookIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5A1.5 1.5 0 0 1 20 20.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <BookOpen size={22} color={color} strokeWidth={1.8} />;
 }
 function DocumentIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M14 3v4h4M9 12h6M9 16h6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={22} color={color} strokeWidth={1.8} />;
 }
 function CalendarIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Rect x="3.5" y="5" width="17" height="16" rx="2" stroke={color} strokeWidth={1.8} />
-      <Path d="M3.5 9.5h17M8 3.5v3M16 3.5v3M8.5 14l2 2 4-4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CalendarCheck size={22} color={color} strokeWidth={1.8} />;
 }
 function ReportDocIcon({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M14 3v4h4M9 12h6M9 16h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={26} color={color} strokeWidth={1.8} />;
 }
 function StagesIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx="5" cy="6" r="2.2" stroke={color} strokeWidth={1.8} />
-      <Circle cx="12" cy="12" r="2.2" stroke={color} strokeWidth={1.8} />
-      <Circle cx="19" cy="18" r="2.2" stroke={color} strokeWidth={1.8} />
-      <Path d="M7 7l3.5 3.5M14 14l3.5 3.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Workflow size={22} color={color} strokeWidth={1.8} />;
 }
 function QuranTrackerIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M8 8h8M8 11.5h6" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <BookOpen size={22} color={color} strokeWidth={1.8} />;
 }
 function ChecklistIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v16H4z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M7.5 10l1.5 1.5L11.5 8" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M14 9.5h4M7.5 16l1.5 1.5 2.5-3.5M14 16.5h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ClipboardCheck size={22} color={color} strokeWidth={1.8} />;
 }
 function GearIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="3.2" stroke={color} strokeWidth={1.8} />
-      <Path
-        d="M12 3.5v2.4M12 18.1v2.4M20.5 12h-2.4M5.9 12H3.5M17.7 6.3l-1.7 1.7M8 16l-1.7 1.7M17.7 17.7L16 16M8 8L6.3 6.3"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Settings size={22} color={color} strokeWidth={1.8} />;
 }
 function GraduationCapIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 8.5L12 4l10 4.5-10 4.5-10-4.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M6 10.7v4.3c0 1.5 2.7 2.8 6 2.8s6-1.3 6-2.8v-4.3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M21 9v6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <GraduationCap size={22} color={color} strokeWidth={1.8} />;
 }
 function GradebookIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 0-3 3V4z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M9 9h5M9 13h5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <NotebookText size={22} color={color} strokeWidth={1.8} />;
 }
 function ExamCategoriesIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 6h16M4 12h10M4 18h7" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path d="M17 15v6M14 18h6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ListOrdered size={22} color={color} strokeWidth={1.8} />;
 }
 function AnnouncementReviewIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 11v2a2 2 0 0 0 2 2h1l2 4h2l-1-4h6l5 3V6l-5 3H8L6 5H4a2 2 0 0 0-2 2v2" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Megaphone size={22} color={color} strokeWidth={1.8} />;
 }
 function LessonPlanReviewIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M9 8h7M9 12h7" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <NotebookText size={22} color={color} strokeWidth={1.8} />;
 }
 function AssessmentReviewIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 11l3 3L22 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ClipboardCheck size={22} color={color} strokeWidth={1.8} />;
 }
 function CatalogIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Rect x="3.5" y="4" width="17" height="16" rx="2" stroke={color} strokeWidth={1.8} />
-      <Path d="M8 8.5h8M8 12h8M8 15.5h5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <LayoutList size={22} color={color} strokeWidth={1.8} />;
 }
 function IdCardIcon({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Rect x={2.5} y={4.5} width={19} height={15} rx={2.5} stroke={color} strokeWidth={1.7} />
-      <Circle cx={8.5} cy={11} r={2.1} stroke={color} strokeWidth={1.7} />
-      <Path
-        d="M5.2 16.4c.6-1.5 1.9-2.3 3.3-2.3s2.7.8 3.3 2.3"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M14.6 9.6h4.6M14.6 12.4h4.6M14.6 15.2h2.9"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <IdCard size={26} color={color} strokeWidth={1.7} />;
 }
 function AlumniCapIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={22} color={color} strokeWidth={2} />;
 }
 function CameraIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2.2} />
-    </Svg>
-  );
+  return <Camera size={size} color={color} strokeWidth={2.2} />;
 }
 function LockIcon({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="5" y="11" width="14" height="9" rx="2" stroke={color} strokeWidth={2} />
-      <Path d="M8 11V7a4 4 0 0 1 8 0v4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Lock size={size} color={color} strokeWidth={2} />;
 }
-function ArrowRight({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12h13M13 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+function ArrowRightIcon({ color, size = 18 }: { color: string; size?: number }) {
+  return <ArrowRight size={size} color={color} strokeWidth={2} />;
+}
+function ChevronIcon({ color, size = 18 }: { color: string; size?: number }) {
+  return <ChevronRight size={size} color={color} strokeWidth={2} />;
 }
 
 // Declutter: this school is only using the foundation pieces for now
@@ -268,8 +141,14 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
 ]);
 
 type Variant = 'solid' | 'soft';
+type Category = 'people' | 'identity' | 'academics' | 'activity' | 'settings';
+
 interface ManageItem {
   key: string;
+  // Only set on non-featured (variant: 'soft') items - featured items render
+  // in the hero/quick-actions row above the grouped lists, so they don't
+  // belong to a group.
+  category?: Category;
   title: string;
   desc: string;
   variant: Variant;
@@ -278,6 +157,8 @@ interface ManageItem {
   locked?: boolean;
   lockedMessage?: string;
 }
+
+const CATEGORY_ORDER: Category[] = ['people', 'identity', 'academics', 'activity', 'settings'];
 
 interface AdminDashboardProps {
   footer?: React.ReactNode;
@@ -363,6 +244,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'teachers',
+      category: 'people',
       title: t('admin_dashboard.teachers_title', 'Teachers'),
       desc: t('admin_dashboard.teachers_desc', 'Manage teachers and permissions'),
       variant: 'soft',
@@ -371,6 +253,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'cashiers',
+      category: 'people',
       title: t('admin_dashboard.cashiers_title', 'Cashiers'),
       desc: t('admin_dashboard.cashiers_desc', 'Add and manage cashier accounts'),
       variant: 'soft',
@@ -379,6 +262,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'registrars',
+      category: 'people',
       title: t('admin_dashboard.registrars_title', 'Registrars'),
       desc: t('admin_dashboard.registrars_desc', 'Add and manage registrar accounts'),
       variant: 'soft',
@@ -387,6 +271,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'idCards',
+      category: 'identity',
       title: t('admin_dashboard.id_cards_title', 'ID Cards'),
       desc: t('admin_dashboard.id_cards_desc', 'View and export every student’s QR ID card'),
       variant: 'soft',
@@ -395,6 +280,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'staffIdCards',
+      category: 'identity',
       title: t('admin_dashboard.staff_id_cards_title', 'Staff ID Cards'),
       desc: t('admin_dashboard.staff_id_cards_desc', 'View and export teacher, cashier, and registrar ID cards'),
       variant: 'soft',
@@ -403,6 +289,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'classes',
+      category: 'academics',
       title: t('admin_dashboard.classes_title', 'Academic'),
       desc: t('admin_dashboard.classes_desc', 'Assign class teachers to sections'),
       variant: 'soft',
@@ -411,6 +298,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'classSchedule',
+      category: 'academics',
       title: t('admin_dashboard.class_schedule_title', 'Class Schedule'),
       desc: t('admin_dashboard.class_schedule_desc', 'Build the weekly timetable'),
       variant: 'soft',
@@ -419,6 +307,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'enrollment',
+      category: 'academics',
       title: t('admin_dashboard.enrollment_title', 'Enrollment'),
       desc: t('admin_dashboard.enrollment_desc', 'Configure enrollment stages'),
       variant: 'soft',
@@ -427,6 +316,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'academicSetup',
+      category: 'academics',
       title: t('admin_dashboard.academic_setup_title', 'Academic Setup'),
       desc: t('admin_dashboard.academic_setup_desc', 'Manage academic years and terms'),
       variant: 'soft',
@@ -435,6 +325,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'gradingSystems',
+      category: 'academics',
       title: t('admin_dashboard.grading_systems_title', 'Grading Systems'),
       desc: t('admin_dashboard.grading_systems_desc', 'Build grading systems and grade scales'),
       variant: 'soft',
@@ -447,6 +338,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       ? [
           {
             key: 'quranTracker',
+      category: 'academics',
             title: t('admin_dashboard.quran_tracker_title', 'Quran Tracker'),
             desc: t('admin_dashboard.quran_tracker_desc', 'Track each student\'s surah, juz, and memorization progress'),
             variant: 'soft' as Variant,
@@ -457,6 +349,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       : []),
     {
       key: 'examCategories',
+      category: 'academics',
       title: t('admin_dashboard.exam_categories_title', 'Exam Categories'),
       desc: t(
         'admin_dashboard.exam_categories_desc',
@@ -470,6 +363,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'gradebookReview',
+      category: 'academics',
       title: t('admin_dashboard.gradebook_review_title', 'Gradebook Review'),
       desc: t('admin_dashboard.gradebook_review_desc', 'See the grades teachers have entered, by class and exam'),
       variant: 'soft',
@@ -480,6 +374,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'announcementReview',
+      category: 'academics',
       title: t('admin_dashboard.announcement_review_title', 'Announcements Review'),
       desc: t('admin_dashboard.announcement_review_desc', 'See what teachers have posted, by class and section'),
       variant: 'soft',
@@ -488,6 +383,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'lessonPlanReview',
+      category: 'academics',
       title: t('admin_dashboard.lesson_plan_review_title', 'Lesson Plans Review'),
       desc: t(
         'admin_dashboard.lesson_plan_review_desc',
@@ -499,6 +395,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'assessmentReview',
+      category: 'academics',
       title: t('admin_dashboard.assessment_review_title', 'Assessments Review'),
       desc: t(
         'admin_dashboard.assessment_review_desc',
@@ -510,6 +407,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'assessmentGrades',
+      category: 'academics',
       title: t('admin_dashboard.assessment_grades_title', 'Assessment Grades'),
       desc: t('admin_dashboard.assessment_grades_desc', 'Weighted grade breakdown by section and subject'),
       variant: 'soft',
@@ -520,6 +418,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'materialsReview',
+      category: 'academics',
       title: t('admin_dashboard.materials_review_title', 'Materials Review'),
       desc: t('admin_dashboard.materials_review_desc', 'See what teachers have shared, by section and subject'),
       variant: 'soft',
@@ -532,6 +431,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       // gated by ACADEMIC_ADMIN_TILE_KEYS since orphan children and staff
       // both need a code format too. See StudentStaffCodeSetupScreen.
       key: 'studentStaffCodes',
+      category: 'identity',
       title: t('admin_dashboard.student_staff_codes_title', 'Student & Staff Codes'),
       desc: t('admin_dashboard.student_staff_codes_desc', 'Set the code format for new students and staff'),
       variant: 'soft',
@@ -540,6 +440,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'programsSubjects',
+      category: 'academics',
       title: t('admin_dashboard.programs_subjects_title', 'Programs & Subjects'),
       desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's program and subject catalog"),
       variant: 'soft',
@@ -548,6 +449,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'academicFacilities',
+      category: 'academics',
       title: t('admin_dashboard.academic_facilities_title', 'Facilities'),
       desc: t('admin_dashboard.academic_facilities_desc', 'Buildings, rooms and learning spaces'),
       variant: 'soft',
@@ -556,6 +458,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'academicSchedule',
+      category: 'academics',
       title: t('admin_dashboard.academic_schedule_title', 'Timetable'),
       desc: t('admin_dashboard.academic_schedule_desc', 'Conflict-checked school schedules'),
       variant: 'soft',
@@ -564,6 +467,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'academicCalendar',
+      category: 'academics',
       title: t('admin_dashboard.academic_calendar_title', 'Calendar'),
       desc: t('admin_dashboard.academic_calendar_desc', 'Exams, holidays and school events'),
       variant: 'soft',
@@ -572,6 +476,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'academicAnalytics',
+      category: 'academics',
       title: t('admin_dashboard.academic_analytics_title', 'Analytics'),
       desc: t('admin_dashboard.academic_analytics_desc', 'Read-only academic KPIs'),
       variant: 'soft',
@@ -580,6 +485,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'completionHub',
+      category: 'academics',
       title: t('admin_dashboard.completion_hub_title', 'Completion Hub'),
       desc: t('admin_dashboard.completion_hub_desc', 'Six-phase release health and audit'),
       variant: 'soft',
@@ -588,6 +494,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'graduation',
+      category: 'academics',
       title: t('admin_dashboard.graduation_title', 'Graduation & Completion'),
       desc: t('admin_dashboard.graduation_desc', 'Requirement sets, eligibility, and approval decisions'),
       variant: 'soft',
@@ -596,6 +503,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'promotionPolicy',
+      category: 'academics',
       title: t('admin_dashboard.promotion_policy_title', 'Promotion & Policy'),
       desc: t('admin_dashboard.promotion_policy_desc', 'Promotion, retention, remedial and probation rules'),
       variant: 'soft',
@@ -604,6 +512,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'documentTemplates',
+      category: 'academics',
       title: t('admin_dashboard.document_templates_title', 'Document Templates'),
       desc: t('admin_dashboard.document_templates_desc', 'Report cards, transcripts, COR and certificates'),
       variant: 'soft',
@@ -612,6 +521,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'gradeRelease',
+      category: 'academics',
       title: t('admin_dashboard.grade_release_title', 'Grade Release'),
       desc: t('admin_dashboard.grade_release_desc', 'Release and lock finalized grades'),
       variant: 'soft',
@@ -620,6 +530,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'studentLifecycle',
+      category: 'academics',
       title: t('admin_dashboard.student_lifecycle_title', 'Student Lifecycle'),
       desc: t('admin_dashboard.student_lifecycle_desc', 'Transfers, withdrawals, reactivation and archive'),
       variant: 'soft',
@@ -628,6 +539,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'timetableConflicts',
+      category: 'academics',
       title: t('admin_dashboard.timetable_conflicts_title', 'Timetable Conflicts'),
       desc: t('admin_dashboard.timetable_conflicts_desc', 'Check room and teacher scheduling conflicts'),
       variant: 'soft',
@@ -636,6 +548,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'attendanceConfig',
+      category: 'academics',
       title: t('admin_dashboard.attendance_config_title', 'Attendance Config'),
       desc: t('admin_dashboard.attendance_config_desc', 'Statuses and capture methods for your school'),
       variant: 'soft',
@@ -644,6 +557,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'permissions',
+      category: 'settings',
       title: t('admin_dashboard.permissions_title', 'Permissions'),
       desc: t('admin_dashboard.permissions_desc', 'Role capabilities and optional modules'),
       variant: 'soft',
@@ -652,6 +566,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'security',
+      category: 'settings',
       title: t('admin_dashboard.security_title', 'Security'),
       desc: t('admin_dashboard.security_desc', 'Two-factor authentication and device sessions'),
       variant: 'soft',
@@ -660,6 +575,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'orgStructure',
+      category: 'academics',
       title: t('admin_dashboard.org_structure_title', 'Org Structure'),
       desc: t('admin_dashboard.org_structure_desc', 'Faculties, colleges, institutes, streams'),
       variant: 'soft',
@@ -668,6 +584,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'behaviorIncidents',
+      category: 'academics',
       title: t('admin_dashboard.behavior_incidents_title', 'Behavior & Discipline'),
       desc: t('admin_dashboard.behavior_incidents_desc', 'School-wide behavior incidents'),
       variant: 'soft',
@@ -676,6 +593,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'examinations',
+      category: 'academics',
       title: t('admin_dashboard.examinations_title', 'Examinations'),
       desc: t('admin_dashboard.examinations_desc', 'Schedule exams and manage grades'),
       variant: 'soft',
@@ -684,6 +602,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'studentProgress',
+      category: 'academics',
       title: t('admin_dashboard.student_progress_title', 'Student Progress'),
       desc: t('admin_dashboard.student_progress_desc', 'Attendance, grades, behavior, memorization'),
       variant: 'soft',
@@ -692,6 +611,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'integrationSettings',
+      category: 'settings',
       title: t('admin_dashboard.integration_settings_title', 'Integrations'),
       desc: t('admin_dashboard.integration_settings_desc', 'Finance, library and third-party connections'),
       variant: 'soft',
@@ -700,6 +620,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'localizationSettings',
+      category: 'settings',
       title: t('admin_dashboard.localization_settings_title', 'Localization'),
       desc: t('admin_dashboard.localization_settings_desc', 'Languages, RTL and translation management'),
       variant: 'soft',
@@ -708,6 +629,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'authorizationAudit',
+      category: 'settings',
       title: t('admin_dashboard.authorization_audit_title', 'Authorization Audit'),
       desc: t('admin_dashboard.authorization_audit_desc', 'Review role access and permission changes'),
       variant: 'soft',
@@ -716,6 +638,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'analyticsExtended',
+      category: 'academics',
       title: t('admin_dashboard.analytics_extended_title', 'Analytics Dashboard'),
       desc: t('admin_dashboard.analytics_extended_desc', 'Extended KPIs and school-wide reporting'),
       variant: 'soft',
@@ -724,6 +647,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'notifications',
+      category: 'activity',
       title: t('admin_dashboard.notifications_title', 'Notifications'),
       desc: t('admin_dashboard.notifications_desc', 'Academic updates, grade releases and schedule changes'),
       variant: 'soft',
@@ -740,6 +664,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'attendance',
+      category: 'activity',
       title: t('admin_dashboard.attendance_title', 'Attendance'),
       desc: t('admin_dashboard.attendance_desc', 'Track daily attendance'),
       variant: 'soft',
@@ -748,6 +673,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'studentDocumentRequests',
+      category: 'activity',
       title: t('admin_dashboard.student_document_requests_title', 'Document Requests'),
       desc: t('admin_dashboard.student_document_requests_desc', 'Issue or reject student document requests'),
       variant: 'soft',
@@ -756,6 +682,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'alumniApplications',
+      category: 'activity',
       title: t('admin_dashboard.alumni_applications_title', 'Alumni Applications'),
       desc: t('admin_dashboard.alumni_applications_desc', 'Review and approve self-service alumni signups'),
       variant: 'soft',
@@ -764,6 +691,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'studentServiceRequests',
+      category: 'activity',
       title: t('admin_dashboard.student_service_requests_title', 'Service Requests'),
       desc: t(
         'admin_dashboard.student_service_requests_desc',
@@ -775,6 +703,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     },
     {
       key: 'accountSettings',
+      category: 'settings',
       title: t('admin_dashboard.account_settings_title', 'Account Settings'),
       desc: t('admin_dashboard.account_settings_desc', 'Language, theme, privacy and password'),
       variant: 'soft',
@@ -784,6 +713,45 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   ]
     .filter((item) => !(isOrphanSchool && ACADEMIC_ADMIN_TILE_KEYS.has(item.key)))
     .filter((item) => !HIDDEN_FOR_NOW_KEYS.has(item.key));
+
+  // A flat grid of ~24 identically-sized cards has no hierarchy - everything
+  // fights for the same attention, so nothing actually stands out. The 3
+  // items already marked `variant: 'solid'` were the codebase's own signal
+  // for "this matters more"; they were just rendered as the same-size card
+  // in a different color. Surface that signal for real: a hero + two
+  // secondary quick actions up top (a 1+2 bento, not 3 equal tiles), then
+  // everything else grouped into short, scannable Settings-style lists
+  // instead of another wall of big cards.
+  const featured = items.filter((item) => item.variant === 'solid');
+  const grouped = items.filter((item) => item.variant !== 'solid');
+  // Students is deliberately the hero regardless of array order - see the
+  // comment above the hero card in the render below for why.
+  const hero = featured.find((item) => item.key === 'students') ?? featured[0] ?? null;
+  const secondary = featured.filter((item) => item !== hero);
+
+  const CATEGORY_LABELS: Record<Category, string> = {
+    people: t('admin_dashboard.group_people', 'People'),
+    identity: t('admin_dashboard.group_identity', 'Identity & Codes'),
+    academics: t('admin_dashboard.group_academics', 'Academics'),
+    activity: t('admin_dashboard.group_activity', 'Activity & Requests'),
+    settings: t('admin_dashboard.group_settings', 'Settings'),
+  };
+  const sections = CATEGORY_ORDER.map((cat) => ({
+    key: cat,
+    label: CATEGORY_LABELS[cat],
+    items: grouped.filter((item) => item.category === cat),
+  })).filter((section) => section.items.length > 0);
+
+  const openItem = (item: ManageItem) => {
+    if (item.locked) {
+      Alert.alert(
+        t('admin_dashboard.locked_title', 'Locked'),
+        item.lockedMessage ?? t('admin_dashboard.locked_default_message', 'This feature is currently locked.'),
+      );
+      return;
+    }
+    if (item.route) (navigation as any).navigate(item.route);
+  };
 
   // --- Parallax + fade for the background layer only. The ScrollView content
   // (greeting, reports card, grid) scrolls at normal speed on top, so it
@@ -871,55 +839,98 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             // placeholder card (no live counts). See MuslimEdu-Status-8.
             <MonthlyReportsCard token={token} />
           ) : null}
+
+          {/* Non-orphan schools' equivalent of the hero card above - every
+              institution type except orphanage has the class-based academic
+              subsystem (attendance, grades, enrollment) this reports on,
+              same boundary isOrphanSchool already draws for the rest of the
+              academic tile set. */}
+          {!isOrphanSchool && token ? <AnalyticsCard token={token} /> : null}
         </View>
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
           <SyncStatusCard />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
-          <View style={styles.grid}>
-            {items.map((item) => {
-              const solid = item.variant === 'solid';
-              const fg = solid ? '#FFFFFF' : EMERALD;
-              return (
+
+          {/* Hero + secondary bento (1+2, per the 3 featured items - not 3
+              equal tiles). Students is the hero: it's the one action every
+              admin, regardless of school type or setup progress, comes back
+              to constantly. Setup Checklist and Fee Reports are onboarding-
+              and finance-flavored respectively - important, but situational
+              rather than a daily habit, so they stay secondary. */}
+          {hero ? (
+            <TouchableOpacity activeOpacity={0.92} style={styles.heroCard} onPress={() => openItem(hero)}>
+              <View style={styles.heroIcon}>{hero.icon('#FFFFFF')}</View>
+              <Text style={styles.heroTitle}>{hero.title}</Text>
+              <Text style={styles.heroDesc}>{hero.desc}</Text>
+              <View style={styles.heroArrow}>
+                <ArrowRightIcon color="#FFFFFF" size={17} />
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {secondary.length > 0 ? (
+            <View style={styles.secondaryRow}>
+              {secondary.map((item) => (
                 <TouchableOpacity
                   key={item.key}
-                  activeOpacity={item.route ? 0.85 : 1}
-                  style={[styles.card, solid ? styles.cardSolid : styles.cardSoft]}
-                  onPress={() => {
-                    if (item.locked) {
-                      Alert.alert(
-                        t('admin_dashboard.locked_title', 'Locked'),
-                        item.lockedMessage ?? t('admin_dashboard.locked_default_message', 'This feature is currently locked.'),
-                      );
-                      return;
-                    }
-                    if (item.route) (navigation as any).navigate(item.route);
-                  }}
+                  activeOpacity={0.88}
+                  style={styles.secondaryCard}
+                  onPress={() => openItem(item)}
                 >
-                  <View style={[styles.cardIcon, solid ? styles.cardIconSolid : styles.cardIconSoft]}>
-                    {item.icon(fg)}
-                    {item.locked ? (
-                      <View style={styles.lockBadge}>
-                        <LockIcon color="#FFFFFF" size={10} />
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.cardTitle, solid ? styles.cardTitleSolid : null]}>
+                  <View style={styles.secondaryIcon}>{item.icon(EMERALD)}</View>
+                  <Text style={styles.secondaryTitle} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <Text style={[styles.cardDesc, solid ? styles.cardDescSolid : null]}>
+                  <Text style={styles.secondaryDesc} numberOfLines={2}>
                     {item.desc}
                   </Text>
-                  <View style={styles.cardArrowRow}>
-                    <View style={[styles.cardArrow, solid ? styles.cardArrowSolid : styles.cardArrowSoft]}>
-                      <ArrowRight color={fg} size={16} />
-                    </View>
-                  </View>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Everything else, grouped into short Settings-style lists instead
+              of another wall of 40+ identical cards - elevation on a single
+              card communicates the group, so individual rows don't need
+              their own card/shadow (design-taste-frontend 4.4: cards only
+              where elevation communicates real hierarchy, group with
+              dividers otherwise). */}
+          {sections.map((section) => (
+            <View key={section.key} style={styles.groupSection}>
+              <Text style={styles.groupLabel}>{section.label}</Text>
+              <View style={styles.groupCard}>
+                {section.items.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.key}
+                    activeOpacity={0.7}
+                    style={[styles.row, idx > 0 && styles.rowDivider]}
+                    onPress={() => openItem(item)}
+                  >
+                    <View style={styles.rowIconWrap}>
+                      {item.icon(EMERALD)}
+                      {item.locked ? (
+                        <View style={styles.rowLockBadge}>
+                          <LockIcon color="#FFFFFF" size={9} />
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.rowTextWrap}>
+                      <Text style={styles.rowTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.rowDesc} numberOfLines={1}>
+                        {item.desc}
+                      </Text>
+                    </View>
+                    <ChevronIcon color={SUBTLE} size={18} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+
           {footer}
         </View>
       </Animated.ScrollView>
@@ -1032,50 +1043,111 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     fontWeight: '700',
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  card: {
-    width: '48%',
-    borderRadius: 22,
-    padding: 16,
-    minHeight: 176,
-    marginBottom: 14,
+  // --- Hero (1 of the 3 featured items) -----------------------------------
+  // #1FAE64 (EMERALD) with white text measures 2.88:1 - fails WCAG AA
+  // (4.5:1) outright, the same bug the superadmin screen had. This deep
+  // variant of the same hue measures 5.42:1, kept local rather than pulled
+  // from theme/glass since this file already keeps its palette local
+  // (see HERO_TOP/HERO_BOTTOM above).
+  heroCard: {
+    backgroundColor: '#0F7A3D',
+    borderRadius: 26,
+    padding: 22,
+    marginBottom: 12,
   },
-  cardSolid: { backgroundColor: EMERALD },
-  cardSoft: { backgroundColor: EMERALD_SOFT },
-  cardIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    position: 'relative',
+    marginBottom: 18,
   },
-  cardIconSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  cardIconSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
-  lockBadge: {
+  heroTitle: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
+  heroDesc: { fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 19, paddingRight: 50 },
+  heroArrow: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#1C1C1E',
+    right: 20,
+    bottom: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: INK, marginBottom: 5 },
-  cardTitleSolid: { color: '#FFFFFF' },
-  cardDesc: { fontSize: 12.5, color: SUBTLE, lineHeight: 17 },
-  cardDescSolid: { color: 'rgba(255,255,255,0.8)' },
-  cardArrowRow: { marginTop: 'auto', alignItems: 'flex-end' },
-  cardArrow: {
+
+  // --- Secondary quick actions (the other 2 featured items) ---------------
+  secondaryRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  secondaryCard: {
+    flex: 1,
+    backgroundColor: EMERALD_SOFT,
+    borderRadius: 20,
+    padding: 15,
+  },
+  secondaryIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
+    backgroundColor: 'rgba(31,174,100,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  secondaryTitle: { fontSize: 14.5, fontWeight: '700', color: INK, marginBottom: 3 },
+  secondaryDesc: { fontSize: 11.5, color: SUBTLE, lineHeight: 15 },
+
+  // --- Grouped lists (everything else) -------------------------------------
+  groupSection: { marginBottom: 22 },
+  groupLabel: {
+    fontSize: 12,
+    color: SUBTLE,
+    marginBottom: 8,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontWeight: '700',
+  },
+  // One elevated card per group - the surface itself communicates "these
+  // belong together"; rows inside are flat, separated by a hairline only.
+  groupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.06)',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  rowDivider: { borderTopWidth: 1, borderTopColor: 'rgba(17,24,39,0.06)' },
+  rowIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  rowLockBadge: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: '#1C1C1E',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardArrowSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  cardArrowSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
+  rowTextWrap: { flex: 1 },
+  rowTitle: { fontSize: 14.5, fontWeight: '600', color: INK },
+  rowDesc: { fontSize: 12, color: SUBTLE, marginTop: 1 },
 });

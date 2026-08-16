@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
-import Svg, { Polyline } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchMySchedule } from '../../services/academicScheduleService';
@@ -21,11 +21,7 @@ const SURFACE = COLORS.surface;
 const BORDER = COLORS.border;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 
 /**

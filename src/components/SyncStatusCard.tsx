@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { useOfflineQueue } from '../context/OfflineQueueContext';

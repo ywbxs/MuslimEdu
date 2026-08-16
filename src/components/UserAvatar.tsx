@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 
 const DEFAULT_RING = '#FFFFFF';
-const DEFAULT_FILL = '#2BCBB0';
+const DEFAULT_FILL = '#1FAE64';
 
 /**
  * The one avatar look used everywhere in the app: a ring-bordered circle

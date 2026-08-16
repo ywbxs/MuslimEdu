@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { BellDot } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotifications } from '../../context/NotificationContext';
 import { AppNotification } from '../../services/notificationService';
@@ -15,17 +15,7 @@ const EMERALD = COLORS.emerald;
 function BellDotIcon({ type }: { type: AppNotification['type'] }) {
   const color =
     type === 'approval' ? COLORS.danger : type === 'message' ? EMERALD : type === 'announcement' ? '#8B5CF6' : EMERALD;
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 17h12l-1.4-2.2A6 6 0 0 1 16 11V9a4 4 0 0 0-8 0v2a6 6 0 0 1-.6 3.8L6 17z"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-      <Circle cx="12" cy="20" r="1.4" fill={color} />
-    </Svg>
-  );
+  return <BellDot size={20} color={color} strokeWidth={1.8} />;
 }
 
 function timeAgo(iso: string): string {

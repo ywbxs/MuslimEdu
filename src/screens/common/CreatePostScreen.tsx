@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft, Plus, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -24,7 +24,7 @@ import { checkImageModeration, ModeratedContentError } from '../../services/cont
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../theme/spatial';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';
@@ -32,25 +32,13 @@ const PLACEHOLDER = '#EDEFF2';
 const MAX_IMAGES = 6;
 
 function CloseIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6 6 18" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={size} color={color} strokeWidth={2.4} />;
 }
 function BackIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
 }
 function PlusIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={size} color={color} strokeWidth={2.2} />;
 }
 
 const PRIVACY_OPTIONS: { key: PostPrivacy; labelKey: string; label: string }[] = [

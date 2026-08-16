@@ -1,31 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Image, Alert, ActivityIndicator, Platform, Dimensions } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { X, ChevronLeft, ChevronRight, Download } from 'lucide-react-native';
 import { downloadImageToDevice } from '../utils/downloadFile';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 function CloseIcon() {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6L6 18" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color="#FFFFFF" size={16} strokeWidth={2.2} />;
 }
 function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
-  const d = direction === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6';
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d={d} stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
+  return direction === 'left' ? (
+    <ChevronLeft color="#FFFFFF" size={16} strokeWidth={2.4} />
+  ) : (
+    <ChevronRight color="#FFFFFF" size={16} strokeWidth={2.4} />
   );
 }
 function DownloadIcon({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Download color={color} size={15} strokeWidth={2.2} />;
 }
 
 interface PhotoLightboxProps {
@@ -149,7 +140,7 @@ const styles = StyleSheet.create({
   dotActive: { width: 14, borderRadius: 3, backgroundColor: '#FFFFFF' },
   bottom: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 28 },
   downloadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 13 },
-  downloadBtnDone: { backgroundColor: '#2BCBB0' },
+  downloadBtnDone: { backgroundColor: '#1FAE64' },
   downloadText: { color: '#14171A', fontWeight: '700', fontSize: 13.5 },
   downloadTextDone: { color: '#FFFFFF' },
 });

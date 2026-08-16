@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
+import { ArrowRight, Bell, Calendar, Camera, ChartNoAxesColumn, ChevronDown, ChevronRight, CircleCheck, Clock, FileText, IdCard, Mail, Settings, Star, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
@@ -39,157 +40,55 @@ const MONTH_NAMES = [
 
 // --- Inline icons (react-native-svg) ---
 function PersonIcon({ color = PALE_GREEN, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User size={size} color={color} strokeWidth={2} />;
 }
 function MailIcon({ color = PALE_GREEN, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={5} width={18} height={14} rx={2} stroke={color} strokeWidth={2} />
-      <Path d="M4 7l8 6 8-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Mail size={size} color={color} strokeWidth={2} />;
 }
 function IdCardIcon({ color = PALE_GREEN, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={5} width={18} height={14} rx={2} stroke={color} strokeWidth={2} />
-      <Circle cx={8.5} cy={11} r={2} stroke={color} strokeWidth={2} />
-      <Line x1={13} y1={10} x2={17} y2={10} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={13} y1={14} x2={17} y2={14} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <IdCard size={size} color={color} strokeWidth={2} />;
 }
 function CameraIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.4} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <Camera size={size} color={color} strokeWidth={2} />;
 }
 function DocCheckIcon({ color = '#FFFFFF', size = 24 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Polyline points="8.5 14 11 16.5 15.5 11.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <FileText size={size} color={color} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Polyline points="14 6 20 12 14 18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight size={size} color={color} strokeWidth={2} />;
 }
 function ChevronRightIcon({ color = EMERALD, size = 15 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
 }
 function ChevronDownIcon({ color = SUBTLE, size = 14 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 9 12 16 19 9" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronDown size={size} color={color} strokeWidth={2.2} />;
 }
 function CalendarIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar size={size} color={color} strokeWidth={2} />;
 }
 function ProgressBarsIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={20} x2={6} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={12} y1={20} x2={12} y2={8} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={18} y1={20} x2={18} y2={15} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ChartNoAxesColumn size={size} color={color} strokeWidth={2} />;
 }
 function BellIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M10 19a2 2 0 0 0 4 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Bell size={size} color={color} strokeWidth={2} />;
 }
 function DocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={9} y1={13} x2={15} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={9} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={size} color={color} strokeWidth={2} />;
 }
 function UploadDocumentIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={12} y1={19} x2={12} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Polyline points="9.5 14.5 12 12 14.5 14.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <FileText size={size} color={color} strokeWidth={2} />;
 }
 function StarIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polygon
-        points="12 3 14.7 8.6 21 9.3 16.5 13.6 17.6 20 12 16.9 6.4 20 7.5 13.6 3 9.3 9.3 8.6"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Star size={size} color={color} strokeWidth={2} />;
 }
 function CheckCircleIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="8.5 12 11 14.5 15.5 9.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck size={size} color={color} strokeWidth={2} />;
 }
 function ClockIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="12 7 12 12 15 14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock size={size} color={color} strokeWidth={2} />;
 }
 function GearIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={3} stroke={color} strokeWidth={2} />
-      <Path
-        d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Settings size={size} color={color} strokeWidth={2} />;
 }
 
 function GlassRow({
@@ -835,7 +734,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   quickIconWrapSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  quickIconWrapSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
+  quickIconWrapSoft: { backgroundColor: 'rgba(31,174,100,0.12)' },
   quickBadge: {
     position: 'absolute',
     top: -4,
@@ -862,7 +761,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickArrowButtonSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  quickArrowButtonSoft: { backgroundColor: 'rgba(43,203,176,0.12)' },
+  quickArrowButtonSoft: { backgroundColor: 'rgba(31,174,100,0.12)' },
 
   overviewCard: {
     backgroundColor: '#FFFFFF',

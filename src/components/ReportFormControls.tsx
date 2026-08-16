@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import Svg, { Path, Rect, Circle, Line } from 'react-native-svg';
+import { CirclePlus, X } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { PickedPhoto } from '../services/orphanService';
 import { SHADOW } from '../theme/spatial';
 import { preparePostPhoto, InvalidPhotoTypeError, formatBytes, MAX_PHOTO_BYTES } from '../utils/imagePrep';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -71,21 +71,10 @@ export function RatingSelector({
 }
 
 function IconPlusCircle() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={EMERALD} strokeWidth={1.8} />
-      <Line x1={12} y1={8} x2={12} y2={16} stroke={EMERALD} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={8} y1={12} x2={16} y2={12} stroke={EMERALD} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <CirclePlus color={EMERALD} size={22} strokeWidth={1.8} />;
 }
 function IconClose() {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke="#FFF" strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke="#FFF" strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color="#FFF" size={14} strokeWidth={2.4} />;
 }
 
 export function PhotoPicker({

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, Path, Circle } from 'react-native-svg';
+import { BookOpen, Building2, Calendar, Camera, ChevronLeft, CircleDollarSign, Clock, Flag, IdCard, Layers, Star } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -46,88 +46,37 @@ interface ChecklistItem {
 }
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconBuilding({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h16M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M15 21v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Building2 size={22} color={color} strokeWidth={1.8} />;
 }
 function IconCalendar({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v16H4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M4 9h16M8 3v4M16 3v4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar size={22} color={color} strokeWidth={2} />;
 }
 function IconGrade({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l2.6 5.3 5.9.8-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.8L12 3Z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Star size={22} color={color} strokeWidth={1.8} />;
 }
 function IconLayers({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l9 5-9 5-9-5 9-5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M3 13l9 5 9-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Layers size={22} color={color} strokeWidth={2} />;
 }
 function IconBook({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <BookOpen size={22} color={color} strokeWidth={2} />;
 }
 function IconClock({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v5l3.5 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock size={22} color={color} strokeWidth={2} />;
 }
 function IconCamera({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8h3l1.5-2h7L17 8h3v11H4V8Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={12} cy={13} r={3.2} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <Camera size={22} color={color} strokeWidth={2} />;
 }
 function IconFlag({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 21V4M5 4h12l-3 4 3 4H5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Flag size={22} color={color} strokeWidth={2} />;
 }
 function IconCoin({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v10M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.8 2.5 2c0 1.5-1.5 2-2.5 2.4-1.2.4-2.5 1-2.5 2.6 0 1.2 1.1 2.2 2.5 2.2s2.5-.8 2.5-2" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <CircleDollarSign size={22} color={color} strokeWidth={2} />;
 }
 function IconIdCard({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6h18v12H3z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={8} cy={12} r={2.2} stroke={color} strokeWidth={1.8} />
-      <Path d="M13 10h6M13 14h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <IdCard size={22} color={color} strokeWidth={2} />;
 }
 
 export default function SetupChecklistScreen() {

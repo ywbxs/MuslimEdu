@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { FileText, ArrowRight as ArrowRightGlyph, CircleCheck, CircleAlert } from 'lucide-react-native';
 import { fetchReportOverview, ReportOverview } from '../services/adminOrphanReportService';
 import { Skeleton } from './Skeleton';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const PALE_GREEN = '#7FD9A8';
 const DANGER_SOFT = '#F4A7A7';
 // Same faux-glass values used by StudentDashboard's Profile card and
@@ -17,36 +17,16 @@ const GLASS_BG_STRONG = 'rgba(255,255,255,0.1)';
 const GLASS_BORDER = 'rgba(255,255,255,0.14)';
 
 function ReportDocIcon({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M14 3v4h4M9 12h6M9 16h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText color={color} size={26} strokeWidth={1.8} />;
 }
 function ArrowRight({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12h13M13 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRightGlyph color={color} size={size} strokeWidth={2} />;
 }
 function CheckCircleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-      <Path d="M8 12.5l2.5 2.5L16 9.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck color={color} size={15} strokeWidth={1.8} />;
 }
 function AlertCircleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-      <Path d="M12 8v5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Circle cx={12} cy={16} r={1} fill={color} />
-    </Svg>
-  );
+  return <CircleAlert color={color} size={15} strokeWidth={1.8} />;
 }
 
 /** Circular icon button that scales down slightly on press (200-250ms spring). */

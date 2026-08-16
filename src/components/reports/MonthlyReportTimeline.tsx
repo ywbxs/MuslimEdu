@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
-import Svg, { Path, Polyline, Rect, Line } from 'react-native-svg';
+import { Check, CalendarX, ChevronRight } from 'lucide-react-native';
 
-const EMERALD = '#2BCBB0';
-const EMERALD_DEEP = '#1E927E';
-const EMERALD_SOFT = 'rgba(43,203,176,0.1)';
+const EMERALD = '#1FAE64';
+const EMERALD_DEEP = '#0F7A3D';
+const EMERALD_SOFT = 'rgba(31,174,100,0.1)';
 const GOLD = '#B8912F';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -29,26 +29,13 @@ export interface TimelineMonthMeta {
 }
 
 function CheckIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 13 10 18 19 7" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color="#FFFFFF" size={18} strokeWidth={3} />;
 }
 function MissingIcon() {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={3} stroke={DANGER} strokeWidth={2} />
-      <Line x1={4} y1={9.5} x2={20} y2={9.5} stroke={DANGER} strokeWidth={2} />
-    </Svg>
-  );
+  return <CalendarX color={DANGER} size={16} strokeWidth={2} />;
 }
 function ChevronIcon({ color = '#C4C9CF' }: { color?: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight color={color} size={16} strokeWidth={2.2} />;
 }
 
 function PhotoStack({ photos }: { photos: string[] }) {

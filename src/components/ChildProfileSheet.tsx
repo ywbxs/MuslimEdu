@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
+import { X, ChevronRight, Mail, Phone, Heart, GraduationCap, User, IdCard, FileText, ClipboardList, Pencil } from 'lucide-react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAuth } from '../context/AuthContext';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
@@ -56,100 +56,37 @@ function formatJoined(dateStr?: string | null): string | null {
 
 // --- Icons ---------------------------------------------------------------
 function IconClose({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color={color} size={18} strokeWidth={2.2} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight color={color} size={20} strokeWidth={2.2} />;
 }
 function IconMail({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v14H4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M4 6l8 7 8-7" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Mail color={color} size={15} strokeWidth={2} />;
 }
 function IconPhone({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Phone color={color} size={15} strokeWidth={2} />;
 }
 function IconHeart({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 20s-7-4.35-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.65 12 20 12 20z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Heart color={color} size={15} strokeWidth={2} />;
 }
 function IconCap({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 9l10-4 10 4-10 4L2 9z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M6 11v4c0 1.1 2.7 2.5 6 2.5s6-1.4 6-2.5v-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap color={color} size={15} strokeWidth={2} />;
 }
 function IconUser({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User color={color} size={15} strokeWidth={2} />;
 }
 function IconIdCard({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6h18v12H3z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={8} cy={12} r={2} stroke={color} strokeWidth={1.6} />
-      <Line x1={13} y1={10} x2={18} y2={10} stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-      <Line x1={13} y1={14} x2={18} y2={14} stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <IdCard color={color} size={15} strokeWidth={2} />;
 }
 function IconDocument({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M14 3v4h4M9 12h6M9 16h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText color={color} size={20} strokeWidth={1.8} />;
 }
 function IconReport({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 3h12l4 4v14H4z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M8 8h8M8 12h8M8 16h5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ClipboardList color={color} size={20} strokeWidth={1.8} />;
 }
 function IconPencil({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Pencil color={color} size={15} strokeWidth={1.8} />;
 }
 
 // --- Action modal: Profile / Documents / Monthly Report -------------------

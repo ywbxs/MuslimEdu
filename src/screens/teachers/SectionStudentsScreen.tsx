@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import { ArrowLeftRight, Check, ChevronLeft, Plus, Search, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -37,49 +37,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Colors now come from academicTheme.ts (emerald variant) for light/dark support.
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconPlus({ color }: { color: string }) {
-  return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
 function IconClose({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function IconSearch({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={18} color={color} strokeWidth={2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Polyline points="4 12 9 18 20 6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={14} color={color} strokeWidth={3} />;
 }
 function IconSwap({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8h13l-3-3M20 16H7l3 3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowLeftRight size={16} color={color} strokeWidth={2} />;
 }
 
 function RowSkeleton() {

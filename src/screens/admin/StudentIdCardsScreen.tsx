@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
-import Svg, { Polyline, Line, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft, Image as ImageIcon, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, fetchChildProfile, StudentSummary, ChildProfile } from '../../services/adminService';
@@ -23,29 +24,13 @@ const SURFACE = COLORS.surface;
 const BORDER = COLORS.border;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 function IconClose({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={size} color={color} strokeWidth={2.2} />;
 }
 function IconImage({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={4} x2={20} y2={4} stroke="transparent" />
-      <Path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L15 15.2M14 14l1.6-1.6a2 2 0 0 1 2.8 0L20 14.2" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={8} y1={8} x2={8.01} y2={8} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ImageIcon size={size} color={color} strokeWidth={1.8} />;
 }
 function IconCheckCircle({ color, filled, size = 20 }: { color: string; filled: boolean; size?: number }) {
   return (

@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Svg, { Path, Polyline, Line } from 'react-native-svg';
+import { ChevronLeft, FileText, Folder, Plus, Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -37,42 +37,19 @@ const HAIRLINE = COLORS.border;
 
 // --- Icons ---------------------------------------------------------------
 function ChevronLeftIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.3} />;
 }
 function FileIcon({ color = EMERALD, size = 26 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={1.9} strokeLinejoin="round" />
-      <Line x1={9} y1={13} x2={15} y2={13} stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-      <Line x1={9} y1={16} x2={13} y2={16} stroke={color} strokeWidth={1.9} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={size} color={color} strokeWidth={1.9} />;
 }
 function PlusIcon({ color = EMERALD, size = 26 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.3} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={size} color={color} strokeWidth={2.3} />;
 }
 function TrashIcon({ color = DANGER, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Trash2 size={size} color={color} strokeWidth={1.9} />;
 }
 function FolderIcon({ color = EMERALD, size = 40 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Folder size={size} color={color} strokeWidth={1.8} />;
 }
 
 function formatDate(iso: string): string {

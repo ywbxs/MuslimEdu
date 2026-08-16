@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Line, Circle } from 'react-native-svg';
+import { ChevronLeft, FileText, Calendar, Send } from 'lucide-react-native';
 import { SHADOW } from '../theme/spatial';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -12,35 +12,16 @@ const HAIRLINE = '#EDEEF0';
 const CANVAS = '#F6F7F9';
 
 function IconChevronLeft() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 6l-6 6 6 6" stroke={EMERALD} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft color={EMERALD} size={20} strokeWidth={2.2} />;
 }
 function IconDocOutline() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={INK} strokeWidth={1.8} strokeLinejoin="round" />
-      <Line x1={9} y1={12} x2={15} y2={12} stroke={INK} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText color={INK} size={22} strokeWidth={1.8} />;
 }
 function IconCalendar() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 5h16v16H4z" stroke={EMERALD} strokeWidth={1.8} strokeLinejoin="round" />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={EMERALD} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <Calendar color={EMERALD} size={20} strokeWidth={1.8} />;
 }
 function IconSend() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M21 3L10.5 13.5" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M21 3l-6.5 18-4-8-8-4L21 3z" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Send color="#FFF" size={18} strokeWidth={2} />;
 }
 
 export interface WizardStep {

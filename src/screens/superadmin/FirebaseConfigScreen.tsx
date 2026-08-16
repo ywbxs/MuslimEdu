@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
   fetchFirebaseConfig,
@@ -23,11 +23,7 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 
 /** Superadmin-only: configures the backend's Firebase Admin SDK credentials used to send real push notifications. */

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { FileText, Shield, Tag } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -24,27 +24,13 @@ import {
  */
 
 function IconTag({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M20.5 12.5 12 21l-9-9V4h8l9.5 8.5Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={7.5} cy={7.5} r={1.4} fill={color} />
-    </Svg>
-  );
+  return <Tag size={26} color={color} strokeWidth={2} />;
 }
 function IconShield({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Shield size={26} color={color} strokeWidth={2} />;
 }
 function IconDoc({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M7 3h7l4 4v14H7V3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <FileText size={26} color={color} strokeWidth={2} />;
 }
 
 function SummaryRow({ label, value, theme }: { label: string; value: string; theme: ReturnType<typeof useAcademicGlassTheme> }) {

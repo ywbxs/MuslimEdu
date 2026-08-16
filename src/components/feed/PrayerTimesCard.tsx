@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { Moon, ChevronRight } from 'lucide-react-native';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
   fetchPrayerTimes,
@@ -24,19 +24,10 @@ const GLASS_FILL = 'rgba(255,255,255,0.14)';
 const SKELETON_BASE = 'rgba(255,255,255,0.16)';
 
 function MoonIcon({ color = WHITE, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Moon color={color} size={size} strokeWidth={1.8} />;
 }
 function ArrowRightIcon({ color = WHITE, size = 15 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={0} fill="none" />
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight color={color} size={size} strokeWidth={2} />;
 }
 
 /**

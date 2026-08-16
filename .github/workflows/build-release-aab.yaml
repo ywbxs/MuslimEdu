@@ -88,6 +88,7 @@ jobs:
             "@react-native-async-storage/async-storage@1.23.1" \
             react-native-keychain \
             react-native-svg \
+            lucide-react-native@1.31.0 \
             react-native-image-picker \
             "@react-native-documents/picker@12.0.2" \
             react-native-linear-gradient \

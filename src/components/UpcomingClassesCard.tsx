@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
+import { Calendar, ArrowRight, DoorOpen, User, Clock } from 'lucide-react-native';
 import { fetchMySchedule, AcademicSchedule, Day } from '../services/academicScheduleService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
 
@@ -32,47 +32,19 @@ const SKELETON_BASE = 'rgba(255,255,255,0.14)';
 const DAY_INDEX_TO_KEY: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 function CalendarIcon({ color = PALE_GREEN, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar color={color} size={size} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M14 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight color={color} size={size} strokeWidth={2} />;
 }
 function DoorIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Line x1={6} y1={21} x2={20} y2={21} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={13} cy={13} r={0.8} stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+  return <DoorOpen color={color} size={size} strokeWidth={2} />;
 }
 function PersonIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User color={color} size={size} strokeWidth={2} />;
 }
 function ClockIcon({ color = PALE_GREEN, size = 13 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v5l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock color={color} size={size} strokeWidth={2} />;
 }
 
 /**

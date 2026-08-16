@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { Ban, Check } from 'lucide-react-native';
 import { AcademicGlassTheme } from '../../screens/teachers/academicGlassTheme';
 
 /**
@@ -16,19 +16,10 @@ import { AcademicGlassTheme } from '../../screens/teachers/academicGlassTheme';
  */
 
 function IconSlash({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={8.5} stroke={color} strokeWidth={2} />
-      <Line x1={6.5} y1={17.5} x2={17.5} y2={6.5} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Ban color={color} size={20} strokeWidth={2} />;
 }
 function IconCheckSmall({ color }: { color: string }) {
-  return (
-    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12.5l4.5 4.5L19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={color} size={12} strokeWidth={3} />;
 }
 
 export interface BentoOption {

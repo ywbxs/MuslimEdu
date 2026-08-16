@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Polyline } from 'react-native-svg';
+import { ChevronLeft, Download } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchAdminMaterialReview, Material } from '../../services/materialService';
@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -39,18 +39,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconDownload({ color, size = 13 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Download size={size} color={color} strokeWidth={1.8} />;
 }
 
 function MaterialCardSkeleton() {

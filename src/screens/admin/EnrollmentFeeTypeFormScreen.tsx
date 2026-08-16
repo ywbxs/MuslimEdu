@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { CircleDollarSign, Shield } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -16,19 +16,10 @@ import { fetchFeeTypes, createFeeType, updateFeeType } from '../../services/enro
  */
 
 function IconCoin({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path d="M12 7v10M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.8 2.5 2c0 1.5-1.5 2-2.5 2.4-1.2.4-2.5 1-2.5 2.6 0 1.2 1.1 2.2 2.5 2.2s2.5-.8 2.5-2" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <CircleDollarSign size={26} color={color} strokeWidth={2} />;
 }
 function IconShield({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Shield size={26} color={color} strokeWidth={2} />;
 }
 
 function SummaryRow({ label, value, theme }: { label: string; value: string; theme: ReturnType<typeof useAcademicGlassTheme> }) {

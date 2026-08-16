@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
-import Svg, { Path, Polyline, Line, Circle } from 'react-native-svg';
+import { ChevronLeft, ChevronRight, ClipboardCheck, Clock } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchAttendanceClasses, AttendanceClassOption } from '../../services/teacherAttendanceService';
@@ -17,7 +17,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const AMBER = '#B8860B';
 const AMBER_SOFT = '#FBF2DE';
@@ -47,36 +47,16 @@ function toMinutes(hhmm?: string | null): number | null {
 }
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
 function IconClipboard({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M7 4h10v3H7z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M6 6h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={8.5} y1={12} x2={15.5} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={8.5} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ClipboardCheck size={22} color={color} strokeWidth={2} />;
 }
 function IconClock({ color }: { color: string }) {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="12 7 12 12 15 14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock size={13} color={color} strokeWidth={2} />;
 }
 
 function ClassCardSkeleton() {

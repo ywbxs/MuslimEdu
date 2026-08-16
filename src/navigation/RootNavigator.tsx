@@ -688,6 +688,7 @@ export default function RootNavigator() {
       <Stack.Screen name="BuildingForm" component={BuildingFormScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="RoomForm" component={RoomFormScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
+      <Stack.Screen name="AcademicAnalytics" component={AcademicAnalyticsScreen} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />
       <Stack.Screen name="GradeRelease" component={GradeReleaseScreen} />

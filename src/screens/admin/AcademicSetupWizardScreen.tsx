@@ -10,7 +10,7 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import { Check, Building2, Sparkles } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -35,7 +35,7 @@ import {
 import { createEnrollmentStage } from '../../services/enrollmentWorkflowService';
 
 const EMERALD = BRAND.emerald;
-const EMERALD_SOFT = 'rgba(43,203,176,0.14)';
+const EMERALD_SOFT = 'rgba(31,174,100,0.14)';
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const ERROR = '#BA1A1A';
@@ -81,34 +81,15 @@ const PROGRAM_DURATION_LABELS: Record<ProgramDuration, string> = {
 };
 
 function CheckIcon() {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color="#fff" size={16} strokeWidth={3} />;
 }
 
 function BuildingIcon() {
-  return (
-    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="3" width="16" height="18" rx="1.5" stroke={EMERALD} strokeWidth={1.8} />
-      <Path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" stroke={EMERALD} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Building2 color={EMERALD} size={28} strokeWidth={1.8} />;
 }
 
 function SparkleIcon({ size = 40 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"
-        stroke={EMERALD}
-        strokeWidth={1.6}
-        strokeLinejoin="round"
-      />
-      <Circle cx={19} cy={5} r={1.4} fill={EMERALD} />
-    </Svg>
-  );
+  return <Sparkles color={EMERALD} size={size} strokeWidth={1.6} />;
 }
 
 // Bento-style selectable tile - replaces a vertical list of radio rows with

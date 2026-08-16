@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Polyline, Line, Circle, Path } from 'react-native-svg';
+import { Check, ChevronLeft, ChevronRight, Search, User, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -31,50 +31,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Colors now come from academicTheme.ts (emerald variant) for light/dark support.
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconClose({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Polyline points="5 13 10 18 19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={16} color={color} strokeWidth={3} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={16} color={color} strokeWidth={2.2} />;
 }
 function IconPerson({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <User size={18} color={color} strokeWidth={2} />;
 }
 
 function IconSearch({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.65} y2={16.65} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={16} color={color} strokeWidth={2} />;
 }
 
 function RowSkeleton({ styles, theme }: { styles: any; theme: AcademicGlassTheme }) {

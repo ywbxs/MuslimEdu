@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCameraPermission, useCodeScanner, Code } from 'react-native-vision-camera';
-import Svg, { Polyline, Path } from 'react-native-svg';
+import { Check, ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
@@ -30,18 +30,10 @@ const DANGER = COLORS.danger;
 const RESCAN_COOLDOWN_MS = 3000;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 function IconCheckCircle({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M8.5 12l2.5 2.5L16 9" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check size={size} color={color} strokeWidth={2.4} />;
 }
 
 interface ScannedEntry {
@@ -325,7 +317,7 @@ const styles = StyleSheet.create({
     padding: 14,
     ...SHADOW.level2,
   },
-  bannerOk: { backgroundColor: 'rgba(43,203,176,0.92)' },
+  bannerOk: { backgroundColor: 'rgba(31,174,100,0.92)' },
   bannerError: { backgroundColor: 'rgba(229,72,77,0.92)' },
   bannerText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13.5, textAlign: 'center' },
 

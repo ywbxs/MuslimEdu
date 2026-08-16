@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, Path } from 'react-native-svg';
+import { ChevronLeft, ChevronUp, ChevronDown, Flag, Milestone } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -44,39 +44,19 @@ import {
  */
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronUp({ color, disabled }: { color: string; disabled?: boolean }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" opacity={disabled ? 0.3 : 1}>
-      <Polyline points="6 15 12 9 18 15" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronUp size={16} color={color} strokeWidth={2.2} opacity={disabled ? 0.3 : 1} />;
 }
 function IconChevronDown({ color, disabled }: { color: string; disabled?: boolean }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" opacity={disabled ? 0.3 : 1}>
-      <Polyline points="6 9 12 15 18 9" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronDown size={16} color={color} strokeWidth={2.2} opacity={disabled ? 0.3 : 1} />;
 }
 function IconFlag({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 21V4M5 4h12l-3 4 3 4H5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Flag size={22} color={color} strokeWidth={2} />;
 }
 function IconMilestone({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 2v20M6 6h9l2 3-2 3H6V6Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Milestone size={22} color={color} strokeWidth={2} />;
 }
 
 function approverLabel(role: WorkflowStage['approver_role'], t: (key: string, fallback: string) => string): string | null {

@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import { ChevronLeft, Plus, UserRound, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -44,35 +44,16 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function PlusIcon({ color }: { color: string }) {
-  return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
 function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function EmptyIcon() {
-  return (
-    <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={8} r={3.6} stroke="#C4C9CF" strokeWidth={1.6} />
-      <Path d="M4.5 20c0-3.6 3.4-6.4 7.5-6.4s7.5 2.8 7.5 6.4" stroke="#C4C9CF" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <UserRound size={56} color={"#C4C9CF"} strokeWidth={1.6} />;
 }
 
 function SessionsSheet({ visible, onClose, admin }: { visible: boolean; onClose: () => void; admin: SchoolAdmin | null }) {

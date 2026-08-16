@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Polyline, Rect } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchClasses, ClassOption } from '../../services/adminService';
@@ -18,7 +19,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
-const EMERALD = '#2BCBB0';
+const EMERALD = '#1FAE64';
 const EMERALD_SOFT = '#E5F8F5';
 const INK = '#1C1C1E';
 const SUBTLE = '#8A9099';
@@ -29,7 +30,7 @@ const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 const STATUS_META: Record<keyof AttendanceStatusCounts, { label: string; color: string }> = {
-  present: { label: 'Present', color: '#2BCBB0' },
+  present: { label: 'Present', color: '#1FAE64' },
   late: { label: 'Late', color: '#B8860B' },
   absent: { label: 'Absent', color: '#E5484D' },
   excused: { label: 'Excused', color: '#4C6EF5' },
@@ -54,11 +55,7 @@ function toISO(d: Date) {
 }
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 
 // A minimal same-height bar per day, colored by that day's attendance %
@@ -91,7 +88,7 @@ function TrendChart({ trend }: { trend: AttendanceAnalytics['daily_trend'] }) {
       {trend.map((day, i) => {
         const pct = pctFor(day);
         const barHeight = Math.max(pct * (height - 8), 2);
-        const color = pct >= 0.9 ? '#2BCBB0' : pct >= 0.75 ? '#B8860B' : '#E5484D';
+        const color = pct >= 0.9 ? '#1FAE64' : pct >= 0.75 ? '#B8860B' : '#E5484D';
         return (
           <Rect
             key={day.date}

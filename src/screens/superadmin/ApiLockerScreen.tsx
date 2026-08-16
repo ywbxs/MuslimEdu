@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Line, Path, Circle } from 'react-native-svg';
+import { ChevronLeft, KeyRound, Plus, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchApiKeys, createApiKey, revokeApiKey, ApiKeyRecord } from '../../services/superAdminService';
@@ -33,35 +33,16 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function PlusIcon({ color }: { color: string }) {
-  return (
-    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
 function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function KeyIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={8} cy={15} r={4} stroke={color} strokeWidth={2} />
-      <Path d="M11 12l8-8M16 5l3 3M13 8l2 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <KeyRound size={20} color={color} strokeWidth={2} />;
 }
 
 const KeyRow = React.memo(function KeyRow({ item, onRevoke }: { item: ApiKeyRecord; onRevoke: () => void }) {

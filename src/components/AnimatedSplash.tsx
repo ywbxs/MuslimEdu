@@ -5,7 +5,8 @@ import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect, Circle } from 'r
 /* ------------------------------------------------------------------ *
  * Animated splash for MuslimEdu (no Expo, no extra deps).
  *
- * Green gradient background (#1E927E -> #15803D) with a soft radial glow
+ * Green gradient background (#48B24E -> #346573, matching the app logo's
+ * own gradient) with a soft radial glow
  * behind the logo. The logo fades in, springs from 0.8x -> 1.0x, floats
  * gently, and pulses a soft glow. When `ready` flips true (auth/session
  * check done), the whole splash crossfades out via onFinish.
@@ -119,16 +120,20 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
           splash screen. Dropping backgroundColor/translucent alone wasn't
           enough to avoid that call, so the component is gone entirely. */}
 
-      {/* Base + drifting gradient background */}
+      {/* Base + drifting gradient background - colors sampled directly from
+          the app logo's own gradient (bright emerald green top fading to a
+          deep teal-blue bottom), same direction (straight vertical), so the
+          splash reads as one continuous surface with the logo sitting on
+          it rather than a similar-but-different green. */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
         <Defs>
-          <LinearGradient id="bgBase" x1="0" y1="0" x2="0.3" y2="1">
-            <Stop offset="0" stopColor="#1E927E" />
-            <Stop offset="1" stopColor="#15803D" />
+          <LinearGradient id="bgBase" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#48B24E" />
+            <Stop offset="1" stopColor="#346573" />
           </LinearGradient>
           <LinearGradient id="bgDrift" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#1EB85A" />
-            <Stop offset="1" stopColor="#0F6E36" />
+            <Stop offset="0" stopColor="#5CC257" />
+            <Stop offset="1" stopColor="#2A4F5C" />
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width={width} height={height} fill="url(#bgBase)" />
@@ -151,7 +156,7 @@ export default function AnimatedSplash({ ready, onFinish, logo }: AnimatedSplash
             <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
               <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.55" />
               <Stop offset="0.5" stopColor="#BBF7D0" stopOpacity="0.18" />
-              <Stop offset="1" stopColor="#1E927E" stopOpacity="0" />
+              <Stop offset="1" stopColor="#346573" stopOpacity="0" />
             </RadialGradient>
           </Defs>
           <Circle cx={glowSize / 2} cy={glowSize / 2} r={glowSize / 2} fill="url(#glow)" />
@@ -177,7 +182,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E927E',
+    backgroundColor: '#48B24E',
     zIndex: 999,
   },
 });

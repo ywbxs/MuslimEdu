@@ -1,57 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { ArrowRight, Bell, GraduationCap, IdCard, Settings } from 'lucide-react-native';
 import { useLocale } from '../../context/LocaleContext';
 import DashboardShell, { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
 
 // --- Inline icons (matches the app's existing inline-SVG style) ---
 function CapIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 4L2 9l10 5 8-4v6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={22} color={color} strokeWidth={2} />;
 }
 function BellIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M10 19a2 2 0 0 0 4 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Bell size={22} color={color} strokeWidth={2} />;
 }
 function IdCardIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 5h18v14H3z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Circle cx={8.5} cy={11} r={2} stroke={color} strokeWidth={2} />
-      <Line x1={13} y1={10} x2={17} y2={10} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={13} y1={14} x2={17} y2={14} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <IdCard size={22} color={color} strokeWidth={2} />;
 }
 function GearIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={3} stroke={color} strokeWidth={2} />
-      <Path
-        d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Settings size={22} color={color} strokeWidth={2} />;
 }
 function ArrowRightIcon({ color }: { color: string }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M14 6l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ArrowRight size={16} color={color} strokeWidth={2} />;
 }
 
 function AlumniCard({

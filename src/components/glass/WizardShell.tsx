@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, Path } from 'react-native-svg';
+import { ChevronLeft, Check } from 'lucide-react-native';
 import { useLocale } from '../../context/LocaleContext';
 import { AcademicGlassTheme } from '../../screens/teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
@@ -33,18 +33,10 @@ export interface WizardStep {
 }
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft color={color} size={22} strokeWidth={2.4} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12.5l4.5 4.5L19 7" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={color} size={14} strokeWidth={3} />;
 }
 
 export default function WizardShell({

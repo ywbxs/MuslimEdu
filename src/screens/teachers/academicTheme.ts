@@ -103,7 +103,7 @@ const darkAcademicTheme = {
 const emeraldLight: AcademicTheme = {
   ...lightAcademicTheme,
   accent: BRAND.emerald,
-  accentSoft: 'rgba(43,203,176,0.12)',
+  accentSoft: 'rgba(31,174,100,0.12)',
   accentSoftText: BRAND.emeraldDeep,
 };
 
