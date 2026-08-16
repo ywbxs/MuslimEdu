@@ -1,9 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChartNoAxesColumn, ArrowRight as ArrowRightGlyph, Users, CalendarCheck } from 'lucide-react-native';
+import { ChartNoAxesColumn, ArrowRight as ArrowRightGlyph, Users, CalendarCheck, GraduationCap, Layers, BookOpen, School as SchoolGlyph } from 'lucide-react-native';
 import { fetchAcademicAnalytics, Analytics } from '../services/academicAnalyticsService';
+import { fetchSetupStatus, SchoolProfile } from '../services/academicSetupService';
 import { Skeleton } from './Skeleton';
+
+const INSTITUTION_LABELS: Record<string, string> = {
+  mahad: 'Mahad',
+  madrasa: 'Madrasa',
+  markaz: 'Markaz',
+  regular_school: 'Regular School',
+  orphanage: 'Orphanage',
+};
 
 const EMERALD = '#1FAE64';
 const PALE_GREEN = '#7FD9A8';
@@ -24,6 +33,15 @@ function StudentsIcon({ color }: { color: string }) {
 }
 function AttendanceIcon({ color }: { color: string }) {
   return <CalendarCheck color={color} size={15} strokeWidth={1.8} />;
+}
+function TeachersIcon({ color }: { color: string }) {
+  return <GraduationCap color={color} size={15} strokeWidth={1.8} />;
+}
+function SectionsIcon({ color }: { color: string }) {
+  return <Layers color={color} size={15} strokeWidth={1.8} />;
+}
+function SubjectsIcon({ color }: { color: string }) {
+  return <BookOpen color={color} size={15} strokeWidth={1.8} />;
 }
 
 /** Circular icon button that scales down slightly on press - identical to
@@ -74,6 +92,48 @@ function StatChip({ icon, value, label }: { icon: React.ReactNode; value: string
   );
 }
 
+function MiniStat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+  return (
+    <View style={styles.miniStat}>
+      {icon}
+      <Text style={styles.miniStatValue}>{value}</Text>
+      <Text style={styles.miniStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function schoolInitials(name: string | null): string {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+function SchoolIdentityStrip({ school }: { school: SchoolProfile }) {
+  const institutionLabel = school.institution_type ? INSTITUTION_LABELS[school.institution_type] : null;
+  return (
+    <View style={styles.schoolStrip}>
+      {school.logo ? (
+        <Image source={{ uri: school.logo }} style={styles.schoolLogo} />
+      ) : (
+        <View style={styles.schoolLogoFallback}>
+          {school.name ? (
+            <Text style={styles.schoolInitials}>{schoolInitials(school.name)}</Text>
+          ) : (
+            <SchoolGlyph color={PALE_GREEN} size={18} strokeWidth={1.8} />
+          )}
+        </View>
+      )}
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text style={styles.schoolName} numberOfLines={1}>
+          {school.name ?? 'Your school'}
+        </Text>
+        {institutionLabel ? <Text style={styles.schoolType}>{institutionLabel}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
 /**
  * The admin dashboard's Academic Analytics widget - same dark-glass hero
  * treatment as MonthlyReportsCard (orphan schools' equivalent), fetching
@@ -87,6 +147,7 @@ function StatChip({ icon, value, label }: { icon: React.ReactNode; value: string
 export default function AnalyticsCard({ token }: { token: string }) {
   const navigation = useNavigation();
   const [data, setData] = useState<Analytics | null>(null);
+  const [school, setSchool] = useState<SchoolProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,13 +161,22 @@ export default function AnalyticsCard({ token }: { token: string }) {
       .then(setData)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load analytics.'))
       .finally(() => setIsLoading(false));
+    // School identity (name/logo) is a nice-to-have on this card - never
+    // let it block or fail the actual analytics load if it errors.
+    fetchSetupStatus(token)
+      .then((status) => setSchool(status.school))
+      .catch(() => {});
   };
 
   useEffect(load, [token]);
 
   const students = data?.summary.students ?? 0;
+  const teachers = data?.summary.teachers ?? 0;
+  const sections = data?.summary.sections ?? 0;
+  const subjects = data?.summary.subjects ?? 0;
   const attendanceRate = data?.summary.attendance_rate ?? null;
   const hasData = students > 0 || attendanceRate != null;
+  const hasSchoolInfo = teachers > 0 || sections > 0 || subjects > 0;
 
   useEffect(() => {
     if (isLoading || error) return;
@@ -158,6 +228,8 @@ export default function AnalyticsCard({ token }: { token: string }) {
 
   return (
     <Animated.View style={[styles.card, { opacity: fadeIn }]}>
+      {school ? <SchoolIdentityStrip school={school} /> : null}
+
       <TouchableOpacity style={styles.headerRow} activeOpacity={0.85} onPress={goToAnalytics}>
         <View style={styles.iconBox}>
           <ChartIcon color={PALE_GREEN} />
@@ -183,6 +255,19 @@ export default function AnalyticsCard({ token }: { token: string }) {
               label="Attendance"
             />
           </View>
+
+          {hasSchoolInfo ? (
+            <View style={styles.schoolInfoSection}>
+              <Text style={styles.schoolInfoLabel}>SCHOOL OVERVIEW</Text>
+              <View style={styles.miniStatsRow}>
+                <MiniStat icon={<TeachersIcon color={PALE_GREEN} />} value={String(teachers)} label="Teachers" />
+                <View style={styles.miniStatDivider} />
+                <MiniStat icon={<SectionsIcon color={PALE_GREEN} />} value={String(sections)} label="Sections" />
+                <View style={styles.miniStatDivider} />
+                <MiniStat icon={<SubjectsIcon color={PALE_GREEN} />} value={String(subjects)} label="Subjects" />
+              </View>
+            </View>
+          ) : null}
 
           {attendanceRate != null ? (
             <View style={styles.progressSection}>
@@ -221,6 +306,34 @@ const styles = StyleSheet.create({
     padding: 18,
     marginHorizontal: 20,
   },
+  schoolStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 14,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
+  },
+  schoolLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  schoolLogoFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  schoolInitials: { color: PALE_GREEN, fontSize: 14, fontWeight: '800' },
+  schoolName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  schoolType: { color: 'rgba(255,255,255,0.6)', fontSize: 11.5, fontWeight: '600', marginTop: 2 },
+
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   iconBox: {
     width: 56,
@@ -266,6 +379,29 @@ const styles = StyleSheet.create({
   },
   statChipValue: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', lineHeight: 20 },
   statChipLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '600' },
+
+  schoolInfoSection: {
+    marginTop: 16,
+    backgroundColor: GLASS_BG_STRONG,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  schoolInfoLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  miniStatsRow: { flexDirection: 'row', alignItems: 'center' },
+  miniStat: { flex: 1, alignItems: 'center', gap: 4 },
+  miniStatDivider: { width: 1, height: 34, backgroundColor: GLASS_BORDER },
+  miniStatValue: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', lineHeight: 19 },
+  miniStatLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 10.5, fontWeight: '600' },
 
   progressSection: { marginTop: 16 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
