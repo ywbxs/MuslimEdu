@@ -118,21 +118,31 @@ function MetaRow({ Icon, text }: { Icon: typeof Mail; text: string }) {
   );
 }
 
-/** Tappable proof photo - a 72px thumbnail is far too small to actually verify
- *  an ID against a selfie, which is the entire job of this screen. */
+function initialsOf(name: string): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+/**
+ * Tappable proof photo. The caption rides on the image rather than sitting in
+ * its own row beneath it - two stacked caption rows plus a section heading was
+ * most of this card's height, for three words of text.
+ */
 function ProofThumb({ uri, label, onPress }: { uri: string; label: string; onPress: () => void }) {
   return (
-    <PressableScale scaleTo={0.95} onPress={onPress} accessibilityLabel={`View ${label}`}>
-      {/* PressableScale renders children inside a transform-only Animated.View,
-          so the stacking/centering has to live on an inner wrapper. */}
-      <View style={styles.thumbWrap}>
-        <View>
-          <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
-          <View style={styles.thumbExpand}>
-            <Maximize2 size={11} color="#FFFFFF" strokeWidth={2.6} />
-          </View>
+    <PressableScale style={styles.proofSlot} scaleTo={0.97} onPress={onPress} accessibilityLabel={`Inspect ${label}`}>
+      {/* PressableScale renders children in a transform-only Animated.View,
+          so the clipping/stacking has to live on an inner wrapper. */}
+      <View style={styles.proofInner}>
+        <Image source={{ uri }} style={styles.proofImg} resizeMode="cover" />
+        <View style={styles.proofPill}>
+          <Text style={styles.proofPillText}>{label}</Text>
         </View>
-        <Text style={styles.thumbLabel}>{label}</Text>
+        <View style={styles.proofExpand}>
+          <Maximize2 size={11} color="#FFFFFF" strokeWidth={2.6} />
+        </View>
       </View>
     </PressableScale>
   );
@@ -162,9 +172,12 @@ function RegistrationCard({
           <Text style={styles.monogramText}>{(item.school_name || '?').charAt(0).toUpperCase()}</Text>
         </View>
         <View style={styles.flex1}>
-          <Text style={styles.schoolName} numberOfLines={2}>
-            {item.school_name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.schoolName} numberOfLines={2}>
+              {item.school_name}
+            </Text>
+            <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+          </View>
           <View style={styles.chipRow}>
             <View style={styles.typeChip}>
               <Text style={styles.typeChipText}>
@@ -173,50 +186,46 @@ function RegistrationCard({
             </View>
             {!isPending && <StatusChip status={item.status} />}
           </View>
+          {!!item.school_address && (
+            <View style={styles.addressRow}>
+              <MapPin size={12} color={SUBTLE} strokeWidth={2} />
+              <Text style={styles.addressText} numberOfLines={1}>
+                {item.school_address}
+              </Text>
+            </View>
+          )}
         </View>
-        <Text style={styles.date}>{formatDate(item.created_at)}</Text>
       </View>
 
-      {!!item.school_address && (
-        <View style={styles.addressRow}>
-          <MapPin size={13} color={SUBTLE} strokeWidth={2} />
-          <Text style={styles.addressText} numberOfLines={2}>
-            {item.school_address}
-          </Text>
+      <View style={styles.applicantPanel}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initialsOf(item.admin_name)}</Text>
         </View>
-      )}
-
-      <View style={styles.divider} />
-
-      <Text style={styles.sectionLabel}>Admin applying</Text>
-      <Text style={styles.adminName} numberOfLines={1}>
-        {item.admin_name}
-      </Text>
-      <View style={styles.metaStack}>
-        <MetaRow Icon={Mail} text={item.admin_email} />
-        {!!item.admin_phone && <MetaRow Icon={Phone} text={item.admin_phone} />}
+        <View style={styles.flex1}>
+          <Text style={styles.applicantCaption}>Applying as admin</Text>
+          <Text style={styles.applicantName} numberOfLines={1}>
+            {item.admin_name}
+          </Text>
+          <View style={styles.metaStack}>
+            <MetaRow Icon={Mail} text={item.admin_email} />
+            {!!item.admin_phone && <MetaRow Icon={Phone} text={item.admin_phone} />}
+          </View>
+        </View>
       </View>
 
       {photos.length > 0 && (
-        <>
-          <Text style={[styles.sectionLabel, styles.proofLabel]}>Identity proof · tap to inspect</Text>
-          <View style={styles.thumbRow}>
-            {item.id_document_url && (
-              <ProofThumb
-                uri={item.id_document_url}
-                label="ID document"
-                onPress={() => onViewPhoto(photos, 0)}
-              />
-            )}
-            {item.selfie_url && (
-              <ProofThumb
-                uri={item.selfie_url}
-                label="Selfie"
-                onPress={() => onViewPhoto(photos, photos.length - 1)}
-              />
-            )}
-          </View>
-        </>
+        <View style={styles.proofRow}>
+          {item.id_document_url && (
+            <ProofThumb uri={item.id_document_url} label="ID" onPress={() => onViewPhoto(photos, 0)} />
+          )}
+          {item.selfie_url && (
+            <ProofThumb
+              uri={item.selfie_url}
+              label="Selfie"
+              onPress={() => onViewPhoto(photos, photos.length - 1)}
+            />
+          )}
+        </View>
       )}
 
       {item.status === 'rejected' && !!item.reason && (
@@ -749,16 +758,17 @@ const styles = StyleSheet.create({
   cardBusy: { opacity: 0.6 },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   monogram: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monogramText: { fontSize: 18, fontWeight: '800', color: EMERALD },
-  schoolName: { fontSize: 16.5, fontWeight: '800', color: INK, lineHeight: 21 },
-  chipRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  monogramText: { fontSize: 19, fontWeight: '800', color: EMERALD },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  schoolName: { flex: 1, fontSize: 17, fontWeight: '800', color: INK, lineHeight: 22 },
+  chipRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 7 },
   typeChip: {
     backgroundColor: EMERALD_SOFT,
     borderRadius: RADIUS.pill,
@@ -775,40 +785,61 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusChipText: { fontSize: 11, fontWeight: '700' },
-  date: { fontSize: 11.5, color: SUBTLE, fontWeight: '600' },
+  date: { fontSize: 11.5, color: SUBTLE, fontWeight: '600', marginTop: 2 },
 
-  addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 12 },
-  addressText: { flex: 1, fontSize: 12.5, color: SUBTLE, lineHeight: 17 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
+  addressText: { flex: 1, fontSize: 12.5, color: SUBTLE },
 
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
-  sectionLabel: {
-    fontSize: 10.5,
-    color: SUBTLE,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    fontWeight: '800',
+  // Tinted panel instead of a heading + divider: the grouping is carried by
+  // the surface, which costs no vertical space.
+  applicantPanel: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    padding: 13,
+    borderRadius: RADIUS.md,
+    backgroundColor: 'rgba(17,24,39,0.035)',
   },
-  adminName: { fontSize: 15, fontWeight: '700', color: INK, marginTop: 6 },
-  metaStack: { gap: 5, marginTop: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { flex: 1, fontSize: 12.5, color: SUBTLE },
-
-  proofLabel: { marginTop: 16 },
-  thumbRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  thumbWrap: { alignItems: 'center' },
-  thumb: { width: 92, height: 92, borderRadius: RADIUS.sm, backgroundColor: '#EDEFF2' },
-  thumbExpand: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(17,24,39,0.62)',
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbLabel: { fontSize: 11, color: SUBTLE, marginTop: 6, fontWeight: '600' },
+  avatarText: { fontSize: 13, fontWeight: '800', color: SUBTLE },
+  applicantCaption: { fontSize: 11, color: SUBTLE, fontWeight: '600' },
+  applicantName: { fontSize: 15, fontWeight: '800', color: INK, marginTop: 1 },
+  metaStack: { gap: 4, marginTop: 7 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { flex: 1, fontSize: 12.5, color: SUBTLE },
+
+  proofRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  proofSlot: { flex: 1 },
+  proofInner: { borderRadius: RADIUS.sm, overflow: 'hidden', backgroundColor: '#EDEFF2' },
+  proofImg: { width: '100%', height: 118 },
+  proofPill: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(17,24,39,0.68)',
+  },
+  proofPillText: { fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' },
+  proofExpand: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(17,24,39,0.68)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   reasonBox: {
     marginTop: 14,
