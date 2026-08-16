@@ -24,6 +24,16 @@ const CENTER_BTN_BG = '#16211F';
 // where the fill actually dipped down for the notch. Both now use the
 // SAME path (see barPath), so there's only ever one shape.
 const BAR_BG = '#FFFFFF';
+// A genuinely transparent notch has no color of its own - whether it reads
+// as a visible curve at all depends entirely on how much contrast the page
+// behind the bar happens to have against BAR_BG, which varies screen to
+// screen and can be low enough that the "cutout" is structurally correct
+// but effectively invisible. This subtle stroke traces the curve itself
+// (and the rest of the bar's outline) so the notch stays legible
+// regardless of what's behind it - on the SAME single path as the fill
+// (see the note above) so it can't develop the fill/border silhouette
+// mismatch that caused the earlier "nested pill" bug.
+const BAR_STROKE = 'rgba(13,30,28,0.14)';
 
 // Edge-to-edge docked bar, not a floating pill - full screen width, no
 // margin lifting it off the bottom edge, no border. Side padding for the
@@ -248,10 +258,11 @@ export default function BottomNavBar() {
         <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* The notch cutout is genuinely transparent - no white backing
               shape behind it - so it shows whatever's actually behind the
-              bar there instead of an opaque fill. Fill only, no stroke/
-              border - the bar docks flush to the screen edges, so there's
-              no gap around it that a border would be defining. */}
-          <Path d={barPath} fill={BAR_BG} />
+              bar there. The stroke traces this same path (see BAR_STROKE
+              above) so the notch curve stays visible even where the page
+              behind it is too close to BAR_BG in color to show a cutout on
+              its own. */}
+          <Path d={barPath} fill={BAR_BG} stroke={BAR_STROKE} strokeWidth={1.5} />
         </Svg>
         {sideTabs.map((name, i) => {
           const isActive = activeName === name;
