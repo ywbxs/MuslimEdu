@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Check } from 'lucide-react-native';
 import { useLocale } from '../../context/LocaleContext';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 
@@ -9,11 +9,7 @@ const EMERALD_SOFT = COLORS.emeraldSoft;
 const SUBTLE = COLORS.subtle;
 
 function CheckIcon() {
-  return (
-    <Svg width={30} height={30} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12.5l5 5L20 6.5" stroke={EMERALD} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={EMERALD} size={30} strokeWidth={2.6} />;
 }
 
 /**

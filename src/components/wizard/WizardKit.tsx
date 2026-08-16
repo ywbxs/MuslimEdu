@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { CircleCheck } from 'lucide-react-native';
 import { BRAND, COLORS } from '../../theme/glass';
 
 /**
@@ -13,12 +13,7 @@ import { BRAND, COLORS } from '../../theme/glass';
  */
 
 export function CheckCircleIcon({ color = BRAND.emerald, size = 64 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
-      <Path d="M7.5 12.5l3 3 6-6.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <CircleCheck color={color} size={size} strokeWidth={1.8} />;
 }
 
 export function WizardGradientButton({

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { Globe, X, Check } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useLocale, RTL_LOCALES } from '../context/LocaleContext';
 import { saveUserSettings } from '../services/studentPortalService';
@@ -17,26 +17,13 @@ const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
 ];
 
 function GlobeIcon({ color = '#FFFFFF', size = 17 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-      <Path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Globe color={color} size={size} strokeWidth={1.8} />;
 }
 function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X color={color} size={size} strokeWidth={2.2} />;
 }
 function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12.5l5 5L20 6.5" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Check color={color} size={size} strokeWidth={2.6} />;
 }
 
 /**

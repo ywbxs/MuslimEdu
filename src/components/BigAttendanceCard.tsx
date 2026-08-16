@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { MapPin, Cake } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import UserAvatar from './UserAvatar';
 import { COLORS, RADIUS, SHADOW } from '../theme/glass';
@@ -49,19 +49,10 @@ const FLIGHT_DURATION = 220;
 const HEADER_HEIGHT = 64;
 
 function IconPin({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Circle cx={12} cy={9.5} r={2.4} stroke={color} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <MapPin color={color} size={size} strokeWidth={1.8} />;
 }
 function IconCake({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 21v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6M4 21h16M4 17c1.5 1 2.5-1 4 0s2.5 1 4 0 2.5-1 4 0 2.5 1 4 0M12 9V5M9 5c0-1.5 3-1.5 3-3 0 1.5 3 1.5 3 3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Cake color={color} size={size} strokeWidth={1.8} />;
 }
 
 export interface BigAttendanceCardProps {
