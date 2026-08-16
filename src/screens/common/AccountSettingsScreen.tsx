@@ -12,10 +12,22 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ChevronLeft,
+  Type,
+  Globe,
+  ShieldCheck,
+  KeyRound,
+  Check,
+  Eye,
+  EyeOff,
+} from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale, RTL_LOCALES } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
+import { INK, SUBTLE } from '../dashboards/DashboardShell';
+import { BRAND } from '../../theme/glass';
+import { Skeleton } from '../../components/Skeleton';
 import {
   UserSettings,
   UserSettingsOptions,
@@ -32,11 +44,20 @@ import {
  *
  * Language changes are pushed into the app's existing i18n plumbing
  * (LocaleContext) immediately on save, instead of requiring a restart.
+ *
+ * Redesign: EMERALD (#1FAE64) was used as a fill with white text/icons in
+ * several places (chips, save buttons, retry button) - that combination
+ * measures 2.88:1, below WCAG AA's 4.5:1 minimum, the same failure mode
+ * fixed elsewhere in the app this session. Every filled control here now
+ * uses BRAND.emeraldDeep (5.42:1) instead. The loading state also no
+ * longer blocks on a spinner - it shows a skeleton shaped like the real
+ * layout, per the section's own pattern used everywhere else in the app.
  */
 
 const BORDER = '#E4E9E5';
 const CANVAS = '#F5F7F6';
 const DANGER = '#BA1A1A';
+const EMERALD_SOFT = '#E5F8F5';
 
 function labelize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -48,6 +69,104 @@ function labelize(value: string) {
 const LANGUAGE_LABELS: Record<string, string> = { en: 'English', ar: 'العربية' };
 function languageLabel(code: string) {
   return LANGUAGE_LABELS[code] ?? labelize(code);
+}
+
+function IconChevronLeft({ color }: { color: string }) {
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
+}
+function IconType({ color }: { color: string }) {
+  return <Type size={16} color={color} strokeWidth={2} />;
+}
+function IconGlobe({ color }: { color: string }) {
+  return <Globe size={16} color={color} strokeWidth={2} />;
+}
+function IconShield({ color }: { color: string }) {
+  return <ShieldCheck size={16} color={color} strokeWidth={2} />;
+}
+function IconKey({ color }: { color: string }) {
+  return <KeyRound size={16} color={color} strokeWidth={2} />;
+}
+function IconCheck({ color, size = 12 }: { color: string; size?: number }) {
+  return <Check size={size} color={color} strokeWidth={3} />;
+}
+function IconEye({ color, off }: { color: string; off: boolean }) {
+  return off ? <EyeOff size={18} color={color} strokeWidth={2} /> : <Eye size={18} color={color} strokeWidth={2} />;
+}
+
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIconWrap}>{icon}</View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.chip, selected && styles.chipActive]} onPress={onPress} activeOpacity={0.8}>
+      {selected ? (
+        <View style={styles.chipCheck}>
+          <IconCheck color="#FFFFFF" />
+        </View>
+      ) : null}
+      <Text style={[styles.chipText, selected && styles.chipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function PasswordField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder: string;
+  isLast?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={[styles.fieldRow, isLast && styles.fieldRowLast]}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.fieldInputRow}>
+        <TextInput
+          style={styles.fieldInput}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={!visible}
+          placeholder={placeholder}
+          placeholderTextColor={SUBTLE}
+        />
+        <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={10}>
+          <IconEye color={SUBTLE} off={!visible} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function SettingsSkeleton() {
+  return (
+    <View style={styles.scrollContent}>
+      {[0, 1, 2].map((section) => (
+        <View key={section} style={{ marginBottom: 16 }}>
+          <Skeleton width={130} height={12} style={{ marginBottom: 10, borderRadius: 4 }} />
+          <View style={styles.card}>
+            <Skeleton width="45%" height={13} style={{ marginBottom: 10, borderRadius: 4 }} />
+            <View style={styles.chipRow}>
+              <Skeleton width={70} height={34} style={{ borderRadius: 999 }} />
+              <Skeleton width={90} height={34} style={{ borderRadius: 999 }} />
+              <Skeleton width={80} height={34} style={{ borderRadius: 999 }} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 export default function AccountSettingsScreen() {
@@ -161,23 +280,42 @@ export default function AccountSettingsScreen() {
     }
   };
 
+  const header = (
+    <View style={styles.header}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <IconChevronLeft color={BRAND.emeraldDeep} />
+      </TouchableOpacity>
+      <View style={styles.headerText}>
+        <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
+        <Text style={styles.headerSub}>
+          {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
+        </Text>
+      </View>
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>{t('account_settings.loading', 'Loading your settings…')}</Text>
+      <View style={[styles.flex, { paddingTop: insets.top }]}>
+        {header}
+        <ScrollView style={styles.scroll}>
+          <SettingsSkeleton />
+        </ScrollView>
       </View>
     );
   }
 
   if (error || !settings || !options) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
-        <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
-        </TouchableOpacity>
+      <View style={[styles.flex, { paddingTop: insets.top }]}>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
+          <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -195,13 +333,7 @@ export default function AccountSettingsScreen() {
   }) => (
     <View style={styles.chipRow}>
       {optionsList.map((opt) => (
-        <TouchableOpacity
-          key={opt}
-          style={[styles.chip, value === opt && styles.chipActive]}
-          onPress={() => onSelect(opt)}
-        >
-          <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{labelFor(opt)}</Text>
-        </TouchableOpacity>
+        <Chip key={opt} label={labelFor(opt)} selected={value === opt} onPress={() => onSelect(opt)} />
       ))}
     </View>
   );
@@ -214,41 +346,28 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={[styles.flex, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChevron}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-          <Text style={styles.headerSub}>
-            {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-          </Text>
-        </View>
-      </View>
+      {header}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>{t('account_settings.accessibility_section', 'Accessibility')}</Text>
+        <SectionHeader icon={<IconType color={BRAND.emeraldDeep} />} title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
           <Text style={styles.label}>{t('account_settings.display_size_label', 'Text & display size')}</Text>
           <View style={styles.chipRow}>
             {DISPLAY_SCALE_OPTIONS.map((opt) => {
               const selected = Math.abs(opt.value - scale) < 0.001;
               return (
-                <TouchableOpacity
+                <Chip
                   key={opt.key}
-                  style={[styles.chip, selected && styles.chipActive]}
+                  label={t(`accessibility.size.${opt.key}`, opt.label)}
+                  selected={selected}
                   onPress={() => setScale(opt.value)}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>
-                    {t(`accessibility.size.${opt.key}`, opt.label)}
-                  </Text>
-                </TouchableOpacity>
+                />
               );
             })}
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>{t('account_settings.language_appearance_section', 'Language & appearance')}</Text>
+        <SectionHeader icon={<IconGlobe color={BRAND.emeraldDeep} />} title={t('account_settings.language_appearance_section', 'Language & appearance')} />
         <View style={styles.card}>
           <Text style={styles.label}>{t('account_settings.language_label', 'Language')}</Text>
           <ChipGroup optionsList={languageOptions} value={settings.language} onSelect={(v) => patch({ language: v })} labelFor={languageLabel} />
@@ -271,7 +390,7 @@ export default function AccountSettingsScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>{t('account_settings.privacy_section', 'Privacy')}</Text>
+        <SectionHeader icon={<IconShield color={BRAND.emeraldDeep} />} title={t('account_settings.privacy_section', 'Privacy')} />
         <View style={styles.card}>
           <Text style={styles.label}>{t('account_settings.profile_visibility_label', 'Profile visibility')}</Text>
           <ChipGroup
@@ -280,12 +399,14 @@ export default function AccountSettingsScreen() {
             onSelect={(v) => patch({ profile_visibility: v })}
           />
 
+          <View style={styles.divider} />
+
           <View style={styles.switchRow}>
             <Text style={styles.rowTitle}>{t('account_settings.show_email_label', 'Show email on my profile')}</Text>
             <Switch
               value={settings.show_email}
               onValueChange={(v) => patch({ show_email: v })}
-              trackColor={{ false: '#D8DED9', true: EMERALD }}
+              trackColor={{ false: '#D8DED9', true: BRAND.emeraldDeep }}
             />
           </View>
           <View style={styles.switchRow}>
@@ -293,7 +414,7 @@ export default function AccountSettingsScreen() {
             <Switch
               value={settings.show_phone}
               onValueChange={(v) => patch({ show_phone: v })}
-              trackColor={{ false: '#D8DED9', true: EMERALD }}
+              trackColor={{ false: '#D8DED9', true: BRAND.emeraldDeep }}
             />
           </View>
 
@@ -305,7 +426,10 @@ export default function AccountSettingsScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={onSave} disabled={saving}>
+        {/* Save is the primary action for everything above - a solid pill
+            standing apart from the cards, not another bordered box, so it
+            reads as "commit" rather than one more settings row. */}
+        <TouchableOpacity style={styles.saveBtn} onPress={onSave} disabled={saving} activeOpacity={0.85}>
           {saving ? (
             <ActivityIndicator color="#FFF" />
           ) : (
@@ -313,36 +437,35 @@ export default function AccountSettingsScreen() {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>{t('account_settings.password_section', 'Password')}</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>{t('account_settings.current_password_label', 'Current password')}</Text>
-          <TextInput
-            style={styles.input}
+        {/* Password gets a distinct tinted card, not the same white as
+            everything else above - a security action deserves to read as
+            a separate, deliberate zone rather than blend into the rest of
+            the settings list. */}
+        <SectionHeader icon={<IconKey color={DANGER} />} title={t('account_settings.password_section', 'Password')} />
+        <View style={[styles.card, styles.cardDanger]}>
+          <PasswordField
+            label={t('account_settings.current_password_label', 'Current password')}
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            secureTextEntry
             placeholder={t('account_settings.current_password_label', 'Current password')}
-            placeholderTextColor={SUBTLE}
           />
-          <Text style={styles.label}>{t('account_settings.new_password_label', 'New password')}</Text>
-          <TextInput
-            style={styles.input}
+          <View style={styles.divider} />
+          <PasswordField
+            label={t('account_settings.new_password_label', 'New password')}
             value={newPassword}
             onChangeText={setNewPassword}
-            secureTextEntry
             placeholder={t('account_settings.new_password_label', 'New password')}
-            placeholderTextColor={SUBTLE}
           />
-          <Text style={styles.label}>{t('account_settings.confirm_password_label', 'Confirm new password')}</Text>
-          <TextInput
-            style={styles.input}
+          <View style={styles.divider} />
+          <PasswordField
+            label={t('account_settings.confirm_password_label', 'Confirm new password')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            secureTextEntry
             placeholder={t('account_settings.confirm_password_placeholder', 'Re-type new password')}
-            placeholderTextColor={SUBTLE}
+            isLast
           />
-          <TouchableOpacity style={styles.saveBtnInline} onPress={onChangePassword} disabled={changingPassword}>
+
+          <TouchableOpacity style={styles.saveBtnInline} onPress={onChangePassword} disabled={changingPassword} activeOpacity={0.85}>
             {changingPassword ? (
               <ActivityIndicator color="#FFF" />
             ) : (
@@ -357,10 +480,10 @@ export default function AccountSettingsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
-  center: { flex: 1, backgroundColor: CANVAS, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   centerText: { marginTop: 12, fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 20 },
   errorTitle: { fontSize: 18, fontWeight: '700', color: INK },
-  retryBtn: { marginTop: 20, backgroundColor: EMERALD, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
+  retryBtn: { marginTop: 20, backgroundColor: BRAND.emeraldDeep, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
   retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
   header: {
@@ -373,30 +496,60 @@ const styles = StyleSheet.create({
     borderBottomColor: BORDER,
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
-  backChevron: { fontSize: 26, lineHeight: 28, color: EMERALD, marginTop: -3 },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 },
+  sectionIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 16 },
+  cardDanger: { backgroundColor: '#FDF4F4', borderColor: '#F3D9D9' },
   rowTitle: { fontSize: 14, fontWeight: '700', color: INK, flex: 1, paddingRight: 12 },
 
   label: { fontSize: 12.5, fontWeight: '700', color: INK, marginTop: 12, marginBottom: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: '#F1F3F2' },
-  chipActive: { backgroundColor: EMERALD },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: '#F1F3F2',
+  },
+  chipActive: { backgroundColor: BRAND.emeraldDeep },
+  chipCheck: { marginRight: 5 },
   chipText: { fontSize: 12.5, fontWeight: '700', color: SUBTLE },
   chipTextActive: { color: '#FFFFFF' },
 
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  divider: { height: 1, backgroundColor: BORDER, marginVertical: 14 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
 
-  input: { marginTop: 8, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: INK, backgroundColor: '#FAFBFA' },
+  fieldRow: { marginBottom: 14 },
+  fieldRowLast: { marginBottom: 0 },
+  fieldLabel: { fontSize: 12.5, fontWeight: '700', color: INK, marginBottom: 8 },
+  fieldInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  fieldInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: INK },
 
-  saveBtn: { backgroundColor: EMERALD, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  saveBtnInline: { marginTop: 16, backgroundColor: EMERALD, borderRadius: 12, height: 46, alignItems: 'center', justifyContent: 'center' },
+  saveBtn: { backgroundColor: BRAND.emeraldDeep, borderRadius: 999, height: 52, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  saveBtnInline: { marginTop: 16, backgroundColor: BRAND.emeraldDeep, borderRadius: 999, height: 48, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
 });
