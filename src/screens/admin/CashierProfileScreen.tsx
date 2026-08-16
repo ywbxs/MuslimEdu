@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
+import { Pencil } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchCashierProfile, updateCashierProfile, CashierProfile, CashierBasicProfileFields } from '../../services/feeService';
@@ -20,11 +20,7 @@ const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 function IconPencil({ color }: { color: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
-  );
+  return <Pencil size={15} color={color} strokeWidth={1.8} />;
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null }) {

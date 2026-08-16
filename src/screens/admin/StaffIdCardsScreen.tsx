@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { captureRef } from 'react-native-view-shot';
-import Svg, { Polyline, Line } from 'react-native-svg';
+import { ChevronLeft, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherList, fetchTeacherProfile, StaffSummary, TeacherProfile } from '../../services/adminTeacherService';
@@ -24,19 +24,10 @@ const SURFACE = COLORS.surface;
 const BORDER = COLORS.border;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 function IconClose({ color, size = 18 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={size} color={color} strokeWidth={2.2} />;
 }
 
 function TileSkeleton() {

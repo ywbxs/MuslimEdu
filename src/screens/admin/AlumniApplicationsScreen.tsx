@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
   PendingAlumniRegistration,
@@ -20,11 +20,7 @@ const SUBTLE = COLORS.subtle;
 const DANGER = COLORS.danger;
 
 function BackIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
 }
 
 function ApplicationCard({

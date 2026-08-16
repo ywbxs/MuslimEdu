@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
+import { ChevronLeft, ChevronRight, FileText, Search } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchAdminFeeList, FeeInvoice } from '../../services/feeService';
@@ -28,45 +28,19 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function SearchIcon({ color }: { color: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
-      <Line x1={21} y1={21} x2={16.2} y2={16.2} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Search size={17} color={color} strokeWidth={2} />;
 }
 function ChevronRightIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
 function DocumentIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={3} width={16} height={18} rx={2} stroke={color} strokeWidth={1.8} />
-      <Line x1={8} y1={8} x2={16} y2={8} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={8} y1={12} x2={16} y2={12} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={8} y1={16} x2={12} y2={16} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={20} color={color} strokeWidth={1.8} />;
 }
 function EmptyIcon() {
-  return (
-    <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={3} width={16} height={18} rx={2} stroke="#C4C9CF" strokeWidth={1.6} />
-      <Line x1={8} y1={8} x2={16} y2={8} stroke="#C4C9CF" strokeWidth={1.6} strokeLinecap="round" />
-      <Line x1={8} y1={12} x2={16} y2={12} stroke="#C4C9CF" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={56} color={"#C4C9CF"} strokeWidth={1.6} />;
 }
 
 type StatusFilter = 'all' | 'unpaid' | 'partial' | 'paid';

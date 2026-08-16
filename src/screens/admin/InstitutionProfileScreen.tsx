@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -98,11 +98,7 @@ interface PendingPhoto {
 }
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 
 export default function InstitutionProfileScreen() {

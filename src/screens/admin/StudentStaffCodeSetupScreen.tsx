@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft, ChevronDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -37,18 +37,10 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function ChevronDownIcon({ color, up }: { color: string; up?: boolean }) {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ transform: [{ rotate: up ? '180deg' : '0deg' }] }}>
-      <Path d="M6 9l6 6 6-6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronDown size={16} color={color} strokeWidth={2.2} style={{ transform: [{ rotate: up ? '180deg' : '0deg' }] }} />;
 }
 
 const DEFAULT_DRAFT: StudentNumberDraft = {

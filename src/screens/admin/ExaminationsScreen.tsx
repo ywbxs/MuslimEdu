@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Polyline, Circle, Line } from 'react-native-svg';
+import { ChevronLeft, FileText, Folder, Mic, SquarePen, Star, Trash2, Upload, WifiOff, Wrench } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
@@ -79,90 +79,34 @@ const STATUS_FALLBACKS: Record<ExaminationStatus, string> = {
 const EXAM_TYPES = ['written', 'oral', 'practical', 'project'];
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={20} color={color} strokeWidth={2.4} />;
 }
 function IconDocument({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M14 3v4h4M9 13h6M9 16.5h4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={20} color={color} strokeWidth={1.8} />;
 }
 function IconMic({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke={color} strokeWidth={1.8} />
-      <Path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Mic size={20} color={color} strokeWidth={1.8} />;
 }
 function IconTool({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M14.7 6.3a3.5 3.5 0 0 0-4.8 4.2L4 16.4V20h3.6l5.9-5.9a3.5 3.5 0 0 0 4.2-4.8l-2.5 2.5-2-2 2.5-2.5Z"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Wrench size={20} color={color} strokeWidth={1.7} />;
 }
 function IconFolder({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Folder size={20} color={color} strokeWidth={1.8} />;
 }
 function IconPencil({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={13} y1={7} x2={17} y2={11} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <SquarePen size={size} color={color} strokeWidth={2} />;
 }
 function IconStar({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 3l2.7 5.6 6.3.9-4.5 4.4 1 6.2L12 17l-5.5 3.1 1-6.2L3 9.5l6.3-.9L12 3Z"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Star size={size} color={color} strokeWidth={1.8} />;
 }
 function IconUpload({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 16V4M7 9l5-5 5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Upload size={size} color={color} strokeWidth={2} />;
 }
 function IconTrash({ color, size = 15 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Trash2 size={size} color={color} strokeWidth={1.9} />;
 }
 function IconWifiOff({ color, size = 16 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 8.5a17 17 0 0 1 8-3.9M17 6.4A17 17 0 0 1 22 8.5M5.5 12a11 11 0 0 1 4-2.1M18.5 12a11 11 0 0 0-3-1.7" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path d="M8.5 15.3a6 6 0 0 1 7 0M11 18.4a2 2 0 0 1 2 0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={3} y1={3} x2={21} y2={21} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <WifiOff size={size} color={color} strokeWidth={1.8} />;
 }
 
 function examTypeIcon(type: string, color: string) {

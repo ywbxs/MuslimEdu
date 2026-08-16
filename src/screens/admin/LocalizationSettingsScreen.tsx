@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { ChevronLeft, Globe, Plus } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
   LocaleOption,
@@ -20,26 +20,13 @@ const SUBTLE = COLORS.subtle;
 const BORDER = COLORS.border;
 
 function BackIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 5 8 12l7 7" stroke={INK} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
 }
 function PlusIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Plus size={size} color={color} strokeWidth={2.2} />;
 }
 function GlobeIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-      <Path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Globe size={size} color={color} strokeWidth={1.8} />;
 }
 
 /**

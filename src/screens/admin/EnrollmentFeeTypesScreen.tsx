@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, Path, Circle } from 'react-native-svg';
+import { ChevronLeft, CircleDollarSign } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -21,24 +21,10 @@ import { FeeType, fetchFeeTypes, deleteFeeType } from '../../services/enrollment
  */
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconCoin({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Path
-        d="M12 7v10M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.8 2.5 2c0 1.5-1.5 2-2.5 2.4-1.2.4-2.5 1-2.5 2.6 0 1.2 1.1 2.2 2.5 2.2s2.5-.8 2.5-2"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <CircleDollarSign size={22} color={color} strokeWidth={2} />;
 }
 
 function formatAmount(amount: FeeType['amount']): string | null {

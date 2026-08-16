@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Polyline } from 'react-native-svg';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { recordFeePayment } from '../../services/feeService';
@@ -29,11 +29,7 @@ const GLASS_BORDER = GLASS.borderOnLight;
 const PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'other'] as const;
 
 function ChevronLeftIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 
 function money(n: number): string {
