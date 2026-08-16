@@ -553,7 +553,7 @@ export default function LoginScreen() {
                   its own overflow:'hidden' for its own content) so the glow
                   isn't clipped and actually extends past the card's edge
                   into the page background instead of staying inside it. */}
-              <HeroGlow />
+              <HeroGlow bottomLeft={false} />
               <View style={styles.card}>
               {step === 1 ? (
                 <>

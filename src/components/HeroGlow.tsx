@@ -18,27 +18,42 @@ const BOTTOM_LEFT_SIZE = 180;
  * and genuinely fades to fully transparent at the edge, which is what makes
  * it look like light instead of a shape.
  */
-export default function HeroGlow() {
+interface HeroGlowProps {
+  /** Default true - pass false to omit that circle (e.g. the login card only
+   * wants the top-right one; the bottom-left one poked out past the card's
+   * rounded corner as a hard-edged wedge once the glow was moved outside
+   * the card's overflow:'hidden', since the card itself covers the rest of
+   * that circle rather than the whole thing blending into a page-colored
+   * background). */
+  topRight?: boolean;
+  bottomLeft?: boolean;
+}
+
+export default function HeroGlow({ topRight = true, bottomLeft = true }: HeroGlowProps) {
   return (
     <>
-      <Svg width={TOP_RIGHT_SIZE} height={TOP_RIGHT_SIZE} style={styles.topRight} pointerEvents="none">
-        <Defs>
-          <RadialGradient id="heroGlowTopRight" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={TOP_RIGHT_COLOR} stopOpacity={0.55} />
-            <Stop offset="1" stopColor={TOP_RIGHT_COLOR} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={TOP_RIGHT_SIZE / 2} cy={TOP_RIGHT_SIZE / 2} r={TOP_RIGHT_SIZE / 2} fill="url(#heroGlowTopRight)" />
-      </Svg>
-      <Svg width={BOTTOM_LEFT_SIZE} height={BOTTOM_LEFT_SIZE} style={styles.bottomLeft} pointerEvents="none">
-        <Defs>
-          <RadialGradient id="heroGlowBottomLeft" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0.4} />
-            <Stop offset="1" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={BOTTOM_LEFT_SIZE / 2} cy={BOTTOM_LEFT_SIZE / 2} r={BOTTOM_LEFT_SIZE / 2} fill="url(#heroGlowBottomLeft)" />
-      </Svg>
+      {topRight && (
+        <Svg width={TOP_RIGHT_SIZE} height={TOP_RIGHT_SIZE} style={styles.topRight} pointerEvents="none">
+          <Defs>
+            <RadialGradient id="heroGlowTopRight" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={TOP_RIGHT_COLOR} stopOpacity={0.55} />
+              <Stop offset="1" stopColor={TOP_RIGHT_COLOR} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={TOP_RIGHT_SIZE / 2} cy={TOP_RIGHT_SIZE / 2} r={TOP_RIGHT_SIZE / 2} fill="url(#heroGlowTopRight)" />
+        </Svg>
+      )}
+      {bottomLeft && (
+        <Svg width={BOTTOM_LEFT_SIZE} height={BOTTOM_LEFT_SIZE} style={styles.bottomLeft} pointerEvents="none">
+          <Defs>
+            <RadialGradient id="heroGlowBottomLeft" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0.4} />
+              <Stop offset="1" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={BOTTOM_LEFT_SIZE / 2} cy={BOTTOM_LEFT_SIZE / 2} r={BOTTOM_LEFT_SIZE / 2} fill="url(#heroGlowBottomLeft)" />
+        </Svg>
+      )}
     </>
   );
 }
