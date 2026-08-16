@@ -547,11 +547,14 @@ export default function LoginScreen() {
               </View>
             )}
 
-            <View style={styles.card}>
+            <View style={styles.cardOuter}>
               {/* Same emerald-green radial glow used on the dashboard hero
-                  headers (HeroGlow) - card has overflow:'hidden' so the
-                  circles get clipped to its rounded corners automatically. */}
+                  headers (HeroGlow) - lives OUTSIDE the card (which keeps
+                  its own overflow:'hidden' for its own content) so the glow
+                  isn't clipped and actually extends past the card's edge
+                  into the page background instead of staying inside it. */}
               <HeroGlow />
+              <View style={styles.card}>
               {step === 1 ? (
                 <>
                   <Text style={styles.fieldLabel}>{t('login.email_label', 'E-MAIL')}</Text>
@@ -686,6 +689,7 @@ export default function LoginScreen() {
                 <Text style={styles.getStartedLink}>{t('login.get_started', 'Get Started')}</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </Animated.View>
 
           <Footer />
@@ -780,8 +784,11 @@ const styles = StyleSheet.create({
   },
   emailChipText: { fontSize: 13, fontWeight: '700', color: ACCENT, flexShrink: 1 },
 
+  // Plain wrapper, no overflow:'hidden' - lets HeroGlow's circles (an
+  // absolutely-positioned sibling of `card` below) extend past the card's
+  // edge into the page background instead of getting clipped to it.
+  cardOuter: { marginTop: 20 },
   card: {
-    marginTop: 20,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.6)',
