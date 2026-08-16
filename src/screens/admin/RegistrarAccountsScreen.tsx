@@ -54,7 +54,7 @@ const RegistrarRow = React.memo(function RegistrarRow({ item }: { item: Registra
   const active = item.status === 1;
   return (
     <View style={styles.row}>
-      <UserAvatar name={item.name} photo={null} size={48} ringColor={HAIRLINE} dotColor={active ? EMERALD : DANGER} />
+      <UserAvatar name={item.name} photo={item.photo} size={48} ringColor={HAIRLINE} dotColor={active ? EMERALD : DANGER} />
       <View style={[styles.flex1, { marginLeft: 14 }]}>
         <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.rowEmail} numberOfLines={1}>{item.email}</Text>

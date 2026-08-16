@@ -322,7 +322,12 @@ export default function StudentIdCardsScreen() {
                 student={{
                   name: selected.name,
                   nameAr: selectedProfile?.name_ar ?? selected.name_ar,
-                  photo: selected.photo,
+                  // Prefer the freshly-fetched profile's photo over the
+                  // list-summary one - admin_student_list is a summary
+                  // endpoint that may not carry a photo even when the
+                  // student has one on file; admin_child_profile is the
+                  // authoritative source.
+                  photo: selectedProfile?.photo ?? selected.photo,
                   code: selected.code ?? String(selected.id),
                   personType: 'student',
                   className: selected.class_name,

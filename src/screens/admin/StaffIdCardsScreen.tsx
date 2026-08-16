@@ -247,7 +247,12 @@ export default function StaffIdCardsScreen() {
                 student={{
                   name: selected.name,
                   nameAr: selectedProfile?.name_ar,
-                  photo: selected.photo,
+                  // Prefer the freshly-fetched profile's photo over the
+                  // list-summary one - admin_teacher_list/admin_accountant_
+                  // list/admin_registrar_list are summary endpoints that may
+                  // not carry a photo even when the person has one on file;
+                  // the dedicated profile fetch is the authoritative source.
+                  photo: selectedProfile?.photo ?? selected.photo,
                   code: selected.code ?? String(selected.id),
                   personType: 'staff',
                   schoolName,

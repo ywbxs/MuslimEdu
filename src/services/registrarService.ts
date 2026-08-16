@@ -51,7 +51,21 @@ export interface RegistrarAccount {
 /** POST /admin_registrar_list - admin-only: every Registrar account in the school. */
 export async function fetchRegistrarAccounts(token: string): Promise<RegistrarAccount[]> {
   const data = await authedPost('/admin_registrar_list', token);
-  return (data.registrars ?? []) as RegistrarAccount[];
+  const rawList: any[] = data.registrars ?? [];
+  // Was returning the raw response untouched - unlike the sibling
+  // fetchTeacherList/fetchCashierAccounts, this never ran `photo` through
+  // absoluteUrl(), so every registrar showed initials instead of their
+  // real uploaded photo regardless of whether one was on file.
+  return rawList.map((raw) => ({
+    id: raw.id,
+    name: raw.name ?? '',
+    name_ar: raw.name_ar ?? null,
+    email: raw.email ?? '',
+    phone: raw.phone ?? null,
+    photo: absoluteUrl(raw.photo ?? null),
+    code: raw.code ?? null,
+    status: raw.status,
+  }));
 }
 
 export interface RegistrarProfile {
