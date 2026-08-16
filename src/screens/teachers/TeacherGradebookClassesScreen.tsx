@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Polyline, Line } from 'react-native-svg';
+import { ChevronLeft, ChevronRight, NotebookText } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -31,27 +31,13 @@ const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 
 function IconChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Polyline points="9 5 16 12 9 19" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
 function IconGradeBook({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 0-3 3V4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={9} y1={9} x2={14} y2={9} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={9} y1={13} x2={14} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <NotebookText size={22} color={color} strokeWidth={2} />;
 }
 
 function ClassCardSkeleton() {

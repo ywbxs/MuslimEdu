@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { DoorOpen, FileText, ListChecks } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme } from './academicGlassTheme';
@@ -12,29 +12,13 @@ import { listBuildings, listRooms, saveRoom, updateRoom, Building, RoomType } fr
 const TYPES: RoomType[] = ['classroom', 'laboratory', 'library', 'office', 'hall', 'mosque', 'learning_space', 'other'];
 
 function IconDoor({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 21V4a1 1 0 0 1 1-1h8l3 3v15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M6 21h14" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={13} cy={13} r={0.9} fill={color} />
-    </Svg>
-  );
+  return <DoorOpen size={26} color={color} strokeWidth={2} />;
 }
 function IconRuler({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 15l5-5 3 3 8-8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 19h16" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ListChecks size={26} color={color} strokeWidth={2} />;
 }
 function IconDoc({ color }: { color: string }) {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M7 3h7l4 4v14H7V3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <FileText size={26} color={color} strokeWidth={2} />;
 }
 
 function SummaryRow({ label, value, theme }: { label: string; value: string; theme: ReturnType<typeof useAcademicGlassTheme> }) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path, Polyline, Rect, Circle, Line } from 'react-native-svg';
+import { ChevronLeft, Hand, QrCode, ScanFace } from 'lucide-react-native';
 import { useLocale } from '../../context/LocaleContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -15,38 +15,16 @@ const SURFACE = COLORS.surface;
 const BORDER = COLORS.border;
 
 function IconChevronLeft({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Polyline points="15 5 8 12 15 19" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <ChevronLeft size={size} color={color} strokeWidth={2.4} />;
 }
 function IconHandTap({ color, size = 26 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 12V6a1.5 1.5 0 0 1 3 0v5M12 11V4.5a1.5 1.5 0 0 1 3 0V11M15 11.5V7a1.5 1.5 0 0 1 3 0v7c0 4-2.5 7-6.5 7S5 18 5 15v-3.5A1.5 1.5 0 0 1 6.5 10c.5 0 1 .2 1.3.6L9 12" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Hand size={size} color={color} strokeWidth={1.8} />;
 }
 function IconQrCode({ color, size = 26 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={3} width={7} height={7} rx={1} stroke={color} strokeWidth={1.8} />
-      <Rect x={14} y={3} width={7} height={7} rx={1} stroke={color} strokeWidth={1.8} />
-      <Rect x={3} y={14} width={7} height={7} rx={1} stroke={color} strokeWidth={1.8} />
-      <Path d="M14 14h3v3h-3zM20 14v3M14 20h3M17.5 17.5H20V20" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <QrCode size={size} color={color} strokeWidth={1.8} />;
 }
 function IconFace({ color, size = 26 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={9} cy={11} r={1} fill={color} />
-      <Circle cx={15} cy={11} r={1} fill={color} />
-      <Path d="M9 15c1 1 5 1 6 0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
+  return <ScanFace size={size} color={color} strokeWidth={1.8} />;
 }
 
 interface MethodTileProps {

@@ -10,7 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Line, Circle, Polyline, Rect } from 'react-native-svg';
+import { Calendar, ChevronLeft, Clock, FileText, GraduationCap, Heart, Image as ImageIcon, SquarePen, TrendingUp, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
@@ -55,75 +55,31 @@ const MONTH_FALLBACKS = [
 const HISTORY_MONTHS = 12;
 
 function IconEdit({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 20h4L18 10l-4-4L4 16v4z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <SquarePen size={20} color={color} strokeWidth={1.8} />;
 }
 function IconCap({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 9l10-4 10 4-10 4L2 9z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <GraduationCap size={20} color={color} strokeWidth={1.8} />;
 }
 function IconHeart({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 20s-7-4.35-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.65 12 20 12 20z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Heart size={20} color={color} strokeWidth={1.8} />;
 }
 function IconTrend({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 16l5-5 4 4 7-8" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <TrendingUp size={20} color={color} strokeWidth={1.8} />;
 }
 function IconImage({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.8} />
-    </Svg>
-  );
+  return <ImageIcon size={20} color={color} strokeWidth={1.8} />;
 }
 function IconDoc({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 3h8l4 4v14H6z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M14 3v4h4" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Line x1={9} y1={12} x2={15} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={9} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <FileText size={22} color={color} strokeWidth={2} />;
 }
 function IconClock({ color = SUBTLE }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
-      <Polyline points="12 7 12 12 15 14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+  return <Clock size={18} color={color} strokeWidth={2} />;
 }
 function IconCalendar({ color = EMERALD }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={16} rx={2} stroke={color} strokeWidth={2} />
-      <Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} />
-      <Line x1={8} y1={3} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Line x1={16} y1={3} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <Calendar size={18} color={color} strokeWidth={2} />;
 }
 function IconClose({ color = SUBTLE }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    </Svg>
-  );
+  return <X size={20} color={color} strokeWidth={2.2} />;
 }
 
 interface TimelineMonth {
@@ -510,9 +466,7 @@ export default function TeacherOrphanReportScreen() {
         <GlassBackground variant="canvas" />
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
-            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-              <Polyline points="15 5 8 12 15 19" stroke={EMERALD} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <ChevronLeft size={22} color={EMERALD} strokeWidth={2.4} />
             <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('teacher_orphan_report.header_title', 'Monthly Report')}</Text>
@@ -549,9 +503,7 @@ export default function TeacherOrphanReportScreen() {
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-            <Polyline points="15 5 8 12 15 19" stroke={EMERALD} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+          <ChevronLeft size={22} color={EMERALD} strokeWidth={2.4} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('teacher_orphan_report.header_title', 'Monthly Report')}</Text>
