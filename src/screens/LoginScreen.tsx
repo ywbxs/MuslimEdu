@@ -783,11 +783,6 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     backgroundColor: SURFACE,
-    shadowColor: '#0B3D2E',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 4,
   },
 
   fieldLabel: { fontSize: 12, fontWeight: '800', color: FAINT, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
