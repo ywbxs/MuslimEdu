@@ -22,26 +22,25 @@ import {
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
-// LoginScreen.tsx's own local-palette precedent. Edge-to-edge docked bar
-// (not a floating pill) with a raised circular center button for whichever
-// tab is this role's "primary action" (Admission for admin/superadmin, Scan
-// for teacher), nesting into a curved notch cut into the bar's top edge.
+// LoginScreen.tsx's own local-palette precedent. Flat, single-level bar -
+// every icon (including the center action) sits on the same row, same
+// height, no raised/notched center button. The earlier raised-FAB-in-a-
+// notch treatment was a Material "speed dial" pattern, not how Apple's own
+// tab bars work: Apple's tab items (including a distinct circular action
+// item, e.g. a capture/create button) all live in the same bar, at the
+// same level - visually distinct via shape/fill, never elevated out of
+// the bar itself.
 const ACTIVE = '#0D1E1C';
 const SUBTLE = '#6B8C88';
 const DANGER = '#D9534F';
 const CENTER_BTN_BG = '#16211F';
-// Fully transparent - the bar has no background of its own at all now, so
-// the icons and the center button float directly over whatever the screen
-// behind them is doing. The notch-cutout path (see buildBarPath) still
-// exists structurally but is a no-op visually while this is transparent -
-// left in place rather than ripped out so a solid fill can come back
-// later without rebuilding the shape.
+// Fully transparent - the bar has no background of its own, so the icons
+// float directly over whatever the screen behind them is doing.
 const BAR_BG = 'transparent';
 
-// Edge-to-edge docked bar, not a floating pill - full screen width, square
-// corners, no margin lifting it off the bottom edge, no border. Side
-// padding for the icons only (no outer margin, since the bar itself now
-// reaches the screen edges).
+// Edge-to-edge docked bar - full screen width, no margin lifting it off the
+// bottom edge. Side padding for the icons only (no outer margin, since the
+// bar itself reaches the screen edges).
 const BAR_SIDE_PADDING = 20;
 
 const BAR_PADDING_TOP = 14;
@@ -49,49 +48,10 @@ const BAR_PADDING_BOTTOM = 14;
 const ICON_SIZE = 24;
 const BAR_HEIGHT = BAR_PADDING_TOP + ICON_SIZE + BAR_PADDING_BOTTOM;
 
-const CENTER_BTN_SIZE = 52;
-const CENTER_BTN_RADIUS = CENTER_BTN_SIZE / 2;
-// The notch is a true semicircle, CONCENTRIC with the button: same center
-// point (the button's own center always lands exactly on the pill's top
-// edge - see centerBtn's `top: -CENTER_BTN_RADIUS` below, which makes that
-// true by construction regardless of any other spacing value). Its radius
-// is the button's own radius plus a small fixed gap, so the cutout traces
-// the button's exact circular curvature at a uniform distance all the way
-// around - a perfect circle, not an approximated wider/shallower dip.
-const NOTCH_GAP = 6;
-const NOTCH_RADIUS = CENTER_BTN_RADIUS + NOTCH_GAP;
-// Reserved gap between Chat and Alerts, matching the notch's opening width,
-// so they sit pulled in close to the button instead of the wide empty
-// stretch four evenly-flexed tabs would otherwise leave in the middle.
-const CENTER_GAP = NOTCH_RADIUS * 2;
-
-/**
- * Full-width rectangle, square corners, with a true semicircular notch cut
- * into the top-center for the raised button to nest into - drawn with a
- * single SVG elliptical-arc command (rx=ry=NOTCH_RADIUS), not an
- * approximated bezier dip, so it's exactly as round as the button by
- * definition, everywhere along the curve. Built directly in the bar's own
- * pixel dimensions (no stretched viewBox) so there's no non-uniform
- * scaling to throw the curve off.
- */
-function buildBarPath(width: number, height: number): string {
-  const cx = width / 2;
-  const R = NOTCH_RADIUS;
-  const left = cx - R;
-  const right = cx + R;
-  return [
-    `M 0,0`,
-    `L ${left},0`,
-    // sweep-flag 0 traces the arc through the BOTTOM of the circle centered
-    // at (cx, 0) - i.e. dipping down into the bar - rather than the top
-    // (which would bulge up and out of it).
-    `A ${R},${R} 0 0 0 ${right},0`,
-    `L ${width},0`,
-    `L ${width},${height}`,
-    `L 0,${height}`,
-    'Z',
-  ].join(' ');
-}
+// Sized to sit comfortably within the flat row (BAR_HEIGHT) alongside the
+// plain 24px icons - bigger than them for visual prominence as the primary
+// action, but not so big it needs to be raised out of the bar to fit.
+const CENTER_BTN_SIZE = 40;
 
 const Tab = createBottomTabNavigator();
 
@@ -123,7 +83,7 @@ function HomeIcon({ color }: { color: string }) {
 // admin center icon simply read as "add/admission".
 function AdmissionIcon({ color }: { color: string }) {
   return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
     </Svg>
   );
@@ -132,7 +92,7 @@ function AdmissionIcon({ color }: { color: string }) {
 // grades - see MyProgressScreen/StudentProgressScreen.tsx).
 function ProfileIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="8" r="3.4" stroke={color} strokeWidth={1.9} />
       <Path d="M4.5 19.5c0-3.6 3.3-6.2 7.5-6.2s7.5 2.6 7.5 6.2" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
@@ -175,7 +135,7 @@ function BellIcon({ color }: { color: string }) {
 }
 function ScanIcon({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path
         d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2"
         stroke={color}
@@ -217,12 +177,9 @@ function TabBar({ state, navigation, isStudent }: any) {
   const { unreadCount } = useNotifications();
   const { width: windowWidth } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 8);
-  const barWidth = windowWidth;
-  // The bar's own rendered height covers the icon row PLUS the safe-area
-  // gutter below it, so the white fill reaches the true screen edge instead
-  // of leaving a gap that would expose the screen's background there.
+  // Bar height covers the icon row PLUS the safe-area gutter below it, so
+  // the (transparent) bar's touch/layout area reaches the true screen edge.
   const totalBarHeight = BAR_HEIGHT + bottomInset;
-  const barPath = buildBarPath(barWidth, totalBarHeight);
 
   // MainTabs stays mounted underneath every screen pushed on top of it in
   // RootNavigator (e.g. ClassListScreen, GradingSystemsScreen - the ones
@@ -253,63 +210,70 @@ function TabBar({ state, navigation, isStudent }: any) {
     }
   };
 
+  // visibleRoutes is always [Home, Chat, Alerts, Menu] in that order (JSX
+  // registration order minus whichever center route was filtered out) -
+  // split it around the middle so the center action (real route or the
+  // student's synthetic MyProgress button) renders between Chat and Alerts,
+  // same visual position as before, but inline/same-level now instead of
+  // notched.
+  const beforeCenter = visibleRoutes.slice(0, 2);
+  const afterCenter = visibleRoutes.slice(2);
+
+  const renderRouteItem = (route: any) => {
+    const index = state.routes.indexOf(route);
+    const isRouteFocused = state.index === index;
+    const renderIcon = ICONS[route.name];
+    const color = isRouteFocused ? ACTIVE : SUBTLE;
+    return (
+      <PressableScale
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityState={isRouteFocused ? { selected: true } : {}}
+        onPress={() => goToRoute(route, isRouteFocused)}
+        style={styles.tabItem}
+        scaleTo={0.88}
+      >
+        <View style={styles.iconWrap}>
+          {renderIcon && renderIcon(color)}
+          {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
+        </View>
+      </PressableScale>
+    );
+  };
+
   return (
-    <View style={styles.tabBarWrap}>
+    <View
+      style={[
+        styles.tabBar,
+        { width: windowWidth, height: totalBarHeight, paddingBottom: bottomInset, backgroundColor: BAR_BG },
+      ]}
+    >
+      {beforeCenter.map(renderRouteItem)}
+
       {centerRouteName && (
         <PressableScale
-          style={styles.centerBtn}
+          style={styles.tabItem}
           scaleTo={0.9}
           onPress={() => goToRoute(state.routes[centerIndex], centerFocused)}
           accessibilityRole="button"
           accessibilityLabel={centerRouteName}
         >
-          {(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}
+          <View style={[styles.iconWrap, styles.centerIconWrap]}>{(ICONS[centerRouteName] ?? (() => null))('#FFFFFF')}</View>
         </PressableScale>
       )}
       {showStudentCenter && (
         <PressableScale
-          style={styles.centerBtn}
+          style={styles.tabItem}
           scaleTo={0.9}
           onPress={() => (navigation.getParent() ?? navigation).navigate('MyProgress')}
           accessibilityRole="button"
           accessibilityLabel="My Progress"
         >
-          {ICONS.MyProgress('#FFFFFF')}
+          <View style={[styles.iconWrap, styles.centerIconWrap]}>{ICONS.MyProgress('#FFFFFF')}</View>
         </PressableScale>
       )}
 
-      <View style={[styles.tabBar, { width: barWidth, height: totalBarHeight, paddingBottom: bottomInset }]}>
-        <Svg width={barWidth} height={totalBarHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
-          {/* The notch cutout is genuinely transparent - no white backing
-              shape and no border - it shows whatever's actually behind the
-              bar there. */}
-          <Path d={barPath} fill={BAR_BG} />
-        </Svg>
-        {visibleRoutes.map((route: any, i: number) => {
-          const index = state.routes.indexOf(route);
-          const isRouteFocused = state.index === index;
-          const renderIcon = ICONS[route.name];
-          const color = isRouteFocused ? ACTIVE : SUBTLE;
-
-          return (
-            <React.Fragment key={route.key}>
-              {i === 2 && <View style={styles.centerSpacer} pointerEvents="none" />}
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityState={isRouteFocused ? { selected: true } : {}}
-                onPress={() => goToRoute(route, isRouteFocused)}
-                style={styles.tabItem}
-                scaleTo={0.88}
-              >
-                <View style={styles.iconWrap}>
-                  {renderIcon && renderIcon(color)}
-                  {route.name === 'Alerts' && <TabBadge count={unreadCount} />}
-                </View>
-              </PressableScale>
-            </React.Fragment>
-          );
-        })}
-      </View>
+      {afterCenter.map(renderRouteItem)}
     </View>
   );
 }
@@ -462,50 +426,26 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  // No backgroundColor here - this wrapper is just a positioning box for the
-  // bar and the button, not a second white surface behind them. Only the
-  // bar's own SVG fill (BAR_BG) is white.
-  tabBarWrap: {},
-  // No shadow* or elevation here at all. shadow*-only (no elevation) was
-  // tried on the theory that Android only reacts to elevation and shadow*
-  // is a no-op there - but on this build, adding shadow* back brought the
-  // exact same symptoms as elevation had (the fill and notch cutout both
-  // disappeared again), so whatever the precise mechanism, this View can't
-  // carry any shadow property at all while its fill lives on a child Svg
-  // with no backgroundColor of its own.
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: BAR_SIDE_PADDING,
   },
-  // flex:1 per item + centered content - even horizontal distribution and
-  // vertical centering both come straight from flexbox, no manual pixel
-  // math to keep in sync with anything else. Home/Chat split the space left
-  // of centerSpacer, Alerts/Menu split the space right of it.
+  // flex:1 per item - even horizontal distribution and vertical centering
+  // both come straight from flexbox, no manual pixel math or reserved-gap
+  // spacer to keep in sync with a button size.
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  centerSpacer: { width: CENTER_GAP },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  centerBtn: {
-    position: 'absolute',
-    top: -CENTER_BTN_RADIUS,
-    left: '50%',
-    marginLeft: -CENTER_BTN_RADIUS,
+  // Same row, same height as every other icon - just a filled circle
+  // instead of a plain glyph, for visual prominence as the primary action.
+  centerIconWrap: {
     width: CENTER_BTN_SIZE,
     height: CENTER_BTN_SIZE,
-    borderRadius: CENTER_BTN_RADIUS,
+    borderRadius: CENTER_BTN_SIZE / 2,
     backgroundColor: CENTER_BTN_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-    // No shadow/elevation. The button's own drop shadow used to bleed into
-    // the transparent notch gap around it - a cast shadow needs a surface to
-    // land on, and where the notch is genuinely transparent (revealing the
-    // screen behind the bar) it just showed up as an isolated gray blob
-    // instead of blending into anything. The button's solid dark fill
-    // against the white pill gives it enough definition without one.
   },
   badge: {
     position: 'absolute',
