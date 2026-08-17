@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { COLORS, RADIUS, GLASS, BRAND } from '../../theme/glass';
@@ -18,6 +19,13 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
+// A real pixel cap, not a Yoga percentage - '88%' needs an ancestor with a
+// definite height to resolve against, and this sheet's parent
+// (KeyboardAvoidingView, at rest with no keyboard open) doesn't have one,
+// so the percentage was resolving unreliably and clipping content (the
+// second field in a step would just never render) instead of the
+// ScrollView below scrolling to reveal it.
+const MAX_SHEET_HEIGHT = Dimensions.get('window').height * 0.88;
 
 function CloseIcon({ color }: { color: string }) {
   return <X size={18} color={color} strokeWidth={2.2} />;
@@ -107,7 +115,7 @@ export default function AccountWizardSheet({
       <View style={styles.backdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { maxHeight: MAX_SHEET_HEIGHT }]}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>{title}</Text>
@@ -118,7 +126,12 @@ export default function AccountWizardSheet({
 
             <WizardStepHeader step={step + 1} labels={steps.map((s) => s.label)} />
 
-            <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={styles.stepScroll}
+              contentContainerStyle={styles.stepScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {current.render()}
             </ScrollView>
 
@@ -158,14 +171,21 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
     paddingBottom: 20,
-    maxHeight: '88%',
+    // maxHeight itself is set inline (MAX_SHEET_HEIGHT, a real pixel
+    // value) - see the constant's comment for why a Yoga percentage here
+    // was unreliable.
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 4 },
   title: { fontSize: 17, fontWeight: '700', color: INK },
   closeBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
-  stepScroll: { paddingHorizontal: 20 },
+  // flexShrink lets this give up space to the header/step-indicator/
+  // actions siblings above and below it instead of the sheet's maxHeight
+  // just clipping whatever doesn't fit - the actual bug (a step's second
+  // field silently not rendering) instead of a normal scrollable overflow.
+  stepScroll: { flexShrink: 1, flexGrow: 0 },
+  stepScrollContent: { paddingHorizontal: 20, paddingBottom: 4 },
   stepErrorText: { color: COLORS.danger, fontSize: 12.5, textAlign: 'center', paddingHorizontal: 20, marginTop: 8 },
 
   actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16 },
