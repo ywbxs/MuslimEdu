@@ -115,8 +115,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AdminAttendanceAnalytics',
   // Grading / gradebook / exams
   'GradingSystems',
-  'GradingSystemForm',
-  'GradeScaleBuilder',
+  'GradingSystemWizard',
   'GradeRelease',
   'AdminExamCategories',
   'AdminGradebookReview',

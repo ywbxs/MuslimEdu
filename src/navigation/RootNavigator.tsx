@@ -84,8 +84,7 @@ import AcademicTermsScreen from '../screens/admin/AcademicTermsScreen';
 import AcademicTermFormScreen from '../screens/admin/AcademicTermFormScreen';
 import InstitutionProfileScreen from '../screens/admin/InstitutionProfileScreen';
 import GradingSystemsScreen from '../screens/admin/GradingSystemsScreen';
-import GradingSystemFormScreen from '../screens/admin/GradingSystemFormScreen';
-import GradeScaleBuilderScreen from '../screens/admin/GradeScaleBuilderScreen';
+import GradingSystemWizardScreen from '../screens/admin/GradingSystemWizardScreen';
 import ProgramsCatalogScreen from '../screens/admin/ProgramsCatalogScreen';
 import ProgramFormScreen from '../screens/admin/ProgramFormScreen';
 import StudentIdentityScreen from '../screens/student/StudentIdentityScreen';
@@ -366,13 +365,8 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
-                name="GradingSystemForm"
-                component={GradingSystemFormScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
-              <Stack.Screen
-                name="GradeScaleBuilder"
-                component={GradeScaleBuilderScreen}
+                name="GradingSystemWizard"
+                component={GradingSystemWizardScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
