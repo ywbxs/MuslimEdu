@@ -19,7 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
 import { PickedImage, Post, PostPrivacy, createPost, repost, updatePost } from '../../services/postService';
-import { preparePostPhoto, InvalidPhotoTypeError } from '../../utils/imagePrep';
+import { preparePostPhoto, InvalidPhotoTypeError, MAX_POST_COMPOSER_PHOTO_BYTES } from '../../utils/imagePrep';
 import { checkImageModeration, ModeratedContentError } from '../../services/contentModerationService';
 import { WizardStepHeader } from '../../components/wizard/WizardKit';
 
@@ -32,7 +32,7 @@ const INK = '#1C1C1E';
 const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';
 const PLACEHOLDER = '#EDEFF2';
-const MAX_IMAGES = 6;
+const MAX_IMAGES = 20;
 
 function CloseIcon({ color = '#FFFFFF', size = 14 }: { color?: string; size?: number }) {
   return <X size={size} color={color} strokeWidth={2.4} />;
@@ -120,10 +120,10 @@ export default function CreatePostScreen() {
       for (const a of result.assets) {
         if (!a.uri) continue;
         try {
-          // Every photo gets squeezed down to ~200KB before it ever reaches
-          // the composer preview or the upload - keeps posts light on data
-          // and server storage regardless of the original camera resolution.
-          const prepared = await preparePostPhoto(a.uri, a.fileName, a.type, a.fileSize);
+          // Every photo gets squeezed down to ~100KB before it ever reaches
+          // the composer preview or the upload - a post can carry up to 20
+          // of them, so keeping each one small matters a lot here.
+          const prepared = await preparePostPhoto(a.uri, a.fileName, a.type, a.fileSize, MAX_POST_COMPOSER_PHOTO_BYTES);
           const candidate: PickedImage = { uri: prepared.uri, fileName: prepared.fileName, type: prepared.type };
 
           // Nudity/violence screening before the photo is ever added to the
@@ -277,7 +277,7 @@ export default function CreatePostScreen() {
                         </View>
                         <Text style={styles.addPhotoTitle}>{t('create_post.add_photos_title', 'Add Photos')}</Text>
                         <Text style={styles.addPhotoDesc}>
-                          {t('create_post.add_photos_desc', 'Choose up to 6 photos from your library')}
+                          {t('create_post.add_photos_desc', 'Choose up to 20 photos from your library')}
                         </Text>
                       </>
                     )}

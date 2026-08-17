@@ -153,7 +153,11 @@ export async function fetchFeed(
   return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'feed'), load);
 }
 
-/** POST /post_create (multipart) - content and/or up to 6 images */
+/**
+ * POST /post_create (multipart) - content and/or up to 20 images.
+ * The server-side max_images validation rule (if any) needs to allow 20,
+ * not whatever the previous composer limit of 6 was.
+ */
 export async function createPost(
   token: string,
   fields: { content?: string; privacy: PostPrivacy },
