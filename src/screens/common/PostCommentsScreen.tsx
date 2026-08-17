@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, MessageSquare, Send, Heart } from 'lucide-react-native';
+import { ChevronLeft, MessageSquare, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -47,6 +47,30 @@ function HeartIcon({ filled, size = 15 }: { filled: boolean; size?: number }) {
 }
 function CommentBubbleIcon({ size = 15 }: { size?: number }) {
   return <MessageSquare size={size} color={SUBTLE} strokeWidth={1.8} />;
+}
+function CameraToolIcon() {
+  return <Camera size={21} color={SUBTLE} strokeWidth={1.8} />;
+}
+function GifToolIcon() {
+  // No badge glyph in the icon set for "GIF" specifically - a small
+  // outlined tag reading "GIF" reads the same way the reference app's does.
+  return (
+    <View style={styles.gifBadge}>
+      <Text style={styles.gifBadgeText}>GIF</Text>
+    </View>
+  );
+}
+function SmileToolIcon() {
+  return <Smile size={21} color={SUBTLE} strokeWidth={1.8} />;
+}
+function StickerToolIcon() {
+  return <Sticker size={21} color={SUBTLE} strokeWidth={1.8} />;
+}
+function SortIcon() {
+  return <ArrowUpDown size={18} color={SUBTLE} strokeWidth={1.8} />;
+}
+function EmptyIllustration() {
+  return <MessagesSquare size={56} color={INK} strokeWidth={1.6} />;
 }
 
 function timeAgo(dateStr: string): string {
@@ -108,6 +132,8 @@ export default function PostCommentsScreen() {
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<PostComment | null>(null);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const inputRef = useRef<TextInput>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -125,7 +151,31 @@ export default function PostCommentsScreen() {
     load();
   }, [load]);
 
-  const visibleComments = useMemo(() => filterCommentsByGender(comments, user?.gender), [comments, user?.gender]);
+  const visibleComments = useMemo(() => {
+    const filtered = filterCommentsByGender(comments, user?.gender);
+    // Only reorders top-level threads - replies within a thread stay in the
+    // order they were posted, same as every comment UI this one is modeled
+    // after (reordering replies independently of their parent reads as a
+    // shuffled conversation, not a sort).
+    const sorted = [...filtered].sort((a, b) => {
+      const at = new Date(a.created_at).getTime();
+      const bt = new Date(b.created_at).getTime();
+      return sortOrder === 'newest' ? bt - at : at - bt;
+    });
+    return sorted;
+  }, [comments, user?.gender, sortOrder]);
+
+  const toggleSort = () => setSortOrder((s) => (s === 'newest' ? 'oldest' : 'newest'));
+
+  // Camera/GIF/sticker attachments aren't backed by anything yet - no image
+  // field exists on a comment server-side, no GIF-search integration, no
+  // sticker asset set. Honest "not yet" rather than a button that silently
+  // does nothing when tapped.
+  const notAvailable = () =>
+    Alert.alert(
+      t('post_comments.not_ready_title', 'Not available yet'),
+      t('post_comments.not_ready_desc', 'Photo, GIF, and sticker attachments on comments are coming soon.'),
+    );
 
   const send = async () => {
     if (!token || !text.trim() || sending) return;
@@ -265,7 +315,11 @@ export default function PostCommentsScreen() {
           renderItem={({ item }) => renderComment(item, false)}
           ListEmptyComponent={
             <View style={styles.centerFill}>
-              <Text style={styles.emptyText}>{t('post_comments.empty', 'No comments yet. Say something!')}</Text>
+              <EmptyIllustration />
+              <Text style={styles.emptyTitle}>{t('post_comments.empty_title', 'No comments yet')}</Text>
+              <Text style={styles.emptyText}>
+                {t('post_comments.empty_desc', 'Someone has to go first. Lead the way.')}
+              </Text>
             </View>
           }
         />
@@ -282,18 +336,50 @@ export default function PostCommentsScreen() {
         </View>
       )}
 
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          placeholder={replyTo ? `${t('post_comments.reply_to', 'Reply to')} ${replyTo.author?.name ?? ''}...` : t('post_comments.write_comment', 'Write a comment...')}
-          placeholderTextColor={SUBTLE}
-          value={text}
-          onChangeText={setText}
-          multiline
-        />
-        <TouchableOpacity onPress={send} disabled={!text.trim() || sending} hitSlop={10} style={styles.sendBtn}>
-          {sending ? <ActivityIndicator size="small" color={EMERALD} /> : <SendIcon disabled={!text.trim()} />}
-        </TouchableOpacity>
+      <View style={styles.composer}>
+        <View style={styles.composerInputRow}>
+          <TextInput
+            ref={inputRef}
+            style={styles.composerInput}
+            placeholder={
+              replyTo
+                ? `${t('post_comments.reply_to', 'Reply to')} ${replyTo.author?.name ?? ''}...`
+                : t('post_comments.comment_as', 'Comment as {name}').replace('{name}', user?.name ?? t('post_comments.you', 'you'))
+            }
+            placeholderTextColor={SUBTLE}
+            value={text}
+            onChangeText={setText}
+            multiline
+          />
+          {text.trim().length > 0 && (
+            <TouchableOpacity onPress={send} disabled={sending} hitSlop={10} style={styles.inlineSendBtn}>
+              {sending ? <ActivityIndicator size="small" color={EMERALD} /> : <SendIcon disabled={false} />}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.composerToolsRow}>
+          <View style={styles.composerToolsLeft}>
+            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
+              <CameraToolIcon />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
+              <GifToolIcon />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => inputRef.current?.focus()} hitSlop={8}>
+              <SmileToolIcon />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
+              <StickerToolIcon />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={toggleSort} hitSlop={8} style={styles.sortBtn}>
+            <SortIcon />
+            <Text style={styles.sortBtnText}>
+              {sortOrder === 'newest' ? t('post_comments.sort_newest', 'Newest') : t('post_comments.sort_oldest', 'Oldest')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <UserProfileModal
@@ -319,6 +405,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
+  emptyTitle: { color: INK, fontSize: 18, fontWeight: '800', marginTop: 16, marginBottom: 6 },
   emptyText: { color: SUBTLE, fontSize: 14, textAlign: 'center' },
   commentRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, alignItems: 'flex-start' },
   replyRow: { flexDirection: 'row', paddingLeft: 34, paddingTop: 14, alignItems: 'flex-start' },
@@ -341,15 +428,15 @@ const styles = StyleSheet.create({
   },
   replyBannerText: { fontSize: 12, color: INK, flex: 1 },
   replyBannerCancel: { fontSize: 12, color: EMERALD, fontWeight: '700', marginLeft: 10 },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+  composer: {
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingTop: 10,
+    paddingBottom: 8,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
   },
-  input: {
+  composerInputRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  composerInput: {
     flex: 1,
     backgroundColor: '#F5F6F7',
     borderRadius: 18,
@@ -359,5 +446,25 @@ const styles = StyleSheet.create({
     color: INK,
     maxHeight: 100,
   },
-  sendBtn: { marginLeft: 10, marginBottom: 6 },
+  inlineSendBtn: { marginLeft: 10, marginBottom: 6 },
+
+  composerToolsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  composerToolsLeft: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  toolBtn: { alignItems: 'center', justifyContent: 'center' },
+  gifBadge: {
+    borderWidth: 1.4,
+    borderColor: SUBTLE,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  gifBadgeText: { fontSize: 10, fontWeight: '800', color: SUBTLE, letterSpacing: 0.2 },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sortBtnText: { fontSize: 12.5, fontWeight: '600', color: SUBTLE },
 });
