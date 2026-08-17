@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { COLORS, RADIUS, GLASS, BRAND } from '../../theme/glass';
+import { WizardStepHeader } from './WizardKit';
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -35,10 +36,10 @@ export interface WizardStepDef {
  * on the inputs (just placeholder text floating with nothing marking it
  * as a field). Reusable across all three since they collect the exact
  * same field set (identity, account credentials, contact info); the
- * step-name-plus-segmented-track progress header is the same shape
- * InstitutionProfileScreen's wizard uses, not the numbered-circle-row
- * pattern (that one both reads as more generic and doesn't fit many
- * steps on a phone width without clipping).
+ * progress header reuses WizardStepHeader from WizardKit.tsx - the same
+ * numbered-circle-plus-connector stepper SchoolRegistrationScreen and
+ * AlumniRegistrationScreen already use - so every wizard in the app reads
+ * as one consistent design instead of each screen inventing its own.
  *
  * Steps only ever validate+advance locally; the caller's `onFinish` is
  * the only thing that hits the network, on the last step.
@@ -115,17 +116,7 @@ export default function AccountWizardSheet({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.progressTopRow}>
-              <Text style={styles.progressStepName}>{current.label}</Text>
-              <Text style={styles.progressStepCount}>
-                Step {step + 1} of {steps.length}
-              </Text>
-            </View>
-            <View style={styles.progressTrackRow}>
-              {steps.map((s, i) => (
-                <View key={s.key} style={[styles.progressSegment, i <= step && styles.progressSegmentFilled]} />
-              ))}
-            </View>
+            <WizardStepHeader step={step + 1} labels={steps.map((s) => s.label)} />
 
             <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {current.render()}
@@ -173,13 +164,6 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 4 },
   title: { fontSize: 17, fontWeight: '700', color: INK },
   closeBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-
-  progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 12, marginBottom: 8 },
-  progressStepName: { fontSize: 14.5, fontWeight: '800', color: INK },
-  progressStepCount: { fontSize: 12, fontWeight: '600', color: SUBTLE },
-  progressTrackRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 20, marginBottom: 16 },
-  progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: HAIRLINE },
-  progressSegmentFilled: { backgroundColor: BRAND.emeraldDeep },
 
   stepScroll: { paddingHorizontal: 20 },
   stepErrorText: { color: COLORS.danger, fontSize: 12.5, textAlign: 'center', paddingHorizontal: 20, marginTop: 8 },

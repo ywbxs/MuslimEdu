@@ -21,6 +21,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS, BRAND } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { WizardStepHeader } from '../../components/wizard/WizardKit';
 import {
   prepareProfilePhoto,
   InvalidPhotoTypeError,
@@ -351,21 +352,7 @@ export default function InstitutionProfileScreen() {
       </View>
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.progressHeader}>
-          <View style={styles.progressTopRow}>
-            <Text style={styles.progressStepName}>{stepLabel(currentStepKey)}</Text>
-            <Text style={styles.progressStepCount}>
-              {t('institution_profile.step_count', 'Step {current} of {total}')
-                .replace('{current}', String(step + 1))
-                .replace('{total}', String(STEP_KEYS.length))}
-            </Text>
-          </View>
-          <View style={styles.progressTrackRow}>
-            {STEP_KEYS.map((key, i) => (
-              <View key={key} style={[styles.progressSegment, i <= step && styles.progressSegmentFilled]} />
-            ))}
-          </View>
-        </View>
+        <WizardStepHeader step={step + 1} labels={STEP_KEYS.map(stepLabel)} />
 
         {error ? (
           <View style={styles.errorBanner}>
@@ -691,33 +678,6 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-    // Progress header - a slim segmented bar + "Step X of Y" instead of a
-    // row of numbered circles with labels underneath. The circle-row
-    // pattern is a generic template stepper (and doesn't fit 6 items on a
-    // phone width without clipping); this is the same shape Apple's own
-    // multi-step flows use (Setup Assistant, Fitness onboarding) - a
-    // step name, a count, and a thin filled track. Scales to any number
-    // of steps with zero overflow risk since every segment is flex:1.
-    progressHeader: {
-      paddingHorizontal: 20,
-      paddingTop: 14,
-      paddingBottom: 16,
-      backgroundColor: theme.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-    progressStepName: { fontSize: 15, fontWeight: '800', color: theme.textPrimary },
-    progressStepCount: { fontSize: 12, fontWeight: '600', color: theme.textSecondary },
-    progressTrackRow: { flexDirection: 'row', gap: 6 },
-    progressSegment: {
-      flex: 1,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.background === 'transparent' ? 'rgba(0,0,0,0.08)' : theme.border,
-    },
-    progressSegmentFilled: { backgroundColor: BRAND.emeraldDeep },
 
     stepScroll: { flex: 1 },
     content: { padding: 20, paddingTop: 4 },
