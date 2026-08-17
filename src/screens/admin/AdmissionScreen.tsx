@@ -84,7 +84,19 @@ const ORPHAN_FIELDS: {
   { key: 'admission_reason', label: 'Admission reason', multiline: true, required: true },
 ];
 
-type StepKey = 'basic' | 'photo' | 'signature' | 'class' | 'orphan';
+// Basic Info used to be one lump step with all 10 of these fields on it at
+// once - split into one field per step (Typeform-style) so the wizard reads
+// as ten short, focused screens (1-10) instead of one long form buried
+// behind a single "Basic Info" step.
+type BasicStepKey =
+  | 'name' | 'name_ar' | 'email' | 'password' | 'phone' | 'address'
+  | 'emergency_contact_name' | 'emergency_contact_phone' | 'gender' | 'birthday';
+const BASIC_STEP_KEY_SET = new Set<BasicStepKey>([
+  'name', 'name_ar', 'email', 'password', 'phone', 'address',
+  'emergency_contact_name', 'emergency_contact_phone', 'gender', 'birthday',
+]);
+
+type StepKey = BasicStepKey | 'photo' | 'signature' | 'class' | 'orphan';
 type FieldErrors = Partial<Record<string, string>>;
 
 function parseDateValue(value: string): Date {
@@ -282,7 +294,16 @@ export default function AdmissionScreen() {
   }, [stepIndex, stepAnim]);
 
   const steps: { key: StepKey; title: string; subtitle: string }[] = [
-    { key: 'basic', title: t('admission.step_basic_title', 'Basic Info'), subtitle: t('admission.step_basic_subtitle', "The student's name, login, and contact details.") },
+    { key: 'name', title: t('admission.field_name', 'Full name'), subtitle: t('admission.step_name_subtitle', "The student's full legal name.") },
+    { key: 'name_ar', title: t('admission.field_name_ar', 'Arabic name'), subtitle: t('admission.step_name_ar_subtitle', "The student's name in Arabic.") },
+    { key: 'email', title: t('admission.field_email', 'Email'), subtitle: t('admission.step_email_subtitle', 'Used to sign in to the student portal.') },
+    { key: 'password', title: t('admission.field_password', 'Password'), subtitle: t('admission.step_password_subtitle', 'At least 6 characters - the student will use this to log in.') },
+    { key: 'phone', title: t('admission.field_phone', 'Phone'), subtitle: t('admission.step_phone_subtitle', 'A contact number for the student.') },
+    { key: 'address', title: t('admission.field_address', 'Address'), subtitle: t('admission.step_address_subtitle', 'Where the student currently lives.') },
+    { key: 'emergency_contact_name', title: t('admission.field_emergency_contact_name', 'Emergency contact name'), subtitle: t('admission.step_emergency_contact_name_subtitle', 'Who to reach in an emergency.') },
+    { key: 'emergency_contact_phone', title: t('admission.field_emergency_contact_phone', 'Emergency contact phone'), subtitle: t('admission.step_emergency_contact_phone_subtitle', 'Their phone number.') },
+    { key: 'gender', title: t('admission.field_gender', 'Gender'), subtitle: t('admission.step_gender_subtitle', "Select the student's gender.") },
+    { key: 'birthday', title: t('admission.field_birthday', 'Birthday'), subtitle: t('admission.step_birthday_subtitle', "The student's date of birth.") },
     { key: 'photo', title: t('admission.step_photo_title', 'Profile Picture'), subtitle: t('admission.step_photo_subtitle', 'A clear photo helps staff recognize this student.') },
     { key: 'signature', title: t('admission.step_signature_title', 'Signature'), subtitle: t('admission.step_signature_subtitle', "Draw the student's signature for their ID card - optional, skip if unavailable.") },
     // Orphan schools don't organize children by class/section - they're
@@ -300,18 +321,26 @@ export default function AdmissionScreen() {
   const step = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
 
-  const validateBasic = (): FieldErrors => {
+  // One field's worth of validation per basic step, instead of all 10 at
+  // once - each step only blocks Next on its own field being wrong.
+  const validateBasicStep = (key: BasicStepKey): FieldErrors => {
     const errs: FieldErrors = {};
-    BASE_FIELDS.forEach((f) => {
-      if (f.required && !(form[f.key] as string)?.trim()) {
-        errs[f.key as string] = t('admission.error_field_required', '{field} is required.').replace('{field}', fieldLabel(f));
+    const fieldDef = BASE_FIELDS.find((f) => f.key === key);
+    if (fieldDef) {
+      if (fieldDef.required && !(form[fieldDef.key] as string)?.trim()) {
+        errs[fieldDef.key as string] = t('admission.error_field_required', '{field} is required.').replace('{field}', fieldLabel(fieldDef));
       }
-    });
-    if (form.password && form.password.length < 6) {
-      errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
+      if (fieldDef.key === 'password' && form.password && form.password.length < 6) {
+        errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
+      }
+      return errs;
     }
-    if (!form.gender) errs.gender = t('admission.error_gender_required', 'Gender is required.');
-    if (!form.birthday?.trim()) errs.birthday = t('admission.error_birthday_required', 'Birthday is required.');
+    if (key === 'gender' && !form.gender) {
+      errs.gender = t('admission.error_gender_required', 'Gender is required.');
+    }
+    if (key === 'birthday' && !form.birthday?.trim()) {
+      errs.birthday = t('admission.error_birthday_required', 'Birthday is required.');
+    }
     return errs;
   };
 
@@ -333,7 +362,7 @@ export default function AdmissionScreen() {
 
   const goNext = async () => {
     let errs: FieldErrors = {};
-    if (step.key === 'basic') errs = validateBasic();
+    if (BASIC_STEP_KEY_SET.has(step.key as BasicStepKey)) errs = validateBasicStep(step.key as BasicStepKey);
     if (step.key === 'photo' && !photo) {
       setPhotoError(t('admission.error_photo_required', 'A profile picture is required.'));
       return;
@@ -406,33 +435,22 @@ export default function AdmissionScreen() {
   };
 
   const renderStepBody = () => {
-    switch (step.key) {
-      case 'basic':
+    if (BASIC_STEP_KEY_SET.has(step.key as BasicStepKey)) {
+      if (step.key === 'gender') {
+        return (
+          <ChipGroup
+            label={t('admission.field_gender', 'Gender')}
+            options={GENDER_OPTIONS}
+            selectedId={form.gender}
+            onSelect={(id) => set('gender', id)}
+            required
+            error={fieldErrors.gender}
+          />
+        );
+      }
+      if (step.key === 'birthday') {
         return (
           <>
-            {BASE_FIELDS.map((f) => (
-              <FormField
-                key={f.key}
-                label={fieldLabel(f)}
-                value={(form[f.key] as string) ?? ''}
-                onChangeText={(value) => set(f.key, value)}
-                required={f.required}
-                error={fieldErrors[f.key]}
-                keyboardType={f.keyboard ?? 'default'}
-                secure={f.secure}
-                autoCapitalize={f.key === 'email' || f.secure ? 'none' : 'words'}
-              />
-            ))}
-
-            <ChipGroup
-              label={t('admission.field_gender', 'Gender')}
-              options={GENDER_OPTIONS}
-              selectedId={form.gender}
-              onSelect={(id) => set('gender', id)}
-              required
-              error={fieldErrors.gender}
-            />
-
             <AdmissionDateField
               label={t('admission.field_birthday', 'Birthday')}
               value={form.birthday ?? ''}
@@ -440,7 +458,6 @@ export default function AdmissionScreen() {
               required
               error={fieldErrors.birthday}
             />
-
             <View style={styles.wrap}>
               <Text style={styles.helperText}>
                 {t('admission.student_code_auto_note', 'A student code will be assigned automatically, based on your Student & Staff Codes setup.')}
@@ -448,7 +465,23 @@ export default function AdmissionScreen() {
             </View>
           </>
         );
+      }
+      const fieldDef = BASE_FIELDS.find((f) => f.key === step.key)!;
+      return (
+        <FormField
+          label={fieldLabel(fieldDef)}
+          value={(form[fieldDef.key] as string) ?? ''}
+          onChangeText={(value) => set(fieldDef.key, value)}
+          required={fieldDef.required}
+          error={fieldErrors[fieldDef.key]}
+          keyboardType={fieldDef.keyboard ?? 'default'}
+          secure={fieldDef.secure}
+          autoCapitalize={fieldDef.key === 'email' || fieldDef.secure ? 'none' : 'words'}
+        />
+      );
+    }
 
+    switch (step.key) {
       case 'photo':
         return (
           <PhotoField
