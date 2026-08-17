@@ -648,7 +648,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="PostComments"
                 component={PostCommentsScreen}
-                options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+                // transparentModal, not modal - PostCommentsScreen renders
+                // itself as a partial-height draggable sheet with its own
+                // backdrop, so the feed underneath needs to stay visible/
+                // mounted rather than being replaced by an opaque card.
+                options={{ animation: 'slide_from_bottom', presentation: 'transparentModal' }}
               />
               <Stack.Screen
                 name="ImageViewer"

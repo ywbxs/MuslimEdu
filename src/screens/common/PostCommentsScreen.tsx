@@ -10,9 +10,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  PanResponder,
+  Pressable,
+  Easing,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { X, MessagesSquare, Send, Heart, ArrowUpDown } from 'lucide-react-native';
+import { MessagesSquare, Send, Heart, ArrowUpDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -35,9 +40,6 @@ const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';
 const HEART_RED = '#E0245E';
 
-function CloseIcon() {
-  return <X size={20} color={INK} strokeWidth={2.2} />;
-}
 function SendIcon({ disabled }: { disabled: boolean }) {
   return <Send size={20} color={disabled ? SUBTLE : EMERALD} strokeWidth={1.8} />;
 }
@@ -113,6 +115,36 @@ export default function PostCommentsScreen() {
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const inputRef = useRef<TextInput>(null);
+
+  // Drag-to-dismiss: this is a bottom sheet (not full height - the backdrop
+  // above it stays visible), so there's no X button. Dragging the handle
+  // down past a threshold, or tapping the backdrop, slides the sheet the
+  // rest of the way off-screen locally before actually popping the route -
+  // otherwise the navigator's own exit transition (which doesn't know about
+  // this drag offset) would visibly jump back to the sheet's un-dragged
+  // position for a frame.
+  const { height: windowHeight } = useWindowDimensions();
+  const translateY = useRef(new Animated.Value(0)).current;
+  const dismiss = () => {
+    Animated.timing(translateY, {
+      toValue: windowHeight,
+      duration: 220,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => navigation.goBack());
+  };
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 6,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) translateY.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 100) dismiss();
+        else Animated.spring(translateY, { toValue: 0, friction: 11, tension: 70, useNativeDriver: true }).start();
+      },
+    }),
+  ).current;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -270,96 +302,100 @@ export default function PostCommentsScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      // 'height' on Android, not undefined - this screen is presented as a
-      // native-stack modal (RootNavigator: presentation: 'modal'), which on
-      // Android renders outside the Activity's own window, so the OS's
-      // windowSoftInputMode="adjustResize" never resizes it the way a
-      // normal pushed screen gets resized. Left to `undefined` the keyboard
-      // just overlaps the composer instead of pushing it up - RN has to
-      // drive the resize itself here.
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}
-    >
-      {/* Drag handle + centered title + a close X instead of a back chevron -
-          this is a bottom sheet (slides up over the feed), not a pushed
-          screen, so "back" is the wrong affordance for dismissing it. */}
-      <View style={[styles.sheetTop, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.dragHandle} />
-        <View style={styles.header}>
-          <View style={styles.headerSpacer} />
+    <View style={styles.root}>
+      {/* Tapping the backdrop (the part of the previous screen still
+          visible above the sheet - RootNavigator presents this route as
+          presentation: 'transparentModal') dismisses the same way dragging
+          the handle down does. */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+
+      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          // 'height' on Android, not undefined - this screen is presented
+          // as a native-stack modal, which on Android renders outside the
+          // Activity's own window, so windowSoftInputMode="adjustResize"
+          // never resizes it the way a normal pushed screen gets resized.
+          // Left to `undefined` the keyboard just overlaps the composer
+          // instead of pushing it up - RN has to drive the resize itself.
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Drag handle only - no close X. Dragging down (or tapping the
+              backdrop above) is how this sheet dismisses. panHandlers are
+              scoped to just this small zone, not the whole sheet, so
+              scrolling the comment list and tapping the title still work
+              normally. */}
+          <View {...panResponder.panHandlers} style={styles.dragZone}>
+            <View style={styles.dragHandle} />
+          </View>
           <Text style={styles.headerTitle}>{t('post_comments.title', 'Comments')}</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.closeBtn}>
-            <CloseIcon />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator color={EMERALD} />
-        </View>
-      ) : (
-        <FlatList
-          data={visibleComments}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={visibleComments.length === 0 ? { flexGrow: 1 } : { paddingVertical: 10 }}
-          renderItem={({ item }) => renderComment(item, false)}
-          ListEmptyComponent={
+          {loading ? (
             <View style={styles.centerFill}>
-              <EmptyIllustration />
-              <Text style={styles.emptyTitle}>{t('post_comments.empty_title', 'No comments yet')}</Text>
-              <Text style={styles.emptyText}>
-                {t('post_comments.empty_desc', 'Someone has to go first. Lead the way.')}
-              </Text>
+              <ActivityIndicator color={EMERALD} />
             </View>
-          }
-        />
-      )}
-
-      {replyTo && (
-        <View style={styles.replyBanner}>
-          <Text style={styles.replyBannerText} numberOfLines={1}>
-            {t('post_comments.replying_to', 'Replying to')} {replyTo.author?.name ?? t('post_comments.comment', 'comment')}
-          </Text>
-          <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={8}>
-            <Text style={styles.replyBannerCancel}>{t('common.cancel', 'Cancel')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.composer}>
-        <View style={styles.composerInputRow}>
-          <TextInput
-            ref={inputRef}
-            style={styles.composerInput}
-            placeholder={
-              replyTo
-                ? `${t('post_comments.reply_to', 'Reply to')} ${replyTo.author?.name ?? ''}...`
-                : t('post_comments.comment_as', 'Comment as {name}').replace('{name}', user?.name ?? t('post_comments.you', 'you'))
-            }
-            placeholderTextColor={SUBTLE}
-            value={text}
-            onChangeText={setText}
-            multiline
-          />
-          {text.trim().length > 0 && (
-            <TouchableOpacity onPress={send} disabled={sending} hitSlop={10} style={styles.inlineSendBtn}>
-              {sending ? <ActivityIndicator size="small" color={EMERALD} /> : <SendIcon disabled={false} />}
-            </TouchableOpacity>
+          ) : (
+            <FlatList
+              data={visibleComments}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={visibleComments.length === 0 ? { flexGrow: 1 } : { paddingVertical: 10 }}
+              renderItem={({ item }) => renderComment(item, false)}
+              ListEmptyComponent={
+                <View style={styles.centerFill}>
+                  <EmptyIllustration />
+                  <Text style={styles.emptyTitle}>{t('post_comments.empty_title', 'No comments yet')}</Text>
+                  <Text style={styles.emptyText}>
+                    {t('post_comments.empty_desc', 'Someone has to go first. Lead the way.')}
+                  </Text>
+                </View>
+              }
+            />
           )}
-        </View>
 
-        <View style={styles.composerToolsRow}>
-          <TouchableOpacity onPress={toggleSort} hitSlop={8} style={styles.sortBtn}>
-            <SortIcon />
-            <Text style={styles.sortBtnText}>
-              {sortOrder === 'newest' ? t('post_comments.sort_newest', 'Newest') : t('post_comments.sort_oldest', 'Oldest')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          {replyTo && (
+            <View style={styles.replyBanner}>
+              <Text style={styles.replyBannerText} numberOfLines={1}>
+                {t('post_comments.replying_to', 'Replying to')} {replyTo.author?.name ?? t('post_comments.comment', 'comment')}
+              </Text>
+              <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={8}>
+                <Text style={styles.replyBannerCancel}>{t('common.cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            <View style={styles.composerInputRow}>
+              <TextInput
+                ref={inputRef}
+                style={styles.composerInput}
+                placeholder={
+                  replyTo
+                    ? `${t('post_comments.reply_to', 'Reply to')} ${replyTo.author?.name ?? ''}...`
+                    : t('post_comments.comment_as', 'Comment as {name}').replace('{name}', user?.name ?? t('post_comments.you', 'you'))
+                }
+                placeholderTextColor={SUBTLE}
+                value={text}
+                onChangeText={setText}
+                multiline
+              />
+              {text.trim().length > 0 && (
+                <TouchableOpacity onPress={send} disabled={sending} hitSlop={10} style={styles.inlineSendBtn}>
+                  {sending ? <ActivityIndicator size="small" color={EMERALD} /> : <SendIcon disabled={false} />}
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.composerToolsRow}>
+              <TouchableOpacity onPress={toggleSort} hitSlop={8} style={styles.sortBtn}>
+                <SortIcon />
+                <Text style={styles.sortBtnText}>
+                  {sortOrder === 'newest' ? t('post_comments.sort_newest', 'Newest') : t('post_comments.sort_oldest', 'Oldest')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Animated.View>
 
       <UserProfileModal
         userId={profileUserId}
@@ -367,30 +403,34 @@ export default function PostCommentsScreen() {
         onClose={() => setProfileUserId(null)}
         onOpenProfile={setProfileUserId}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas },
-  sheetTop: {
+  // Backdrop fills the whole screen; the previous screen (feed) shows
+  // through it since RootNavigator presents this route as
+  // presentation: 'transparentModal' rather than an opaque 'modal'.
+  root: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,20,23,0.45)' },
+  sheet: {
+    height: '85%',
     backgroundColor: COLORS.canvas,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
   },
-  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginBottom: 10 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+  flex: { flex: 1 },
+  dragZone: { alignItems: 'center', paddingTop: 10, paddingBottom: 8 },
+  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1' },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: INK,
+    textAlign: 'center',
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
   },
-  headerSpacer: { width: 30 },
-  closeBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   emptyTitle: { color: INK, fontSize: 18, fontWeight: '800', marginTop: 16, marginBottom: 6 },
   emptyText: { color: SUBTLE, fontSize: 14, textAlign: 'center' },
