@@ -113,8 +113,28 @@ export default function AccountWizardSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
-        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {/* Absolutely positioned (not a flex sibling) so it doesn't compete
+            with the KeyboardAvoidingView below for vertical space - see that
+            view's comment for why it needs the full backdrop height to
+            itself. Renders first, so the sheet still draws on top of it. */}
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        {/* behavior="height" computes its shrink amount as (its own last-
+            measured layout height) minus (keyboard height). Without an
+            explicit flex:1 here, that measured height was just this view's
+            shrink-wrapped content height (i.e. the sheet's own height) -
+            often *smaller* than the keyboard itself, so the subtraction
+            went to ~0 and the whole sheet visually collapsed to just its
+            handle/header the moment a field was focused. flex:1 gives it
+            the full backdrop height as a stable reference instead;
+            justifyContent keeps the sheet pinned to the bottom the same as
+            before, and pointerEvents="box-none" lets taps in the now-larger
+            empty area above the sheet still reach the dismiss overlay
+            underneath. */}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoider}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          pointerEvents="box-none"
+        >
           <View style={[styles.sheet, { maxHeight: MAX_SHEET_HEIGHT }]}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
@@ -164,7 +184,10 @@ export default function AccountWizardSheet({
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1 },
+  // flex:1 + justifyContent so this has a stable full-height layout frame
+  // for "height" behavior's math (see the render-time comment) while still
+  // keeping the sheet pinned to the bottom.
+  keyboardAvoider: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: GLASS_SURFACE_STRONG,
