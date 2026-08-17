@@ -293,8 +293,21 @@ export default function InstitutionProfileScreen() {
     }
   };
 
-  const isLastStep = step === STEP_KEYS.length - 1;
-  const currentStepKey = STEP_KEYS[step];
+  // Orphan schools skip two steps entirely: Type, because the institution
+  // type is a one-time choice made at registration/onboarding (changing it
+  // here would be re-founding the school as something else, not editing a
+  // profile field) - and Structure, because "academic year structure"
+  // describes a class-based curriculum orphan schools don't have (same
+  // boundary orphanSchool.ts already draws for the rest of the academic
+  // tile set). Both stay available for every other institution type.
+  const isOrphanSchool = institutionType === 'orphanage';
+  const visibleStepKeys = useMemo(
+    () => STEP_KEYS.filter((k) => !(isOrphanSchool && (k === 'type' || k === 'structure'))),
+    [isOrphanSchool],
+  );
+
+  const isLastStep = step === visibleStepKeys.length - 1;
+  const currentStepKey = visibleStepKeys[step];
 
   const goNext = () => {
     setStepError(null);
@@ -309,7 +322,7 @@ export default function InstitutionProfileScreen() {
     if (isLastStep) {
       onSave();
     } else {
-      setStep((s) => Math.min(STEP_KEYS.length - 1, s + 1));
+      setStep((s) => Math.min(visibleStepKeys.length - 1, s + 1));
     }
   };
 
@@ -352,7 +365,7 @@ export default function InstitutionProfileScreen() {
       </View>
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <WizardStepHeader step={step + 1} labels={STEP_KEYS.map(stepLabel)} />
+        <WizardStepHeader step={step + 1} labels={visibleStepKeys.map(stepLabel)} />
 
         {error ? (
           <View style={styles.errorBanner}>
