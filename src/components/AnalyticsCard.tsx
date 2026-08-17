@@ -6,14 +6,6 @@ import { fetchAcademicAnalytics, Analytics } from '../services/academicAnalytics
 import { fetchSetupStatus, SchoolProfile } from '../services/academicSetupService';
 import { Skeleton } from './Skeleton';
 
-const INSTITUTION_LABELS: Record<string, string> = {
-  mahad: 'Mahad',
-  madrasa: 'Madrasa',
-  markaz: 'Markaz',
-  regular_school: 'Regular School',
-  orphanage: 'Orphanage',
-};
-
 const EMERALD = '#1FAE64';
 const PALE_GREEN = '#7FD9A8';
 // Same faux-glass values MonthlyReportsCard uses - kept identical so every
@@ -113,7 +105,6 @@ function schoolInitials(name: string | null): string {
 }
 
 function SchoolIdentityStrip({ school, onEdit }: { school: SchoolProfile; onEdit: () => void }) {
-  const institutionLabel = school.institution_type ? INSTITUTION_LABELS[school.institution_type] : null;
   return (
     <View style={styles.schoolStrip}>
       {school.logo ? (
@@ -131,7 +122,11 @@ function SchoolIdentityStrip({ school, onEdit }: { school: SchoolProfile; onEdit
         <Text style={styles.schoolName} numberOfLines={1}>
           {school.name ?? 'Your school'}
         </Text>
-        {institutionLabel ? <Text style={styles.schoolType}>{institutionLabel}</Text> : null}
+        {school.address ? (
+          <Text style={styles.schoolAddress} numberOfLines={1}>
+            {school.address}
+          </Text>
+        ) : null}
       </View>
       <Pressable
         onPress={onEdit}
@@ -344,7 +339,7 @@ const styles = StyleSheet.create({
   },
   schoolInitials: { color: PALE_GREEN, fontSize: 14, fontWeight: '800' },
   schoolName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  schoolType: { color: 'rgba(255,255,255,0.6)', fontSize: 11.5, fontWeight: '600', marginTop: 2 },
+  schoolAddress: { color: 'rgba(255,255,255,0.6)', fontSize: 11.5, fontWeight: '600', marginTop: 2 },
   editBtn: {
     width: 32,
     height: 32,
