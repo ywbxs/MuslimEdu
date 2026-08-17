@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, CircleCheck } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
@@ -20,8 +20,6 @@ import { RADIUS } from '../../theme/glass';
 import { WizardStepHeader, WizardGradientButton } from '../../components/wizard/WizardKit';
 import GlassBackground from '../../components/glass/GlassBackground';
 import {
-  GRADING_SYSTEM_TYPES,
-  GradingSystemType,
   BandInput,
   fetchGradingSystems,
   createGradingSystem,
@@ -33,79 +31,20 @@ import {
 } from '../../services/adminAcademicCatalogService';
 
 /**
- * Replaces the old two-hop flow (GradingSystemFormScreen for name/type,
- * then a separate GradeScaleBuilder navigation for bands) with one wizard:
- * pick a type, fill in the details, build the scale, save - covering both
- * create and edit. Quarterly is the pre-selected type for a brand-new
- * system since it's this school's most common grading period; every other
- * type is still one tap away on step 1.
+ * Quarterly is this school's only grading system now - no more picking a
+ * type. Two steps: name it, then build the Q1-Q4 report's grade scale
+ * (used only to decide the "With Honors" badge on
+ * StudentQuarterlyReportScreen - a band flagged Honors that the general
+ * average falls into). Covers both create and edit; saving writes the
+ * grading system and its grade scale (or a new scale version, if one
+ * already exists) in one action.
  */
+
+const QUARTERLY_NAME = 'Quarterly Grades';
 
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
-
-const TYPE_LABELS: Record<GradingSystemType, string> = {
-  percentage: 'Percentage',
-  letter: 'Letter Grade',
-  gpa: 'GPA',
-  competency: 'Competency',
-  pass_fail: 'Pass / Fail',
-  memorization: 'Memorization',
-  behavior: 'Behavior',
-  attendance: 'Attendance',
-  oral: 'Oral',
-  written: 'Written',
-  practical: 'Practical',
-  islamic_studies: 'Islamic Studies',
-  arabic: 'Arabic',
-  quarterly: 'Quarterly',
-  custom: 'Custom',
-};
-
-const TYPE_DESCRIPTIONS: Record<GradingSystemType, string> = {
-  percentage: 'Scores as a 0-100% number.',
-  letter: 'A, B, C, D, F style letter grades.',
-  gpa: 'Grade point average on a 0.0-4.0 scale.',
-  competency: 'Skill mastery levels instead of a score.',
-  pass_fail: 'Just a pass or fail outcome.',
-  memorization: "Track memorized material, e.g. Qur'an.",
-  behavior: 'Conduct and behavior ratings.',
-  attendance: 'Attendance-based scoring.',
-  oral: 'Oral exam or recitation scoring.',
-  written: 'Written exam scoring.',
-  practical: 'Hands-on / practical skill scoring.',
-  islamic_studies: 'Islamic Studies subject grading.',
-  arabic: 'Arabic language subject grading.',
-  quarterly: 'Grades computed and reported each quarter.',
-  custom: 'Define your own grading approach.',
-};
-
-const NAME_SUGGESTIONS: Record<GradingSystemType, string> = {
-  percentage: 'Percentage Grading',
-  letter: 'Letter Grade Grading',
-  gpa: 'GPA Grading',
-  competency: 'Competency Grading',
-  pass_fail: 'Pass / Fail Grading',
-  memorization: 'Memorization Grading',
-  behavior: 'Behavior Grading',
-  attendance: 'Attendance Grading',
-  oral: 'Oral Grading',
-  written: 'Written Grading',
-  practical: 'Practical Grading',
-  islamic_studies: 'Islamic Studies Grading',
-  arabic: 'Arabic Grading',
-  quarterly: 'Quarterly Grades',
-  custom: 'Custom Grading',
-};
-
-// Type selection is a grid, but Quarterly leads the list (and is
-// pre-selected below) since it's the default this wizard steers new
-// schools toward - every other type is still right there, just not first.
-const ORDERED_TYPES: GradingSystemType[] = [
-  'quarterly',
-  ...GRADING_SYSTEM_TYPES.filter((t) => t !== 'quarterly'),
-];
 
 let bandKeySeq = 0;
 function nextBandKey() {
@@ -116,30 +55,13 @@ interface EditableBand extends BandInput {
   key: string;
 }
 
-function defaultBandsFor(type: GradingSystemType): EditableBand[] {
-  if (type === 'pass_fail') {
-    return [
-      { key: nextBandKey(), min_score: 60, max_score: 100, label: 'Pass', is_passing: true },
-      { key: nextBandKey(), min_score: 0, max_score: 59, label: 'Fail', is_passing: false },
-    ];
-  }
-  if (type === 'gpa') {
-    return [
-      { key: nextBandKey(), min_score: 90, max_score: 100, label: 'A', gpa_value: 4.0, is_passing: true },
-      { key: nextBandKey(), min_score: 80, max_score: 89, label: 'B', gpa_value: 3.0, is_passing: true },
-      { key: nextBandKey(), min_score: 70, max_score: 79, label: 'C', gpa_value: 2.0, is_passing: true },
-      { key: nextBandKey(), min_score: 60, max_score: 69, label: 'D', gpa_value: 1.0, is_passing: true },
-      { key: nextBandKey(), min_score: 0, max_score: 59, label: 'F', gpa_value: 0.0, is_passing: false },
-    ];
-  }
-  // Standard A-F breakdown - a reasonable starting point for percentage,
-  // letter, quarterly, and everything else; admins can freely edit/remove.
+function defaultBands(): EditableBand[] {
   return [
-    { key: nextBandKey(), min_score: 90, max_score: 100, label: 'A', is_passing: true },
-    { key: nextBandKey(), min_score: 80, max_score: 89, label: 'B', is_passing: true },
-    { key: nextBandKey(), min_score: 70, max_score: 79, label: 'C', is_passing: true },
-    { key: nextBandKey(), min_score: 60, max_score: 69, label: 'D', is_passing: true },
-    { key: nextBandKey(), min_score: 0, max_score: 59, label: 'F', is_passing: false },
+    { key: nextBandKey(), min_score: 90, max_score: 100, label: 'A', is_passing: true, honors_eligible: true },
+    { key: nextBandKey(), min_score: 80, max_score: 89, label: 'B', is_passing: true, honors_eligible: false },
+    { key: nextBandKey(), min_score: 70, max_score: 79, label: 'C', is_passing: true, honors_eligible: false },
+    { key: nextBandKey(), min_score: 60, max_score: 69, label: 'D', is_passing: true, honors_eligible: false },
+    { key: nextBandKey(), min_score: 0, max_score: 59, label: 'F', is_passing: false, honors_eligible: false },
   ];
 }
 
@@ -155,30 +77,19 @@ export default function GradingSystemWizardScreen() {
   const gradingSystemId: number | undefined = route.params?.gradingSystemId;
   const isEditing = !!gradingSystemId;
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [type, setType] = useState<GradingSystemType>('quarterly');
-  const [name, setName] = useState('');
-  const [nameTouched, setNameTouched] = useState(false);
+  const [name, setName] = useState(QUARTERLY_NAME);
   const [description, setDescription] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
+  const [isDefault, setIsDefault] = useState(true);
   const [isActive, setIsActive] = useState(true);
 
   const [currentScale, setCurrentScale] = useState<GradeScale | null>(null);
-  const [scaleName, setScaleName] = useState('');
-  const [bands, setBands] = useState<EditableBand[]>(() => defaultBandsFor('quarterly'));
-
-  // New system, type still at its default: keep the suggested name in sync
-  // as the admin browses step 1, but stop touching it the moment they've
-  // typed their own.
-  useEffect(() => {
-    if (!isEditing && !nameTouched) {
-      setName(NAME_SUGGESTIONS[type]);
-    }
-  }, [type, isEditing, nameTouched]);
+  const [scaleName, setScaleName] = useState(QUARTERLY_NAME + ' Scale');
+  const [bands, setBands] = useState<EditableBand[]>(() => defaultBands());
 
   useEffect(() => {
     if (!isEditing || !token || !gradingSystemId) return;
@@ -191,9 +102,7 @@ export default function GradingSystemWizardScreen() {
           setError(t('grading_system_wizard.not_found', 'Grading system not found.'));
           return;
         }
-        setType(system.type);
         setName(system.name);
-        setNameTouched(true);
         setDescription(system.description ?? '');
         setIsDefault(system.is_default);
         setIsActive(system.status === 'active');
@@ -216,9 +125,6 @@ export default function GradingSystemWizardScreen() {
               promotion_eligible: b.promotion_eligible ?? true,
             })),
           );
-        } else {
-          setScaleName(NAME_SUGGESTIONS[system.type] + ' Scale');
-          setBands(defaultBandsFor(system.type));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : t('grading_system_wizard.load_error', 'Failed to load grading system.'));
@@ -228,40 +134,24 @@ export default function GradingSystemWizardScreen() {
     })();
   }, [isEditing, gradingSystemId, token, t]);
 
-  const selectType = (next: GradingSystemType) => {
-    setType(next);
-    // A fresh system with untouched (still-default) bands follows the type
-    // choice too, so picking GPA on step 1 doesn't leave a Pass/Fail scale
-    // sitting on step 3. Once the admin has actually edited a band by hand
-    // this stops - see bandsTouched.
-    if (!isEditing && !bandsTouched) {
-      setBands(defaultBandsFor(next));
-      setScaleName(NAME_SUGGESTIONS[next] + ' Scale');
-    }
-  };
-
-  const [bandsTouched, setBandsTouched] = useState(false);
   const updateBand = (key: string, patch: Partial<EditableBand>) => {
-    setBandsTouched(true);
     setBands((prev) => prev.map((b) => (b.key === key ? { ...b, ...patch } : b)));
   };
   const removeBand = (key: string) => {
-    setBandsTouched(true);
     setBands((prev) => (prev.length > 1 ? prev.filter((b) => b.key !== key) : prev));
   };
   const addBand = () => {
-    setBandsTouched(true);
     setBands((prev) => [
       ...prev,
-      { key: nextBandKey(), min_score: 0, max_score: 0, label: '', gpa_value: null, is_passing: true },
+      { key: nextBandKey(), min_score: 0, max_score: 0, label: '', gpa_value: null, is_passing: true, honors_eligible: false },
     ]);
   };
 
-  const validateStep2 = (): string | null => {
+  const validateStep1 = (): string | null => {
     if (!name.trim()) return t('grading_system_wizard.name_required', 'Grading system name is required.');
     return null;
   };
-  const validateStep3 = (): string | null => {
+  const validateStep2 = (): string | null => {
     if (!scaleName.trim()) return t('grading_system_wizard.scale_name_required', 'Scale name is required.');
     if (bands.length === 0) return t('grading_system_wizard.need_one_band', 'Add at least one band.');
     for (const b of bands) {
@@ -275,21 +165,19 @@ export default function GradingSystemWizardScreen() {
   };
 
   const goNext = () => {
-    if (step === 2) {
-      const err = validateStep2();
-      if (err) {
-        Alert.alert(t('grading_system_wizard.check_details', 'Check the details'), err);
-        return;
-      }
+    const err = validateStep1();
+    if (err) {
+      Alert.alert(t('grading_system_wizard.check_details', 'Check the details'), err);
+      return;
     }
-    setStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s));
+    setStep(2);
   };
   const goBackStep = () => {
     if (step === 1) {
       navigation.goBack();
       return;
     }
-    setStep((s) => (s - 1) as 1 | 2 | 3);
+    setStep(1);
   };
 
   const onSave = async () => {
@@ -297,7 +185,7 @@ export default function GradingSystemWizardScreen() {
       Alert.alert(t('common.error', 'Error'), t('grading_system_wizard.session_expired', 'Your session expired. Please log in again.'));
       return;
     }
-    const err = validateStep3();
+    const err = validateStep2();
     if (err) {
       Alert.alert(t('grading_system_wizard.check_bands', 'Check the bands'), err);
       return;
@@ -318,7 +206,7 @@ export default function GradingSystemWizardScreen() {
     try {
       const input = {
         name: name.trim(),
-        type,
+        type: 'quarterly' as const,
         description: description.trim() || null,
         is_default: isDefault,
         status: (isActive ? 'active' : 'inactive') as 'active' | 'inactive',
@@ -347,7 +235,6 @@ export default function GradingSystemWizardScreen() {
   };
 
   const stepLabels = [
-    t('grading_system_wizard.step_type', 'Type'),
     t('grading_system_wizard.step_details', 'Details'),
     t('grading_system_wizard.step_scale', 'Scale'),
   ];
@@ -360,7 +247,7 @@ export default function GradingSystemWizardScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {t('grading_system_wizard.title', 'Grading System')}
+            {t('grading_system_wizard.title', 'Quarterly Grades')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -380,8 +267,8 @@ export default function GradingSystemWizardScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
           {isEditing
-            ? t('grading_system_wizard.edit_title', 'Edit Grading System')
-            : t('grading_system_wizard.add_title', 'Add Grading System')}
+            ? t('grading_system_wizard.edit_title', 'Edit Quarterly Grades')
+            : t('grading_system_wizard.add_title', 'Set Up Quarterly Grades')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -393,54 +280,19 @@ export default function GradingSystemWizardScreen() {
 
         {step === 1 ? (
           <>
-            <Text style={styles.stepTitle}>{t('grading_system_wizard.choose_type_title', 'Choose a grading system')}</Text>
-            <Text style={styles.stepSubtitle}>
-              {t('grading_system_wizard.choose_type_subtitle', 'Quarterly is selected by default - pick a different one if this school needs it.')}
-            </Text>
-
-            <View style={{ gap: 10, marginTop: 16 }}>
-              {ORDERED_TYPES.map((gt) => {
-                const selected = gt === type;
-                return (
-                  <TouchableOpacity
-                    key={gt}
-                    style={[styles.typeCard, selected && styles.typeCardSelected]}
-                    onPress={() => selectType(gt)}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.typeCardHeaderRow}>
-                        <Text style={[styles.typeCardName, selected && styles.typeCardNameSelected]}>
-                          {t(`grading_system_wizard.type_${gt}`, TYPE_LABELS[gt])}
-                        </Text>
-                        {gt === 'quarterly' ? (
-                          <View style={styles.defaultBadge}>
-                            <Text style={styles.defaultBadgeText}>{t('grading_system_wizard.default_badge', 'Default')}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                      <Text style={styles.typeCardDesc}>{t(`grading_system_wizard.type_desc_${gt}`, TYPE_DESCRIPTIONS[gt])}</Text>
-                    </View>
-                    {selected ? <CircleCheck size={20} color={theme.accent} strokeWidth={2.2} /> : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </>
-        ) : step === 2 ? (
-          <>
             <Text style={styles.stepTitle}>{t('grading_system_wizard.details_title', 'Name it')}</Text>
             <Text style={styles.stepSubtitle}>
-              {t('grading_system_wizard.details_subtitle', 'How this grading system will show up to teachers and admins.')}
+              {t(
+                'grading_system_wizard.details_subtitle_quarterly',
+                'Grades are computed and reported each quarter (Q1-Q4) - this names the setup teachers and admins will see.',
+              )}
             </Text>
 
             <Text style={styles.label}>{t('grading_system_form.name_label', 'Name')}</Text>
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={(v) => {
-                setNameTouched(true);
-                setName(v);
-              }}
+              onChangeText={setName}
               placeholder={t('grading_system_form.name_placeholder', 'e.g. Quarterly Grades')}
               placeholderTextColor={theme.textMuted}
             />
@@ -487,7 +339,10 @@ export default function GradingSystemWizardScreen() {
                   )
                     .replace('{next}', String(currentScale.version + 1))
                     .replace('{current}', String(currentScale.version))
-                : t('grading_system_wizard.scale_subtitle', "We've started you off with a standard breakdown - edit, remove, or add bands as needed.")}
+                : t(
+                    'grading_system_wizard.scale_subtitle_quarterly',
+                    "This decides the \"With Honors\" badge on a student's quarterly report - whichever band their general average falls into. We've started you off with a standard breakdown.",
+                  )}
             </Text>
 
             <Text style={styles.label}>{t('grade_scale_builder.scale_name', 'Scale Name')}</Text>
@@ -537,17 +392,6 @@ export default function GradingSystemWizardScreen() {
                       placeholderTextColor={theme.textMuted}
                     />
                   </View>
-                  <View style={styles.bandGpaField}>
-                    <Text style={styles.fieldLabel}>{t('grade_scale_builder.gpa', 'GPA')}</Text>
-                    <TextInput
-                      style={styles.smallInput}
-                      keyboardType="numeric"
-                      value={band.gpa_value != null ? String(band.gpa_value) : ''}
-                      onChangeText={(v) => updateBand(band.key, { gpa_value: v ? Number(v) : null })}
-                      placeholder="-"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
                 </View>
 
                 <View style={styles.bandRowBottom}>
@@ -558,6 +402,14 @@ export default function GradingSystemWizardScreen() {
                       trackColor={{ true: theme.accent }}
                     />
                     <Text style={styles.pillText}>{t('grade_scale_builder.passing', 'Passing')}</Text>
+                  </View>
+                  <View style={styles.pill}>
+                    <Switch
+                      value={!!band.honors_eligible}
+                      onValueChange={(v) => updateBand(band.key, { honors_eligible: v })}
+                      trackColor={{ true: theme.accent }}
+                    />
+                    <Text style={styles.pillText}>{t('grade_scale_builder.honors', 'Honors')}</Text>
                   </View>
 
                   <TouchableOpacity onPress={() => removeBand(band.key)} disabled={bands.length <= 1}>
@@ -580,13 +432,13 @@ export default function GradingSystemWizardScreen() {
           <View style={{ flex: 1 }}>
             <WizardGradientButton
               label={
-                step < 3
+                step < 2
                   ? t('grading_system_wizard.next', 'Next')
                   : isEditing
                   ? t('grading_system_form.save_changes', 'Save Changes')
                   : t('grading_system_wizard.finish', 'Create Grading System')
               }
-              onPress={step < 3 ? goNext : onSave}
+              onPress={step < 2 ? goNext : onSave}
               loading={submitting}
             />
           </View>
@@ -621,23 +473,6 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     stepTitle: { fontSize: 19, fontWeight: '800', color: theme.textPrimary },
     stepSubtitle: { fontSize: 13, color: theme.textSecondary, marginTop: 6, lineHeight: 18 },
 
-    typeCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.surface,
-      borderRadius: RADIUS.md ?? 10,
-      padding: 14,
-    },
-    typeCardSelected: { borderColor: theme.accent, backgroundColor: theme.accentSoft },
-    typeCardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    typeCardName: { fontSize: 15, fontWeight: '700', color: theme.textPrimary },
-    typeCardNameSelected: { color: theme.accentSoftText },
-    typeCardDesc: { fontSize: 12, color: theme.textSecondary, marginTop: 3, lineHeight: 16 },
-    defaultBadge: { backgroundColor: theme.accent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
-    defaultBadgeText: { fontSize: 10, fontWeight: '800', color: theme.onAccent },
-
     label: { fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, marginBottom: 6, marginTop: 16 },
     input: {
       height: 48,
@@ -667,9 +502,8 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       marginTop: 10,
     },
     bandRowTop: { flexDirection: 'row', gap: 8 },
-    bandScoreField: { width: 56 },
+    bandScoreField: { width: 64 },
     bandLabelField: { flex: 1 },
-    bandGpaField: { width: 56 },
     fieldLabel: { fontSize: 10.5, fontWeight: '600', color: theme.textSecondary, marginBottom: 4 },
     smallInput: {
       height: 40,
@@ -682,10 +516,10 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       color: theme.textPrimary,
     },
 
-    bandRowBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
+    bandRowBottom: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 10 },
     pill: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     pillText: { fontSize: 12.5, color: theme.textSecondary, fontWeight: '600' },
-    removeText: { color: theme.danger, fontSize: 12.5, fontWeight: '600' },
+    removeText: { color: theme.danger, fontSize: 12.5, fontWeight: '600', marginLeft: 'auto' },
     removeTextDisabled: { opacity: 0.4 },
 
     navRow: { flexDirection: 'row', gap: 10, marginTop: 32, alignItems: 'center' },

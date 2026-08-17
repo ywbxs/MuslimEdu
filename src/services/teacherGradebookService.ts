@@ -41,6 +41,10 @@ export interface ExamCategoryOption {
   id: number;
   name: string;
   weight?: number | null;
+  // 1-4 when this category represents one of the school's grading
+  // quarters (see StudentQuarterlyReportScreen) - null for everything
+  // else (Quizzes, Midterm, etc).
+  quarter?: number | null;
 }
 
 export interface GradebookClassOption {
@@ -186,18 +190,19 @@ export async function fetchAdminGradebookReview(
 
 export async function createExamCategory(
   token: string,
-  input: { name: string; weight?: number | null }
+  input: { name: string; weight?: number | null; quarter?: number | null }
 ): Promise<ExamCategoryOption> {
   const data = await authedPost('/admin_gradebook_exam_category_create', token, {
     name: input.name,
     weight: input.weight ?? undefined,
+    quarter: input.quarter ?? undefined,
   });
   return data.exam_category;
 }
 
 export async function updateExamCategory(
   token: string,
-  input: { exam_category_id: number; name?: string; weight?: number | null }
+  input: { exam_category_id: number; name?: string; weight?: number | null; quarter?: number | null }
 ): Promise<ExamCategoryOption> {
   const data = await authedPost('/admin_gradebook_exam_category_update', token, input);
   return data.exam_category;

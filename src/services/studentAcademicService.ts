@@ -337,6 +337,41 @@ export async function fetchStudentGpaSummary(token: string, termId?: number): Pr
   });
 }
 
+// --- Quarterly report card (StudentQuarterlyReportScreen) -----------------
+//
+// Unlike everything above, this one route (`/student_quarterly_report`)
+// is new - it didn't exist before this feature. See ApiController.php's
+// docblock on that method for exactly how it's computed: per-subject Q1-Q4
+// marks come from the school's ExamCategory rows tagged with a `quarter`
+// (1-4), read out of the same Gradebook.marks JSON the teacher gradebook
+// already writes. Honors is read off whichever grade-scale band (from the
+// school's "quarterly" GradingSystem) the general average falls into.
+
+export interface QuarterlySubjectRow {
+  subject_id: number;
+  subject_name: string | null;
+  q1: number | null;
+  q2: number | null;
+  q3: number | null;
+  q4: number | null;
+  avg: number | null;
+}
+
+export interface QuarterlyReportResponse {
+  session_id: number | null;
+  class_id?: number | null;
+  section_id?: number | null;
+  general_average: number | null;
+  honors: { eligible: boolean; label: string | null };
+  subjects: QuarterlySubjectRow[];
+}
+
+export async function fetchStudentQuarterlyReport(token: string): Promise<QuarterlyReportResponse> {
+  return cacheThenNetwork(cacheKeyFor(CACHE_PREFIX, token, 'quarterlyReport'), async () => {
+    return await authedPost<QuarterlyReportResponse>('/student_quarterly_report', token);
+  });
+}
+
 // --- Progress (client-side aggregation over the above) --------------------
 //
 // Raw average marks per subject remain the baseline (unambiguous, always

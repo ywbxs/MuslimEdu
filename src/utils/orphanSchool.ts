@@ -130,6 +130,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AdminAssessmentGrades',
   'StudentAssessments',
   'StudentAssessmentGrades',
+  'StudentQuarterlyReport',
   'TeacherLessonPlans',
   'AdminLessonPlanReview',
   'TeacherMaterials',

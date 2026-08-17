@@ -63,6 +63,7 @@ import StudentAssessmentsScreen from '../screens/student/StudentAssessmentsScree
 import TeacherAssessmentGradesScreen from '../screens/teachers/TeacherAssessmentGradesScreen';
 import AdminAssessmentGradesScreen from '../screens/teachers/AdminAssessmentGradesScreen';
 import StudentAssessmentGradesScreen from '../screens/student/StudentAssessmentGradesScreen';
+import StudentQuarterlyReportScreen from '../screens/student/StudentQuarterlyReportScreen';
 import StudentAnnouncementsScreen from '../screens/student/StudentAnnouncementsScreen';
 import StudentMaterialsScreen from '../screens/student/StudentMaterialsScreen';
 import StudentScheduleScreen from '../screens/student/StudentScheduleScreen';
@@ -611,6 +612,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="StudentAssessmentGrades"
                 component={StudentAssessmentGradesScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="StudentQuarterlyReport"
+                component={StudentQuarterlyReportScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen

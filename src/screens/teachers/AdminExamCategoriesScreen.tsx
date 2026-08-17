@@ -50,9 +50,11 @@ type FormState = {
   categoryId: number | null;
   name: string;
   weight: string;
+  quarter: number | null;
 };
 
-const EMPTY_FORM: FormState = { categoryId: null, name: '', weight: '' };
+const EMPTY_FORM: FormState = { categoryId: null, name: '', weight: '', quarter: null };
+const QUARTER_OPTIONS = [1, 2, 3, 4];
 
 // Admin management of Assessment Components (spec §4.11): the weighted
 // categories (Quizzes, Midterm, Final, etc.) that both the legacy
@@ -105,7 +107,7 @@ export default function AdminExamCategoriesScreen() {
   };
 
   const openEdit = (c: ExamCategoryOption) => {
-    setForm({ categoryId: c.id, name: c.name, weight: c.weight != null ? String(c.weight) : '' });
+    setForm({ categoryId: c.id, name: c.name, weight: c.weight != null ? String(c.weight) : '', quarter: c.quarter ?? null });
     setIsModalVisible(true);
   };
 
@@ -129,9 +131,10 @@ export default function AdminExamCategoriesScreen() {
           exam_category_id: form.categoryId,
           name: form.name.trim(),
           weight: weightValue,
+          quarter: form.quarter,
         });
       } else {
-        await createExamCategory(token, { name: form.name.trim(), weight: weightValue });
+        await createExamCategory(token, { name: form.name.trim(), weight: weightValue, quarter: form.quarter });
       }
       setIsModalVisible(false);
       load({ silent: true });
@@ -208,6 +211,11 @@ export default function AdminExamCategoriesScreen() {
                 <Text style={styles.cardTitle} numberOfLines={1}>
                   {item.name}
                 </Text>
+                {item.quarter ? (
+                  <View style={styles.quarterBadge}>
+                    <Text style={styles.quarterBadgeText}>{t('admin_exam_categories.quarter_badge', 'Q{n}').replace('{n}', String(item.quarter))}</Text>
+                  </View>
+                ) : null}
                 <View style={styles.weightBadge}>
                   <Text style={styles.weightBadgeText}>{item.weight != null ? `${item.weight}%` : t('admin_exam_categories.no_weight_set', 'No weight set')}</Text>
                 </View>
@@ -244,6 +252,28 @@ export default function AdminExamCategoriesScreen() {
                 value={form.weight}
                 onChangeText={(v) => setForm((f) => ({ ...f, weight: v }))}
               />
+
+              <Text style={styles.fieldLabel}>{t('admin_exam_categories.quarter_label', 'Quarter (optional)')}</Text>
+              <Text style={styles.fieldHint}>
+                {t(
+                  'admin_exam_categories.quarter_hint',
+                  'Tag this as Q1-Q4 to feed a student\'s quarterly report card - leave unset for categories like Quizzes or Midterm.',
+                )}
+              </Text>
+              <View style={styles.quarterPickerRow}>
+                {QUARTER_OPTIONS.map((q) => {
+                  const active = form.quarter === q;
+                  return (
+                    <TouchableOpacity
+                      key={q}
+                      style={[styles.quarterChip, active && styles.quarterChipActive]}
+                      onPress={() => setForm((f) => ({ ...f, quarter: active ? null : q }))}
+                    >
+                      <Text style={[styles.quarterChipText, active && styles.quarterChipTextActive]}>Q{q}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
@@ -286,6 +316,8 @@ const styles = StyleSheet.create({
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: INK },
   weightBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: EMERALD_SOFT },
   weightBadgeText: { fontSize: 11, fontWeight: '700', color: EMERALD },
+  quarterBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: '#E8EAFB' },
+  quarterBadgeText: { fontSize: 11, fontWeight: '700', color: '#3B4CCA' },
   emptyText: { textAlign: 'center', color: SUBTLE, marginTop: 40, fontSize: 13.5, paddingHorizontal: 24 },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(17,24,39,0.4)', alignItems: 'center', justifyContent: 'center', padding: 20 },
@@ -302,6 +334,19 @@ const styles = StyleSheet.create({
     color: INK,
     backgroundColor: '#FAFAFB',
   },
+  fieldHint: { fontSize: 11.5, color: SUBTLE, marginTop: -2, marginBottom: 8, lineHeight: 15 },
+  quarterPickerRow: { flexDirection: 'row', gap: 8 },
+  quarterChip: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  quarterChipActive: { backgroundColor: '#3B4CCA', borderColor: '#3B4CCA' },
+  quarterChipText: { fontSize: 13, fontWeight: '700', color: INK },
+  quarterChipTextActive: { color: '#FFFFFF' },
   modalActions: { flexDirection: 'row', marginTop: 16, gap: 8 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   modalBtnPrimary: { backgroundColor: EMERALD },
