@@ -149,6 +149,8 @@ import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequest
 // StudentUploadDocumentsScreen's own docblock and studentDocumentUploadService.ts.
 import StudentUploadDocumentsScreen from '../screens/student/StudentUploadDocumentsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
+import AccountSettingPickerScreen from '../screens/common/AccountSettingPickerScreen';
+import ChangePasswordScreen from '../screens/common/ChangePasswordScreen';
 import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
 import RecordFeePaymentScreen from '../screens/admin/RecordFeePaymentScreen';
@@ -723,6 +725,8 @@ export default function RootNavigator() {
       <Stack.Screen name="StaffIdCards" component={StaffIdCardsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="IdCardTemplate" component={IdCardTemplateScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+      <Stack.Screen name="AccountSettingPicker" component={AccountSettingPickerScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="SuperAdminSchoolList" component={SchoolListScreen} />
       <Stack.Screen name="SuperAdminSchoolAdmins" component={SchoolAdminsScreen} options={{ animation: 'slide_from_right' }} />
