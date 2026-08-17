@@ -171,6 +171,8 @@ import PendingRegistrationsScreen from '../screens/superadmin/PendingRegistratio
 import FirebaseConfigScreen from '../screens/superadmin/FirebaseConfigScreen';
 import SubscriptionPackagesScreen from '../screens/superadmin/SubscriptionPackagesScreen';
 import SchoolSubscriptionScreen from '../screens/superadmin/SchoolSubscriptionScreen';
+import SubscriptionRequestsScreen from '../screens/superadmin/SubscriptionRequestsScreen';
+import SubscribeScreen from '../screens/admin/SubscribeScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -748,6 +750,8 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminFirebaseConfig" component={FirebaseConfigScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SuperAdminSubscriptionPackages" component={SubscriptionPackagesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SuperAdminSchoolSubscription" component={SchoolSubscriptionScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminSubscriptionRequests" component={SubscriptionRequestsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SubscribeRequest" component={SubscribeScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

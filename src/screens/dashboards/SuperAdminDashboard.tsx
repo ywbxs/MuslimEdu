@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Activity, ArrowRight, BellRing, ClipboardCheck, CreditCard, Flag, Images, KeyRound, RotateCcwClock, School, Trash2 } from 'lucide-react-native';
+import { Activity, ArrowRight, BellRing, ClipboardCheck, CreditCard, Flag, Images, Inbox, KeyRound, RotateCcwClock, School, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import DashboardShell, { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
@@ -41,6 +41,9 @@ function BellCogIcon({ color }: { color: string }) {
 }
 function CreditCardIcon({ color }: { color: string }) {
   return <CreditCard size={22} color={color} strokeWidth={2} />;
+}
+function InboxIcon({ color }: { color: string }) {
+  return <Inbox size={22} color={color} strokeWidth={2} />;
 }
 
 function SuperAdminCard({
@@ -134,6 +137,12 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           title={t('superadmin_dashboard.subscription_packages_title', 'Subscription Plans')}
           desc={t('superadmin_dashboard.subscription_packages_desc', 'Manage plans, pricing, and per-school fee status')}
           onPress={() => (navigation as any).navigate('SuperAdminSubscriptionPackages')}
+        />
+        <SuperAdminCard
+          icon={<InboxIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.subscription_requests_title', 'Subscription Requests')}
+          desc={t('superadmin_dashboard.subscription_requests_desc', 'Review and approve schools that self-served a plan')}
+          onPress={() => (navigation as any).navigate('SuperAdminSubscriptionRequests')}
         />
         <SuperAdminCard
           icon={<KeyIcon color={EMERALD} />}

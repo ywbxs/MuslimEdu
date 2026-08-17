@@ -1,22 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CreditCard } from 'lucide-react-native';
+import { ChevronRight, Clock, CreditCard } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { AdminSubscriptionStatus } from '../services/subscriptionService';
 import { COLORS, RADIUS } from '../theme/glass';
 
 /**
  * Read-only summary of this school's platform subscription - package,
- * expiration, days remaining/overdue. The admin app previously fetched this
- * (subscriptionService.fetchAdminSubscriptionStatus) only to silently lock
- * three cards; there was nowhere an admin could actually see the package
- * name or expiry date that decided that lock. Set by the superadmin from
- * SuperAdminSchoolSubscription.
+ * expiration, days remaining/overdue - plus, while there's no active plan,
+ * a way for the admin to actually do something about it: submit a
+ * self-serve request (see SubscribeScreen) instead of just waiting for the
+ * superadmin to notice. Set by the superadmin from SuperAdminSchoolSubscription,
+ * or by approving a request from SubscriptionRequestsScreen.
  */
 export default function SubscriptionStatusCard({
   status,
   loadFailed = false,
   onRetry,
+  onSubscribePress,
 }: {
   status: AdminSubscriptionStatus | null;
   // True once the fetch has actually errored (endpoint missing/500/network) -
@@ -24,6 +25,9 @@ export default function SubscriptionStatusCard({
   // misleading "No subscription" before the real answer arrives.
   loadFailed?: boolean;
   onRetry?: () => void;
+  // Navigates to SubscribeScreen - only used to make the card tappable
+  // while there's no active plan and no request already pending.
+  onSubscribePress?: () => void;
 }) {
   const { t } = useLocale();
 
@@ -45,6 +49,32 @@ export default function SubscriptionStatusCard({
 
   // Still loading - stay quiet rather than flash something misleading.
   if (!status) return null;
+
+  if (status.pending_request) {
+    const requestedDate = new Date(status.pending_request.requested_at).toLocaleDateString();
+    return (
+      <View style={styles.card}>
+        <View style={[styles.iconWrap, styles.iconWrapAmber]}>
+          <Clock size={18} color={AMBER} strokeWidth={1.8} />
+        </View>
+        <View style={styles.textWrap}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {status.pending_request.package ?? t('subscription_card.no_package', 'Subscription')}
+            </Text>
+            <View style={[styles.pill, pillStyles.pending]}>
+              <Text style={[styles.pillText, pillTextStyles.pending]}>
+                {t('subscription_card.status_pending', 'Pending review')}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {t('subscription_card.pending_since', 'Requested {date}').replace('{date}', requestedDate)}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const expireDate = status.expire_date != null ? Number(status.expire_date) : null;
   const isLifetime = expireDate === 0;
@@ -86,8 +116,14 @@ export default function SubscriptionStatusCard({
     }
   }
 
+  const showSubscribeCta = !status.active && !!onSubscribePress;
+  const Container = showSubscribeCta ? TouchableOpacity : View;
+
   return (
-    <View style={styles.card}>
+    <Container
+      style={styles.card}
+      {...(showSubscribeCta ? { activeOpacity: 0.75, onPress: onSubscribePress } : {})}
+    >
       <View style={styles.iconWrap}>
         <CreditCard size={18} color={COLORS.emerald} strokeWidth={1.8} />
       </View>
@@ -102,12 +138,18 @@ export default function SubscriptionStatusCard({
         </View>
         <Text style={styles.subtitle} numberOfLines={1}>
           {expiryLine ??
-            t('subscription_card.contact_owner', 'Contact your account owner to activate a plan.')}
+            (showSubscribeCta
+              ? t('subscription_card.tap_to_subscribe', 'Tap to choose a plan')
+              : t('subscription_card.contact_owner', 'Contact your account owner to activate a plan.'))}
         </Text>
       </View>
-    </View>
+      {showSubscribeCta ? <ChevronRight size={18} color={COLORS.subtle} strokeWidth={2} /> : null}
+    </Container>
   );
 }
+
+const AMBER = '#92400E';
+const AMBER_SOFT = 'rgba(180,83,9,0.10)';
 
 const styles = StyleSheet.create({
   card: {
@@ -131,6 +173,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   iconWrapMuted: { backgroundColor: '#EEF0F2' },
+  iconWrapAmber: { backgroundColor: AMBER_SOFT },
   textWrap: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 13, fontWeight: '700', color: COLORS.ink, flexShrink: 1 },
@@ -143,9 +186,11 @@ const pillStyles = StyleSheet.create({
   active: { backgroundColor: COLORS.emeraldSoft },
   expired: { backgroundColor: 'rgba(239,68,68,0.1)' },
   none: { backgroundColor: '#EEF0F2' },
+  pending: { backgroundColor: AMBER_SOFT },
 });
 const pillTextStyles = StyleSheet.create({
   active: { color: COLORS.emerald },
   expired: { color: COLORS.danger },
   none: { color: COLORS.subtle },
+  pending: { color: AMBER },
 });

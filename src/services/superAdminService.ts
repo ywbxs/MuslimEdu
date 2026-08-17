@@ -465,3 +465,53 @@ export async function setSchoolSubscription(
   const data = await authedPost('/superadmin_school_subscription_set', token, input);
   return data.subscription;
 }
+
+// --- Self-serve subscription requests (admin-submitted, superadmin review) ---
+
+export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SubscriptionRequest {
+  id: number;
+  school: { id: number; title: string } | null;
+  package: { id: number; name: string; price: number } | null;
+  requested_by: { id: number; name: string } | null;
+  payment_reference: string | null;
+  status: SubscriptionRequestStatus;
+  reason: string | null;
+  reviewed_by: { id: number; name: string } | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export async function fetchSubscriptionRequests(token: string): Promise<SubscriptionRequest[]> {
+  const data = await authedPost('/superadmin_subscription_request_list', token, {});
+  return data.requests;
+}
+
+export interface SubscriptionRequestApproveInput {
+  request_id: number;
+  paid_amount?: number;
+  payment_method?: string;
+  student_limit?: string;
+  expire_date?: number;
+}
+
+export async function approveSubscriptionRequest(
+  token: string,
+  input: SubscriptionRequestApproveInput,
+): Promise<SubscriptionRequest> {
+  const data = await authedPost('/superadmin_subscription_request_approve', token, input);
+  return data.request;
+}
+
+export async function rejectSubscriptionRequest(
+  token: string,
+  requestId: number,
+  reason?: string,
+): Promise<SubscriptionRequest> {
+  const data = await authedPost('/superadmin_subscription_request_reject', token, {
+    request_id: requestId,
+    reason,
+  });
+  return data.request;
+}

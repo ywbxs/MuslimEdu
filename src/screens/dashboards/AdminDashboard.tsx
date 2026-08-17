@@ -903,6 +903,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             status={subscriptionStatus}
             loadFailed={subscriptionStatusError}
             onRetry={loadSubscriptionStatus}
+            onSubscribePress={() => (navigation as any).navigate('SubscribeRequest')}
           />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
