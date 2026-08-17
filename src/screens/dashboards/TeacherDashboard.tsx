@@ -313,13 +313,9 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
             icon: (c: string) => <ClipboardCheckIcon color={c} size={20} />,
             onPress: () => (navigation as any).navigate('BehaviorIncidents'),
           },
-          {
-            key: 'examinations',
-            title: t('teacher_dashboard.examinations_title', 'Examinations'),
-            description: t('teacher_dashboard.examinations_desc', 'Schedule exams and enter grades'),
-            icon: (c: string) => <AssessmentIcon color={c} size={20} />,
-            onPress: () => (navigation as any).navigate('Examinations'),
-          },
+          // Exam features hidden per admin request (mirrors AdminDashboard's
+          // HIDDEN_FOR_NOW_KEYS) - the Examinations route/screen is untouched,
+          // just no longer surfaced as a tile here.
           {
             key: 'studentProgress',
             title: t('teacher_dashboard.student_progress_title', 'Student Progress'),

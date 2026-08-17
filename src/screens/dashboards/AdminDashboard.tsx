@@ -121,6 +121,14 @@ const HIDDEN_FOR_NOW_KEYS = new Set([
   // structure this assumes. Kept reachable by route (AdminClassTeacherAssign)
   // for whenever a school that size signs up.
   'classes',
+  // Exam features, hidden per admin request. "Exam Categories" is still the
+  // mechanism the Quarterly grading wizard's Q1-Q4 tagging relies on
+  // (AdminExamCategoriesScreen) - hiding the tile doesn't touch that data or
+  // any grade already computed from it, it just removes this dashboard as an
+  // entry point. Both routes (AdminExamCategories, Examinations) still work
+  // for whenever exams come back into scope.
+  'examCategories',
+  'examinations',
   'gradebookReview',
   'announcementReview',
   'lessonPlanReview',
