@@ -63,6 +63,11 @@ const GENDER_OPTIONS = [
   { id: 'female', name: 'Female' },
 ];
 
+// Same format check SchoolRegistrationScreen's admin-email field already
+// uses - not a full RFC 5322 validator, just enough to catch "missing @",
+// "missing domain" typos before they hit the backend.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Orphan-profile fields. These only ever get saved on the backend when the
 // admin's school is orphanage-type, so this whole step is skipped otherwise -
 // no point asking for info that would just be silently discarded. Since the
@@ -204,6 +209,20 @@ const dateFieldStyles = StyleSheet.create({
   },
 });
 
+function CheckIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Polyline
+        points="5 13 10 18 19 7"
+        stroke={md3.color.primary}
+        strokeWidth={3.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function ChevronLeft({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -329,6 +348,8 @@ export default function AdmissionScreen() {
     if (fieldDef) {
       if (fieldDef.required && !(form[fieldDef.key] as string)?.trim()) {
         errs[fieldDef.key as string] = t('admission.error_field_required', '{field} is required.').replace('{field}', fieldLabel(fieldDef));
+      } else if (fieldDef.key === 'email' && form.email?.trim() && !EMAIL_RE.test(form.email.trim())) {
+        errs.email = t('admission.error_email_invalid', 'Enter a valid email address, e.g. name@example.com');
       }
       if (fieldDef.key === 'password' && form.password && form.password.length < 6) {
         errs.password = t('admission.error_password_length', 'Use at least 6 characters.');
@@ -467,17 +488,33 @@ export default function AdmissionScreen() {
         );
       }
       const fieldDef = BASE_FIELDS.find((f) => f.key === step.key)!;
+      const emailValue = (form.email ?? '').trim();
       return (
-        <FormField
-          label={fieldLabel(fieldDef)}
-          value={(form[fieldDef.key] as string) ?? ''}
-          onChangeText={(value) => set(fieldDef.key, value)}
-          required={fieldDef.required}
-          error={fieldErrors[fieldDef.key]}
-          keyboardType={fieldDef.keyboard ?? 'default'}
-          secure={fieldDef.secure}
-          autoCapitalize={fieldDef.key === 'email' || fieldDef.secure ? 'none' : 'words'}
-        />
+        <>
+          <FormField
+            label={fieldLabel(fieldDef)}
+            value={(form[fieldDef.key] as string) ?? ''}
+            onChangeText={(value) => set(fieldDef.key, value)}
+            required={fieldDef.required}
+            error={fieldErrors[fieldDef.key]}
+            keyboardType={fieldDef.keyboard ?? 'default'}
+            secure={fieldDef.secure}
+            autoCapitalize={fieldDef.key === 'email' || fieldDef.secure ? 'none' : 'words'}
+          />
+          {/* Live format check as they type, on top of the on-Next required/
+              format validation above - same "Looks good" pattern
+              SchoolRegistrationScreen's admin-email field already uses, so
+              a typo (missing @, missing domain) is obvious immediately
+              instead of only surfacing after tapping Next. */}
+          {fieldDef.key === 'email' && emailValue.length > 0 && !fieldErrors.email ? (
+            EMAIL_RE.test(emailValue) ? (
+              <View style={emailCheckStyles.row}>
+                <CheckIcon />
+                <Text style={emailCheckStyles.validText}>{t('admission.email_valid', 'Looks good')}</Text>
+              </View>
+            ) : null
+          ) : null}
+        </>
       );
     }
 
@@ -628,6 +665,11 @@ export default function AdmissionScreen() {
     </View>
   );
 }
+
+const emailCheckStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12 },
+  validText: { fontSize: 12.5, color: md3.color.primary, fontWeight: '600' },
+});
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#EFF7F1' },
