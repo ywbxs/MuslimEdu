@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -120,6 +120,12 @@ export default function FeedScreen() {
     return items;
   }, [posts, hasMore]);
 
+  // True only for the very first load - every focus-regain after that
+  // reloads silently (see useFocusEffect below), so returning from Comments/
+  // CreatePost/ImageViewer etc. doesn't blank the whole feed back to
+  // skeletons every time, just quietly refreshes it in the background.
+  const hasLoadedOnceRef = useRef(false);
+
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
       if (!token) return;
@@ -139,6 +145,7 @@ export default function FeedScreen() {
       } finally {
         setLoading(false);
         setRefreshing(false);
+        hasLoadedOnceRef.current = true;
       }
     },
     [token, t],
@@ -149,16 +156,15 @@ export default function FeedScreen() {
     load({ silent: true });
   };
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // No manual refresh button anymore - the feed reloads automatically every
-  // time this screen regains focus (e.g. switching back to the Home tab),
-  // which covers the same "see anything new" need.
+  // No manual refresh button - the feed reloads automatically every time
+  // this screen regains focus (e.g. switching back to the Home tab, or a
+  // sheet like Comments closing on top of it), which covers the same "see
+  // anything new" need. useFocusEffect already fires on initial mount (this
+  // screen starts focused), so it alone covers first load too - silent only
+  // flips true once that first load has actually finished.
   useFocusEffect(
     useCallback(() => {
-      load();
+      load({ silent: hasLoadedOnceRef.current });
     }, [load]),
   );
 
