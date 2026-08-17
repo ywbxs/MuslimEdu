@@ -94,6 +94,7 @@ import BuildingFormScreen from '../screens/teachers/BuildingFormScreen';
 import RoomFormScreen from '../screens/teachers/RoomFormScreen';
 import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
+import AcademicMetricDetailScreen from '../screens/teachers/AcademicMetricDetailScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
 import SubjectFormScreen from '../screens/admin/SubjectFormScreen';
 import ChatBoxScreen from '../screens/chat/ChatBoxScreen';
@@ -691,6 +692,7 @@ export default function RootNavigator() {
       <Stack.Screen name="RoomForm" component={RoomFormScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
       <Stack.Screen name="AcademicAnalytics" component={AcademicAnalyticsScreen} />
+      <Stack.Screen name="AcademicMetricDetail" component={AcademicMetricDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />
       <Stack.Screen name="GradeRelease" component={GradeReleaseScreen} />
