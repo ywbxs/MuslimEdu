@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, MessageSquare, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
+import { X, MessageSquare, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -35,8 +35,8 @@ const SUBTLE = '#8E8E93';
 const HAIRLINE = '#ECEEF0';
 const HEART_RED = '#E0245E';
 
-function BackIcon() {
-  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
+function CloseIcon() {
+  return <X size={20} color={INK} strokeWidth={2.2} />;
 }
 function SendIcon({ disabled }: { disabled: boolean }) {
   return <Send size={20} color={disabled ? SUBTLE : EMERALD} strokeWidth={1.8} />;
@@ -294,13 +294,30 @@ export default function PostCommentsScreen() {
   );
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-          <BackIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('post_comments.title', 'Comments')}</Text>
-        <View style={{ width: 22 }} />
+    <KeyboardAvoidingView
+      style={styles.flex}
+      // 'height' on Android, not undefined - this screen is presented as a
+      // native-stack modal (RootNavigator: presentation: 'modal'), which on
+      // Android renders outside the Activity's own window, so the OS's
+      // windowSoftInputMode="adjustResize" never resizes it the way a
+      // normal pushed screen gets resized. Left to `undefined` the keyboard
+      // just overlaps the composer instead of pushing it up - RN has to
+      // drive the resize itself here.
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}
+    >
+      {/* Drag handle + centered title + a close X instead of a back chevron -
+          this is a bottom sheet (slides up over the feed), not a pushed
+          screen, so "back" is the wrong affordance for dismissing it. */}
+      <View style={[styles.sheetTop, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.dragHandle} />
+        <View style={styles.header}>
+          <View style={styles.headerSpacer} />
+          <Text style={styles.headerTitle}>{t('post_comments.title', 'Comments')}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.closeBtn}>
+            <CloseIcon />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -394,6 +411,12 @@ export default function PostCommentsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
+  sheetTop: {
+    backgroundColor: COLORS.canvas,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginBottom: 10 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,6 +426,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
   },
+  headerSpacer: { width: 30 },
+  closeBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   emptyTitle: { color: INK, fontSize: 18, fontWeight: '800', marginTop: 16, marginBottom: 6 },
