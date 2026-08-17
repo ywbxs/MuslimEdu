@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { X, MessageSquare, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
+import { X, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -44,9 +44,6 @@ function SendIcon({ disabled }: { disabled: boolean }) {
 function HeartIcon({ filled, size = 15 }: { filled: boolean; size?: number }) {
   const color = filled ? HEART_RED : SUBTLE;
   return <Heart size={size} color={color} fill={filled ? color : 'none'} strokeWidth={1.9} />;
-}
-function CommentBubbleIcon({ size = 15 }: { size?: number }) {
-  return <MessageSquare size={size} color={SUBTLE} strokeWidth={1.8} />;
 }
 function CameraToolIcon() {
   return <Camera size={21} color={SUBTLE} strokeWidth={1.8} />;
@@ -268,23 +265,24 @@ export default function PostCommentsScreen() {
         <Text style={styles.commentText}>{item.content}</Text>
 
         <View style={styles.commentFooter}>
-          <TouchableOpacity style={styles.footerStat} onPress={() => handleToggleLike(item)} hitSlop={8}>
-            <HeartIcon filled={item.is_liked} />
-            <Text style={[styles.footerStatText, item.is_liked && { color: HEART_RED }]}>
-              {item.likes_count > 0 ? item.likes_count : ''}
-            </Text>
-          </TouchableOpacity>
           {/* Reply is available on replies too, not just top-level comments -
               a thread can nest as deep as people keep replying. renderComment
               already recurses through item.replies regardless of depth, and
               updateCommentTree matches by id wherever it is in the tree, so
               a reply-to-a-reply tucks itself under its real immediate parent
               rather than flattening back to the top-level comment. */}
-          <TouchableOpacity style={styles.footerStat} onPress={() => setReplyTo(item)} hitSlop={8}>
-            <CommentBubbleIcon />
-            <Text style={styles.footerStatText}>
-              {item.replies?.length > 0 ? item.replies.length : ''}
-            </Text>
+          <TouchableOpacity onPress={() => setReplyTo(item)} hitSlop={8}>
+            <Text style={styles.replyText}>{t('post_comments.reply', 'Reply')}</Text>
+          </TouchableOpacity>
+          {item.likes_count > 0 && (
+            <View style={styles.reactionBadge}>
+              <HeartIcon filled size={10} />
+              <Text style={styles.reactionBadgeText}>{item.likes_count}</Text>
+            </View>
+          )}
+          <View style={styles.footerSpacer} />
+          <TouchableOpacity onPress={() => handleToggleLike(item)} hitSlop={10}>
+            <HeartIcon filled={item.is_liked} size={19} />
           </TouchableOpacity>
         </View>
 
@@ -441,8 +439,21 @@ const styles = StyleSheet.create({
   commentTime: { fontSize: 12, color: SUBTLE, marginLeft: 8 },
   commentText: { fontSize: 14.5, color: INK, marginTop: 4, lineHeight: 20 },
   commentFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  footerStat: { flexDirection: 'row', alignItems: 'center', marginRight: 26 },
-  footerStatText: { fontSize: 13, color: SUBTLE, marginLeft: 7, fontWeight: '600', minWidth: 8 },
+  replyText: { fontSize: 13, color: SUBTLE, fontWeight: '700' },
+  footerSpacer: { flex: 1 },
+  reactionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  reactionBadgeText: { fontSize: 11.5, color: SUBTLE, fontWeight: '700' },
   replyBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
