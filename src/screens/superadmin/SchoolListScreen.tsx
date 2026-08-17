@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, House, Plus, Search, Trash2, X } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, House, Plus, Search, Trash2, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -57,16 +57,21 @@ function EmptyIcon() {
 function TrashIcon({ color }: { color: string }) {
   return <Trash2 size={17} color={color} strokeWidth={2} />;
 }
+function SubscriptionIcon({ color }: { color: string }) {
+  return <CreditCard size={17} color={color} strokeWidth={2} />;
+}
 
 const SchoolRow = React.memo(function SchoolRow({
   item,
   onPress,
   onToggleStatus,
+  onSubscription,
   onDelete,
 }: {
   item: School;
   onPress: () => void;
   onToggleStatus: () => void;
+  onSubscription: () => void;
   onDelete: () => void;
 }) {
   const { t } = useLocale();
@@ -97,6 +102,9 @@ const SchoolRow = React.memo(function SchoolRow({
         <Text style={active ? styles.statusPillTextOk : styles.statusPillTextMissing}>
           {active ? t('school_list.status_active', 'Active') : t('school_list.status_disabled', 'Disabled')}
         </Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.subscriptionIconBtn} onPress={onSubscription} hitSlop={8}>
+        <SubscriptionIcon color={EMERALD} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.deleteIconBtn} onPress={onDelete} hitSlop={8}>
         <TrashIcon color={DANGER} />
@@ -393,6 +401,9 @@ export default function SchoolListScreen() {
               item={item}
               onPress={() => (navigation as any).navigate('SuperAdminSchoolAdmins', { schoolId: item.id, schoolName: item.title })}
               onToggleStatus={() => handleToggleStatus(item)}
+              onSubscription={() =>
+                (navigation as any).navigate('SuperAdminSchoolSubscription', { schoolId: item.id, schoolName: item.title })
+              }
               onDelete={() => handleDelete(item)}
             />
           )}
@@ -490,7 +501,8 @@ const styles = StyleSheet.create({
   statusPillMissing: { backgroundColor: 'rgba(239,68,68,0.1)' },
   statusPillTextOk: { fontSize: 11.5, color: EMERALD, fontWeight: '700' },
   statusPillTextMissing: { fontSize: 11.5, color: DANGER, fontWeight: '700' },
-  deleteIconBtn: { marginLeft: 10, padding: 4 },
+  subscriptionIconBtn: { marginLeft: 10, padding: 4 },
+  deleteIconBtn: { marginLeft: 6, padding: 4 },
 
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },

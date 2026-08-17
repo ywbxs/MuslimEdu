@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Activity, ArrowRight, BellRing, ClipboardCheck, Flag, Images, KeyRound, RotateCcwClock, School, Trash2 } from 'lucide-react-native';
+import { Activity, ArrowRight, BellRing, ClipboardCheck, CreditCard, Flag, Images, KeyRound, RotateCcwClock, School, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import DashboardShell, { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
@@ -38,6 +38,9 @@ function ClipboardCheckIcon({ color }: { color: string }) {
 
 function BellCogIcon({ color }: { color: string }) {
   return <BellRing size={22} color={color} strokeWidth={2} />;
+}
+function CreditCardIcon({ color }: { color: string }) {
+  return <CreditCard size={22} color={color} strokeWidth={2} />;
 }
 
 function SuperAdminCard({
@@ -125,6 +128,12 @@ export default function SuperAdminDashboard({ footer }: SuperAdminDashboardProps
           title={t('superadmin_dashboard.schools_title', 'Schools')}
           desc={t('superadmin_dashboard.schools_desc', 'Add, edit, disable schools and manage their admins')}
           onPress={() => (navigation as any).navigate('SuperAdminSchoolList')}
+        />
+        <SuperAdminCard
+          icon={<CreditCardIcon color={EMERALD} />}
+          title={t('superadmin_dashboard.subscription_packages_title', 'Subscription Plans')}
+          desc={t('superadmin_dashboard.subscription_packages_desc', 'Manage plans, pricing, and per-school fee status')}
+          onPress={() => (navigation as any).navigate('SuperAdminSubscriptionPackages')}
         />
         <SuperAdminCard
           icon={<KeyIcon color={EMERALD} />}

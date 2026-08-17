@@ -28,7 +28,22 @@ export interface AdminSubscriptionStatus {
   package: string | null;
   expire_date: string | number | null;
   student_limit?: number | string;
+  // Feature keys the current package explicitly grants (see
+  // SUBSCRIPTION_FEATURE_KEYS below). Empty/absent means the package
+  // doesn't restrict by feature - AdminDashboard falls back to gating
+  // everything by `active` alone, same as before this field existed.
+  features?: string[];
 }
+
+// Feature keys a subscription package can list in its `features` array to
+// grant access to specific admin-side capabilities. Shared between
+// AdminDashboard (which gates cards by these) and the superadmin's package
+// editor (which lets a package opt into granting them).
+export const SUBSCRIPTION_FEATURE_KEYS = {
+  gradingSystems: 'grading_systems',
+  examCategories: 'exam_categories',
+  gradebookReview: 'gradebook_review',
+} as const;
 
 export interface StudentAcademicStatus {
   enrolled: boolean;
