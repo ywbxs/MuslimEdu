@@ -16,7 +16,7 @@ import {
   PrayerLocation,
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { COLORS, RADIUS, SHADOW, BRAND } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
 const EMERALD = COLORS.emerald;
@@ -205,15 +205,26 @@ export default function PrayerTimesDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.list}>
-              {result.timings.map((t) => {
+            <View style={styles.listCard}>
+              {result.timings.map((t, i) => {
                 const passed = isToday && timingMinutes(t) <= nowMinutes;
+                const isCurrent = isToday && next?.current.name === t.name;
                 return (
-                  <View key={t.name} style={[styles.row, passed && styles.rowPassed]}>
-                    <View style={[styles.rowCheck, passed && styles.rowCheckDone]}>{passed && <CheckIcon />}</View>
-                    <Text style={[styles.rowName, passed && styles.rowNamePassed]}>{t.name}</Text>
-                    <Text style={styles.rowTime}>{t.timeLabel}</Text>
-                  </View>
+                  <React.Fragment key={t.name}>
+                    <View style={[styles.row, isCurrent && styles.rowCurrent]}>
+                      <View style={[styles.rowCheck, passed && styles.rowCheckDone]}>
+                        {passed ? <CheckIcon color={WHITE} size={14} /> : null}
+                      </View>
+                      <Text style={[styles.rowName, passed && styles.rowNamePassed]}>{t.name}</Text>
+                      {isCurrent ? (
+                        <View style={styles.nowTag}>
+                          <Text style={styles.nowTagText}>NOW</Text>
+                        </View>
+                      ) : null}
+                      <Text style={[styles.rowTime, passed && styles.rowTimePassed]}>{t.timeLabel}</Text>
+                    </View>
+                    {i < result.timings.length - 1 ? <View style={styles.rowDivider} /> : null}
+                  </React.Fragment>
                 );
               })}
             </View>
@@ -279,23 +290,50 @@ const styles = StyleSheet.create({
   heroNextName: { color: WHITE, fontSize: 32, fontWeight: '800', marginTop: 6 },
   heroNextTime: { color: FAINT, fontSize: 16, fontWeight: '600', marginTop: 2 },
 
-  sectionLabel: { fontSize: 15, fontWeight: '700', color: INK, marginBottom: 10 },
-  daySwitcher: { flexDirection: 'row', alignItems: 'center', backgroundColor: GRADIENT_TOP, borderRadius: RADIUS.pill, paddingVertical: 10, paddingHorizontal: 10, marginBottom: 14 },
-  dayArrow: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: GLASS_FILL },
-  dayPill: { flex: 1, alignItems: 'center' },
-  dayPillText: { color: WHITE, fontSize: 13.5, fontWeight: '700' },
-
-  list: { gap: 10 },
-  row: {
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SUBTLE,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  // Lighter than the old solid-dark-green bar - the hero card right above
+  // already carries that weight; repeating it here read as two stacked
+  // slabs of the same heavy material back to back.
+  daySwitcher: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    marginBottom: 14,
     ...SHADOW.level1,
   },
-  rowPassed: { backgroundColor: COLORS.emeraldSoft },
+  dayArrow: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
+  dayPill: { flex: 1, alignItems: 'center' },
+  dayPillText: { color: INK, fontSize: 13.5, fontWeight: '700' },
+
+  // One grouped card with hairline dividers instead of a separately
+  // shadowed card per row - six stacked shadows read as visual noise for
+  // a list this uniform; elevation belongs to the card as a whole.
+  listCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    ...SHADOW.level1,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  rowCurrent: { backgroundColor: COLORS.emeraldSoft },
+  rowDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: 52 },
   rowCheck: {
     width: 24,
     height: 24,
@@ -306,8 +344,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  rowCheckDone: { backgroundColor: '#FFFFFF', borderColor: EMERALD },
+  // Solid filled circle rather than an outline + green check - reads as a
+  // completed state at a glance and keeps the check icon's white-on-fill
+  // contrast well above the 3:1 UI-graphics minimum (outline + green-on-
+  // white check previously measured 2.88:1).
+  rowCheckDone: { backgroundColor: BRAND.emeraldDeep, borderColor: BRAND.emeraldDeep },
   rowName: { flex: 1, fontSize: 15, fontWeight: '600', color: INK },
-  rowNamePassed: { color: EMERALD, fontWeight: '700' },
+  // BRAND.emeraldDeep, not COLORS.emerald - the lighter emerald measured
+  // 2.44:1 against the emeraldSoft tint (fails WCAG AA's 4.5:1); deep
+  // emerald measures 5.42:1 against white/near-white.
+  rowNamePassed: { color: BRAND.emeraldDeep, fontWeight: '700' },
+  nowTag: { backgroundColor: BRAND.emeraldDeep, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, marginRight: 10 },
+  nowTagText: { color: WHITE, fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   rowTime: { fontSize: 14, fontWeight: '700', color: SUBTLE },
+  rowTimePassed: { color: BRAND.emeraldDeep },
 });

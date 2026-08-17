@@ -9,9 +9,15 @@
 // static structure, so it's built here by hand instead of silently
 // substituting an image/screenshot for "PDF export".
 //
-// Deliberately text-only, one exported table shape: a title, a header row,
-// and left-aligned data rows across a fixed set of columns. Good enough for
-// a printable schedule/report; not a general PDF layout engine.
+// Two builders live here:
+//  - buildTablePdf: one title, one header row, left-aligned data rows across
+//    a fixed set of columns. Good enough for a printable schedule.
+//  - buildSectionedReportPdf: a paginated stack of typed blocks (title,
+//    section headers, label/value rows, and small horizontal bar-chart
+//    rows drawn with plain PDF `re`/`f` fill-rectangle operators - no image
+//    embedding, just vector fills, so still no native dependency needed).
+//    Used for reports that need real sections and simple visuals instead of
+//    one flat table.
 
 const PAGE_WIDTH = 612; // US Letter, points
 const PAGE_HEIGHT = 792;
@@ -121,6 +127,162 @@ export function buildTablePdf(title: string, columns: PdfColumn[], rows: string[
   let body = '%PDF-1.4\n';
   const offsets: number[] = [0]; // index 0 is the free-list head, never used
   const totalObjects = objects.length - 1; // objects[] is 1-indexed, slot 0 unused
+
+  for (let n = 1; n <= totalObjects; n++) {
+    offsets[n] = body.length;
+    body += `${n} 0 obj\n${objects[n]}\nendobj\n`;
+  }
+
+  const xrefStart = body.length;
+  let xref = `xref\n0 ${totalObjects + 1}\n0000000000 65535 f \n`;
+  for (let n = 1; n <= totalObjects; n++) {
+    xref += `${String(offsets[n]).padStart(10, '0')} 00000 n \n`;
+  }
+
+  const trailer = `trailer\n<< /Size ${totalObjects + 1} /Root ${catalogNum} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return body + xref + trailer;
+}
+
+// -----------------------------------------------------------------------
+// buildSectionedReportPdf - a typed-block report layout with real section
+// headers and small drawn bar-chart rows, on top of the same object/xref
+// machinery buildTablePdf uses.
+// -----------------------------------------------------------------------
+
+export type ReportBlock =
+  | { kind: 'title'; text: string }
+  | { kind: 'subtitle'; text: string }
+  | { kind: 'section'; text: string }
+  | { kind: 'divider' }
+  | { kind: 'kv'; label: string; value: string }
+  | { kind: 'bar'; label: string; value: string; pct: number }
+  | { kind: 'note'; text: string }
+  | { kind: 'spacer'; height: number };
+
+const RPT_MARGIN = 40;
+const RPT_PAGE_WIDTH = 612;
+const RPT_PAGE_HEIGHT = 792;
+const RPT_USABLE_WIDTH = RPT_PAGE_WIDTH - RPT_MARGIN * 2;
+const RPT_USABLE_HEIGHT = RPT_PAGE_HEIGHT - RPT_MARGIN * 2;
+const RPT_BAR_TRACK_WIDTH = 320;
+const RPT_ACCENT_RGB = '0.059 0.478 0.239'; // BRAND.emeraldDeep #0F7A3D as 0-1 fractions
+const RPT_TRACK_RGB = '0.91 0.93 0.92';
+
+function reportBlockHeight(b: ReportBlock): number {
+  switch (b.kind) {
+    case 'title':
+      return 32;
+    case 'subtitle':
+      return 16;
+    case 'section':
+      return 24;
+    case 'divider':
+      return 14;
+    case 'kv':
+      return 16;
+    case 'bar':
+      return 26;
+    case 'note':
+      return 16;
+    case 'spacer':
+      return b.height;
+  }
+}
+
+/** Draws one block at the given top-of-block y, returning its content-stream ops. y is a baseline-style cursor, same convention buildTablePdf uses. */
+function drawReportBlock(b: ReportBlock, y: number): string {
+  switch (b.kind) {
+    case 'title':
+      return textOp(RPT_MARGIN, y, 18, 'F2', b.text);
+    case 'subtitle':
+      return textOp(RPT_MARGIN, y, 10.5, 'F1', b.text);
+    case 'section':
+      return textOp(RPT_MARGIN, y, 11, 'F2', b.text.toUpperCase());
+    case 'divider':
+      return `${RPT_MARGIN.toFixed(1)} ${y.toFixed(1)} m ${(RPT_PAGE_WIDTH - RPT_MARGIN).toFixed(1)} ${y.toFixed(1)} l S\n`;
+    case 'kv':
+      return textOp(RPT_MARGIN, y, 10, 'F2', b.label) + textOp(RPT_MARGIN + 220, y, 10, 'F1', b.value);
+    case 'note':
+      return textOp(RPT_MARGIN, y, 9, 'F1', b.text);
+    case 'bar': {
+      const clampedPct = Math.max(0, Math.min(100, b.pct));
+      const fillWidth = (RPT_BAR_TRACK_WIDTH * clampedPct) / 100;
+      const barY = y - 14;
+      let ops = textOp(RPT_MARGIN, y, 9.5, 'F1', b.label);
+      ops += textOp(RPT_MARGIN + RPT_BAR_TRACK_WIDTH + 14, y, 9.5, 'F2', b.value);
+      ops += `${RPT_TRACK_RGB} rg\n${RPT_MARGIN.toFixed(1)} ${barY.toFixed(1)} ${RPT_BAR_TRACK_WIDTH.toFixed(1)} 8 re f\n`;
+      if (fillWidth > 0) {
+        ops += `${RPT_ACCENT_RGB} rg\n${RPT_MARGIN.toFixed(1)} ${barY.toFixed(1)} ${fillWidth.toFixed(1)} 8 re f\n`;
+      }
+      ops += '0 0 0 rg\n'; // reset fill color to black - rect fills otherwise bleed into subsequent text
+      return ops;
+    }
+    case 'spacer':
+      return '';
+  }
+}
+
+/**
+ * Paginated multi-section report: title/subtitle/section headers,
+ * label-value rows, and small drawn horizontal bar-chart rows. Blocks are
+ * laid out top-down and wrapped onto new pages purely by accumulated
+ * height, the same idea as buildTablePdf's row pagination but for
+ * heterogeneous block types instead of one repeating row shape.
+ */
+export function buildSectionedReportPdf(blocks: ReportBlock[]): string {
+  const pages: ReportBlock[][] = [];
+  let current: ReportBlock[] = [];
+  let budget = RPT_USABLE_HEIGHT;
+  for (const b of blocks) {
+    const h = reportBlockHeight(b);
+    if (h > budget && current.length > 0) {
+      pages.push(current);
+      current = [];
+      budget = RPT_USABLE_HEIGHT;
+    }
+    current.push(b);
+    budget -= h;
+  }
+  if (current.length > 0) pages.push(current);
+  if (pages.length === 0) pages.push([]);
+
+  const objects: string[] = [];
+  const catalogNum = 1;
+  const pagesNum = 2;
+  const fontRegularNum = 3;
+  const fontBoldNum = 4;
+  const firstDynamicNum = 5;
+
+  const pageNums: number[] = [];
+  const contentNums: number[] = [];
+  for (let p = 0; p < pages.length; p++) {
+    pageNums.push(firstDynamicNum + p * 2);
+    contentNums.push(firstDynamicNum + p * 2 + 1);
+  }
+
+  objects[catalogNum] = `<< /Type /Catalog /Pages ${pagesNum} 0 R >>`;
+  objects[pagesNum] = `<< /Type /Pages /Kids [${pageNums.map((n) => `${n} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+  objects[fontRegularNum] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`;
+  objects[fontBoldNum] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`;
+
+  for (let p = 0; p < pages.length; p++) {
+    let stream = '0 0 0 rg\n';
+    let y = RPT_PAGE_HEIGHT - RPT_MARGIN;
+    for (const block of pages[p]) {
+      stream += drawReportBlock(block, y);
+      y -= reportBlockHeight(block);
+    }
+
+    objects[pageNums[p]] =
+      `<< /Type /Page /Parent ${pagesNum} 0 R /MediaBox [0 0 ${RPT_PAGE_WIDTH} ${RPT_PAGE_HEIGHT}] ` +
+      `/Resources << /Font << /F1 ${fontRegularNum} 0 R /F2 ${fontBoldNum} 0 R >> >> /Contents ${contentNums[p]} 0 R >>`;
+    objects[contentNums[p]] = `<< /Length ${stream.length} >>\nstream\n${stream}endstream`;
+  }
+
+  let body = '%PDF-1.4\n';
+  const offsets: number[] = [0];
+  const totalObjects = objects.length - 1;
 
   for (let n = 1; n <= totalObjects; n++) {
     offsets[n] = body.length;

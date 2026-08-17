@@ -51,6 +51,7 @@ const TYPE_LABELS: Record<GradingSystemType, string> = {
   practical: 'Practical',
   islamic_studies: 'Islamic Studies',
   arabic: 'Arabic',
+  quarterly: 'Quarterly',
   custom: 'Custom',
 };
 

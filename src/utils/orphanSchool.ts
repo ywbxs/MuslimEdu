@@ -179,6 +179,12 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AuthorizationAudit',
   'AdminStudentDocuments',
   'AdminStudentServices',
+  // Alumni applications - "alumni" here means graduates of a class-based
+  // school re-applying to reconnect; an orphan school's children age out
+  // into independent life, not a graduating class with an alumni network,
+  // so there's no self-service alumni signup pipeline for an admin here to
+  // review.
+  'AdminAlumniApplications',
   // Cashier (accountant) role + fee management - orphan schools have no
   // tuition fees to collect (sponsorship payments are the separate,
   // already-existing admin_sponsorship_payment_* flow), so there's nothing
@@ -207,6 +213,7 @@ export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'permissions', 'integrationSettings', 'localizationSettings',
   'authorizationAudit', 'fees', 'studentDocumentRequests',
   'studentServiceRequests', 'cashiers', 'registrars', 'idCards',
+  'alumniApplications',
   // Tile only, not the shared 'Notifications' route: the admin card is
   // specifically "academic updates, grade releases and schedule changes",
   // but the same screen also serves the personal notification bell on the

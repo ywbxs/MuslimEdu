@@ -46,6 +46,7 @@ const TYPE_LABELS: Record<string, string> = {
   practical: 'Practical',
   islamic_studies: 'Islamic Studies',
   arabic: 'Arabic',
+  quarterly: 'Quarterly',
   custom: 'Custom',
 };
 

@@ -8,8 +8,6 @@ import {
   RefreshControl,
   TextInput,
   Modal,
-  ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +17,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../services/adminTeacherService';
 import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
+import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
@@ -199,14 +198,6 @@ function AddTeacherSheet({
 
   const handleCreate = async () => {
     if (!token) return;
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert(t('admin_teacher_list.almost_done', 'Almost done'), t('admin_teacher_list.error_required_fields', 'Name, email, and password are required.'));
-      return;
-    }
-    if (password.trim().length < 6) {
-      Alert.alert(t('admin_teacher_list.almost_done', 'Almost done'), t('admin_teacher_list.error_password_length', 'Password must be at least 6 characters.'));
-      return;
-    }
     setIsSubmitting(true);
     try {
       const created = await addTeacher(token, {
@@ -232,106 +223,123 @@ function AddTeacherSheet({
     }
   };
 
+  const steps: WizardStepDef[] = [
+    {
+      key: 'identity',
+      label: t('admin_teacher_list.step_identity', 'Identity'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.full_name_label', 'Full Name')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.full_name_placeholder', 'e.g. Ahmad bin Abdullah')}
+            placeholderTextColor={SUBTLE}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.name_ar_label', 'Arabic Name (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.name_ar_placeholder', 'الاسم بالعربية')}
+            placeholderTextColor={SUBTLE}
+            value={nameAr}
+            onChangeText={setNameAr}
+          />
+        </>
+      ),
+    },
+    {
+      key: 'account',
+      label: t('admin_teacher_list.step_account', 'Account'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.email_label', 'Email')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.email_placeholder', 'teacher@example.com')}
+            placeholderTextColor={SUBTLE}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.password_label', 'Password')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.password_placeholder', 'At least 6 characters')}
+            placeholderTextColor={SUBTLE}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </>
+      ),
+    },
+    {
+      key: 'contact',
+      label: t('admin_teacher_list.step_contact', 'Contact'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.phone_label', 'Phone (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.phone_placeholder', 'e.g. 012-345 6789')}
+            placeholderTextColor={SUBTLE}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.emergency_contact_name_label', 'Emergency Contact Name (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.emergency_contact_name_placeholder', 'e.g. Fatimah binti Ahmad')}
+            placeholderTextColor={SUBTLE}
+            value={emergencyContactName}
+            onChangeText={setEmergencyContactName}
+            autoCapitalize="words"
+          />
+          <Text style={wizardFieldStyles.label}>{t('admin_teacher_list.emergency_contact_phone_label', 'Emergency Contact Phone (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('admin_teacher_list.emergency_contact_phone_placeholder', 'e.g. 012-345 6789')}
+            placeholderTextColor={SUBTLE}
+            value={emergencyContactPhone}
+            onChangeText={setEmergencyContactPhone}
+            keyboardType="phone-pad"
+          />
+        </>
+      ),
+    },
+  ];
+
+  const validateStep = (stepIndex: number): string | null => {
+    if (stepIndex === 0 && !name.trim()) {
+      return t('admin_teacher_list.error_name_required', 'Full name is required.');
+    }
+    if (stepIndex === 1) {
+      if (!email.trim() || !password.trim()) {
+        return t('admin_teacher_list.error_required_fields', 'Name, email, and password are required.');
+      }
+      if (password.trim().length < 6) {
+        return t('admin_teacher_list.error_password_length', 'Password must be at least 6 characters.');
+      }
+    }
+    return null;
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={styles.sheetBackdrop}>
-        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
-        <View style={styles.formSheet}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>{t('admin_teacher_list.add_teacher_title', 'Add Teacher')}</Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
-              <CloseIcon color={SUBTLE} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.full_name_label', 'Full Name')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.full_name_placeholder', 'e.g. Ahmad bin Abdullah')}
-              placeholderTextColor={SUBTLE}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.name_ar_label', 'Arabic Name (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.name_ar_placeholder', 'الاسم بالعربية')}
-              placeholderTextColor={SUBTLE}
-              value={nameAr}
-              onChangeText={setNameAr}
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.email_label', 'Email')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.email_placeholder', 'teacher@example.com')}
-              placeholderTextColor={SUBTLE}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.password_label', 'Password')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.password_placeholder', 'At least 6 characters')}
-              placeholderTextColor={SUBTLE}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.phone_label', 'Phone (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.phone_placeholder', 'e.g. 012-345 6789')}
-              placeholderTextColor={SUBTLE}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.emergency_contact_name_label', 'Emergency Contact Name (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.emergency_contact_name_placeholder', 'e.g. Fatimah binti Ahmad')}
-              placeholderTextColor={SUBTLE}
-              value={emergencyContactName}
-              onChangeText={setEmergencyContactName}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin_teacher_list.emergency_contact_phone_label', 'Emergency Contact Phone (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('admin_teacher_list.emergency_contact_phone_placeholder', 'e.g. 012-345 6789')}
-              placeholderTextColor={SUBTLE}
-              value={emergencyContactPhone}
-              onChangeText={setEmergencyContactPhone}
-              keyboardType="phone-pad"
-            />
-
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
-              onPress={handleCreate}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>{t('admin_teacher_list.add_teacher_title', 'Add Teacher')}</Text>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    <AccountWizardSheet
+      visible={visible}
+      onClose={handleClose}
+      title={t('admin_teacher_list.add_teacher_title', 'Add Teacher')}
+      steps={steps}
+      validateStep={validateStep}
+      onFinish={handleCreate}
+      finishing={isSubmitting}
+      finishLabel={t('admin_teacher_list.add_teacher_title', 'Add Teacher')}
+    />
   );
 }
 
@@ -594,30 +602,4 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: 15.5, fontWeight: '700', color: INK },
   actionDesc: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
-
-  formSheet: {
-    backgroundColor: GLASS_SURFACE_STRONG,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    paddingBottom: 34,
-    paddingHorizontal: 20,
-    maxHeight: '85%',
-  },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8, marginTop: 14 },
-  fieldInput: {
-    backgroundColor: 'transparent',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: INK,
-  },
-  submitButton: {
-    backgroundColor: EMERALD,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  submitButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });

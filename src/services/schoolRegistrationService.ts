@@ -21,10 +21,18 @@ import { API_BASE_URL, absoluteUrl } from '../config/api';
  *     user, same duplicate-email check the rest of the app relies on.
  *
  *   POST /superadmin_school_registration_list    (superadmin) -> { registrations: PendingRegistration[] }
- *   POST /superadmin_school_registration_approve  (superadmin, { id })
+ *   POST /superadmin_school_registration_approve  (superadmin, { id,
+ *       subscription_package?: string, subscription_student_limit?: number|null,
+ *       subscription_expire_date?: string (YYYY-MM-DD) })
  *     -> creates the real School + admin User records (status: 1, so the
  *     admin can log in immediately after) and marks the registration
- *     approved. -> { registration }
+ *     approved. When the subscription_* fields are present the server
+ *     should also write them onto the new school's subscription record
+ *     (the same fields /admin_subscription_status later reads back as
+ *     package/expire_date/student_limit - see subscriptionService.ts) so
+ *     a freshly-approved school doesn't start on "no_subscription".
+ *     subscription_student_limit of null means unlimited.
+ *     -> { registration }
  *   POST /superadmin_school_registration_reject   (superadmin, { id, reason?: string }) -> { registration }
  */
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -50,6 +58,12 @@ export interface SchoolRegistrationInput {
   password: string;
   idDocument: PickedRegistrationImage;
   selfie: PickedRegistrationImage;
+}
+
+export interface SubscriptionSelection {
+  package: string;
+  studentLimit: number | null;
+  expireDate: string; // YYYY-MM-DD
 }
 
 export interface PendingRegistration {
@@ -229,9 +243,27 @@ export async function fetchPendingSchoolRegistrations(token: string): Promise<Pe
   return (data.registrations ?? []).map(normalizeRegistration);
 }
 
-/** POST /superadmin_school_registration_approve - creates the real School + admin User. */
-export async function approveSchoolRegistration(token: string, id: number): Promise<PendingRegistration> {
-  const data = await postJson('/superadmin_school_registration_approve', { id }, token);
+/** POST /superadmin_school_registration_approve - creates the real School + admin User,
+ *  and (when provided) activates the school's subscription in the same call. */
+export async function approveSchoolRegistration(
+  token: string,
+  id: number,
+  subscription?: SubscriptionSelection,
+): Promise<PendingRegistration> {
+  const data = await postJson(
+    '/superadmin_school_registration_approve',
+    {
+      id,
+      ...(subscription
+        ? {
+            subscription_package: subscription.package,
+            subscription_student_limit: subscription.studentLimit,
+            subscription_expire_date: subscription.expireDate,
+          }
+        : {}),
+    },
+    token,
+  );
   return normalizeRegistration(data.registration);
 }
 

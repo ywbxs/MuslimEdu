@@ -5,8 +5,9 @@ const GAP = 3;
 const IMAGE_RADIUS = 18;
 // Default single-image shape: a slightly-taller-than-wide rectangle (the
 // original ratio this always had). The Home feed overrides this to a true
-// 4:3 via the aspectRatio prop below - scoped there only, since other
-// callers (moderation queue, profile modal, quoted reposts) keep this look.
+// 1:1 square via the aspectRatio prop below - scoped there only, since
+// other callers (moderation queue, profile modal, quoted reposts) keep
+// this look.
 const DEFAULT_ASPECT_RATIO = 1 / 1.05;
 
 interface Props {
