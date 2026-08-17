@@ -278,10 +278,13 @@ export default function InstitutionProfileScreen() {
         logo: newLogo ? { uri: newLogo.uri, fileName: newLogo.fileName, type: newLogo.type } : undefined,
         seal: newSeal ? { uri: newSeal.uri, fileName: newSeal.fileName, type: newSeal.type } : undefined,
       });
-      Alert.alert(t('institution_profile.saved', 'Saved'), t('institution_profile.saved_message', 'Institution profile updated.'));
+      Alert.alert(
+        t('institution_profile.saved', 'Saved'),
+        t('institution_profile.saved_message', 'Institution profile updated.'),
+        [{ text: t('common.ok', 'OK'), onPress: () => navigation.goBack() }],
+      );
       setNewLogo(null);
       setNewSeal(null);
-      load();
     } catch (err) {
       Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('institution_profile.save_error', 'Could not save the institution profile.'));
     } finally {
