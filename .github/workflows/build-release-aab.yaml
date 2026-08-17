@@ -52,6 +52,11 @@ jobs:
       - name: Add camera permission for QR/ID scanning
         run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
 
+      - name: Add storage/media permissions for picking ID/profile photos from the gallery
+        run: |
+          sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
       - name: Add location permissions for GPS-based prayer times
         run: |
           sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
