@@ -10,6 +10,7 @@ import UserAvatar from '../../components/UserAvatar';
 import HeroGlow from '../../components/HeroGlow';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import AnalyticsCard from '../../components/AnalyticsCard';
+import SchoolIdentityCard from '../../components/SchoolIdentityCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
 import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
@@ -834,10 +835,19 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           </View>
 
           {isOrphanSchool && token ? (
-            // Real data via admin_orphan_report_overview, restored after a
-            // later merge silently reverted this to the old static
-            // placeholder card (no live counts). See MuslimEdu-Status-8.
-            <MonthlyReportsCard token={token} />
+            <>
+              {/* AnalyticsCard (below) shows this same school name/address/
+                  logo + edit shortcut for non-orphan schools, but orphan
+                  schools never render AnalyticsCard at all - it otherwise
+                  reports on class-based academic data they don't have.
+                  Standalone here so orphan admins can still see and edit
+                  their own school's info from the dashboard. */}
+              <SchoolIdentityCard token={token} />
+              {/* Real data via admin_orphan_report_overview, restored after a
+                  later merge silently reverted this to the old static
+                  placeholder card (no live counts). See MuslimEdu-Status-8. */}
+              <MonthlyReportsCard token={token} />
+            </>
           ) : null}
 
           {/* Non-orphan schools' equivalent of the hero card above - every
