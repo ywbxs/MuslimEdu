@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ChevronLeft, Plus, X, Users, Globe, Lock, Check } from 'lucide-react-native';
+import { ChevronLeft, Plus, X, Users, Globe, Lock, Check, ImagePlus } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -42,6 +42,9 @@ function BackIcon() {
 }
 function PlusIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
   return <Plus size={size} color={color} strokeWidth={2.2} />;
+}
+function ImagePlusIcon({ color = EMERALD_DEEP, size = 26 }: { color?: string; size?: number }) {
+  return <ImagePlus size={size} color={color} strokeWidth={1.8} />;
 }
 // Filled check for "selected", plain outline ring otherwise - matches the
 // met/unmet checklist pattern used elsewhere in the app (SchoolRegistrationScreen's
@@ -100,7 +103,7 @@ export default function CreatePostScreen() {
   // for them - bounce them out defensively rather than trust the UI alone.
   const canPost = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'teacher';
 
-  const pickImages = async (opts: { initial?: boolean } = {}) => {
+  const pickImages = async () => {
     if (images.length >= MAX_IMAGES) return;
     const result = await launchImageLibrary({
       mediaType: 'photo',
@@ -108,10 +111,6 @@ export default function CreatePostScreen() {
       quality: 0.9,
     });
     if (result.didCancel || result.errorCode || !result.assets) {
-      // Backing out of the very first picker means the post was abandoned
-      // before it ever existed - close the composer rather than strand the
-      // user on an empty screen with nothing they're allowed to post.
-      if (opts.initial && images.length === 0) navigation.goBack();
       return;
     }
 
@@ -142,7 +141,6 @@ export default function CreatePostScreen() {
         }
       }
       setImages((prev) => [...prev, ...picked].slice(0, MAX_IMAGES));
-      if (opts.initial && picked.length === 0) navigation.goBack();
     } finally {
       setCompressing(false);
     }
@@ -161,18 +159,6 @@ export default function CreatePostScreen() {
       navigation.goBack();
     }
   }, [canPost, navigation, t]);
-
-  // A new post opens straight into the photo library, the way Instagram's
-  // "New post" does - the photo IS the post, so there's nothing worth
-  // showing until one is chosen. Edits and reposts skip this: they're built
-  // around existing content and their text is the point.
-  const [pickerOpened, setPickerOpened] = useState(false);
-  useEffect(() => {
-    if (!canPost || pickerOpened || !isNewPost) return;
-    setPickerOpened(true);
-    pickImages({ initial: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canPost, pickerOpened, isNewPost]);
 
   if (!canPost) return null;
 
@@ -276,43 +262,62 @@ export default function CreatePostScreen() {
                 {preview ? (
                   <Image source={{ uri: preview.uri }} style={styles.preview} resizeMode="cover" />
                 ) : (
-                  <View style={[styles.preview, styles.previewEmpty]}>
-                    {compressing ? <ActivityIndicator color={EMERALD} /> : null}
-                  </View>
+                  <TouchableOpacity
+                    style={[styles.preview, styles.previewEmpty]}
+                    activeOpacity={0.85}
+                    onPress={() => pickImages()}
+                    disabled={compressing}
+                  >
+                    {compressing ? (
+                      <ActivityIndicator color={EMERALD} />
+                    ) : (
+                      <>
+                        <View style={styles.addPhotoIconWrap}>
+                          <ImagePlusIcon />
+                        </View>
+                        <Text style={styles.addPhotoTitle}>{t('create_post.add_photos_title', 'Add Photos')}</Text>
+                        <Text style={styles.addPhotoDesc}>
+                          {t('create_post.add_photos_desc', 'Choose up to 6 photos from your library')}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.strip}
-                keyboardShouldPersistTaps="handled"
-              >
-                {images.map((img, i) => (
-                  <TouchableOpacity
-                    key={img.uri}
-                    style={[styles.thumbWrap, i === previewIndex && styles.thumbWrapActive]}
-                    activeOpacity={0.85}
-                    onPress={() => setPreviewIndex(i)}
-                  >
-                    <Image source={{ uri: img.uri }} style={styles.thumb} />
-                    <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(img.uri)} hitSlop={8}>
-                      <CloseIcon />
+              {images.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.strip}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {images.map((img, i) => (
+                    <TouchableOpacity
+                      key={img.uri}
+                      style={[styles.thumbWrap, i === previewIndex && styles.thumbWrapActive]}
+                      activeOpacity={0.85}
+                      onPress={() => setPreviewIndex(i)}
+                    >
+                      <Image source={{ uri: img.uri }} style={styles.thumb} />
+                      <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(img.uri)} hitSlop={8}>
+                        <CloseIcon />
+                      </TouchableOpacity>
                     </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
+                  ))}
 
-                {images.length < MAX_IMAGES ? (
-                  <TouchableOpacity
-                    style={styles.addTile}
-                    onPress={() => pickImages()}
-                    disabled={compressing}
-                    activeOpacity={0.8}
-                  >
-                    {compressing ? <ActivityIndicator size="small" color={EMERALD} /> : <PlusIcon />}
-                  </TouchableOpacity>
-                ) : null}
-              </ScrollView>
+                  {images.length < MAX_IMAGES ? (
+                    <TouchableOpacity
+                      style={styles.addTile}
+                      onPress={() => pickImages()}
+                      disabled={compressing}
+                      activeOpacity={0.8}
+                    >
+                      {compressing ? <ActivityIndicator size="small" color={EMERALD} /> : <PlusIcon />}
+                    </TouchableOpacity>
+                  ) : null}
+                </ScrollView>
+              )}
             </>
           )}
 
@@ -449,7 +454,25 @@ const styles = StyleSheet.create({
   newBody: { paddingBottom: 24 },
   previewWrap: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
   preview: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: PLACEHOLDER },
-  previewEmpty: { alignItems: 'center', justifyContent: 'center' },
+  previewEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    borderWidth: 1.5,
+    borderColor: HAIRLINE,
+    borderStyle: 'dashed',
+  },
+  addPhotoIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  addPhotoTitle: { fontSize: 16, fontWeight: '700', color: INK },
+  addPhotoDesc: { fontSize: 13, color: SUBTLE, textAlign: 'center', marginTop: 6, lineHeight: 18 },
   strip: { paddingHorizontal: 16, paddingBottom: 16, gap: 10, backgroundColor: '#FFFFFF' },
   thumbWrap: { width: 62, height: 62, borderRadius: 10, borderWidth: 2, borderColor: 'transparent' },
   thumbWrapActive: { borderColor: EMERALD_DEEP },
