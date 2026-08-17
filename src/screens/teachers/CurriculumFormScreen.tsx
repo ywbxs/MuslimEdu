@@ -290,7 +290,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>{t('curriculum_form.program_label', 'Program')}</Text>
+          <Text style={styles.label}>{t('curriculum_form.program_label', 'Section/Class')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('program_id')}
@@ -405,7 +405,7 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('curriculum_form.select_program', 'Select Program')}</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_program', 'Select Section/Class')}</Text>
             <FlatList
               data={referenceData.programs}
               renderItem={({ item }) => (
@@ -418,7 +418,7 @@ const CurriculumFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_programs_found', 'No programs found')}</Text>
+                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_programs_found', 'No sections/classes found')}</Text>
               }
             />
             <TouchableOpacity

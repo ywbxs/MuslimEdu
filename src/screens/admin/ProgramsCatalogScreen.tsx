@@ -76,7 +76,7 @@ export default function ProgramsCatalogScreen() {
 
   const handleDeleteProgram = (program: Program) => {
     Alert.alert(
-      t('programs_catalog.delete_program_title', 'Delete Program'),
+      t('programs_catalog.delete_program_title', 'Delete Section/Class'),
       t('programs_catalog.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', program.name),
       [
         { text: t('common.cancel', 'Cancel'), style: 'cancel' },
@@ -222,7 +222,7 @@ export default function ProgramsCatalogScreen() {
       <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
         <IconChevronLeft color={theme.textPrimary} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Programs & Subjects')}</Text>
+      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Section/Class & Subject')}</Text>
       {!loading ? (
         <TouchableOpacity
           style={styles.addButton}
@@ -261,7 +261,7 @@ export default function ProgramsCatalogScreen() {
           onPress={() => setTab('programs')}
         >
           <Text style={[styles.tabButtonText, tab === 'programs' && styles.tabButtonTextActive]}>
-            {t('programs_catalog.tab_programs', 'Programs ({n})').replace('{n}', String(programs.length))}
+            {t('programs_catalog.tab_programs', 'Section/Class ({n})').replace('{n}', String(programs.length))}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -292,9 +292,9 @@ export default function ProgramsCatalogScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="🏫"
-              title={t('programs_catalog.empty_programs_title', 'No programs yet')}
-              subtitle={t('programs_catalog.empty_programs_subtitle', 'Add a program (e.g. Hifz, Alimiyyah) to start organizing subjects under it.')}
-              actionLabel={t('programs_catalog.empty_programs_action', 'Add Program')}
+              title={t('programs_catalog.empty_programs_title', 'No sections/classes yet')}
+              subtitle={t('programs_catalog.empty_programs_subtitle', 'Add a section/class (e.g. Hifz, Alimiyyah) to start organizing subjects under it.')}
+              actionLabel={t('programs_catalog.empty_programs_action', 'Add Section/Class')}
               onAction={() => (navigation as any).navigate('ProgramForm')}
               colors={theme}
             />

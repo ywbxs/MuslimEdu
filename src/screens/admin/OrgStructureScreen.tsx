@@ -348,7 +348,7 @@ export default function OrgStructureScreen() {
         ) : streams.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              {t('org_structure.empty_streams', 'No streams or specializations yet. Add one under a department, optionally tied to a program.')}
+              {t('org_structure.empty_streams', 'No streams or specializations yet. Add one under a department, optionally tied to a section/class.')}
             </Text>
           </View>
         ) : (
@@ -457,7 +457,7 @@ export default function OrgStructureScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>{t('org_structure.program_label', 'Program (optional)')}</Text>
+            <Text style={styles.label}>{t('org_structure.program_label', 'Section/Class (optional)')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               <TouchableOpacity
                 style={[styles.chip, sProgramId === null && styles.chipActive]}

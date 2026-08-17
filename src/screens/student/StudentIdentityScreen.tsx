@@ -53,7 +53,7 @@ export default function StudentIdentityScreen() {
             <View style={styles.profileText}><Text style={styles.name}>{identity.name}</Text><Text style={styles.number}>{identity.student_number ?? t('student_identity.number_pending', 'Number pending')}</Text></View>
           </View>
           <View style={styles.cardDivider} />
-          <IdentityRow label={t('student_identity.program', 'Program')} value={identity.academic.program} />
+          <IdentityRow label={t('student_identity.program', 'Section/Class')} value={identity.academic.program} />
           <IdentityRow label={t('student_identity.class_section', 'Class / Section')} value={[identity.academic.class_name, identity.academic.section].filter(Boolean).join(' / ')} />
           <IdentityRow label={t('student_identity.academic_year', 'Academic year')} value={identity.academic.academic_year} />
           <View style={styles.statusPill}><View style={styles.statusDot} /><Text style={styles.statusText}>{identity.academic.status ?? t('student_identity.active_student', 'Active student')}</Text></View>
