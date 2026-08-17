@@ -125,6 +125,15 @@ export default function PostCommentsScreen() {
   // position for a frame.
   const { height: windowHeight } = useWindowDimensions();
   const translateY = useRef(new Animated.Value(0)).current;
+  // Backdrop opacity tracks translateY directly (not a separate Animated
+  // value animated in parallel) - it fades out exactly as fast as the sheet
+  // moves down, dragged or auto-dismissing, instead of staying at full
+  // opacity the whole time and only vanishing once the route finally pops.
+  const backdropOpacity = translateY.interpolate({
+    inputRange: [0, windowHeight],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
   const dismiss = () => {
     Animated.timing(translateY, {
       toValue: windowHeight,
@@ -306,8 +315,12 @@ export default function PostCommentsScreen() {
       {/* Tapping the backdrop (the part of the previous screen still
           visible above the sheet - RootNavigator presents this route as
           presentation: 'transparentModal') dismisses the same way dragging
-          the handle down does. */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+          the handle down does. Opacity is driven by translateY, so it fades
+          in step with the sheet instead of staying solid until the route
+          pops. */}
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+      </Animated.View>
 
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
         <KeyboardAvoidingView
@@ -408,10 +421,12 @@ export default function PostCommentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Backdrop fills the whole screen; the previous screen (feed) shows
-  // through it since RootNavigator presents this route as
+  root: { flex: 1, justifyContent: 'flex-end' },
+  // Its own animated layer (not baked into root's background) so opacity
+  // can be driven by translateY - the previous screen (feed) shows through
+  // it since RootNavigator presents this route as
   // presentation: 'transparentModal' rather than an opaque 'modal'.
-  root: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,20,23,0.45)' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(17,20,23,0.45)' },
   sheet: {
     height: '85%',
     backgroundColor: COLORS.canvas,
