@@ -41,10 +41,18 @@ async function authedPost(path: string, token: string, body: Record<string, any>
 
 // --- Types (mirror AcademicCatalogController.php response shapes) ---
 
+// 'quarterly' added here - a grading system whose scores are computed and
+// reported per academic quarter (distinct from the other types, which are
+// all scoring *methods* rather than reporting *periods*). The backend's
+// admin_grading_systems_create/_update validation (Laravel `in:` rule on
+// `type`, per this file's own top-of-file note that the routes predate any
+// RN screen calling them) needs to accept this value too, or creating/
+// saving a Quarterly grading system will fail server-side even though the
+// UI offers it.
 export type GradingSystemType =
   | 'percentage' | 'letter' | 'gpa' | 'competency' | 'pass_fail' | 'memorization'
   | 'behavior' | 'attendance' | 'oral' | 'written' | 'practical'
-  | 'islamic_studies' | 'arabic' | 'custom';
+  | 'islamic_studies' | 'arabic' | 'quarterly' | 'custom';
 
 export interface GradeScaleBand {
   id?: number;
@@ -89,7 +97,7 @@ export interface GradingSystem {
 export const GRADING_SYSTEM_TYPES: GradingSystemType[] = [
   'percentage', 'letter', 'gpa', 'competency', 'pass_fail', 'memorization',
   'behavior', 'attendance', 'oral', 'written', 'practical',
-  'islamic_studies', 'arabic', 'custom',
+  'islamic_studies', 'arabic', 'quarterly', 'custom',
 ];
 
 // --- Grading systems ---
