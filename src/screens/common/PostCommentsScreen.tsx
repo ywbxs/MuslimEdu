@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { X, MessagesSquare, Send, Heart, Camera, Smile, Sticker, ArrowUpDown } from 'lucide-react-native';
+import { X, MessagesSquare, Send, Heart, ArrowUpDown } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import UserAvatar from '../../components/UserAvatar';
@@ -44,24 +44,6 @@ function SendIcon({ disabled }: { disabled: boolean }) {
 function HeartIcon({ filled, size = 15 }: { filled: boolean; size?: number }) {
   const color = filled ? HEART_RED : SUBTLE;
   return <Heart size={size} color={color} fill={filled ? color : 'none'} strokeWidth={1.9} />;
-}
-function CameraToolIcon() {
-  return <Camera size={21} color={SUBTLE} strokeWidth={1.8} />;
-}
-function GifToolIcon() {
-  // No badge glyph in the icon set for "GIF" specifically - a small
-  // outlined tag reading "GIF" reads the same way the reference app's does.
-  return (
-    <View style={styles.gifBadge}>
-      <Text style={styles.gifBadgeText}>GIF</Text>
-    </View>
-  );
-}
-function SmileToolIcon() {
-  return <Smile size={21} color={SUBTLE} strokeWidth={1.8} />;
-}
-function StickerToolIcon() {
-  return <Sticker size={21} color={SUBTLE} strokeWidth={1.8} />;
 }
 function SortIcon() {
   return <ArrowUpDown size={18} color={SUBTLE} strokeWidth={1.8} />;
@@ -164,16 +146,6 @@ export default function PostCommentsScreen() {
 
   const toggleSort = () => setSortOrder((s) => (s === 'newest' ? 'oldest' : 'newest'));
 
-  // Camera/GIF/sticker attachments aren't backed by anything yet - no image
-  // field exists on a comment server-side, no GIF-search integration, no
-  // sticker asset set. Honest "not yet" rather than a button that silently
-  // does nothing when tapped.
-  const notAvailable = () =>
-    Alert.alert(
-      t('post_comments.not_ready_title', 'Not available yet'),
-      t('post_comments.not_ready_desc', 'Photo, GIF, and sticker attachments on comments are coming soon.'),
-    );
-
   const send = async () => {
     if (!token || !text.trim() || sending) return;
     setSending(true);
@@ -271,7 +243,13 @@ export default function PostCommentsScreen() {
               updateCommentTree matches by id wherever it is in the tree, so
               a reply-to-a-reply tucks itself under its real immediate parent
               rather than flattening back to the top-level comment. */}
-          <TouchableOpacity onPress={() => setReplyTo(item)} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => {
+              setReplyTo(item);
+              inputRef.current?.focus();
+            }}
+            hitSlop={8}
+          >
             <Text style={styles.replyText}>{t('post_comments.reply', 'Reply')}</Text>
           </TouchableOpacity>
           {item.likes_count > 0 && (
@@ -374,20 +352,6 @@ export default function PostCommentsScreen() {
         </View>
 
         <View style={styles.composerToolsRow}>
-          <View style={styles.composerToolsLeft}>
-            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
-              <CameraToolIcon />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
-              <GifToolIcon />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn} onPress={() => inputRef.current?.focus()} hitSlop={8}>
-              <SmileToolIcon />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn} onPress={notAvailable} hitSlop={8}>
-              <StickerToolIcon />
-            </TouchableOpacity>
-          </View>
           <TouchableOpacity onPress={toggleSort} hitSlop={8} style={styles.sortBtn}>
             <SortIcon />
             <Text style={styles.sortBtnText}>
@@ -487,20 +451,10 @@ const styles = StyleSheet.create({
   composerToolsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: 8,
     paddingHorizontal: 2,
   },
-  composerToolsLeft: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  toolBtn: { alignItems: 'center', justifyContent: 'center' },
-  gifBadge: {
-    borderWidth: 1.4,
-    borderColor: SUBTLE,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  gifBadgeText: { fontSize: 10, fontWeight: '800', color: SUBTLE, letterSpacing: 0.2 },
   sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sortBtnText: { fontSize: 12.5, fontWeight: '600', color: SUBTLE },
 });
