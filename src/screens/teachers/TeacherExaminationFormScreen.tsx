@@ -111,7 +111,7 @@ export default function TeacherExaminationFormScreen({ navigation, route }: Prop
 
   return (
     <SafeAreaView style={s.screen}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps='handled'>
           <Text style={s.title}>{editing ? t('teacher_examination_form.edit_title', 'Edit examination') : t('teacher_examination_form.new_title', 'New examination')}</Text>
           <Text style={s.sub}>{t('teacher_examination_form.draft_note', 'Saved as a draft. Students see nothing until you publish it.')}</Text>

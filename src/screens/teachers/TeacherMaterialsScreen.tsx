@@ -238,7 +238,7 @@ export default function TeacherMaterialsScreen() {
     <GlassBackground style={{ flex: 1, backgroundColor: CANVAS }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={insets.top}
       >
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>

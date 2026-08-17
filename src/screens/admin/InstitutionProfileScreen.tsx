@@ -364,7 +364,7 @@ export default function InstitutionProfileScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <WizardStepHeader step={step + 1} labels={visibleStepKeys.map(stepLabel)} />
 
         {error ? (

@@ -432,7 +432,7 @@ export default function LoginScreen() {
         end={{ x: 0.7, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[styles.screen, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
           {/* Top bar changes per step but always stays pinned at the top,
               outside the animated block, so it never participates in the

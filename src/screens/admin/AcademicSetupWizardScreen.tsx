@@ -393,7 +393,7 @@ export default function AcademicSetupWizardScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <View style={styles.iconWrap}>
