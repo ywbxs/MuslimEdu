@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Modal, Image, ActivityIndicator, ScrollView, Platform, StyleProp, ViewStyle } from 'react-native';
-import { Heart, MessageCircle, Repeat2, EllipsisVertical, Lock, School, Globe, Pencil, Trash2, ChevronRight, X, Check, TextAlignStart } from 'lucide-react-native';
+import { Heart, MessageCircle, Repeat2, EllipsisVertical, Lock, Users, Globe, Pencil, Trash2, ChevronRight, X, Check, TextAlignStart } from 'lucide-react-native';
 import UserAvatar from './UserAvatar';
 import RoleTag from './RoleTag';
 import PostImageGrid from './PostImageGrid';
@@ -52,7 +52,7 @@ function PrivacyIcon({ privacy }: { privacy: string }) {
     return <Lock color={c} size={13} strokeWidth={2} />;
   }
   if (privacy === 'school') {
-    return <School color={c} size={14} strokeWidth={1.8} />;
+    return <Users color={c} size={14} strokeWidth={1.8} />;
   }
   // public
   return <Globe color={c} size={13} strokeWidth={1.8} />;
