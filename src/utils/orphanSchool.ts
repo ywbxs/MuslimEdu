@@ -103,6 +103,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
   'AcademicSchedule',
   'AdminSchedule',
   'StudentSchedule',
+  'StudentSubjectDetail',
   'TeacherMySchedule',
   'TimetableConflicts',
   // Attendance

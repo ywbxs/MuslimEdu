@@ -67,6 +67,7 @@ import StudentQuarterlyReportScreen from '../screens/student/StudentQuarterlyRep
 import StudentAnnouncementsScreen from '../screens/student/StudentAnnouncementsScreen';
 import StudentMaterialsScreen from '../screens/student/StudentMaterialsScreen';
 import StudentScheduleScreen from '../screens/student/StudentScheduleScreen';
+import StudentSubjectDetailScreen from '../screens/student/StudentSubjectDetailScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import EnrollmentStagesScreen from '../screens/admin/EnrollmentStagesScreen';
 import EnrollmentStageFormScreen from '../screens/admin/EnrollmentStageFormScreen';
@@ -573,6 +574,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="StudentSchedule"
                 component={StudentScheduleScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="StudentSubjectDetail"
+                component={StudentSubjectDetailScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen

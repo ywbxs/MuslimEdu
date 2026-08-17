@@ -40,6 +40,10 @@ export interface AcademicSchedule {
   section_name?: string | null;
   teacher_name?: string | null;
   subject_name?: string | null;
+  // Admin-set color from SubjectFormScreen's color picker (Subject.color) -
+  // null when the admin never picked one; callers fall back to a
+  // deterministic palette color keyed off subject_id.
+  subject_color?: string | null;
   // Optional - only present once the backend resolves them (campus via
   // section -> class -> campus, units from the subject record). Missing on
   // an older backend just means those table columns show a dash.
@@ -77,6 +81,7 @@ function fromBackendSchedule(row: any): AcademicSchedule {
     section_name: row.section_name ?? null,
     teacher_name: row.teacher_name ?? null,
     subject_name: row.subject_name ?? null,
+    subject_color: row.subject_color ?? null,
     campus_name: row.campus_name ?? null,
     units: row.units ?? null,
   };
