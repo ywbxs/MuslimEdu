@@ -7,13 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
-  ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Plus, Search, UserRound, X } from 'lucide-react-native';
+import { ChevronLeft, Plus, Search, UserRound } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchRegistrarAccounts, addRegistrar, RegistrarAccount } from '../../services/registrarService';
@@ -22,6 +19,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -29,7 +27,6 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const GLASS_SURFACE = GLASS.fillOnLight;
-const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
@@ -41,9 +38,6 @@ function SearchIcon({ color }: { color: string }) {
 }
 function PlusIcon({ color }: { color: string }) {
   return <Plus size={19} color={color} strokeWidth={2.4} />;
-}
-function CloseIcon({ color }: { color: string }) {
-  return <X size={18} color={color} strokeWidth={2.2} />;
 }
 function EmptyIcon() {
   return <UserRound size={56} color={"#C4C9CF"} strokeWidth={1.6} />;
@@ -107,14 +101,6 @@ function AddRegistrarSheet({
 
   const handleCreate = async () => {
     if (!token) return;
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert(t('registrar_accounts.almost_done', 'Almost done'), t('registrar_accounts.error_required_fields', 'Name, email, and password are required.'));
-      return;
-    }
-    if (password.trim().length < 6) {
-      Alert.alert(t('registrar_accounts.almost_done', 'Almost done'), t('registrar_accounts.error_password_length', 'Password must be at least 6 characters.'));
-      return;
-    }
     setIsSubmitting(true);
     try {
       const created = await addRegistrar(token, {
@@ -140,106 +126,123 @@ function AddRegistrarSheet({
     }
   };
 
+  const steps: WizardStepDef[] = [
+    {
+      key: 'identity',
+      label: t('registrar_accounts.step_identity', 'Identity'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.full_name_label', 'Full Name')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.full_name_placeholder', 'e.g. Amina binti Yusuf')}
+            placeholderTextColor={SUBTLE}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.name_ar_label', 'Arabic Name (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.name_ar_placeholder', 'الاسم بالعربية')}
+            placeholderTextColor={SUBTLE}
+            value={nameAr}
+            onChangeText={setNameAr}
+          />
+        </>
+      ),
+    },
+    {
+      key: 'account',
+      label: t('registrar_accounts.step_account', 'Account'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.email_label', 'Email')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.email_placeholder', 'registrar@example.com')}
+            placeholderTextColor={SUBTLE}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.password_label', 'Password')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.password_placeholder', 'At least 6 characters')}
+            placeholderTextColor={SUBTLE}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </>
+      ),
+    },
+    {
+      key: 'contact',
+      label: t('registrar_accounts.step_contact', 'Contact'),
+      render: () => (
+        <>
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.phone_label', 'Phone (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.phone_placeholder', 'e.g. 012-345 6789')}
+            placeholderTextColor={SUBTLE}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.emergency_contact_name_label', 'Emergency Contact Name (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.emergency_contact_name_placeholder', 'e.g. Fatimah binti Ahmad')}
+            placeholderTextColor={SUBTLE}
+            value={emergencyContactName}
+            onChangeText={setEmergencyContactName}
+            autoCapitalize="words"
+          />
+          <Text style={wizardFieldStyles.label}>{t('registrar_accounts.emergency_contact_phone_label', 'Emergency Contact Phone (optional)')}</Text>
+          <TextInput
+            style={wizardFieldStyles.input}
+            placeholder={t('registrar_accounts.emergency_contact_phone_placeholder', 'e.g. 012-345 6789')}
+            placeholderTextColor={SUBTLE}
+            value={emergencyContactPhone}
+            onChangeText={setEmergencyContactPhone}
+            keyboardType="phone-pad"
+          />
+        </>
+      ),
+    },
+  ];
+
+  const validateStep = (stepIndex: number): string | null => {
+    if (stepIndex === 0 && !name.trim()) {
+      return t('registrar_accounts.error_name_required', 'Full name is required.');
+    }
+    if (stepIndex === 1) {
+      if (!email.trim() || !password.trim()) {
+        return t('registrar_accounts.error_required_fields', 'Name, email, and password are required.');
+      }
+      if (password.trim().length < 6) {
+        return t('registrar_accounts.error_password_length', 'Password must be at least 6 characters.');
+      }
+    }
+    return null;
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={styles.sheetBackdrop}>
-        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
-        <View style={styles.formSheet}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeaderRow}>
-            <Text style={styles.sheetTitle}>{t('registrar_accounts.add_registrar_title', 'Add Registrar')}</Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
-              <CloseIcon color={SUBTLE} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.full_name_label', 'Full Name')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.full_name_placeholder', 'e.g. Amina binti Yusuf')}
-              placeholderTextColor={SUBTLE}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.name_ar_label', 'Arabic Name (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.name_ar_placeholder', 'الاسم بالعربية')}
-              placeholderTextColor={SUBTLE}
-              value={nameAr}
-              onChangeText={setNameAr}
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.email_label', 'Email')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.email_placeholder', 'registrar@example.com')}
-              placeholderTextColor={SUBTLE}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.password_label', 'Password')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.password_placeholder', 'At least 6 characters')}
-              placeholderTextColor={SUBTLE}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.phone_label', 'Phone (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.phone_placeholder', 'e.g. 012-345 6789')}
-              placeholderTextColor={SUBTLE}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.emergency_contact_name_label', 'Emergency Contact Name (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.emergency_contact_name_placeholder', 'e.g. Fatimah binti Ahmad')}
-              placeholderTextColor={SUBTLE}
-              value={emergencyContactName}
-              onChangeText={setEmergencyContactName}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>{t('registrar_accounts.emergency_contact_phone_label', 'Emergency Contact Phone (optional)')}</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder={t('registrar_accounts.emergency_contact_phone_placeholder', 'e.g. 012-345 6789')}
-              placeholderTextColor={SUBTLE}
-              value={emergencyContactPhone}
-              onChangeText={setEmergencyContactPhone}
-              keyboardType="phone-pad"
-            />
-
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
-              onPress={handleCreate}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>{t('registrar_accounts.add_registrar_title', 'Add Registrar')}</Text>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    <AccountWizardSheet
+      visible={visible}
+      onClose={handleClose}
+      title={t('registrar_accounts.add_registrar_title', 'Add Registrar')}
+      steps={steps}
+      validateStep={validateStep}
+      onFinish={handleCreate}
+      finishing={isSubmitting}
+      finishLabel={t('registrar_accounts.add_registrar_title', 'Add Registrar')}
+    />
   );
 }
 
@@ -430,36 +433,4 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },
   emptyBody: { fontSize: 13, color: SUBTLE, textAlign: 'center', marginTop: 6, lineHeight: 19 },
-
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DADDE1', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
-  sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  sheetTitle: { fontSize: 17, fontWeight: '700', color: INK, marginLeft: 10, flexShrink: 1 },
-  sheetCloseBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-
-  formSheet: {
-    backgroundColor: GLASS_SURFACE_STRONG,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    paddingBottom: 34,
-    paddingHorizontal: 20,
-    maxHeight: '85%',
-  },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8, marginTop: 14 },
-  fieldInput: {
-    backgroundColor: 'transparent',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: INK,
-  },
-  submitButton: {
-    backgroundColor: EMERALD,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  submitButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });
