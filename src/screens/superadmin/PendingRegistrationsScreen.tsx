@@ -515,7 +515,7 @@ function RejectSheet({
 
   return (
     <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.sheetBackdrop}>
           <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
           <View style={styles.sheet}>

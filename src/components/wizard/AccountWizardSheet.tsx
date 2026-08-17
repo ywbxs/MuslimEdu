@@ -106,7 +106,7 @@ export default function AccountWizardSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.sheet}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
