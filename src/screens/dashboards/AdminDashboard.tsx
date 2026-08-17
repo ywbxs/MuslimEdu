@@ -116,6 +116,11 @@ function ChevronIcon({ color, size = 18 }: { color: string; size?: number }) {
 // built and reachable by route, just hidden from the menu until the admin
 // asks for it back. To bring one back, remove its key from this set.
 const HIDDEN_FOR_NOW_KEYS = new Set([
+  // "Academic" (assign class teachers to sections) - none of this app's
+  // current schools are big enough to need the class/section/department
+  // structure this assumes. Kept reachable by route (AdminClassTeacherAssign)
+  // for whenever a school that size signs up.
+  'classes',
   'gradebookReview',
   'announcementReview',
   'lessonPlanReview',
