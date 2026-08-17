@@ -205,20 +205,26 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // never locks a card - real authorization still lives server-side in
   // admin_grading_systems_* etc.
   const [subscriptionStatus, setSubscriptionStatus] = useState<AdminSubscriptionStatus | null>(null);
-  useEffect(() => {
+  // Distinct from subscriptionStatus === null (still loading) - lets
+  // SubscriptionStatusCard render "couldn't load" instead of nothing when
+  // the request actually fails, so a broken/undeployed endpoint is visible
+  // instead of the card just silently never appearing.
+  const [subscriptionStatusError, setSubscriptionStatusError] = useState(false);
+  const loadSubscriptionStatus = React.useCallback(() => {
     if (!token) return;
-    let cancelled = false;
+    setSubscriptionStatusError(false);
     fetchAdminSubscriptionStatus(token)
-      .then((data) => {
-        if (!cancelled) setSubscriptionStatus(data);
-      })
-      .catch(() => {
-        // Silent - fail-open, card stays unlocked-looking until we know otherwise.
+      .then((data) => setSubscriptionStatus(data))
+      .catch((err) => {
+        // Fail-open for the feature gates below (isFeatureLocked treats a
+        // null status as unlocked) - only the status card surfaces this.
+        console.warn('[AdminDashboard] admin_subscription_status failed:', err);
+        setSubscriptionStatusError(true);
       });
-    return () => {
-      cancelled = true;
-    };
   }, [token]);
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, [loadSubscriptionStatus]);
 
   // A package's `features` list is opt-in: if the superadmin never
   // configured one for this school's package, it stays empty and every
@@ -883,7 +889,11 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
               previously those cards just locked silently with no way for
               the admin to see WHY (package, expiry, days left). Set by the
               superadmin from SuperAdminSchoolSubscription. */}
-          <SubscriptionStatusCard status={subscriptionStatus} />
+          <SubscriptionStatusCard
+            status={subscriptionStatus}
+            loadFailed={subscriptionStatusError}
+            onRetry={loadSubscriptionStatus}
+          />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
           {/* Hero + secondary bento (1+2, per the 3 featured items - not 3

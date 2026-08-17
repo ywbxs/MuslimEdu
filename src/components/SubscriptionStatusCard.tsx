@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CreditCard } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { AdminSubscriptionStatus } from '../services/subscriptionService';
@@ -13,11 +13,37 @@ import { COLORS, RADIUS } from '../theme/glass';
  * name or expiry date that decided that lock. Set by the superadmin from
  * SuperAdminSchoolSubscription.
  */
-export default function SubscriptionStatusCard({ status }: { status: AdminSubscriptionStatus | null }) {
+export default function SubscriptionStatusCard({
+  status,
+  loadFailed = false,
+  onRetry,
+}: {
+  status: AdminSubscriptionStatus | null;
+  // True once the fetch has actually errored (endpoint missing/500/network) -
+  // distinct from still loading, which stays quiet rather than flash a
+  // misleading "No subscription" before the real answer arrives.
+  loadFailed?: boolean;
+  onRetry?: () => void;
+}) {
   const { t } = useLocale();
 
-  // Still loading, or the fetch failed - stay quiet rather than show a
-  // misleading "No subscription" while we don't actually know yet.
+  if (loadFailed) {
+    return (
+      <TouchableOpacity style={styles.card} activeOpacity={onRetry ? 0.7 : 1} onPress={onRetry} disabled={!onRetry}>
+        <View style={[styles.iconWrap, styles.iconWrapMuted]}>
+          <CreditCard size={18} color={COLORS.subtle} strokeWidth={1.8} />
+        </View>
+        <View style={styles.textWrap}>
+          <Text style={styles.title}>{t('subscription_card.load_failed_title', 'Subscription status unavailable')}</Text>
+          <Text style={styles.subtitle}>
+            {t('subscription_card.load_failed_subtitle', 'Tap to try again.')}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // Still loading - stay quiet rather than flash something misleading.
   if (!status) return null;
 
   const expireDate = status.expire_date != null ? Number(status.expire_date) : null;
@@ -104,6 +130,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 10,
   },
+  iconWrapMuted: { backgroundColor: '#EEF0F2' },
   textWrap: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 13, fontWeight: '700', color: COLORS.ink, flexShrink: 1 },
