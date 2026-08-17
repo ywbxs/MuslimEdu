@@ -222,7 +222,15 @@ export async function fetchComments(token: string, postId: number): Promise<Post
   });
 }
 
-/** POST /post_comment_create - pass parentId to reply to a top-level comment */
+/**
+ * POST /post_comment_create - pass parentId to reply to any comment, top-level
+ * or a reply itself. Threads can nest arbitrarily deep (reply to a reply to a
+ * reply, ...); the server needs to accept a parent_id that already has its
+ * own parent_id and return the full tree back via post_comment_list (each
+ * comment's `replies` array holding its own nested replies, not just direct
+ * children of the top-level comment) - normalizeComment above already
+ * recurses through however deep that comes back.
+ */
 export async function addComment(
   token: string,
   postId: number,

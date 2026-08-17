@@ -224,14 +224,18 @@ export default function PostCommentsScreen() {
               {item.likes_count > 0 ? item.likes_count : ''}
             </Text>
           </TouchableOpacity>
-          {!isReply && (
-            <TouchableOpacity style={styles.footerStat} onPress={() => setReplyTo(item)} hitSlop={8}>
-              <CommentBubbleIcon />
-              <Text style={styles.footerStatText}>
-                {item.replies?.length > 0 ? item.replies.length : ''}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Reply is available on replies too, not just top-level comments -
+              a thread can nest as deep as people keep replying. renderComment
+              already recurses through item.replies regardless of depth, and
+              updateCommentTree matches by id wherever it is in the tree, so
+              a reply-to-a-reply tucks itself under its real immediate parent
+              rather than flattening back to the top-level comment. */}
+          <TouchableOpacity style={styles.footerStat} onPress={() => setReplyTo(item)} hitSlop={8}>
+            <CommentBubbleIcon />
+            <Text style={styles.footerStatText}>
+              {item.replies?.length > 0 ? item.replies.length : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {item.replies?.map((reply) => renderComment(reply, true))}
