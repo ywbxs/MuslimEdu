@@ -125,11 +125,10 @@ interface Props {
   // fixed-height photo, so there's nothing useful for it to do there).
   bodyNumberOfLines?: number;
   // Squares off this post's own image grid and switches a single image to a
-  // portrait 4:3 crop, taller than wide (not the quoted repost's, which
-  // keeps its rounded corners and default ratio inside its bordered quote
-  // box regardless) - for the Home feed's edge-to-edge cards, where a
-  // full-bleed photo should meet the card's own square edges instead of
-  // floating mid-image with rounded
+  // 1:1 crop (not the quoted repost's, which keeps its rounded corners and
+  // default ratio inside its bordered quote box regardless) - for the Home
+  // feed's edge-to-edge cards, where a full-bleed photo should meet the
+  // card's own square edges instead of floating mid-image with rounded
   // corners. Omit to keep the default rounded corners and aspect ratio.
   squareImages?: boolean;
 }
@@ -398,12 +397,12 @@ export default function PostCard({
                 images={post.images}
                 width={contentWidth}
                 radius={squareImages ? 0 : undefined}
-                aspectRatio={squareImages ? 3 / 4 : undefined}
-                // PostImageGrid's own maxHeight default (320) is well under
-                // what a 3:4 portrait crop needs at full phone width (~1.33x
-                // width) and would silently clip it back down to a shorter
-                // box. Only lifted for squareImages - every other caller
-                // keeps the 320 default unchanged.
+                aspectRatio={squareImages ? 1 : undefined}
+                // PostImageGrid's own maxHeight default (320) is under what
+                // a 1:1 crop needs at full phone width (~390-430dp) and
+                // would silently clip it back down to a shorter box. Only
+                // lifted for squareImages - every other caller keeps the
+                // 320 default unchanged.
                 maxHeight={squareImages ? 9999 : undefined}
                 onPressImage={(i) => onPressImage?.(post.images, i)}
               />
