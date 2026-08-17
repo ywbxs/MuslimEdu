@@ -348,17 +348,20 @@ export default function InstitutionProfileScreen() {
       </View>
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.stepperRow}>
-          {STEP_KEYS.map((key, i) => (
-            <View key={key} style={styles.stepperItem}>
-              <View style={[styles.stepDot, i < step && styles.stepDotDone, i === step && styles.stepDotActive]}>
-                {i < step ? <IconCheck color="#FFFFFF" /> : <Text style={[styles.stepDotText, i === step && styles.stepDotTextActive]}>{i + 1}</Text>}
-              </View>
-              <Text style={[styles.stepLabelText, i === step && styles.stepLabelActive]} numberOfLines={1}>
-                {stepLabel(key)}
-              </Text>
-            </View>
-          ))}
+        <View style={styles.progressHeader}>
+          <View style={styles.progressTopRow}>
+            <Text style={styles.progressStepName}>{stepLabel(currentStepKey)}</Text>
+            <Text style={styles.progressStepCount}>
+              {t('institution_profile.step_count', 'Step {current} of {total}')
+                .replace('{current}', String(step + 1))
+                .replace('{total}', String(STEP_KEYS.length))}
+            </Text>
+          </View>
+          <View style={styles.progressTrackRow}>
+            {STEP_KEYS.map((key, i) => (
+              <View key={key} style={[styles.progressSegment, i <= step && styles.progressSegmentFilled]} />
+            ))}
+          </View>
         </View>
 
         {error ? (
@@ -686,29 +689,32 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     headerSpacer: { width: 32 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-    // Stepper - numbered dots + labels, same convention as
-    // AcademicSetupWizardScreen's first-run wizard.
-    stepperRow: { flexDirection: 'row', justifyContent: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 12 },
-    stepperItem: { alignItems: 'center', width: 52 },
-    stepDot: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: theme.background === 'transparent' ? 'rgba(0,0,0,0.06)' : theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 5,
+    // Progress header - a slim segmented bar + "Step X of Y" instead of a
+    // row of numbered circles with labels underneath. The circle-row
+    // pattern is a generic template stepper (and doesn't fit 6 items on a
+    // phone width without clipping); this is the same shape Apple's own
+    // multi-step flows use (Setup Assistant, Fitness onboarding) - a
+    // step name, a count, and a thin filled track. Scales to any number
+    // of steps with zero overflow risk since every segment is flex:1.
+    progressHeader: {
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 16,
+      backgroundColor: theme.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
-    // BRAND.emeraldDeep, not theme.accent - white digit text on the raw
-    // accent (#1FAE64) measures 2.88:1, below WCAG AA's 4.5:1 minimum. A
-    // ring (not just fill) tells "current" apart from "done" at a glance,
-    // since both use the same fill color otherwise.
-    stepDotActive: { backgroundColor: BRAND.emeraldDeep, borderWidth: 2, borderColor: theme.accent },
-    stepDotDone: { backgroundColor: BRAND.emeraldDeep },
-    stepDotText: { fontSize: 11.5, fontWeight: '700', color: theme.textSecondary },
-    stepDotTextActive: { color: theme.onAccent },
-    stepLabelText: { fontSize: 9.5, color: theme.textSecondary, fontWeight: '600', textAlign: 'center' },
-    stepLabelActive: { color: BRAND.emeraldDeep, fontWeight: '800' },
+    progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    progressStepName: { fontSize: 15, fontWeight: '800', color: theme.textPrimary },
+    progressStepCount: { fontSize: 12, fontWeight: '600', color: theme.textSecondary },
+    progressTrackRow: { flexDirection: 'row', gap: 6 },
+    progressSegment: {
+      flex: 1,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.background === 'transparent' ? 'rgba(0,0,0,0.08)' : theme.border,
+    },
+    progressSegmentFilled: { backgroundColor: BRAND.emeraldDeep },
 
     stepScroll: { flex: 1 },
     content: { padding: 20, paddingTop: 4 },
