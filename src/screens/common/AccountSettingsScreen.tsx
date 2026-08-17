@@ -56,7 +56,6 @@ import {
 
 const BORDER = '#E4E9E5';
 const CANVAS = '#F5F7F6';
-const DANGER = '#BA1A1A';
 const EMERALD_SOFT = '#E5F8F5';
 
 function labelize(value: string) {
@@ -93,10 +92,10 @@ function IconEye({ color, off }: { color: string; off: boolean }) {
   return off ? <EyeOff size={18} color={color} strokeWidth={2} /> : <Eye size={18} color={color} strokeWidth={2} />;
 }
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+function SectionHeader({ icon, title, dark }: { icon: React.ReactNode; title: string; dark?: boolean }) {
   return (
     <View style={styles.sectionHeader}>
-      <View style={styles.sectionIconWrap}>{icon}</View>
+      <View style={[styles.sectionIconWrap, dark && styles.sectionIconWrapDark]}>{icon}</View>
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
@@ -280,9 +279,13 @@ export default function AccountSettingsScreen() {
     }
   };
 
+  // paddingTop lives on the header itself, not the outer container - the
+  // header's white background needs to extend up through the status-bar
+  // safe area too, or that strip shows the plain canvas color instead and
+  // reads as a seam between two different surfaces.
   const header = (
-    <View style={styles.header}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
         <IconChevronLeft color={BRAND.emeraldDeep} />
       </TouchableOpacity>
       <View style={styles.headerText}>
@@ -296,7 +299,7 @@ export default function AccountSettingsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <View style={styles.flex}>
         {header}
         <ScrollView style={styles.scroll}>
           <SettingsSkeleton />
@@ -307,7 +310,7 @@ export default function AccountSettingsScreen() {
 
   if (error || !settings || !options) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <View style={styles.flex}>
         {header}
         <View style={styles.center}>
           <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
@@ -345,7 +348,7 @@ export default function AccountSettingsScreen() {
   const languageOptions = Array.from(new Set([...options.languages, 'en', 'ar']));
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
+    <View style={styles.flex}>
       {header}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -441,8 +444,8 @@ export default function AccountSettingsScreen() {
             everything else above - a security action deserves to read as
             a separate, deliberate zone rather than blend into the rest of
             the settings list. */}
-        <SectionHeader icon={<IconKey color={DANGER} />} title={t('account_settings.password_section', 'Password')} />
-        <View style={[styles.card, styles.cardDanger]}>
+        <SectionHeader icon={<IconKey color="#FFFFFF" />} title={t('account_settings.password_section', 'Password')} dark />
+        <View style={[styles.card, styles.cardSecurity]}>
           <PasswordField
             label={t('account_settings.current_password_label', 'Current password')}
             value={currentPassword}
@@ -490,10 +493,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    // A soft shadow reads as a floating surface; a flat 1px border reads
+    // as a divider between two panels of the same flat page - the header
+    // is a distinct layer above the scroll content, not a sibling row.
+    shadowColor: '#0B1F14',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
   headerText: { flex: 1 },
@@ -511,10 +520,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Password's badge is solid ink, not a second brand color - the rest of
+  // the screen keeps a single emerald accent throughout (design-taste
+  // "color consistency" rule), so "this section is different" is signaled
+  // by weight/darkness, not by introducing red as a stand-in for
+  // "security" when red actually reads as "error" to a user.
+  sectionIconWrapDark: { backgroundColor: INK },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 16 },
-  cardDanger: { backgroundColor: '#FDF4F4', borderColor: '#F3D9D9' },
+  cardSecurity: { backgroundColor: '#FAFAFA', borderColor: '#E2E3E6' },
   rowTitle: { fontSize: 14, fontWeight: '700', color: INK, flex: 1, paddingRight: 12 },
 
   label: { fontSize: 12.5, fontWeight: '700', color: INK, marginTop: 12, marginBottom: 8 },
