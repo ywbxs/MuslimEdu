@@ -118,6 +118,7 @@ function BentoOptionGrid<T extends { id: number; name: string }>({
   icon,
   styles,
   theme,
+  emptyState,
 }: {
   label: string;
   options: T[];
@@ -128,7 +129,19 @@ function BentoOptionGrid<T extends { id: number; name: string }>({
   icon: (color: string) => React.ReactNode;
   styles: any;
   theme: AcademicGlassTheme;
+  /** Shown instead of an empty grid when there's nothing to pick from yet -
+      a bare empty grid gave no clue why the step's Next button stayed
+      disabled. */
+  emptyState?: React.ReactNode;
 }) {
+  if (options.length === 0 && !allowNone && emptyState) {
+    return (
+      <>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        {emptyState}
+      </>
+    );
+  }
   return (
     <>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -236,6 +249,7 @@ function ScheduleEditSheet({
   theme: AcademicGlassTheme;
 }) {
   const { t } = useLocale();
+  const navigation = useNavigation();
   const [stepIndex, setStepIndex] = useState(0);
   const [code, setCode] = useState(editingRow?.code ?? '');
   const [day, setDay] = useState<Day>(editingRow?.day_of_week ?? 'monday');
@@ -279,6 +293,22 @@ function ScheduleEditSheet({
             icon={(color) => <IconLayers color={color} />}
             styles={styles}
             theme={theme}
+            emptyState={
+              <View style={styles.emptyPickerWrap}>
+                <Text style={styles.emptyPickerText}>
+                  {t('admin_class_schedule.no_sections', 'No class sections yet - create a class and section first.')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyPickerButton}
+                  onPress={() => {
+                    onClose();
+                    (navigation as any).navigate('ClassList');
+                  }}
+                >
+                  <Text style={styles.emptyPickerButtonText}>{t('admin_class_schedule.add_class_section', '+ Add Class & Section')}</Text>
+                </TouchableOpacity>
+              </View>
+            }
           />
           <BentoOptionGrid
             label={t('admin_class_schedule.subject_label', 'Subject')}
@@ -801,6 +831,19 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     chipActive: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
     chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
     chipTextActive: { color: theme.accent },
+
+    emptyPickerWrap: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 14,
+      padding: 16,
+      alignItems: 'center',
+      gap: 12,
+    },
+    emptyPickerText: { fontSize: 13, color: theme.textSecondary, textAlign: 'center', lineHeight: 18 },
+    emptyPickerButton: { backgroundColor: theme.accent, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+    emptyPickerButtonText: { color: theme.onAccent, fontWeight: '700', fontSize: 13.5 },
 
     // Bento tile picker (Section/Subject/Teacher/Room) - spatial cards
     // instead of flat text chips, matching the attendance feature's card
