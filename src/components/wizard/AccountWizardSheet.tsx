@@ -7,8 +7,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  BackHandler,
 } from 'react-native';
-import KeyboardAwareModal from '../KeyboardAwareModal';
 import { X } from 'lucide-react-native';
 import { COLORS, RADIUS, GLASS, BRAND } from '../../theme/glass';
 import { WizardStepHeader } from './WizardKit';
@@ -22,12 +24,6 @@ const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 // give one, so the percentage resolved unreliably and clipped content (the
 // second field in a step would just never render) instead of the ScrollView
 // below scrolling to reveal it.
-//
-// This stays a cap on the *rest* height only. When the keyboard is open,
-// KeyboardAwareModal pads the whole modal area down by the keyboard height,
-// and the sheet's own flex layout (ScrollView flexShrink) takes it from
-// there - so the sheet ends up sitting on top of the keyboard with its
-// fields scrollable, rather than being cut off behind it.
 const MAX_SHEET_HEIGHT = Dimensions.get('window').height * 0.88;
 
 function CloseIcon({ color }: { color: string }) {
@@ -42,18 +38,28 @@ export interface WizardStepDef {
 
 /**
  * A multi-step bottom sheet for the "Add {role}" account-creation forms
- * (Teacher/Cashier/Registrar) - was one long ungrouped list of label+
- * TextInput pairs in a single scroll, with no visible border/background
- * on the inputs (just placeholder text floating with nothing marking it
- * as a field). Reusable across all three since they collect the exact
- * same field set (identity, account credentials, contact info); the
- * progress header reuses WizardStepHeader from WizardKit.tsx - the same
- * numbered-circle-plus-connector stepper SchoolRegistrationScreen and
- * AlumniRegistrationScreen already use - so every wizard in the app reads
- * as one consistent design instead of each screen inventing its own.
+ * (Teacher/Cashier/Registrar).
  *
- * Steps only ever validate+advance locally; the caller's `onFinish` is
- * the only thing that hits the network, on the last step.
+ * Deliberately NOT built on RN's <Modal>. A <Modal> renders into a
+ * *separate* native Android Dialog window, not the Activity's own window -
+ * and Android's keyboard resize behavior for a secondary Dialog window is
+ * notoriously unreliable (well past a RN-specific quirk; it's a long-
+ * standing platform pain point independent of KeyboardAvoidingView's
+ * behavior prop, edge-to-edge, or any padding math layered on top - none of
+ * that has anything real to react to when the window it's measuring never
+ * meaningfully resizes). Every *other* keyboard-avoiding screen in this app
+ * (SchoolRegistrationScreen, AdmissionScreen, etc.) is a plain full-screen
+ * view with KeyboardAvoidingView at the screen level, in the Activity's own
+ * window - and those work. So this sheet is just an absolutely-positioned
+ * full-screen overlay rendered as the last child of whatever screen owns it
+ * (AdminTeacherListScreen / RegistrarAccountsScreen / CashierAccountsScreen
+ * all already render it last, so it paints on top of everything else there
+ * by normal paint order - no elevation/zIndex needed), with the exact same
+ * KeyboardAvoidingView pattern that already works everywhere else. Only
+ * mounted while `visible`, so there's no separate window's worth of native
+ * back-button handling to replace - just a BackHandler subscription for the
+ * Android hardware back button, which <Modal> used to give for free via
+ * onRequestClose.
  */
 export default function AccountWizardSheet({
   visible,
@@ -92,6 +98,16 @@ export default function AccountWizardSheet({
     onClose();
   };
 
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, finishing]);
+
   const goNext = () => {
     const err = validateStep(step);
     if (err) {
@@ -111,23 +127,17 @@ export default function AccountWizardSheet({
     setStep((s) => Math.max(0, s - 1));
   };
 
-  if (!current) return null;
+  if (!visible || !current) return null;
 
   return (
-    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <View style={StyleSheet.absoluteFill}>
       <View style={styles.backdrop}>
-        {/* Absolutely positioned (not a flex sibling) so it doesn't compete
-            with the view below for vertical space. Renders first, so the
-            sheet still draws on top of it. */}
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
-        {/* KeyboardAwareModal (wrapping this whole tree) already pads the
-            modal's content area by the keyboard height - a
-            KeyboardAvoidingView here would double up on that padding and
-            push the sheet too far. This just keeps the sheet pinned to the
-            bottom of whatever room KeyboardAwareModal left; pointerEvents
-            lets taps in the empty area above the sheet still reach the
-            dismiss overlay underneath. */}
-        <View style={styles.keyboardAvoider} pointerEvents="box-none">
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoider}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          pointerEvents="box-none"
+        >
           <View style={[styles.sheet, { maxHeight: MAX_SHEET_HEIGHT }]}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
@@ -170,16 +180,17 @@ export default function AccountWizardSheet({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
-    </KeyboardAwareModal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // flex:1 to take the rest of the backdrop (now that the dismiss overlay
-  // is absolutely positioned instead of a competing flex sibling), and
-  // justifyContent to keep the sheet pinned to the bottom.
+  // flex:1 so KeyboardAvoidingView's "height" behavior has the full backdrop
+  // height as a stable reference frame to shrink from, and justifyContent
+  // keeps the sheet pinned to the bottom - same as every other Modal-free
+  // KeyboardAvoidingView in this app.
   keyboardAvoider: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
   sheet: {
