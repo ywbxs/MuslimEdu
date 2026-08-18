@@ -85,6 +85,7 @@ function AddStudentsModal({
   const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [candidates, setCandidates] = useState<EligibleStudent[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -245,6 +246,7 @@ function TransferModal({
   const { t } = useLocale();
   const theme = useAcademicGlassTheme('emerald');
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const [sections, setSections] = useState<SectionOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [movingId, setMovingId] = useState<number | null>(null);
