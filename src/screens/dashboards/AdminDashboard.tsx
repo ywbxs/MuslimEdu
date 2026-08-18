@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path } from 'react-native-svg';
-import { ArrowRight, BookOpen, CalendarCheck, Camera, ChevronRight, ClipboardCheck, FileText, GraduationCap, IdCard, LayoutList, ListOrdered, Lock, Megaphone, NotebookText, Presentation, Settings, Users, Workflow } from 'lucide-react-native';
+import { ArrowRight, BookOpen, CalendarCheck, Camera, ChevronRight, ClipboardCheck, FileText, GraduationCap, IdCard, LayoutList, ListOrdered, Lock, Megaphone, NotebookText, Presentation, Search, Settings, Users, Workflow, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from './DashboardShell';
@@ -38,6 +38,25 @@ const GLASS_BORDER = 'rgba(255,255,255,0.14)';
 // so the white body + cards visibly slide up and over it. Apple-style depth.
 const HERO_HEIGHT = 300;
 const PARALLAX_FACTOR = 0.5; // background moves at half the content's scroll speed
+
+// Per-item icon tints for the grouped list below the hero. Wayfinding
+// color, not a second accent - EMERALD stays the only brand color (hero,
+// CTAs, focus states). A row without a `tint` (anything not explicitly
+// assigned below) falls back to EMERALD_SOFT/EMERALD, same as before this
+// redesign, so newly un-hidden items never render with a missing color.
+const TINT = {
+  blue: '#0A84FF',
+  indigo: '#5E5CE6',
+  teal: '#2FA9B8',
+  orange: '#FF9F0A',
+  pink: '#FF3B72',
+  red: '#FF453A',
+  purple: '#BF5AF2',
+  gray: '#8E8E93',
+  gold: '#D4A64A',
+  emerald: EMERALD,
+} as const;
+type Tint = keyof typeof TINT;
 
 // --- Inline icons (react-native-svg, matches the app's existing approach) ---
 function PeopleIcon({ color }: { color: string }) {
@@ -109,6 +128,12 @@ function ArrowRightIcon({ color, size = 18 }: { color: string; size?: number }) 
 function ChevronIcon({ color, size = 18 }: { color: string; size?: number }) {
   return <ChevronRight size={size} color={color} strokeWidth={2} />;
 }
+function SearchIcon({ color, size = 18 }: { color: string; size?: number }) {
+  return <Search size={size} color={color} strokeWidth={2} />;
+}
+function ClearIcon({ color, size = 16 }: { color: string; size?: number }) {
+  return <X size={size} color={color} strokeWidth={2.4} />;
+}
 
 // Declutter: this school is only using the foundation pieces for now
 // (academic setup, enrollment, cashier/registrar accounts, ID cards,
@@ -175,6 +200,9 @@ interface ManageItem {
   icon: (color: string) => React.ReactElement;
   locked?: boolean;
   lockedMessage?: string;
+  // Row icon-square color in the grouped lists - undefined falls back to
+  // EMERALD_SOFT/EMERALD (see TINT above).
+  tint?: Tint;
 }
 
 const CATEGORY_ORDER: Category[] = ['people', 'identity', 'academics', 'activity', 'settings'];
@@ -198,6 +226,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // and the body's rounded corner instead of the intended overlap.
   // Measure the real height instead of guessing it.
   const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
+  // Live filter for the grouped lists below the hero/bento row.
+  const [query, setQuery] = useState('');
 
   // Orphan schools have no academic-hub concept (no sections/classes to
   // assign teachers to) - only the Monthly Reports feature applies to them,
@@ -280,6 +310,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'solid',
       route: 'SetupChecklist',
       icon: (c) => <ChecklistIcon color={c} />,
+      tint: 'gold',
     },
     {
       key: 'students',
@@ -297,6 +328,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminTeacherList',
       icon: (c) => <PresentationIcon color={c} />,
+      tint: 'blue',
     },
     {
       key: 'cashiers',
@@ -306,6 +338,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'CashierAccounts',
       icon: (c) => <IdCardIcon color={c} />,
+      tint: 'teal',
     },
     {
       key: 'registrars',
@@ -315,6 +348,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'RegistrarAccounts',
       icon: (c) => <IdCardIcon color={c} />,
+      tint: 'indigo',
     },
     {
       key: 'idCards',
@@ -324,6 +358,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'StudentIdCards',
       icon: (c) => <IdCardIcon color={c} />,
+      tint: 'purple',
     },
     {
       key: 'staffIdCards',
@@ -333,6 +368,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'StaffIdCards',
       icon: (c) => <IdCardIcon color={c} />,
+      tint: 'purple',
     },
     {
       key: 'classesSections',
@@ -342,6 +378,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'ClassList',
       icon: (c) => <BookIcon color={c} />,
+      tint: 'orange',
     },
     {
       key: 'classes',
@@ -360,6 +397,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminSchedule',
       icon: (c) => <CalendarIcon color={c} />,
+      tint: 'indigo',
     },
     {
       key: 'enrollment',
@@ -369,6 +407,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'EnrollmentStages',
       icon: (c) => <StagesIcon color={c} />,
+      tint: 'pink',
     },
     {
       key: 'academicSetup',
@@ -378,6 +417,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AcademicYears',
       icon: (c) => <GearIcon color={c} />,
+      tint: 'gray',
     },
     {
       key: 'gradingSystems',
@@ -389,6 +429,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <GraduationCapIcon color={c} />,
       locked: isGradingLocked,
       lockedMessage: gradingLockedMessage,
+      tint: 'red',
     },
     ...(showQuranTracker
       ? [
@@ -400,6 +441,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             variant: 'soft' as Variant,
             route: 'StudentProgress',
             icon: (c: string) => <QuranTrackerIcon color={c} />,
+            tint: 'emerald' as Tint,
           },
         ]
       : []),
@@ -493,6 +535,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'StudentStaffCodeSetup',
       icon: (c) => <IdCardIcon color={c} />,
+      tint: 'pink',
     },
     {
       key: 'programsSubjects',
@@ -502,6 +545,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'ProgramsCatalog',
       icon: (c) => <CatalogIcon color={c} />,
+      tint: 'blue',
     },
     {
       key: 'academicFacilities',
@@ -511,6 +555,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AcademicFacilities',
       icon: (c) => <CatalogIcon color={c} />,
+      tint: 'gray',
     },
     {
       key: 'academicSchedule',
@@ -610,6 +655,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AttendanceConfig',
       icon: (c) => <GearIcon color={c} />,
+      tint: 'teal',
     },
     {
       key: 'permissions',
@@ -726,6 +772,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminAttendanceAnalytics',
       icon: (c) => <CalendarIcon color={c} />,
+      tint: 'emerald',
     },
     {
       key: 'studentDocumentRequests',
@@ -735,6 +782,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminStudentDocuments',
       icon: (c) => <ReportDocIcon color={c} />,
+      tint: 'blue',
     },
     {
       key: 'alumniApplications',
@@ -744,6 +792,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminAlumniApplications',
       icon: (c) => <AlumniCapIcon color={c} />,
+      tint: 'indigo',
     },
     {
       key: 'studentServiceRequests',
@@ -765,6 +814,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AccountSettings',
       icon: (c) => <GearIcon color={c} />,
+      tint: 'gray',
     },
   ]
     .filter((item) => !(isOrphanSchool && ACADEMIC_ADMIN_TILE_KEYS.has(item.key)))
@@ -797,6 +847,17 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     label: CATEGORY_LABELS[cat],
     items: grouped.filter((item) => item.category === cat),
   })).filter((section) => section.items.length > 0);
+
+  const trimmedQuery = query.trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
+  const filteredSections = isSearching
+    ? sections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => item.title.toLowerCase().includes(trimmedQuery)),
+        }))
+        .filter((section) => section.items.length > 0)
+    : sections;
 
   const openItem = (item: ManageItem) => {
     if (item.locked) {
@@ -929,13 +990,35 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
+          {/* Live filter over the grouped lists below - hero/bento hide while
+              searching since they're quick actions, not menu entries. */}
+          <View style={styles.searchBar}>
+            <SearchIcon color={SUBTLE} size={17} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t('admin_dashboard.search_placeholder', 'Search menu')}
+              placeholderTextColor={SUBTLE}
+              style={styles.searchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              clearButtonMode="never"
+            />
+            {query.length > 0 ? (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+                <ClearIcon color={SUBTLE} size={16} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
           {/* Hero + secondary bento (1+2, per the 3 featured items - not 3
               equal tiles). Students is the hero: it's the one action every
               admin, regardless of school type or setup progress, comes back
               to constantly. Setup Checklist and Fee Reports are onboarding-
               and finance-flavored respectively - important, but situational
               rather than a daily habit, so they stay secondary. */}
-          {hero ? (
+          {!isSearching && hero ? (
             <TouchableOpacity activeOpacity={0.92} style={styles.heroCard} onPress={() => openItem(hero)}>
               <View style={styles.heroIcon}>{hero.icon('#FFFFFF')}</View>
               <Text style={styles.heroTitle}>{hero.title}</Text>
@@ -946,24 +1029,29 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             </TouchableOpacity>
           ) : null}
 
-          {secondary.length > 0 ? (
+          {!isSearching && secondary.length > 0 ? (
             <View style={styles.secondaryRow}>
-              {secondary.map((item) => (
-                <TouchableOpacity
-                  key={item.key}
-                  activeOpacity={0.88}
-                  style={styles.secondaryCard}
-                  onPress={() => openItem(item)}
-                >
-                  <View style={styles.secondaryIcon}>{item.icon(EMERALD)}</View>
-                  <Text style={styles.secondaryTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.secondaryDesc} numberOfLines={2}>
-                    {item.desc}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {secondary.map((item) => {
+                const tintColor = item.tint ? TINT[item.tint] : EMERALD;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    activeOpacity={0.88}
+                    style={styles.secondaryCard}
+                    onPress={() => openItem(item)}
+                  >
+                    <View style={[styles.secondaryIcon, { backgroundColor: tintColor }]}>
+                      {item.icon('#FFFFFF')}
+                    </View>
+                    <Text style={styles.secondaryTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.secondaryDesc} numberOfLines={2}>
+                      {item.desc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : null}
 
@@ -973,39 +1061,49 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
               their own card/shadow (design-taste-frontend 4.4: cards only
               where elevation communicates real hierarchy, group with
               dividers otherwise). */}
-          {sections.map((section) => (
+          {filteredSections.map((section) => (
             <View key={section.key} style={styles.groupSection}>
               <Text style={styles.groupLabel}>{section.label}</Text>
               <View style={styles.groupCard}>
-                {section.items.map((item, idx) => (
-                  <TouchableOpacity
-                    key={item.key}
-                    activeOpacity={0.7}
-                    style={[styles.row, idx > 0 && styles.rowDivider]}
-                    onPress={() => openItem(item)}
-                  >
-                    <View style={styles.rowIconWrap}>
-                      {item.icon(EMERALD)}
-                      {item.locked ? (
-                        <View style={styles.rowLockBadge}>
-                          <LockIcon color="#FFFFFF" size={9} />
-                        </View>
-                      ) : null}
-                    </View>
-                    <View style={styles.rowTextWrap}>
-                      <Text style={styles.rowTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.rowDesc} numberOfLines={1}>
-                        {item.desc}
-                      </Text>
-                    </View>
-                    <ChevronIcon color={SUBTLE} size={18} />
-                  </TouchableOpacity>
-                ))}
+                {section.items.map((item, idx) => {
+                  const tintColor = item.tint ? TINT[item.tint] : EMERALD_SOFT;
+                  const iconColor = item.tint ? '#FFFFFF' : EMERALD;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      activeOpacity={0.7}
+                      style={[styles.row, idx > 0 && styles.rowDivider]}
+                      onPress={() => openItem(item)}
+                    >
+                      <View style={[styles.rowIconWrap, { backgroundColor: tintColor }]}>
+                        {item.icon(iconColor)}
+                        {item.locked ? (
+                          <View style={styles.rowLockBadge}>
+                            <LockIcon color="#FFFFFF" size={9} />
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={styles.rowTextWrap}>
+                        <Text style={styles.rowTitle} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                        <Text style={styles.rowDesc} numberOfLines={1}>
+                          {item.desc}
+                        </Text>
+                      </View>
+                      <ChevronIcon color={SUBTLE} size={18} />
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           ))}
+
+          {isSearching && filteredSections.length === 0 ? (
+            <Text style={styles.noResults}>
+              {t('admin_dashboard.search_no_results', 'No results. Try a different search.')}
+            </Text>
+          ) : null}
 
           {footer}
         </View>
@@ -1119,6 +1217,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     fontWeight: '700',
   },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EFEFF1',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+    marginBottom: 18,
+  },
+  searchInput: { flex: 1, fontSize: 15.5, color: INK, padding: 0 },
+  noResults: {
+    textAlign: 'center',
+    color: SUBTLE,
+    fontSize: 14,
+    paddingVertical: 36,
+  },
   // --- Hero (1 of the 3 featured items) -----------------------------------
   // #1FAE64 (EMERALD) with white text measures 2.88:1 - fails WCAG AA
   // (4.5:1) outright, the same bug the superadmin screen had. This deep
@@ -1155,18 +1270,27 @@ const styles = StyleSheet.create({
   },
 
   // --- Secondary quick actions (the other 2 featured items) ---------------
+  // White cards with a colored icon square (per item.tint) instead of a
+  // uniform light-green tint - matches the grouped-list rows below so the
+  // whole "Manage" section reads as one system, not two different styles.
   secondaryRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
   secondaryCard: {
     flex: 1,
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.06)',
     padding: 15,
+    shadowColor: '#0B3D2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   secondaryIcon: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(31,174,100,0.14)',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
