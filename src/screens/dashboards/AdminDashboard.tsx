@@ -10,9 +10,15 @@ import UserAvatar from '../../components/UserAvatar';
 import HeroGlow from '../../components/HeroGlow';
 import MonthlyReportsCard from '../../components/MonthlyReportsCard';
 import AnalyticsCard from '../../components/AnalyticsCard';
+import SchoolIdentityCard from '../../components/SchoolIdentityCard';
 import SyncStatusCard from '../../components/SyncStatusCard';
 import AcademicSetupWizardScreen from '../admin/AcademicSetupWizardScreen';
-import { fetchAdminSubscriptionStatus, AdminSubscriptionStatus } from '../../services/subscriptionService';
+import {
+  fetchAdminSubscriptionStatus,
+  AdminSubscriptionStatus,
+  SUBSCRIPTION_FEATURE_KEYS,
+} from '../../services/subscriptionService';
+import SubscriptionStatusCard from '../../components/SubscriptionStatusCard';
 import { ACADEMIC_ADMIN_TILE_KEYS, isOrphanSchoolUser, isQuranTrackingSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,6 +116,19 @@ function ChevronIcon({ color, size = 18 }: { color: string; size?: number }) {
 // built and reachable by route, just hidden from the menu until the admin
 // asks for it back. To bring one back, remove its key from this set.
 const HIDDEN_FOR_NOW_KEYS = new Set([
+  // "Academic" (assign class teachers to sections) - none of this app's
+  // current schools are big enough to need the class/section/department
+  // structure this assumes. Kept reachable by route (AdminClassTeacherAssign)
+  // for whenever a school that size signs up.
+  'classes',
+  // Exam features, hidden per admin request. "Exam Categories" is still the
+  // mechanism the Quarterly grading wizard's Q1-Q4 tagging relies on
+  // (AdminExamCategoriesScreen) - hiding the tile doesn't touch that data or
+  // any grade already computed from it, it just removes this dashboard as an
+  // entry point. Both routes (AdminExamCategories, Examinations) still work
+  // for whenever exams come back into scope.
+  'examCategories',
+  'examinations',
   'gradebookReview',
   'announcementReview',
   'lessonPlanReview',
@@ -194,36 +213,64 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     ? t('admin_dashboard.children_title', 'Children')
     : t('admin_dashboard.students_title', 'Students');
 
-  // Gates the "Grading Systems" card. Fail-open by design, same reasoning
-  // as StudentDashboard's isAcademicLocked: a null status (still loading,
-  // or the check failed) never locks the card - real authorization still
-  // lives server-side in admin_grading_systems_* itself.
+  // Gates the Grading Systems / Exam Categories / Gradebook Review cards.
+  // Fail-open by design, same reasoning as StudentDashboard's
+  // isAcademicLocked: a null status (still loading, or the check failed)
+  // never locks a card - real authorization still lives server-side in
+  // admin_grading_systems_* etc.
   const [subscriptionStatus, setSubscriptionStatus] = useState<AdminSubscriptionStatus | null>(null);
-  useEffect(() => {
+  // Distinct from subscriptionStatus === null (still loading) - lets
+  // SubscriptionStatusCard render "couldn't load" instead of nothing when
+  // the request actually fails, so a broken/undeployed endpoint is visible
+  // instead of the card just silently never appearing.
+  const [subscriptionStatusError, setSubscriptionStatusError] = useState(false);
+  const loadSubscriptionStatus = React.useCallback(() => {
     if (!token) return;
-    let cancelled = false;
+    setSubscriptionStatusError(false);
     fetchAdminSubscriptionStatus(token)
-      .then((data) => {
-        if (!cancelled) setSubscriptionStatus(data);
-      })
-      .catch(() => {
-        // Silent - fail-open, card stays unlocked-looking until we know otherwise.
+      .then((data) => setSubscriptionStatus(data))
+      .catch((err) => {
+        // Fail-open for the feature gates below (isFeatureLocked treats a
+        // null status as unlocked) - only the status card surfaces this.
+        console.warn('[AdminDashboard] admin_subscription_status failed:', err);
+        setSubscriptionStatusError(true);
       });
-    return () => {
-      cancelled = true;
-    };
   }, [token]);
-  const isGradingLocked = subscriptionStatus?.active === false;
-  const gradingLockedMessage =
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, [loadSubscriptionStatus]);
+
+  // A package's `features` list is opt-in: if the superadmin never
+  // configured one for this school's package, it stays empty and every
+  // feature below falls back to the old all-or-nothing `active` gate.
+  // Only a package that explicitly lists some features restricts to just
+  // those - see SUBSCRIPTION_FEATURE_KEYS.
+  const isFeatureLocked = (featureKey: string) => {
+    if (!subscriptionStatus) return false;
+    if (subscriptionStatus.active === false) return true;
+    const features = subscriptionStatus.features ?? [];
+    return features.length > 0 && !features.includes(featureKey);
+  };
+  const lockedMessageFor = (defaultKey: string, defaultText: string) =>
     subscriptionStatus?.reason === 'expired'
-      ? t(
-          'admin_dashboard.grading_locked_expired',
-          'Your subscription has expired. Renew it to manage grading systems.',
-        )
-      : t(
-          'admin_dashboard.grading_locked_no_subscription',
-          'Grading Systems needs an active subscription. Contact your account owner to unlock it.',
-        );
+      ? t('admin_dashboard.feature_locked_expired', 'Your subscription has expired. Renew it to unlock this.')
+      : t(defaultKey, defaultText);
+
+  const isGradingLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.gradingSystems);
+  const gradingLockedMessage = lockedMessageFor(
+    'admin_dashboard.grading_locked_no_subscription',
+    'Grading Systems needs an active subscription. Contact your account owner to unlock it.',
+  );
+  const isExamCategoriesLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.examCategories);
+  const examCategoriesLockedMessage = lockedMessageFor(
+    'admin_dashboard.exam_categories_locked_no_subscription',
+    'Exam Categories needs an active subscription. Contact your account owner to unlock it.',
+  );
+  const isGradebookReviewLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.gradebookReview);
+  const gradebookReviewLockedMessage = lockedMessageFor(
+    'admin_dashboard.gradebook_review_locked_no_subscription',
+    'Gradebook Review needs an active subscription. Contact your account owner to unlock it.',
+  );
 
   const items: ManageItem[] = [
     {
@@ -286,6 +333,15 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'StaffIdCards',
       icon: (c) => <IdCardIcon color={c} />,
+    },
+    {
+      key: 'classesSections',
+      category: 'academics',
+      title: t('admin_dashboard.classes_sections_title', 'Classes & Sections'),
+      desc: t('admin_dashboard.classes_sections_desc', 'Create classes and sections for this school'),
+      variant: 'soft',
+      route: 'ClassList',
+      icon: (c) => <BookIcon color={c} />,
     },
     {
       key: 'classes',
@@ -358,8 +414,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminExamCategories',
       icon: (c) => <ExamCategoriesIcon color={c} />,
-      locked: isGradingLocked,
-      lockedMessage: gradingLockedMessage,
+      locked: isExamCategoriesLocked,
+      lockedMessage: examCategoriesLockedMessage,
     },
     {
       key: 'gradebookReview',
@@ -369,8 +425,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AdminGradebookReview',
       icon: (c) => <GradebookIcon color={c} />,
-      locked: isGradingLocked,
-      lockedMessage: gradingLockedMessage,
+      locked: isGradebookReviewLocked,
+      lockedMessage: gradebookReviewLockedMessage,
     },
     {
       key: 'announcementReview',
@@ -441,8 +497,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     {
       key: 'programsSubjects',
       category: 'academics',
-      title: t('admin_dashboard.programs_subjects_title', 'Programs & Subjects'),
-      desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's program and subject catalog"),
+      title: t('admin_dashboard.programs_subjects_title', 'Subjects'),
+      desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's subject catalog"),
       variant: 'soft',
       route: 'ProgramsCatalog',
       icon: (c) => <CatalogIcon color={c} />,
@@ -834,10 +890,19 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
           </View>
 
           {isOrphanSchool && token ? (
-            // Real data via admin_orphan_report_overview, restored after a
-            // later merge silently reverted this to the old static
-            // placeholder card (no live counts). See MuslimEdu-Status-8.
-            <MonthlyReportsCard token={token} />
+            <>
+              {/* AnalyticsCard (below) shows this same school name/address/
+                  logo + edit shortcut for non-orphan schools, but orphan
+                  schools never render AnalyticsCard at all - it otherwise
+                  reports on class-based academic data they don't have.
+                  Standalone here so orphan admins can still see and edit
+                  their own school's info from the dashboard. */}
+              <SchoolIdentityCard token={token} />
+              {/* Real data via admin_orphan_report_overview, restored after a
+                  later merge silently reverted this to the old static
+                  placeholder card (no live counts). See MuslimEdu-Status-8. */}
+              <MonthlyReportsCard token={token} />
+            </>
           ) : null}
 
           {/* Non-orphan schools' equivalent of the hero card above - every
@@ -851,6 +916,17 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
           <SyncStatusCard />
+          {/* Visible read-only status for the platform subscription that
+              gates gradingSystems/examCategories/gradebookReview below -
+              previously those cards just locked silently with no way for
+              the admin to see WHY (package, expiry, days left). Set by the
+              superadmin from SuperAdminSchoolSubscription. */}
+          <SubscriptionStatusCard
+            status={subscriptionStatus}
+            loadFailed={subscriptionStatusError}
+            onRetry={loadSubscriptionStatus}
+            onSubscribePress={() => (navigation as any).navigate('SubscribeRequest')}
+          />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
           {/* Hero + secondary bento (1+2, per the 3 featured items - not 3

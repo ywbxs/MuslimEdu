@@ -2,6 +2,11 @@ import RNFS from 'react-native-fs';
 import ImageResizer from '@bam.tech/react-native-image-resizer';
 
 export const MAX_PHOTO_BYTES = 200 * 1024; // 200 KB
+// Post composer photos compress tighter than everything else that shares
+// prepareImage below (profile photos, ID/selfie verification, report
+// attachments) - a post can carry up to 20 of them, so keeping each one
+// small matters a lot more than it does for a single profile photo.
+export const MAX_POST_COMPOSER_PHOTO_BYTES = 100 * 1024; // 100 KB
 export const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png'];
 
@@ -50,16 +55,18 @@ async function fileSize(uri: string): Promise<number> {
 }
 
 /**
- * Shrinks a photo down to MAX_PHOTO_BYTES (200KB) - tries progressively
- * smaller widths and lower JPEG quality until it fits. Shared by both the
- * profile-photo uploader and post photo uploads, since the target size and
- * approach are identical either way.
+ * Shrinks a photo down to maxBytes (defaults to MAX_PHOTO_BYTES, 200KB) -
+ * tries progressively smaller widths and lower JPEG quality until it fits.
+ * Shared by the profile-photo uploader, ID/selfie verification, report
+ * attachments, and post photo uploads - callers that need a tighter target
+ * (the post composer) pass their own maxBytes instead of taking the default.
  */
 async function prepareImage(
   uri: string,
   fileName?: string | null,
   mimeType?: string | null,
   knownSize?: number | null,
+  maxBytes: number = MAX_PHOTO_BYTES,
 ): Promise<PreparedPhoto> {
   const name = fileName || uri.split('/').pop() || 'photo.jpg';
   assertAllowedPhotoType(name, mimeType);
@@ -67,7 +74,7 @@ async function prepareImage(
   const originalExt = extensionOf(name) || 'jpg';
   let currentUri = uri;
   let size = knownSize && knownSize > 0 ? knownSize : await fileSize(currentUri);
-  const originallyOversized = size > MAX_PHOTO_BYTES;
+  const originallyOversized = size > maxBytes;
 
   if (!originallyOversized) {
     return {
@@ -79,8 +86,8 @@ async function prepareImage(
     };
   }
 
-  const widths = [1280, 1024, 800, 640, 480, 360];
-  const qualities = [80, 70, 60, 50, 40, 30];
+  const widths = [1280, 1024, 800, 640, 480, 360, 240];
+  const qualities = [80, 70, 60, 50, 40, 30, 20];
 
   for (const width of widths) {
     for (const quality of qualities) {
@@ -96,7 +103,7 @@ async function prepareImage(
         { mode: 'contain', onlyScaleDown: true },
       );
       const candidateSize = result.size ?? (await fileSize(result.uri));
-      if (candidateSize <= MAX_PHOTO_BYTES) {
+      if (candidateSize <= maxBytes) {
         return {
           uri: result.uri,
           fileName: name.replace(/\.[a-zA-Z0-9]+$/, '.jpg'),
@@ -128,14 +135,21 @@ export async function prepareProfilePhoto(
   return prepareImage(uri, fileName, mimeType, knownSize);
 }
 
-/** Same 200KB compression as prepareProfilePhoto, used for post photos (up to 6 per post). */
+/**
+ * Same compression approach as prepareProfilePhoto, used for post photos,
+ * verification uploads, and report attachments. Defaults to the shared
+ * 200KB target - pass maxBytes explicitly for a tighter one (the post
+ * composer uses MAX_POST_COMPOSER_PHOTO_BYTES, 100KB, since it allows up
+ * to 20 photos per post).
+ */
 export async function preparePostPhoto(
   uri: string,
   fileName?: string | null,
   mimeType?: string | null,
   knownSize?: number | null,
+  maxBytes: number = MAX_PHOTO_BYTES,
 ): Promise<PreparedPhoto> {
-  return prepareImage(uri, fileName, mimeType, knownSize);
+  return prepareImage(uri, fileName, mimeType, knownSize, maxBytes);
 }
 
 export function formatBytes(bytes: number): string {

@@ -16,6 +16,7 @@ import { useLocale } from '../../context/LocaleContext';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
 import { GlassButton, GlassInput } from '../../components/glass/GlassKit';
+import { WizardStepHeader } from '../../components/wizard/WizardKit';
 import { BRAND, COLORS, RADIUS } from '../../theme/glass';
 import {
   fetchSetupStatus,
@@ -392,7 +393,7 @@ export default function AcademicSetupWizardScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <View style={styles.iconWrap}>
@@ -406,16 +407,10 @@ export default function AcademicSetupWizardScreen() {
             </View>
           </View>
 
-          <View style={styles.stepper}>
-            {STEP_LABELS.map((step_, i) => (
-              <View key={step_.key} style={styles.stepperItem}>
-                <View style={[styles.stepDot, i < step && styles.stepDotDone, i === step && styles.stepDotActive]}>
-                  {i < step ? <CheckIcon /> : <Text style={[styles.stepDotText, i === step && styles.stepDotTextActive]}>{i + 1}</Text>}
-                </View>
-                <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{t(`academic_setup_wizard.step_${step_.key}`, step_.label)}</Text>
-              </View>
-            ))}
-          </View>
+          <WizardStepHeader
+            step={step + 1}
+            labels={STEP_LABELS.map((step_) => t(`academic_setup_wizard.step_${step_.key}`, step_.label))}
+          />
 
           <GlassCard surface="light" radius={RADIUS.lg} style={styles.stepCard} contentStyle={styles.stepCardContent}>
             <ScrollView
@@ -633,23 +628,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: INK },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 18, marginTop: 3 },
 
-  stepper: { flexDirection: 'row', justifyContent: 'center', gap: 22, marginBottom: 18, paddingHorizontal: 20 },
-  stepperItem: { alignItems: 'center', gap: 5 },
-  stepDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepDotActive: { backgroundColor: EMERALD },
-  stepDotDone: { backgroundColor: BRAND.emeraldDeep },
-  stepDotText: { fontSize: 11.5, fontWeight: '700', color: SUBTLE },
-  stepDotTextActive: { color: '#fff' },
-  stepLabel: { fontSize: 10.5, color: SUBTLE, fontWeight: '600' },
-  stepLabelActive: { color: EMERALD },
-
   // flex:1 - the step card fills whatever vertical space is left between
   // the stepper above and the action buttons below.
   //
@@ -693,7 +671,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'flex-end',
   },
-  tileCheckSelected: { borderColor: EMERALD, backgroundColor: EMERALD },
+  // BRAND.emeraldDeep, not EMERALD - white check icon on raw emerald
+  // (#1FAE64) measures 2.88:1, below WCAG AA; deep emerald measures 5.42:1.
+  tileCheckSelected: { borderColor: BRAND.emeraldDeep, backgroundColor: BRAND.emeraldDeep },
   tileLabel: { fontSize: 14.5, color: INK, fontWeight: '700', marginTop: 10 },
   tileLabelSelected: { color: BRAND.emeraldDeep },
   programDurationWrap: { marginTop: 18, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEEF0' },

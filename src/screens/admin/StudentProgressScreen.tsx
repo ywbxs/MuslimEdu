@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   Share,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -453,7 +453,7 @@ export default function StudentProgressScreen() {
         ) : null}
       </ScrollView>
 
-      <Modal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
+      <KeyboardAwareModal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -507,7 +507,7 @@ export default function StudentProgressScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

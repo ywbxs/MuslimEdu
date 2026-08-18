@@ -307,7 +307,7 @@ export default function SubjectFormScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>{t('subject_form.program_label', 'Program (optional)')}</Text>
+        <Text style={styles.label}>{t('subject_form.program_label', 'Section/Class (optional)')}</Text>
         <View style={styles.typeGrid}>
           <TouchableOpacity
             style={[styles.typeOption, programId === null && styles.typeOptionSelected]}

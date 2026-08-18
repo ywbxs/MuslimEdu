@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOfflineQueue } from '../context/OfflineQueueContext';
 
-const AMBER = '#B45309';
-const AMBER_BG = '#FEF3C7';
-const AMBER_BORDER = 'rgba(180,83,9,0.18)';
+const INK = '#1C1C1E';
+const INK_BORDER = 'rgba(255,255,255,0.12)';
 const BAR_CONTENT_HEIGHT = 40;
 
 /**
@@ -65,7 +64,7 @@ export default function OfflineStatusBar() {
             Offline Mode{actions.length > 0 ? ` · ${actions.length} pending` : ''}
           </Text>
           <TouchableOpacity style={styles.syncBtn} onPress={() => flushNow()} activeOpacity={0.8} disabled={isFlushing}>
-            {isFlushing ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.syncText}>Sync</Text>}
+            {isFlushing ? <ActivityIndicator size="small" color={INK} /> : <Text style={styles.syncText}>Sync</Text>}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -79,15 +78,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: BAR_CONTENT_HEIGHT,
     paddingHorizontal: 14,
-    backgroundColor: AMBER_BG,
+    backgroundColor: INK,
     borderBottomWidth: 1,
-    borderBottomColor: AMBER_BORDER,
+    borderBottomColor: INK_BORDER,
     gap: 8,
   },
-  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: AMBER },
-  text: { fontSize: 12.5, fontWeight: '700', color: AMBER, flex: 1 },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#FFFFFF' },
+  text: { fontSize: 12.5, fontWeight: '700', color: '#FFFFFF', flex: 1 },
   syncBtn: {
-    backgroundColor: AMBER,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -95,5 +94,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  syncText: { fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' },
+  syncText: { fontSize: 11.5, fontWeight: '700', color: INK },
 });

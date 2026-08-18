@@ -408,3 +408,114 @@ export async function fetchSections(
   );
   return (data.sections ?? data.data ?? data ?? []) as SectionOption[];
 }
+
+// --- Full class management (admin_classes_* - distinct from the
+// admin_class_list picker above; see CreateClassScreen.tsx) --------------
+
+export interface NamedOption {
+  id: number;
+  name: string;
+}
+
+export interface ClassReferenceData {
+  departments: NamedOption[];
+  campuses: NamedOption[];
+  curricula: NamedOption[];
+  // Backend (Session model) only ever sends session_title - title/name
+  // are kept here only as a defensive fallback, never the real field.
+  school_years: { id: number; session_title?: string; title?: string; name?: string }[];
+  semester_terms: NamedOption[];
+}
+
+export type ClassShift = 'morning' | 'afternoon' | 'evening' | 'full_day';
+export type ClassType = 'face-to-face' | 'online' | 'hybrid';
+export type ClassStatus = 'active' | 'pending' | 'closed' | 'archived';
+
+export interface ClassRecord {
+  id: number;
+  class_code: string;
+  name: string;
+  grade_level: number;
+  section: string | null;
+  school_year_id: number | null;
+  department_id: number | null;
+  campus_id: number | null;
+  curriculum_id: number | null;
+  semester_term_id: number | null;
+  room_number: string | null;
+  building: string | null;
+  floor: string | null;
+  shift: ClassShift;
+  class_type: ClassType;
+  max_capacity: number;
+  description: string | null;
+  status: ClassStatus;
+  start_date: string;
+  end_date: string;
+}
+
+export interface ClassInput {
+  class_code: string;
+  name: string;
+  grade_level: number;
+  section?: string | null;
+  school_year_id: number;
+  department_id?: number | null;
+  campus_id?: number | null;
+  curriculum_id?: number | null;
+  semester_term_id?: number | null;
+  room_number?: string | null;
+  building?: string | null;
+  floor?: string | null;
+  shift: ClassShift;
+  class_type: ClassType;
+  max_capacity: number;
+  description?: string | null;
+  status: ClassStatus;
+  start_date: string;
+  end_date: string;
+}
+
+/** POST /admin_classes_reference_data - pickers for the class wizard. */
+export async function fetchClassReferenceData(token: string): Promise<ClassReferenceData> {
+  const data = await authedPost('/admin_classes_reference_data', token, {});
+  return {
+    departments: data.departments ?? [],
+    campuses: data.campuses ?? [],
+    curricula: data.curricula ?? [],
+    school_years: data.school_years ?? [],
+    semester_terms: data.semester_terms ?? [],
+  };
+}
+
+/** POST /admin_classes_detail - one class record, for editing. */
+export async function fetchClassRecordDetail(token: string, classId: number): Promise<ClassRecord> {
+  const data = await authedPost('/admin_classes_detail', token, { class_id: classId });
+  return data.class as ClassRecord;
+}
+
+export async function createClassRecord(token: string, input: ClassInput): Promise<ClassRecord> {
+  const data = await authedPost('/admin_classes_create', token, input);
+  return data.class as ClassRecord;
+}
+
+export async function updateClassRecord(
+  token: string,
+  classId: number,
+  input: ClassInput,
+): Promise<ClassRecord> {
+  const data = await authedPost('/admin_classes_update', token, { class_id: classId, ...input });
+  return data.class as ClassRecord;
+}
+
+export interface ClassSectionOption {
+  id: number;
+  name: string;
+}
+
+/** POST /admin_sections_list scoped to one class - for the Basics step's Section picker. */
+export async function fetchSectionsForClass(token: string, classId: number): Promise<ClassSectionOption[]> {
+  const data = await authedPost('/admin_sections_list', token, { class_id: classId, status: 'active' });
+  const sections: any[] = data.sections ?? [];
+  return sections.map((s) => ({ id: s.id, name: s.name }));
+}

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
 import { Calendar, ArrowRight, DoorOpen, User, Clock } from 'lucide-react-native';
 import { fetchMySchedule, AcademicSchedule, Day } from '../services/academicScheduleService';
 import { Skeleton, SkeletonCircle } from './Skeleton';
+import { COLORS, GLASS, RADIUS, SHADOW } from '../theme/glass';
 
 function formatTime12h(hhmm: string): string {
   const [hStr, mStr] = hhmm.slice(0, 5).split(':');
@@ -16,34 +16,35 @@ function formatTime12h(hhmm: string): string {
   return `${h}:${m} ${suffix}`;
 }
 
-// Dark hero gradient - same black tone the Admin/Teacher/Student dashboard
-// heroes already use (HERO_TOP/HERO_BOTTOM), so this card reads as part of
-// the same visual language wherever it's dropped (dashboard, feed).
-const GRADIENT_TOP = '#1C1C1E';
-const GRADIENT_BOTTOM = '#000000';
-const PALE_GREEN = '#8FD9AE';
-const WHITE = '#FFFFFF';
-const FAINT = 'rgba(255,255,255,0.6)';
-const FAINTER = 'rgba(255,255,255,0.55)';
-const GLASS_FILL = 'rgba(255,255,255,0.12)';
-const HAIRLINE = 'rgba(255,255,255,0.14)';
-const SKELETON_BASE = 'rgba(255,255,255,0.14)';
+// Light glass card - same fillOnLight/borderOnLight surface the admin
+// menu's cards use, in place of the dark hero-black gradient this used to
+// carry. That gradient read as a heavy, disconnected block sitting on the
+// white body panel it's actually placed on (dashboard/feed both put this
+// on a light background, not the dark hero) - this keeps it in the same
+// visual family as everything around it.
+const INK = COLORS.ink;
+const SUBTLE = COLORS.subtle;
+const EMERALD = COLORS.emerald;
+const EMERALD_SOFT = COLORS.emeraldSoft;
+const GLASS_SURFACE = GLASS.fillOnLightStrong;
+const GLASS_BORDER = GLASS.borderOnLight;
+const SKELETON_BASE = '#EDEFF2';
 
 const DAY_INDEX_TO_KEY: Day[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-function CalendarIcon({ color = PALE_GREEN, size = 22 }: { color?: string; size?: number }) {
+function CalendarIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
   return <Calendar color={color} size={size} strokeWidth={2} />;
 }
-function ArrowRightIcon({ color = PALE_GREEN, size = 16 }: { color?: string; size?: number }) {
+function ArrowRightIcon({ color = EMERALD, size = 15 }: { color?: string; size?: number }) {
   return <ArrowRight color={color} size={size} strokeWidth={2} />;
 }
-function DoorIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
+function DoorIcon({ color = SUBTLE, size = 12 }: { color?: string; size?: number }) {
   return <DoorOpen color={color} size={size} strokeWidth={2} />;
 }
-function PersonIcon({ color = FAINTER, size = 13 }: { color?: string; size?: number }) {
+function PersonIcon({ color = SUBTLE, size = 12 }: { color?: string; size?: number }) {
   return <User color={color} size={size} strokeWidth={2} />;
 }
-function ClockIcon({ color = PALE_GREEN, size = 13 }: { color?: string; size?: number }) {
+function ClockIcon({ color = EMERALD, size = 12 }: { color?: string; size?: number }) {
   return <Clock color={color} size={size} strokeWidth={2} />;
 }
 
@@ -59,10 +60,6 @@ function ClockIcon({ color = PALE_GREEN, size = 13 }: { color?: string; size?: n
  * uses - already scoped server-side to this student's enrolled section
  * and published-only, already denormalized with subject/teacher/room
  * names. "Today" is computed client-side from the device's own date.
- *
- * Dark gradient card - matches the dashboards' own hero black gradient
- * instead of a plain white card, so it reads as a distinct highlight
- * wherever it's dropped (dashboard, feed).
  */
 export default function UpcomingClassesCard({ token }: { token: string }) {
   const navigation = useNavigation();
@@ -91,39 +88,39 @@ export default function UpcomingClassesCard({ token }: { token: string }) {
 
   if (isLoading) {
     return (
-      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+      <View style={styles.card}>
         <View style={styles.headerRow}>
-          <SkeletonCircle size={42} baseColor={SKELETON_BASE} />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Skeleton width={120} height={16} baseColor={SKELETON_BASE} style={{ marginBottom: 6 }} />
-            <Skeleton width={90} height={12} baseColor={SKELETON_BASE} />
+          <SkeletonCircle size={36} baseColor={SKELETON_BASE} />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Skeleton width={110} height={14} baseColor={SKELETON_BASE} style={{ marginBottom: 5 }} />
+            <Skeleton width={80} height={11} baseColor={SKELETON_BASE} />
           </View>
         </View>
-        <Skeleton width="100%" height={54} baseColor={SKELETON_BASE} style={{ borderRadius: 14, marginTop: 14 }} />
-      </LinearGradient>
+        <Skeleton width="100%" height={44} baseColor={SKELETON_BASE} style={{ borderRadius: 12, marginTop: 12 }} />
+      </View>
     );
   }
 
   if (error) {
     return (
-      <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+      <View style={styles.card}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={load} activeOpacity={0.8}>
           <Text style={styles.retryBtnText}>Try again</Text>
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     );
   }
 
   const preview = todayClasses.slice(0, 3);
 
   return (
-    <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-      <TouchableOpacity style={styles.headerRow} activeOpacity={0.85} onPress={goToSchedule}>
+    <View style={styles.card}>
+      <TouchableOpacity style={styles.headerRow} activeOpacity={0.8} onPress={goToSchedule}>
         <View style={styles.iconBox}>
           <CalendarIcon />
         </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
+        <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.title}>Today's Classes</Text>
           <Text style={styles.subtitle}>Your schedule for today</Text>
         </View>
@@ -165,53 +162,52 @@ export default function UpcomingClassesCard({ token }: { token: string }) {
           ))}
         </View>
       )}
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 22,
-    padding: 18,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    backgroundColor: GLASS_SURFACE,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    marginBottom: 16,
+    ...SHADOW.level1,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: GLASS_FILL,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 16, fontWeight: '700', color: WHITE },
-  subtitle: { fontSize: 12, color: FAINT, marginTop: 2 },
+  title: { fontSize: 14.5, fontWeight: '700', color: INK },
+  subtitle: { fontSize: 11.5, color: SUBTLE, marginTop: 1 },
   arrowCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: GLASS_FILL,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  emptyText: { fontSize: 13, color: FAINT, marginTop: 16, lineHeight: 18 },
+  emptyText: { fontSize: 12.5, color: SUBTLE, marginTop: 12, lineHeight: 17 },
 
-  rows: { marginTop: 14 },
-  row: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: HAIRLINE },
-  timeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
-  timeText: { fontSize: 12, fontWeight: '700', color: PALE_GREEN },
-  subjectText: { fontSize: 14.5, fontWeight: '700', color: WHITE },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
+  rows: { marginTop: 10 },
+  row: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: GLASS_BORDER },
+  timeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  timeText: { fontSize: 11.5, fontWeight: '700', color: EMERALD },
+  subjectText: { fontSize: 13.5, fontWeight: '700', color: INK },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 3 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 11.5, color: FAINTER },
+  metaText: { fontSize: 11, color: SUBTLE },
 
-  errorText: { color: '#FF8A8A', fontSize: 13, textAlign: 'center', marginBottom: 10 },
-  retryBtn: { alignSelf: 'center', backgroundColor: GLASS_FILL, paddingVertical: 9, paddingHorizontal: 20, borderRadius: 10 },
-  retryBtnText: { color: WHITE, fontWeight: '700', fontSize: 13 },
+  errorText: { color: COLORS.danger, fontSize: 12.5, textAlign: 'center', marginBottom: 8 },
+  retryBtn: { alignSelf: 'center', backgroundColor: EMERALD_SOFT, paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10 },
+  retryBtnText: { color: EMERALD, fontWeight: '700', fontSize: 12.5 },
 });

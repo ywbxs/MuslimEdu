@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   TextInput,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, CircleCheck, RotateCcwClock } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -144,7 +144,7 @@ function StudentDetailSheet({
 }) {
   const { t } = useLocale();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
         <View style={styles.sheet}>
@@ -181,7 +181,7 @@ function StudentDetailSheet({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

@@ -8,12 +8,12 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   FlatList,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
@@ -26,6 +26,7 @@ const labelize = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCa
 // (already built for CreateClassScreen) for the department + school year
 // pickers instead of adding new endpoints for the same lookups.
 const CurriculumFormScreen = () => {
+  const { token, user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAcademicGlassTheme();
@@ -66,7 +67,6 @@ const CurriculumFormScreen = () => {
 
   const fetchPrograms = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_programs_list`,
         {},
@@ -85,7 +85,6 @@ const CurriculumFormScreen = () => {
 
   const fetchReferenceData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_classes_reference_data`,
         {},
@@ -107,7 +106,6 @@ const CurriculumFormScreen = () => {
 
   const fetchCurriculum = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_curricula_list`,
         {},
@@ -163,7 +161,6 @@ const CurriculumFormScreen = () => {
 
     try {
       setSubmitting(true);
-      const token = await AsyncStorage.getItem('token');
 
       const payload = {
         name: formData.name,
@@ -290,7 +287,7 @@ const CurriculumFormScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>{t('curriculum_form.program_label', 'Program')}</Text>
+          <Text style={styles.label}>{t('curriculum_form.program_label', 'Section/Class')}</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setActiveModal('program_id')}
@@ -356,7 +353,7 @@ const CurriculumFormScreen = () => {
       </View>
 
       {/* Department modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'department_id'}
         transparent
         animationType="slide"
@@ -394,10 +391,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Program modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'program_id'}
         transparent
         animationType="slide"
@@ -405,7 +402,7 @@ const CurriculumFormScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('curriculum_form.select_program', 'Select Program')}</Text>
+            <Text style={styles.modalTitle}>{t('curriculum_form.select_program', 'Select Section/Class')}</Text>
             <FlatList
               data={referenceData.programs}
               renderItem={({ item }) => (
@@ -418,7 +415,7 @@ const CurriculumFormScreen = () => {
               )}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_programs_found', 'No programs found')}</Text>
+                <Text style={styles.modalEmptyText}>{t('curriculum_form.no_programs_found', 'No sections/classes found')}</Text>
               }
             />
             <TouchableOpacity
@@ -435,10 +432,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* School Year modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'effective_school_year_id'}
         transparent
         animationType="slide"
@@ -480,10 +477,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Status modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'status'}
         transparent
         animationType="slide"
@@ -509,7 +506,7 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
       </ScrollView>
     </>
   );

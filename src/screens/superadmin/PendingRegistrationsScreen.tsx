@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Image,
   Alert,
   FlatList,
-  Modal,
   TextInput,
   ActivityIndicator,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -33,6 +33,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   PendingRegistration,
   RegistrationStatus,
+  SubscriptionSelection,
   fetchPendingSchoolRegistrations,
   approveSchoolRegistration,
   rejectSchoolRegistration,
@@ -42,6 +43,7 @@ import PhotoLightbox from '../../components/PhotoLightbox';
 import PressableScale from '../../components/PressableScale';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { WizardStepHeader } from '../../components/wizard/WizardKit';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -79,6 +81,39 @@ const QUICK_REASONS = [
   'Duplicate application',
 ];
 
+interface SubscriptionTier {
+  key: string;
+  label: string;
+  studentLimit: number | null; // null = unlimited
+  tagline: string;
+}
+
+const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
+  { key: 'basic', label: 'Basic', studentLimit: 100, tagline: 'For schools just getting started' },
+  { key: 'standard', label: 'Standard', studentLimit: 500, tagline: 'Most schools' },
+  { key: 'premium', label: 'Premium', studentLimit: null, tagline: 'Unlimited students, full features' },
+];
+
+const DURATION_OPTIONS: { key: string; label: string; months: number }[] = [
+  { key: '1m', label: '1 Month', months: 1 },
+  { key: '6m', label: '6 Months', months: 6 },
+  { key: '12m', label: '1 Year', months: 12 },
+];
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 type TabKey = RegistrationStatus;
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'pending', label: 'Pending' },
@@ -87,7 +122,10 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 type BusyState = { id: number; action: 'approve' | 'reject' } | null;
-type ResultState = { kind: 'approved' | 'rejected'; row: PendingRegistration } | null;
+type ResultState =
+  | { kind: 'approved'; row: PendingRegistration; subscription: SubscriptionSelection }
+  | { kind: 'rejected'; row: PendingRegistration }
+  | null;
 
 function formatDate(value: string): string {
   const d = new Date(value);
@@ -291,7 +329,11 @@ function RegistrationCard({
 }
 
 /** Approving mints a real School + a real login account, so it spells out
- *  exactly what is about to be created rather than a generic "are you sure". */
+ *  exactly what is about to be created rather than a generic "are you sure".
+ *  A 2-step wizard (reusing WizardStepHeader, same numbered-circle stepper
+ *  every other wizard in the app uses) - confirm the account being created,
+ *  then pick the subscription it starts on, so a freshly-approved school
+ *  never lands on "no_subscription" with nobody having chosen a plan for it. */
 function ApproveSheet({
   item,
   submitting,
@@ -300,61 +342,153 @@ function ApproveSheet({
 }: {
   item: PendingRegistration | null;
   submitting: boolean;
-  onConfirm: () => void;
+  onConfirm: (subscription: SubscriptionSelection) => void;
   onClose: () => void;
 }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [tierKey, setTierKey] = useState('standard');
+  const [durationKey, setDurationKey] = useState('12m');
+
+  // Fresh wizard per application - otherwise the previous school's step/plan
+  // choice is still showing when the next approval sheet opens.
+  useEffect(() => {
+    if (item) {
+      setStep(1);
+      setTierKey('standard');
+      setDurationKey('12m');
+    }
+  }, [item]);
+
+  const tier = SUBSCRIPTION_TIERS.find((t) => t.key === tierKey) ?? SUBSCRIPTION_TIERS[1];
+  const duration = DURATION_OPTIONS.find((d) => d.key === durationKey) ?? DURATION_OPTIONS[2];
+  const expireDate = isoDate(addMonths(new Date(), duration.months));
+
+  const close = () => {
+    if (submitting) return;
+    onClose();
+  };
+
+  const confirmApprove = () => {
+    onConfirm({ package: tier.label, studentLimit: tier.studentLimit, expireDate });
+  };
+
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.sheetBackdrop}>
-        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
-          <View style={[styles.sheetIcon, { backgroundColor: EMERALD_SOFT }]}>
-            <CircleCheck size={26} color={EMERALD_INK} strokeWidth={2} />
-          </View>
-          <Text style={styles.sheetTitle}>Approve this school?</Text>
-          <Text style={styles.sheetBody}>This creates the school and an admin login immediately.</Text>
 
-          <View style={styles.summaryBox}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryKey}>School</Text>
-              <Text style={styles.summaryVal} numberOfLines={1}>
-                {item?.school_name}
+          <WizardStepHeader step={step} labels={['Confirm', 'Plan']} />
+
+          {step === 1 ? (
+            <>
+              <View style={[styles.sheetIcon, { backgroundColor: EMERALD_SOFT }]}>
+                <CircleCheck size={26} color={EMERALD_INK} strokeWidth={2} />
+              </View>
+              <Text style={styles.sheetTitle}>Approve this school?</Text>
+              <Text style={styles.sheetBody}>This creates the school and an admin login immediately.</Text>
+
+              <View style={styles.summaryBox}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>School</Text>
+                  <Text style={styles.summaryVal} numberOfLines={1}>
+                    {item?.school_name}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Admin</Text>
+                  <Text style={styles.summaryVal} numberOfLines={1}>
+                    {item?.admin_name}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Login</Text>
+                  <Text style={styles.summaryVal} numberOfLines={1}>
+                    {item?.admin_email}
+                  </Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.sheetTitle}>Choose a plan</Text>
+              <Text style={styles.sheetBody} numberOfLines={2}>
+                {item?.school_name} will start on this subscription.
               </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryKey}>Admin</Text>
-              <Text style={styles.summaryVal} numberOfLines={1}>
-                {item?.admin_name}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryKey}>Login</Text>
-              <Text style={styles.summaryVal} numberOfLines={1}>
-                {item?.admin_email}
-              </Text>
-            </View>
-          </View>
+
+              <View style={plan.tierList}>
+                {SUBSCRIPTION_TIERS.map((t) => {
+                  const active = t.key === tierKey;
+                  return (
+                    <PressableScale
+                      key={t.key}
+                      style={[plan.tierCard, active && plan.tierCardActive]}
+                      scaleTo={0.98}
+                      onPress={() => setTierKey(t.key)}
+                    >
+                      <View style={plan.tierHeaderRow}>
+                        <Text style={[plan.tierLabel, active && plan.tierLabelActive]}>{t.label}</Text>
+                        {active && <CircleCheck size={18} color={EMERALD_INK} strokeWidth={2.4} />}
+                      </View>
+                      <Text style={plan.tierLimit}>
+                        {t.studentLimit === null ? 'Unlimited students' : `Up to ${t.studentLimit} students`}
+                      </Text>
+                      <Text style={plan.tierTagline}>{t.tagline}</Text>
+                    </PressableScale>
+                  );
+                })}
+              </View>
+
+              <Text style={plan.durationLabel}>Duration</Text>
+              <View style={plan.durationRow}>
+                {DURATION_OPTIONS.map((d) => {
+                  const active = d.key === durationKey;
+                  return (
+                    <TouchableOpacity
+                      key={d.key}
+                      style={[plan.durationChip, active && plan.durationChipActive]}
+                      activeOpacity={0.85}
+                      onPress={() => setDurationKey(d.key)}
+                    >
+                      <Text style={[plan.durationChipText, active && plan.durationChipTextActive]}>{d.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.summaryBox}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Active until</Text>
+                  <Text style={styles.summaryVal}>{formatShortDate(expireDate)}</Text>
+                </View>
+              </View>
+            </>
+          )}
 
           <View style={styles.sheetActions}>
-            <TouchableOpacity style={[styles.sheetBtn, styles.sheetBtnGhost]} onPress={onClose} disabled={submitting}>
-              <Text style={styles.sheetBtnGhostText}>Cancel</Text>
+            <TouchableOpacity
+              style={[styles.sheetBtn, styles.sheetBtnGhost]}
+              onPress={step === 1 ? close : () => setStep(1)}
+              disabled={submitting}
+            >
+              <Text style={styles.sheetBtnGhostText}>{step === 1 ? 'Cancel' : 'Back'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.sheetBtn, styles.sheetBtnPrimary]}
-              onPress={onConfirm}
+              onPress={step === 1 ? () => setStep(2) : confirmApprove}
               disabled={submitting}
             >
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.sheetBtnPrimaryText}>Approve</Text>
+                <Text style={styles.sheetBtnPrimaryText}>{step === 1 ? 'Next' : 'Approve & Activate'}</Text>
               )}
             </TouchableOpacity>
           </View>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -380,8 +514,8 @@ function RejectSheet({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
+      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.sheetBackdrop}>
           <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
           <View style={styles.sheet}>
@@ -439,7 +573,7 @@ function RejectSheet({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -448,7 +582,7 @@ function RejectSheet({
 function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => void }) {
   const approved = result?.kind === 'approved';
   return (
-    <Modal visible={!!result} transparent animationType="fade" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={!!result} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.resultBackdrop}>
         <View style={styles.resultCard}>
           <View style={[styles.sheetIcon, { backgroundColor: approved ? EMERALD_SOFT : DANGER_SOFT }]}>
@@ -474,6 +608,18 @@ function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => 
                     {result?.row.admin_email}
                   </Text>
                 </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Plan</Text>
+                  <Text style={styles.summaryVal} numberOfLines={1}>
+                    {result?.kind === 'approved' ? result.subscription.package : ''}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Until</Text>
+                  <Text style={styles.summaryVal} numberOfLines={1}>
+                    {result?.kind === 'approved' ? formatShortDate(result.subscription.expireDate) : ''}
+                  </Text>
+                </View>
               </View>
             </>
           ) : (
@@ -495,7 +641,7 @@ function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => 
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -561,6 +707,7 @@ export default function PendingRegistrationsScreen() {
     item: PendingRegistration,
     action: 'approve' | 'reject',
     run: () => Promise<PendingRegistration>,
+    subscription?: SubscriptionSelection,
   ) => {
     if (!token) return;
     setBusy({ id: item.id, action });
@@ -569,7 +716,11 @@ export default function PendingRegistrationsScreen() {
       setRows((prev) => prev.map((r) => (r.id === item.id ? updated : r)));
       setApproveTarget(null);
       setRejectTarget(null);
-      setResult({ kind: action === 'approve' ? 'approved' : 'rejected', row: updated });
+      setResult(
+        action === 'approve'
+          ? { kind: 'approved', row: updated, subscription: subscription! }
+          : { kind: 'rejected', row: updated },
+      );
     } catch (err: any) {
       Alert.alert(
         action === 'approve' ? "Couldn't approve" : "Couldn't reject",
@@ -667,9 +818,14 @@ export default function PendingRegistrationsScreen() {
         item={approveTarget}
         submitting={busy?.action === 'approve'}
         onClose={() => setApproveTarget(null)}
-        onConfirm={() =>
+        onConfirm={(subscription) =>
           approveTarget &&
-          decide(approveTarget, 'approve', () => approveSchoolRegistration(token!, approveTarget.id))
+          decide(
+            approveTarget,
+            'approve',
+            () => approveSchoolRegistration(token!, approveTarget.id, subscription),
+            subscription,
+          )
         }
       />
 
@@ -984,4 +1140,43 @@ const styles = StyleSheet.create({
     ...SHADOW.level3,
   },
   resultBtn: { flex: 0, alignSelf: 'stretch', marginTop: 20 },
+});
+
+const plan = StyleSheet.create({
+  tierList: { width: '100%', gap: 10, marginTop: 18 },
+  tierCard: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    padding: 14,
+  },
+  tierCardActive: { borderColor: EMERALD_INK, backgroundColor: EMERALD_SOFT },
+  tierHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tierLabel: { fontSize: 15, fontWeight: '800', color: INK },
+  tierLabelActive: { color: EMERALD_INK },
+  tierLimit: { fontSize: 12.5, fontWeight: '700', color: SUBTLE, marginTop: 4 },
+  tierTagline: { fontSize: 12, color: SUBTLE, marginTop: 2 },
+
+  durationLabel: {
+    width: '100%',
+    fontSize: 11,
+    fontWeight: '800',
+    color: SUBTLE,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  durationRow: { width: '100%', flexDirection: 'row', gap: 8 },
+  durationChip: {
+    flex: 1,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  durationChipActive: { borderColor: EMERALD_INK, backgroundColor: EMERALD_SOFT },
+  durationChipText: { fontSize: 13, fontWeight: '700', color: SUBTLE },
+  durationChipTextActive: { color: EMERALD_INK },
 });

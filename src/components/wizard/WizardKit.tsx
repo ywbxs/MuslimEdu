@@ -115,11 +115,16 @@ const stepHeader = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 24, paddingVertical: 14 },
   item: { alignItems: 'center', width: 56 },
   circle: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EDEFF0', alignItems: 'center', justifyContent: 'center' },
-  circleActive: { backgroundColor: BRAND.emerald },
+  // BRAND.emeraldDeep, not BRAND.emerald - white check/digit on the raw
+  // accent (#1FAE64) measures 2.88:1, below WCAG AA's 4.5:1 minimum for
+  // text/icons. Deep emerald measures 5.42:1. Same fix for the active
+  // label text and the connector, so the whole stepper reads as one
+  // consistent accent instead of two different greens.
+  circleActive: { backgroundColor: BRAND.emeraldDeep },
   circleText: { fontSize: 12, fontWeight: '700', color: COLORS.subtle },
   circleTextActive: { color: '#FFFFFF' },
   label: { fontSize: 10.5, color: COLORS.subtle, marginTop: 4, textAlign: 'center' },
-  labelActive: { color: BRAND.emerald, fontWeight: '700' },
+  labelActive: { color: BRAND.emeraldDeep, fontWeight: '700' },
   connector: { flex: 1, height: 2, backgroundColor: '#EDEFF0', marginTop: 12, marginHorizontal: -6 },
-  connectorActive: { backgroundColor: BRAND.emerald },
+  connectorActive: { backgroundColor: BRAND.emeraldDeep },
 });

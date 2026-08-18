@@ -146,7 +146,7 @@ export default function TeacherGradebookRosterScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top + 60}
     >
       <GlassBackground variant="canvas" />

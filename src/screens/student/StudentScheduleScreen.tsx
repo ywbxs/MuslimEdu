@@ -11,6 +11,7 @@ import { saveTextFileToDevice } from '../../utils/downloadFile';
 import { buildTablePdf } from '../../utils/pdfExport';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { resolveSubjectColor, initialsOf } from '../../utils/subjectColor';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -169,6 +170,73 @@ function StatTile({ icon, value, label }: { icon: React.ReactElement; value: str
   );
 }
 
+interface SubjectCardData {
+  subjectId: number;
+  subjectName: string;
+  teacherName: string | null;
+  color: string;
+  dayLabel: string;
+  timeLabel: string;
+}
+
+// One card per distinct subject in the published schedule (not one per
+// meeting slot - a subject meeting Mon/Wed/Fri collapses to a single card),
+// colored per Subject.color (admin-set in SubjectFormScreen) with a
+// deterministic palette fallback when the admin never picked one. Tapping
+// a card opens StudentSubjectDetailScreen for that subject's grades/
+// attendance/schedule - the day-grouped list below stays as the full
+// weekly timetable (PDF export, every meeting's room/campus/unit detail).
+function buildSubjectCards(rows: AcademicSchedule[]): SubjectCardData[] {
+  const bySubject = new Map<number, AcademicSchedule[]>();
+  rows.forEach((r) => {
+    if (r.subject_id == null) return;
+    const list = bySubject.get(r.subject_id) ?? [];
+    list.push(r);
+    bySubject.set(r.subject_id, list);
+  });
+
+  return Array.from(bySubject.entries())
+    .map(([subjectId, meetings]) => {
+      const sorted = [...meetings].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+      const first = sorted[0];
+      const dayAbbrevs = Array.from(new Set(meetings.map((m) => DAY_ABBREV[m.day_of_week])));
+      return {
+        subjectId,
+        subjectName: first.subject_name ?? first.code,
+        teacherName: first.teacher_name ?? null,
+        color: resolveSubjectColor(subjectId, first.subject_color),
+        dayLabel: dayAbbrevs.join(' '),
+        timeLabel: formatTime12h(first.starts_at),
+      };
+    })
+    .sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+}
+
+function SubjectCard({ card, onPress }: { card: SubjectCardData; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.subjectCard, { backgroundColor: card.color }]} activeOpacity={0.85} onPress={onPress}>
+      <Text style={styles.subjectCardName} numberOfLines={2}>{card.subjectName}</Text>
+      <View style={styles.subjectCardSpacer} />
+      <View style={styles.subjectCardTeacherRow}>
+        <View style={styles.subjectCardAvatar}>
+          <Text style={styles.subjectCardAvatarText}>{initialsOf(card.teacherName)}</Text>
+        </View>
+        <Text style={styles.subjectCardTeacherName} numberOfLines={1}>
+          {card.teacherName ?? '—'}
+        </Text>
+      </View>
+      <View style={styles.subjectCardTimeRow}>
+        <Clock size={11} color="rgba(255,255,255,0.9)" strokeWidth={2.2} />
+        <Text style={styles.subjectCardTimeText}>{card.dayLabel} • {card.timeLabel}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function SubjectCardSkeleton() {
+  return <Skeleton width="48%" height={108} borderRadius={RADIUS.md} />;
+}
+
 function CardSkeleton() {
   return (
     <View style={styles.card}>
@@ -232,6 +300,17 @@ export default function StudentScheduleScreen() {
       })).filter((g) => g.items.length > 0),
     [rows]
   );
+
+  const subjectCards = useMemo(() => buildSubjectCards(rows), [rows]);
+
+  const goToSubject = (card: SubjectCardData) => {
+    (navigation as any).navigate('StudentSubjectDetail', {
+      subjectId: card.subjectId,
+      subjectName: card.subjectName,
+      color: card.color,
+      teacherName: card.teacherName,
+    });
+  };
 
   const stats = useMemo(() => {
     const subjectCount = new Set(rows.map((r) => r.subject_name ?? r.code)).size;
@@ -302,6 +381,12 @@ export default function StudentScheduleScreen() {
 
       {isLoading ? (
         <ScrollView contentContainerStyle={styles.outerScroll}>
+          <View style={styles.subjectGrid}>
+            <SubjectCardSkeleton />
+            <SubjectCardSkeleton />
+            <SubjectCardSkeleton />
+            <SubjectCardSkeleton />
+          </View>
           <View style={styles.statsRow}>
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.statTile}>
@@ -342,6 +427,17 @@ export default function StudentScheduleScreen() {
 
           {grouped.length > 0 ? (
             <>
+              {subjectCards.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>{t('student_schedule.subjects_title', 'My Subjects')}</Text>
+                  <View style={styles.subjectGrid}>
+                    {subjectCards.map((card) => (
+                      <SubjectCard key={card.subjectId} card={card} onPress={() => goToSubject(card)} />
+                    ))}
+                  </View>
+                </>
+              ) : null}
+
               <View style={styles.statsRow}>
                 <StatTile
                   icon={<IconBook color={EMERALD} size={18} />}
@@ -359,6 +455,8 @@ export default function StudentScheduleScreen() {
                   label={t('student_schedule.stat_hours', 'Hours / week')}
                 />
               </View>
+
+              <Text style={styles.sectionTitle}>{t('student_schedule.timetable_title', 'Weekly Timetable')}</Text>
 
               {grouped.map((g) => (
                 <View key={g.day} style={styles.dayGroup}>
@@ -442,6 +540,35 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 12, color: SUBTLE, textAlign: 'center', marginTop: 2 },
 
   outerScroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+
+  // --- Colorful subject-card grid: one card per distinct subject,
+  // colored per Subject.color (admin-set), tapping opens the subject's
+  // grades/attendance/schedule detail. ---
+  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },
+  subjectCard: {
+    width: '48%',
+    borderRadius: RADIUS.md,
+    padding: 14,
+    minHeight: 108,
+    ...SHADOW.level1,
+  },
+  subjectCardName: { fontSize: 14.5, fontWeight: '800', color: '#FFFFFF' },
+  subjectCardSpacer: { flex: 1, minHeight: 8 },
+  subjectCardTeacherRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
+  subjectCardAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subjectCardAvatarText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
+  subjectCardTeacherName: { flex: 1, fontSize: 11.5, color: 'rgba(255,255,255,0.95)', fontWeight: '600' },
+  subjectCardTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  subjectCardTimeText: { fontSize: 10.5, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
 
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   statTile: {

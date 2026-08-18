@@ -8,10 +8,10 @@ import {
   TextInput,
   Alert,
   Switch,
-  Modal,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, Paperclip, Plus, Trash2, X } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -376,7 +376,7 @@ export default function TeacherLessonPlansScreen() {
         />
       )}
 
-      <Modal visible={isModalVisible} transparent animationType="fade" onRequestClose={() => setIsModalVisible(false)}>
+      <KeyboardAwareModal visible={isModalVisible} transparent animationType="fade" onRequestClose={() => setIsModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
@@ -566,7 +566,7 @@ export default function TeacherLessonPlansScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </GlassBackground>
   );
 }

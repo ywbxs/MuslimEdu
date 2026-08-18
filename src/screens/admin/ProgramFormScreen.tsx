@@ -74,7 +74,7 @@ export default function ProgramFormScreen() {
           const programs = await fetchPrograms(token);
           const program = programs.find((p) => p.id === programId);
           if (!program) {
-            setError(t('program_form.not_found', 'Program not found.'));
+            setError(t('program_form.not_found', 'Section/Class not found.'));
             return;
           }
           setName(program.name);
@@ -86,7 +86,7 @@ export default function ProgramFormScreen() {
           setIsActive(program.status === 'active');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('program_form.load_error', 'Failed to load the program.'));
+        setError(err instanceof Error ? err.message : t('program_form.load_error', 'Failed to load the section/class.'));
       } finally {
         setLoading(false);
       }
@@ -101,7 +101,7 @@ export default function ProgramFormScreen() {
       return;
     }
     if (!name.trim()) {
-      Alert.alert(t('common.error', 'Error'), t('program_form.name_required', 'Program name is required.'));
+      Alert.alert(t('common.error', 'Error'), t('program_form.name_required', 'Section/Class name is required.'));
       return;
     }
 
@@ -123,7 +123,7 @@ export default function ProgramFormScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('program_form.save_error', 'Could not save the program.'));
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('program_form.save_error', 'Could not save the section/class.'));
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +137,7 @@ export default function ProgramFormScreen() {
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-            {isEditing ? t('program_form.edit_title', 'Edit Program') : t('program_form.add_title', 'Add Program')}
+            {isEditing ? t('program_form.edit_title', 'Edit Section/Class') : t('program_form.add_title', 'Add Section/Class')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -156,7 +156,7 @@ export default function ProgramFormScreen() {
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>
-          {isEditing ? 'Edit Program' : 'Add Program'}
+          {isEditing ? 'Edit Section/Class' : 'Add Section/Class'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -169,7 +169,7 @@ export default function ProgramFormScreen() {
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder={t('program_form.name_placeholder', 'e.g. Hifz Program')}
+          placeholder={t('program_form.name_placeholder', 'e.g. Hifz')}
           placeholderTextColor={theme.textMuted}
         />
 
@@ -231,7 +231,7 @@ export default function ProgramFormScreen() {
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder={t('program_form.description_placeholder', 'Notes about this program')}
+          placeholder={t('program_form.description_placeholder', 'Notes about this section/class')}
           placeholderTextColor={theme.textMuted}
           multiline
           numberOfLines={3}
@@ -241,7 +241,7 @@ export default function ProgramFormScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.switchLabel}>{t('program_form.active', 'Active')}</Text>
             <Text style={styles.switchHelp}>
-              {t('program_form.active_help', 'Inactive programs are hidden from new assignments but kept for history.')}
+              {t('program_form.active_help', 'Inactive sections/classes are hidden from new assignments but kept for history.')}
             </Text>
           </View>
           <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: theme.accent }} />
@@ -255,7 +255,7 @@ export default function ProgramFormScreen() {
           {submitting ? (
             <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <Text style={styles.saveButtonText}>{isEditing ? t('program_form.save_changes', 'Save Changes') : t('program_form.add_title', 'Add Program')}</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? t('program_form.save_changes', 'Save Changes') : t('program_form.add_title', 'Add Section/Class')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -12,11 +12,10 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import axios from 'axios';
-import { ChevronLeft } from 'lucide-react-native';
-import { API_BASE_URL } from '../../config/api';
+import { ChevronLeft, Layers, GraduationCap, Clock, Sun, Building2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
+import { API_BASE_URL } from '../../config/api';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
@@ -24,8 +23,58 @@ import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
 
+interface ClassSummary {
+  id: number;
+  class_code: string;
+  name: string;
+  grade_level: number;
+  campus: string | null;
+  school_year: string | null;
+  shift: string;
+  class_type: string;
+  max_capacity: number;
+  current_enrollment: number;
+  enrollment_percentage: number;
+  status: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface CampusOption {
+  id: number;
+  name: string;
+}
+
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
+}
+function IconLayers({ color }: { color: string }) {
+  return <Layers size={13} color={color} strokeWidth={2.2} />;
+}
+function IconSun({ color }: { color: string }) {
+  return <Sun size={13} color={color} strokeWidth={2.2} />;
+}
+function IconClock({ color }: { color: string }) {
+  return <Clock size={13} color={color} strokeWidth={2.2} />;
+}
+function IconBuilding({ color }: { color: string }) {
+  return <Building2 size={13} color={color} strokeWidth={2.2} />;
+}
+function IconGraduationCap({ color, size = 22 }: { color: string; size?: number }) {
+  return <GraduationCap size={size} color={color} strokeWidth={2} />;
+}
+
+// Backend sends full ISO timestamps ("2026-08-17T18:00:00.000000Z") even
+// though these are date-only fields - just the calendar date, no time.
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// "full_day" -> "full day" (textTransform: capitalize on the chip takes it the rest of the way to "Full Day").
+function formatShift(shift: string): string {
+  return shift.replace(/_/g, ' ');
 }
 
 const ClassListScreen = () => {
@@ -38,58 +87,47 @@ const ClassListScreen = () => {
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
   const statusLabel = (status: string) => t(`class_list.status_${status}`, status.charAt(0).toUpperCase() + status.slice(1));
 
-  const [classes, setClasses] = useState([]);
-  const [filteredClasses, setFilteredClasses] = useState([]);
-  const [campuses, setCampuses] = useState([]);
+  const [classes, setClasses] = useState<ClassSummary[]>([]);
+  const [campuses, setCampuses] = useState<CampusOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [campusFilter, setCampusFilter] = useState('all');
+  const [campusFilter, setCampusFilter] = useState<number | 'all'>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchClasses();
-    }, [token])
+  const authedPost = useCallback(
+    async (path: string, body: Record<string, any>) => {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message ?? `Request failed (${response.status})`);
+      return data;
+    },
+    [token]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchCampuses();
-    }, [token])
-  );
-
-  const fetchCampuses = async () => {
+  const fetchCampuses = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/admin_campuses_list`,
-        { status: 'active' },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      setCampuses(response.data.campuses || []);
-    } catch (error) {
-      console.error('Error fetching campuses:', error);
+      const data = await authedPost('/admin_campuses_list', { status: 'active' });
+      setCampuses(data.campuses ?? []);
+    } catch {
+      // Silent - campus filter just stays at "All" if this fails.
     }
-  };
+  }, [token, authedPost]);
 
-  const fetchClasses = async (pageNum = 1, campusOverride = undefined) => {
-    if (!token) return;
-    try {
-      setLoading(true);
-
-      const effectiveCampus = campusOverride !== undefined ? campusOverride : campusFilter;
-
-      const response = await axios.post(
-        `${API_BASE_URL}/admin_classes_list`,
-        {
+  const fetchClasses = useCallback(
+    async (pageNum = 1, campusOverride?: number | 'all') => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const effectiveCampus = campusOverride !== undefined ? campusOverride : campusFilter;
+        const data = await authedPost('/admin_classes_list', {
           search: searchTerm,
           status: statusFilter,
           campus_id: effectiveCampus === 'all' ? undefined : effectiveCampus,
@@ -97,93 +135,94 @@ const ClassListScreen = () => {
           per_page: 10,
           sort_by: 'grade_level',
           sort_order: 'asc',
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+        });
+        setClasses(data.classes ?? []);
+        setPage(pageNum);
+        setTotalPages(data.pagination?.last_page ?? 1);
+      } catch (err) {
+        Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_list.load_error', 'Failed to load classes'));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [token, authedPost, searchTerm, statusFilter, campusFilter, t]
+  );
 
-      setClasses(response.data.classes);
-      setFilteredClasses(response.data.classes);
-      setPage(pageNum);
-      setTotalPages(response.data.pagination.last_page);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-      Alert.alert(t('common.error', 'Error'), t('class_list.load_error', 'Failed to load classes'));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      fetchClasses();
+    }, [fetchClasses])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCampuses();
+    }, [fetchCampuses])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchClasses(1);
   };
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setSearchTerm(text);
     setPage(1);
-    // Debounce search
-    setTimeout(() => {
-      fetchClasses(1);
-    }, 300);
+    setTimeout(() => fetchClasses(1), 300);
   };
 
-  const handleStatusFilter = (status) => {
+  const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
     setPage(1);
     fetchClasses(1);
   };
 
-  const handleCampusFilter = (campusId) => {
-    setCampusFilter(campusId);
-    setPage(1);
-    fetchClasses(1, campusId);
+  const handleClassPress = (classId: number) => {
+    (navigation as any).navigate('ClassDetail', { classId });
   };
 
-  const handleClassPress = (classId) => {
-    navigation.navigate('ClassDetail', { classId });
+  const handleSectionsPress = (classId: number) => {
+    (navigation as any).navigate('SectionList', { classId });
   };
 
-  const renderClassCard = ({ item }) => {
+  const renderClassCard = ({ item }: { item: ClassSummary }) => {
     const badge = statusColors(theme, item.status);
+    const pct = item.enrollment_percentage || 0;
     return (
-      <TouchableOpacity
-        style={styles.classCard}
-        onPress={() => handleClassPress(item.id)}
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.classCodeBadge}>
+      <TouchableOpacity style={styles.classCard} onPress={() => handleClassPress(item.id)} activeOpacity={0.85}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.gradeBadge}>
+            <Text style={styles.gradeBadgeText}>{item.grade_level}</Text>
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.className} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.classCode}>{item.class_code}</Text>
           </View>
           <Text style={[styles.statusBadgeText, { color: badge.color, backgroundColor: badge.backgroundColor }]}>
-            {item.status}
+            {statusLabel(item.status)}
           </Text>
         </View>
 
-        <Text style={styles.className}>{item.name}</Text>
-
-        <View style={styles.classInfo}>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>{t('class_list.grade_label', 'Grade:')}</Text>
-            <Text style={styles.value}>{item.grade_level}</Text>
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <IconLayers color={theme.textSecondary} />
+            <Text style={styles.metaChipText}>{item.class_type}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>{t('class_list.type_label', 'Type:')}</Text>
-            <Text style={styles.value}>{item.class_type}</Text>
+          <View style={styles.metaChip}>
+            <IconSun color={theme.textSecondary} />
+            <Text style={styles.metaChipText}>{formatShift(item.shift)}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>{t('class_list.shift_label', 'Shift:')}</Text>
-            <Text style={styles.value}>{item.shift}</Text>
-          </View>
+          {item.school_year ? (
+            <View style={styles.metaChip}>
+              <IconClock color={theme.textSecondary} />
+              <Text style={styles.metaChipText}>{item.school_year}</Text>
+            </View>
+          ) : null}
           {item.campus ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>{t('class_list.campus_label', 'Campus:')}</Text>
-              <Text style={styles.value}>{item.campus}</Text>
+            <View style={styles.metaChip}>
+              <IconBuilding color={theme.textSecondary} />
+              <Text style={styles.metaChipText}>{item.campus}</Text>
             </View>
           ) : null}
         </View>
@@ -193,13 +232,8 @@ const ClassListScreen = () => {
             style={[
               styles.enrollmentFill,
               {
-                width: `${item.enrollment_percentage || 0}%`,
-                backgroundColor:
-                  item.enrollment_percentage > 90
-                    ? theme.danger
-                    : item.enrollment_percentage > 75
-                    ? theme.warning
-                    : theme.success,
+                width: `${pct}%`,
+                backgroundColor: pct > 90 ? theme.danger : pct > 75 ? theme.warning : theme.success,
               },
             ]}
           />
@@ -208,17 +242,19 @@ const ClassListScreen = () => {
           {t('class_list.enrollment', '{current}/{capacity} students ({pct}%)')
             .replace('{current}', String(item.current_enrollment))
             .replace('{capacity}', String(item.max_capacity))
-            .replace('{pct}', String(item.enrollment_percentage || 0))}
+            .replace('{pct}', String(pct))}
+        </Text>
+
+        <Text style={styles.dateText}>
+          {t('class_list.date_range', '{start} — {end}').replace('{start}', formatDate(item.start_date)).replace('{end}', formatDate(item.end_date))}
         </Text>
 
         <View style={styles.cardFooter}>
-          <Text style={styles.dateText}>
-            {t('class_list.date_range', '{start} to {end}').replace('{start}', item.start_date).replace('{end}', item.end_date)}
-          </Text>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleClassPress(item.id)}
-          >
+          <TouchableOpacity style={styles.sectionsButton} onPress={() => handleSectionsPress(item.id)}>
+            <IconLayers color={theme.accent} />
+            <Text style={styles.sectionsButtonText}>{t('class_list.sections', 'Sections')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleClassPress(item.id)}>
             <Text style={styles.actionButtonText}>{t('class_list.view', 'View')}</Text>
           </TouchableOpacity>
         </View>
@@ -228,15 +264,15 @@ const ClassListScreen = () => {
 
   const renderSkeletonCard = (key: number) => (
     <View key={key} style={styles.classCard}>
-      <View style={styles.cardHeader}>
-        <Skeleton width={70} height={20} borderRadius={6} baseColor={theme.skeletonBase} />
-        <Skeleton width={50} height={16} borderRadius={4} baseColor={theme.skeletonBase} />
+      <View style={styles.cardTopRow}>
+        <Skeleton width={44} height={44} borderRadius={22} baseColor={theme.skeletonBase} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Skeleton width="70%" height={16} style={{ marginBottom: 6 }} baseColor={theme.skeletonBase} />
+          <Skeleton width="40%" height={12} baseColor={theme.skeletonBase} />
+        </View>
       </View>
-      <Skeleton width="60%" height={18} style={{ marginBottom: 10 }} baseColor={theme.skeletonBase} />
-      <Skeleton width="90%" height={12} style={{ marginBottom: 6 }} baseColor={theme.skeletonBase} />
-      <Skeleton width="80%" height={12} style={{ marginBottom: 6 }} baseColor={theme.skeletonBase} />
-      <Skeleton width="70%" height={12} style={{ marginBottom: 12 }} baseColor={theme.skeletonBase} />
-      <Skeleton width="100%" height={6} borderRadius={3} style={{ marginBottom: 6 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="90%" height={12} style={{ marginTop: 14, marginBottom: 6 }} baseColor={theme.skeletonBase} />
+      <Skeleton width="100%" height={6} borderRadius={3} style={{ marginTop: 8, marginBottom: 6 }} baseColor={theme.skeletonBase} />
       <Skeleton width="50%" height={12} baseColor={theme.skeletonBase} />
     </View>
   );
@@ -244,6 +280,7 @@ const ClassListScreen = () => {
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
+        <GlassBackground variant="canvas" />
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
@@ -251,9 +288,7 @@ const ClassListScreen = () => {
           <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('class_list.title', 'Classes')}</Text>
           <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.listContainer}>
-          {[0, 1, 2, 3].map(renderSkeletonCard)}
-        </View>
+        <View style={styles.listContainer}>{[0, 1, 2, 3].map(renderSkeletonCard)}</View>
         <BottomNavBar />
       </View>
     );
@@ -262,17 +297,13 @@ const ClassListScreen = () => {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('class_list.title', 'Classes')}</Text>
         {isAdminRole ? (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('CreateClass')}
-          >
+          <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('CreateClass')}>
             <Text style={styles.addButtonText}>{t('class_list.add', '+ Add')}</Text>
           </TouchableOpacity>
         ) : (
@@ -280,7 +311,6 @@ const ClassListScreen = () => {
         )}
       </View>
 
-      {/* Search */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -291,43 +321,28 @@ const ClassListScreen = () => {
         />
       </View>
 
-      {/* Status Filter */}
       <ScrollView horizontal style={styles.filterBar} showsHorizontalScrollIndicator={false}>
         {['active', 'pending', 'closed', 'archived'].map((status) => (
           <TouchableOpacity
             key={status}
-            style={[
-              styles.filterButton,
-              statusFilter === status && styles.filterButtonActive,
-            ]}
+            style={[styles.filterButton, statusFilter === status && styles.filterButtonActive]}
             onPress={() => handleStatusFilter(status)}
           >
-            <Text
-              style={[
-                styles.filterButtonText,
-                statusFilter === status && styles.filterButtonTextActive,
-              ]}
-            >
+            <Text style={[styles.filterButtonText, statusFilter === status && styles.filterButtonTextActive]}>
               {statusLabel(status)}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Class List */}
       <FlatList
         style={{ flex: 1 }}
-        data={filteredClasses}
+        data={classes}
         renderItem={renderClassCard}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.accent}
-            colors={[theme.accent]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} colors={[theme.accent]} />
         }
         ListEmptyComponent={
           <EmptyState
@@ -338,13 +353,14 @@ const ClassListScreen = () => {
                 ? t('class_list.no_match', 'Nothing matches "{query}" in {status}.').replace('{query}', searchTerm).replace('{status}', statusLabel(statusFilter).toLowerCase())
                 : t('class_list.empty_status', 'No {status} classes yet.').replace('{status}', statusLabel(statusFilter).toLowerCase())
             }
+            actionLabel={isAdminRole ? t('class_list.add_class_action', 'Add Class') : undefined}
+            onAction={isAdminRole ? () => (navigation as any).navigate('CreateClass') : undefined}
             colors={theme}
           />
         }
       />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 1 ? (
         <View style={styles.paginationContainer}>
           <TouchableOpacity
             style={[styles.paginationButton, page === 1 && styles.paginationButtonDisabled]}
@@ -366,7 +382,7 @@ const ClassListScreen = () => {
             <Text style={styles.paginationText}>{t('class_list.next', 'Next')}</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
       <BottomNavBar />
     </View>
   );
@@ -374,15 +390,7 @@ const ClassListScreen = () => {
 
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
-    centerContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+    container: { flex: 1, backgroundColor: theme.background },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -393,37 +401,14 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: theme.textPrimary,
-    },
-    headerTitleFlex: {
-      flex: 1,
-      marginLeft: 8,
-    },
-    backButton: {
-      width: 32,
-    },
-    headerSpacer: {
-      width: 32,
-    },
-    addButton: {
-      backgroundColor: theme.accent,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 6,
-    },
-    addButtonText: {
-      color: theme.onAccent,
-      fontWeight: '600',
-      fontSize: 14,
-    },
-    searchContainer: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: theme.surface,
-    },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: theme.textPrimary },
+    headerTitleFlex: { flex: 1, marginLeft: 8 },
+    backButton: { width: 32 },
+    headerSpacer: { width: 32 },
+    addButton: { backgroundColor: theme.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.sm },
+    addButtonText: { color: theme.onAccent, fontWeight: '600', fontSize: 14 },
+
+    searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.surface },
     searchInput: {
       height: 46,
       borderWidth: 1,
@@ -435,129 +420,95 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       color: theme.textPrimary,
       ...theme.elevation1,
     },
-    filterBar: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: theme.surface,
-    },
+    filterBar: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.surface, flexGrow: 0 },
     filterButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: RADIUS.pill,
       borderWidth: 1,
       borderColor: theme.borderStrong,
       marginRight: 8,
     },
-    filterButtonActive: {
-      backgroundColor: theme.accent,
-      borderColor: theme.accent,
-    },
-    filterButtonText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    filterButtonTextActive: {
-      color: theme.onAccent,
-    },
-    listContainer: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
+    filterButtonActive: { backgroundColor: theme.accent, borderColor: theme.accent },
+    filterButtonText: { fontSize: 12.5, color: theme.textSecondary, fontWeight: '600' },
+    filterButtonTextActive: { color: theme.onAccent },
+
+    listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
+
     classCard: {
       backgroundColor: theme.surface,
-      borderRadius: RADIUS.lg,
+      borderRadius: RADIUS.xl ?? 20,
       padding: 16,
-      marginBottom: 12,
+      marginBottom: 14,
       borderWidth: 1,
       borderColor: theme.border,
       ...theme.elevation2,
     },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    classCodeBadge: {
+    cardTopRow: { flexDirection: 'row', alignItems: 'center' },
+    gradeBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.accentSoft,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    classCode: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.accentSoftText,
-    },
+    gradeBadgeText: { fontSize: 17, fontWeight: '800', color: theme.accentSoftText },
+    className: { fontSize: 16, fontWeight: '800', color: theme.textPrimary },
+    classCode: { fontSize: 12, fontWeight: '600', color: theme.textSecondary, marginTop: 2 },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: '600',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    className: {
-      fontSize: 16,
       fontWeight: '700',
-      color: theme.textPrimary,
-      marginBottom: 10,
-    },
-    classInfo: {
-      marginBottom: 12,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 6,
-    },
-    label: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    value: {
-      fontSize: 12,
-      color: theme.textPrimary,
-      fontWeight: '600',
-    },
-    enrollmentBar: {
-      height: 6,
-      backgroundColor: theme.border,
-      borderRadius: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: RADIUS.pill,
       overflow: 'hidden',
-      marginBottom: 6,
+      textTransform: 'capitalize',
     },
-    enrollmentFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    enrollmentText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginBottom: 10,
-    },
-    cardFooter: {
+
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+    metaChip: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
+      gap: 5,
+      backgroundColor: theme.surfaceVariant,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: RADIUS.pill,
     },
-    dateText: {
-      fontSize: 11,
-      color: theme.textMuted,
+    metaChipText: { fontSize: 11.5, fontWeight: '600', color: theme.textSecondary, textTransform: 'capitalize' },
+
+    enrollmentBar: { height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: 'hidden', marginTop: 14, marginBottom: 6 },
+    enrollmentFill: { height: '100%', borderRadius: 3 },
+    enrollmentText: { fontSize: 12, color: theme.textSecondary, fontWeight: '600' },
+
+    dateText: { fontSize: 11, color: theme.textMuted, marginTop: 8 },
+
+    cardFooter: { flexDirection: 'row', gap: 10, marginTop: 14 },
+    sectionsButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: theme.accent,
+      paddingVertical: 9,
+      borderRadius: RADIUS.pill,
     },
+    sectionsButtonText: { color: theme.accent, fontSize: 12.5, fontWeight: '700' },
     actionButton: {
+      flex: 1,
       backgroundColor: theme.accent,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 9,
+      borderRadius: RADIUS.pill,
     },
-    actionButtonText: {
-      color: theme.onAccent,
-      fontSize: 12,
-      fontWeight: '600',
-    },
+    actionButtonText: { color: theme.onAccent, fontSize: 12.5, fontWeight: '700' },
+
     paginationContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -568,26 +519,10 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderTopWidth: 1,
       borderTopColor: theme.border,
     },
-    paginationButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: theme.borderStrong,
-    },
-    paginationButtonDisabled: {
-      opacity: 0.5,
-    },
-    paginationText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.accent,
-    },
-    paginationInfo: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
+    paginationButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: theme.borderStrong },
+    paginationButtonDisabled: { opacity: 0.5 },
+    paginationText: { fontSize: 12, fontWeight: '600', color: theme.accent },
+    paginationInfo: { fontSize: 12, color: theme.textSecondary, fontWeight: '500' },
   });
 
 export default ClassListScreen;

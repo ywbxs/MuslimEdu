@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Modal,
 } from 'react-native';
+import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -92,6 +92,15 @@ const INSTITUTION_META: Record<InstitutionType, { tagline: string; features: str
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STEP_LABELS = ['Type', 'School', 'Admin', 'Verify', 'Review'];
 
+const PASSWORD_RULES: { key: string; label: string; test: (pw: string) => boolean }[] = [
+  { key: 'length', label: 'At least 8 characters', test: (pw) => pw.length >= 8 },
+  { key: 'upper', label: 'One uppercase letter (A-Z)', test: (pw) => /[A-Z]/.test(pw) },
+  { key: 'lower', label: 'One lowercase letter (a-z)', test: (pw) => /[a-z]/.test(pw) },
+  { key: 'number', label: 'One number (0-9)', test: (pw) => /[0-9]/.test(pw) },
+  { key: 'special', label: 'One special character (!@#$...)', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+];
+const isPasswordStrong = (pw: string) => PASSWORD_RULES.every((rule) => rule.test(pw));
+
 interface PickedPhoto {
   uri: string;
   fileName: string;
@@ -130,6 +139,41 @@ function FeatureCheckIcon({ color = BRAND.emerald, size = 14 }: { color?: string
       <Circle cx={12} cy={12} r={10} fill={color} opacity={0.14} />
       <Path d="M7.5 12.5l3 3 6-6.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
+  );
+}
+// Filled check for "met", plain outline ring for "not yet met" - met/unmet
+// need to read apart by shape too, not just color, so it still works for
+// colorblind users glancing at the checklist.
+function RuleStatusIcon({ met, size = 14 }: { met: boolean; size?: number }) {
+  if (met) {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx={12} cy={12} r={11} fill={BRAND.emeraldDeep} />
+        <Path d="M7.5 12.5l3 3 6-6.5" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    );
+  }
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={10.5} stroke={BORDER} strokeWidth={1.5} fill="none" />
+    </Svg>
+  );
+}
+
+function PasswordStrengthChecklist({ password }: { password: string }) {
+  if (!password) return null;
+  return (
+    <View style={strength.list}>
+      {PASSWORD_RULES.map((rule) => {
+        const met = rule.test(password);
+        return (
+          <View key={rule.key} style={strength.row}>
+            <RuleStatusIcon met={met} />
+            <Text style={[strength.ruleText, met && strength.ruleTextMet]}>{rule.label}</Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -227,7 +271,7 @@ export default function SchoolRegistrationScreen() {
   const step3Valid =
     adminName.trim().length > 0 &&
     EMAIL_RE.test(adminEmail.trim()) &&
-    password.length >= 8 &&
+    isPasswordStrong(password) &&
     password === confirmPassword;
   const step4Valid = !!idDocument && !!selfie;
 
@@ -334,7 +378,7 @@ export default function SchoolRegistrationScreen() {
 
       <WizardStepHeader step={step} labels={STEP_LABELS} />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={100}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
             <>
@@ -416,6 +460,18 @@ export default function SchoolRegistrationScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+              {adminEmail.trim().length > 0 ? (
+                EMAIL_RE.test(adminEmail.trim()) ? (
+                  <View style={emailCheck.row}>
+                    <RuleStatusIcon met />
+                    <Text style={emailCheck.validText}>{t('school_registration.email_valid', 'Looks good')}</Text>
+                  </View>
+                ) : (
+                  <Text style={form.errorText}>
+                    {t('school_registration.email_invalid', 'Enter a valid email address, e.g. name@example.com')}
+                  </Text>
+                )
+              ) : null}
 
               <FieldLabel>{t('school_registration.admin_phone', 'Your Phone')}</FieldLabel>
               <TextInput
@@ -432,10 +488,11 @@ export default function SchoolRegistrationScreen() {
                 style={form.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder={t('school_registration.password_placeholder', 'At least 8 characters')}
+                placeholder={t('school_registration.password_placeholder', 'Create a strong password')}
                 placeholderTextColor={SUBTLE}
                 secureTextEntry
               />
+              <PasswordStrengthChecklist password={password} />
 
               <FieldLabel required>{t('school_registration.confirm_password', 'Confirm Password')}</FieldLabel>
               <TextInput
@@ -550,7 +607,7 @@ export default function SchoolRegistrationScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <Modal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
+      <KeyboardAwareModal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
         <View style={sheet.backdrop}>
           <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
           <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -583,7 +640,7 @@ export default function SchoolRegistrationScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }
@@ -647,6 +704,18 @@ const verify = StyleSheet.create({
     paddingVertical: 6,
   },
   retakeBadgeText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
+});
+
+const strength = StyleSheet.create({
+  list: { marginTop: 10, gap: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ruleText: { fontSize: 12.5, color: SUBTLE },
+  ruleTextMet: { color: INK, fontWeight: '600' },
+});
+
+const emailCheck = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  validText: { fontSize: 12.5, color: BRAND.emeraldDeep, fontWeight: '600' },
 });
 
 const preview = StyleSheet.create({

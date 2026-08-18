@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
   ActivityIndicator,
   TextInput,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ban, BookOpen, Check, ChevronLeft, Clock, DoorOpen, Layers, Plus, Trash2, User, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +23,8 @@ import {
   Day,
   listSchedules,
   saveSchedule,
+  updateSchedule,
+  setScheduleStatus,
   deleteSchedule,
 } from '../../services/academicScheduleService';
 import { fetchAllSections, fetchClassTeacherAssignments, SectionOption, AssignableTeacher } from '../../services/teacherClassService';
@@ -118,6 +120,7 @@ function BentoOptionGrid<T extends { id: number; name: string }>({
   icon,
   styles,
   theme,
+  emptyState,
 }: {
   label: string;
   options: T[];
@@ -128,7 +131,19 @@ function BentoOptionGrid<T extends { id: number; name: string }>({
   icon: (color: string) => React.ReactNode;
   styles: any;
   theme: AcademicGlassTheme;
+  /** Shown instead of an empty grid when there's nothing to pick from yet -
+      a bare empty grid gave no clue why the step's Next button stayed
+      disabled. */
+  emptyState?: React.ReactNode;
 }) {
+  if (options.length === 0 && !allowNone && emptyState) {
+    return (
+      <>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        {emptyState}
+      </>
+    );
+  }
   return (
     <>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -236,6 +251,7 @@ function ScheduleEditSheet({
   theme: AcademicGlassTheme;
 }) {
   const { t } = useLocale();
+  const navigation = useNavigation();
   const [stepIndex, setStepIndex] = useState(0);
   const [code, setCode] = useState(editingRow?.code ?? '');
   const [day, setDay] = useState<Day>(editingRow?.day_of_week ?? 'monday');
@@ -245,6 +261,13 @@ function ScheduleEditSheet({
   const [teacherId, setTeacherId] = useState<number | null>(editingRow?.teacher_id ?? null);
   const [subjectId, setSubjectId] = useState<number | null>(editingRow?.subject_id ?? null);
   const [roomId, setRoomId] = useState<number | null>(editingRow?.room_id ?? null);
+  // A schedule row only stores section_id (the class is implied through it),
+  // but picking straight from a flat list of section names ("A", "B") gave no
+  // clue which class each one belonged to. Class is picked first here purely
+  // to narrow the section list - it's never sent to the backend.
+  const classIdOfSection = (id: number | null) =>
+    id == null ? null : pickers.sections.find((s) => s.id === id)?.class_id ?? null;
+  const [classId, setClassId] = useState<number | null>(classIdOfSection(editingRow?.section_id ?? null));
 
   React.useEffect(() => {
     if (visible) {
@@ -257,8 +280,26 @@ function ScheduleEditSheet({
       setTeacherId(editingRow?.teacher_id ?? null);
       setSubjectId(editingRow?.subject_id ?? null);
       setRoomId(editingRow?.room_id ?? null);
+      setClassId(classIdOfSection(editingRow?.section_id ?? null));
     }
-  }, [visible, editingRow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, editingRow, pickers.sections]);
+
+  // Distinct classes, derived from the sections themselves - no extra fetch.
+  const classOptions = React.useMemo(() => {
+    const seen = new Map<number, { id: number; name: string }>();
+    pickers.sections.forEach((s) => {
+      if (s.class_id != null && !seen.has(s.class_id)) {
+        seen.set(s.class_id, { id: s.class_id, name: s.class_name ?? `Class ${s.class_id}` });
+      }
+    });
+    return Array.from(seen.values());
+  }, [pickers.sections]);
+
+  const sectionsForClass = React.useMemo(
+    () => (classId == null ? [] : pickers.sections.filter((s) => s.class_id === classId)),
+    [pickers.sections, classId]
+  );
 
   const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
   const canSave = !!sectionId && timeValid;
@@ -272,14 +313,61 @@ function ScheduleEditSheet({
       content: (
         <>
           <BentoOptionGrid
-            label={t('admin_class_schedule.section_label', 'Class Section')}
-            options={pickers.sections}
-            value={sectionId}
-            onChange={setSectionId}
+            label={t('admin_class_schedule.class_label', 'Class')}
+            options={classOptions}
+            value={classId}
+            onChange={(id) => {
+              setClassId(id);
+              // Drop a section from the previously selected class.
+              if (classIdOfSection(sectionId) !== id) setSectionId(null);
+            }}
             icon={(color) => <IconLayers color={color} />}
             styles={styles}
             theme={theme}
+            emptyState={
+              <View style={styles.emptyPickerWrap}>
+                <Text style={styles.emptyPickerText}>
+                  {t('admin_class_schedule.no_sections', 'No class sections yet - create a class and section first.')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyPickerButton}
+                  onPress={() => {
+                    onClose();
+                    (navigation as any).navigate('ClassList');
+                  }}
+                >
+                  <Text style={styles.emptyPickerButtonText}>{t('admin_class_schedule.add_class_section', '+ Add Class & Section')}</Text>
+                </TouchableOpacity>
+              </View>
+            }
           />
+          {classId != null ? (
+            <BentoOptionGrid
+              label={t('admin_class_schedule.section_label', 'Class Section')}
+              options={sectionsForClass}
+              value={sectionId}
+              onChange={setSectionId}
+              icon={(color) => <IconLayers color={color} />}
+              styles={styles}
+              theme={theme}
+              emptyState={
+                <View style={styles.emptyPickerWrap}>
+                  <Text style={styles.emptyPickerText}>
+                    {t('admin_class_schedule.no_sections_in_class', 'This class has no sections yet - add one first.')}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyPickerButton}
+                    onPress={() => {
+                      onClose();
+                      (navigation as any).navigate('SectionForm', { classId });
+                    }}
+                  >
+                    <Text style={styles.emptyPickerButtonText}>{t('admin_class_schedule.add_section', '+ Add Section')}</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
+          ) : null}
           <BentoOptionGrid
             label={t('admin_class_schedule.subject_label', 'Subject')}
             options={pickers.subjects}
@@ -392,6 +480,7 @@ function ScheduleEditSheet({
       isValid: canSave,
       content: (
         <View>
+          <SummaryRow label={t('admin_class_schedule.class_label', 'Class')} value={findOptionName(classOptions, classId) ?? '—'} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.section_label', 'Class Section')} value={findOptionName(pickers.sections, sectionId) ?? '—'} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.subject_label', 'Subject')} value={findOptionName(pickers.subjects, subjectId) ?? t('common.none', 'None')} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.teacher_label', 'Teacher')} value={findOptionName(pickers.teachers, teacherId) ?? t('admin_class_schedule.unassigned', 'Unassigned')} styles={styles} />
@@ -429,8 +518,8 @@ function ScheduleEditSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAwareModal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{editingRow ? t('admin_class_schedule.edit_title', 'Edit Schedule') : t('admin_class_schedule.add_title', 'Add Schedule')}</Text>
@@ -489,7 +578,7 @@ function ScheduleEditSheet({
           )}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -560,7 +649,7 @@ export default function AdminClassScheduleScreen() {
     if (!token || !args.sectionId) return;
     setIsSaving(true);
     try {
-      await saveSchedule(token, {
+      const input = {
         code: args.code || `${args.startTime}-${args.endTime}`,
         day_of_week: args.dayOfWeek,
         starts_at: args.startTime,
@@ -569,7 +658,14 @@ export default function AdminClassScheduleScreen() {
         teacher_id: args.teacherId,
         subject_id: args.subjectId,
         room_id: args.roomId,
-      });
+      };
+      const saved =
+        editingRow && editingRow !== 'new' ? await updateSchedule(token, editingRow.id, input) : await saveSchedule(token, input);
+      // Publish immediately - every row is created as 'draft' server-side
+      // and "my schedule" (teacher/student) only ever shows published
+      // rows, so without this an assigned slot would never actually
+      // reach the teacher/student screens.
+      await setScheduleStatus(token, saved.id, 'published');
       setEditingRow(null);
       await load({ silent: true });
     } catch (err) {
@@ -801,6 +897,19 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     chipActive: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
     chipText: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
     chipTextActive: { color: theme.accent },
+
+    emptyPickerWrap: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 14,
+      padding: 16,
+      alignItems: 'center',
+      gap: 12,
+    },
+    emptyPickerText: { fontSize: 13, color: theme.textSecondary, textAlign: 'center', lineHeight: 18 },
+    emptyPickerButton: { backgroundColor: theme.accent, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+    emptyPickerButtonText: { color: theme.onAccent, fontWeight: '700', fontSize: 13.5 },
 
     // Bento tile picker (Section/Subject/Teacher/Room) - spatial cards
     // instead of flat text chips, matching the attendance feature's card

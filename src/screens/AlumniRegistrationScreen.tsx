@@ -185,7 +185,7 @@ export default function AlumniRegistrationScreen() {
 
       <WizardStepHeader step={step} labels={STEP_LABELS} />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={100}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
         {step === 1 ? (
           <>
             <View style={school.searchWrap}>

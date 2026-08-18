@@ -46,6 +46,7 @@ const TYPE_LABELS: Record<string, string> = {
   practical: 'Practical',
   islamic_studies: 'Islamic Studies',
   arabic: 'Arabic',
+  quarterly: 'Quarterly',
   custom: 'Custom',
 };
 
@@ -113,10 +114,7 @@ export default function GradingSystemsScreen() {
         activeOpacity={0.85}
         style={styles.card}
         onPress={() =>
-          (navigation as any).navigate('GradeScaleBuilder', {
-            gradingSystemId: item.id,
-            gradingSystemName: item.name,
-          })
+          (navigation as any).navigate('GradingSystemWizard', { gradingSystemId: item.id })
         }
       >
         <View style={styles.cardHeader}>
@@ -149,7 +147,7 @@ export default function GradingSystemsScreen() {
           <TouchableOpacity
             style={styles.editButton}
             onPress={() =>
-              (navigation as any).navigate('GradingSystemForm', { gradingSystemId: item.id })
+              (navigation as any).navigate('GradingSystemWizard', { gradingSystemId: item.id })
             }
           >
             <Text style={styles.editButtonText}>{t('common.edit', 'Edit')}</Text>
@@ -195,7 +193,7 @@ export default function GradingSystemsScreen() {
         <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Grading Systems</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => (navigation as any).navigate('GradingSystemForm')}
+          onPress={() => (navigation as any).navigate('GradingSystemWizard')}
         >
           <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
         </TouchableOpacity>
@@ -225,7 +223,7 @@ export default function GradingSystemsScreen() {
             title={t('grading_systems.empty_title', 'No grading systems yet')}
             subtitle={t('grading_systems.empty_subtitle', 'Add a grading system (e.g. Percentage, GPA) to start building grade scales.')}
             actionLabel={t('grading_systems.add_system', 'Add Grading System')}
-            onAction={() => (navigation as any).navigate('GradingSystemForm')}
+            onAction={() => (navigation as any).navigate('GradingSystemWizard')}
             colors={theme}
           />
         }

@@ -63,9 +63,11 @@ import StudentAssessmentsScreen from '../screens/student/StudentAssessmentsScree
 import TeacherAssessmentGradesScreen from '../screens/teachers/TeacherAssessmentGradesScreen';
 import AdminAssessmentGradesScreen from '../screens/teachers/AdminAssessmentGradesScreen';
 import StudentAssessmentGradesScreen from '../screens/student/StudentAssessmentGradesScreen';
+import StudentQuarterlyReportScreen from '../screens/student/StudentQuarterlyReportScreen';
 import StudentAnnouncementsScreen from '../screens/student/StudentAnnouncementsScreen';
 import StudentMaterialsScreen from '../screens/student/StudentMaterialsScreen';
 import StudentScheduleScreen from '../screens/student/StudentScheduleScreen';
+import StudentSubjectDetailScreen from '../screens/student/StudentSubjectDetailScreen';
 import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import EnrollmentStagesScreen from '../screens/admin/EnrollmentStagesScreen';
 import EnrollmentStageFormScreen from '../screens/admin/EnrollmentStageFormScreen';
@@ -84,8 +86,7 @@ import AcademicTermsScreen from '../screens/admin/AcademicTermsScreen';
 import AcademicTermFormScreen from '../screens/admin/AcademicTermFormScreen';
 import InstitutionProfileScreen from '../screens/admin/InstitutionProfileScreen';
 import GradingSystemsScreen from '../screens/admin/GradingSystemsScreen';
-import GradingSystemFormScreen from '../screens/admin/GradingSystemFormScreen';
-import GradeScaleBuilderScreen from '../screens/admin/GradeScaleBuilderScreen';
+import GradingSystemWizardScreen from '../screens/admin/GradingSystemWizardScreen';
 import ProgramsCatalogScreen from '../screens/admin/ProgramsCatalogScreen';
 import ProgramFormScreen from '../screens/admin/ProgramFormScreen';
 import StudentIdentityScreen from '../screens/student/StudentIdentityScreen';
@@ -94,6 +95,7 @@ import BuildingFormScreen from '../screens/teachers/BuildingFormScreen';
 import RoomFormScreen from '../screens/teachers/RoomFormScreen';
 import AcademicCalendarScreen from '../screens/teachers/AcademicCalendarScreen';
 import AcademicAnalyticsScreen from '../screens/teachers/AcademicAnalyticsScreen';
+import AcademicMetricDetailScreen from '../screens/teachers/AcademicMetricDetailScreen';
 import AcademicCompletionHubScreen from '../screens/teachers/AcademicCompletionHubScreen';
 import SubjectFormScreen from '../screens/admin/SubjectFormScreen';
 import ChatBoxScreen from '../screens/chat/ChatBoxScreen';
@@ -149,6 +151,8 @@ import StudentServiceRequestsScreen from '../screens/admin/StudentServiceRequest
 // StudentUploadDocumentsScreen's own docblock and studentDocumentUploadService.ts.
 import StudentUploadDocumentsScreen from '../screens/student/StudentUploadDocumentsScreen';
 import AccountSettingsScreen from '../screens/common/AccountSettingsScreen';
+import AccountSettingPickerScreen from '../screens/common/AccountSettingPickerScreen';
+import ChangePasswordScreen from '../screens/common/ChangePasswordScreen';
 import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AdminFeeReportsScreen from '../screens/admin/AdminFeeReportsScreen';
 import RecordFeePaymentScreen from '../screens/admin/RecordFeePaymentScreen';
@@ -166,6 +170,10 @@ import ActivityLogScreen from '../screens/superadmin/ActivityLogScreen';
 import AnnouncementUploadScreen from '../screens/superadmin/AnnouncementUploadScreen';
 import PendingRegistrationsScreen from '../screens/superadmin/PendingRegistrationsScreen';
 import FirebaseConfigScreen from '../screens/superadmin/FirebaseConfigScreen';
+import SubscriptionPackagesScreen from '../screens/superadmin/SubscriptionPackagesScreen';
+import SchoolSubscriptionScreen from '../screens/superadmin/SchoolSubscriptionScreen';
+import SubscriptionRequestsScreen from '../screens/superadmin/SubscriptionRequestsScreen';
+import SubscribeScreen from '../screens/admin/SubscribeScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -359,13 +367,8 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
-                name="GradingSystemForm"
-                component={GradingSystemFormScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
-              <Stack.Screen
-                name="GradeScaleBuilder"
-                component={GradeScaleBuilderScreen}
+                name="GradingSystemWizard"
+                component={GradingSystemWizardScreen}
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
@@ -574,6 +577,11 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
+                name="StudentSubjectDetail"
+                component={StudentSubjectDetailScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
                 name="TeacherLessonPlans"
                 component={TeacherLessonPlansScreen}
                 options={{ animation: 'slide_from_right' }}
@@ -613,6 +621,11 @@ export default function RootNavigator() {
                 options={{ animation: 'slide_from_right' }}
               />
               <Stack.Screen
+                name="StudentQuarterlyReport"
+                component={StudentQuarterlyReportScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
                 name="AdminAssessmentReview"
                 component={AdminAssessmentReviewScreen}
                 options={{ animation: 'slide_from_right' }}
@@ -645,7 +658,11 @@ export default function RootNavigator() {
               <Stack.Screen
                 name="PostComments"
                 component={PostCommentsScreen}
-                options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+                // transparentModal, not modal - PostCommentsScreen renders
+                // itself as a partial-height draggable sheet with its own
+                // backdrop, so the feed underneath needs to stay visible/
+                // mounted rather than being replaced by an opaque card.
+                options={{ animation: 'slide_from_bottom', presentation: 'transparentModal' }}
               />
               <Stack.Screen
                 name="ImageViewer"
@@ -689,6 +706,7 @@ export default function RootNavigator() {
       <Stack.Screen name="RoomForm" component={RoomFormScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
       <Stack.Screen name="AcademicAnalytics" component={AcademicAnalyticsScreen} />
+      <Stack.Screen name="AcademicMetricDetail" component={AcademicMetricDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AuthorizationAudit" component={AuthorizationAuditScreen} />
       <Stack.Screen name="DocumentTemplates" component={DocumentTemplateScreen} />
       <Stack.Screen name="GradeRelease" component={GradeReleaseScreen} />
@@ -723,6 +741,8 @@ export default function RootNavigator() {
       <Stack.Screen name="StaffIdCards" component={StaffIdCardsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="IdCardTemplate" component={IdCardTemplateScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+      <Stack.Screen name="AccountSettingPicker" component={AccountSettingPickerScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="SuperAdminSchoolList" component={SchoolListScreen} />
       <Stack.Screen name="SuperAdminSchoolAdmins" component={SchoolAdminsScreen} options={{ animation: 'slide_from_right' }} />
@@ -734,6 +754,10 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminAnnouncementUpload" component={AnnouncementUploadScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SuperAdminPendingRegistrations" component={PendingRegistrationsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SuperAdminFirebaseConfig" component={FirebaseConfigScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminSubscriptionPackages" component={SubscriptionPackagesScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminSchoolSubscription" component={SchoolSubscriptionScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SuperAdminSubscriptionRequests" component={SubscriptionRequestsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SubscribeRequest" component={SubscribeScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

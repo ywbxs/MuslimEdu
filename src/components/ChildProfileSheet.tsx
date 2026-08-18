@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   ScrollView,
   TextInput,
   ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
+import KeyboardAwareModal from './KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { X, ChevronRight, Mail, Phone, Heart, GraduationCap, User, IdCard, FileText, ClipboardList, Pencil } from 'lucide-react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -109,7 +109,7 @@ export function ChildActionModal({
   const status: ChildStatus = child?.status ?? 'active';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.sheetBackdropTouch} activeOpacity={1} onPress={onClose} />
         <View style={styles.actionSheet}>
@@ -141,7 +141,7 @@ export function ChildActionModal({
           ))}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -450,7 +450,7 @@ export function ChildProfileSheet({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.sheetBackdropTouch} activeOpacity={1} onPress={handleClose} />
         <View style={styles.profileSheet}>
@@ -608,7 +608,7 @@ export function ChildProfileSheet({
           )}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

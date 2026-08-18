@@ -8,13 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
-  Modal,
   Animated,
   Easing,
   Pressable,
   PanResponder,
   Image,
 } from 'react-native';
+import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -202,7 +202,7 @@ function GetStartedSheet({
   if (!mounted) return null;
 
   return (
-    <Modal transparent visible animationType="none" onRequestClose={() => animateOut(onClose)}>
+    <KeyboardAwareModal transparent visible animationType="none" onRequestClose={() => animateOut(onClose)}>
       <View style={sheet.root}>
         <Animated.View style={[sheet.backdrop, { opacity: backdrop }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => animateOut(onClose)} />
@@ -239,7 +239,7 @@ function GetStartedSheet({
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -432,7 +432,7 @@ export default function LoginScreen() {
         end={{ x: 0.7, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[styles.screen, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
           {/* Top bar changes per step but always stays pinned at the top,
               outside the animated block, so it never participates in the

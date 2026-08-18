@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Plus, UserRound, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -113,7 +113,7 @@ function SessionsSheet({ visible, onClose, admin }: { visible: boolean; onClose:
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
         <View style={styles.formSheet}>
@@ -154,7 +154,7 @@ function SessionsSheet({ visible, onClose, admin }: { visible: boolean; onClose:
           ) : null}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -233,7 +233,7 @@ function ResetPasswordSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
         <View style={styles.formSheet}>
@@ -261,7 +261,7 @@ function ResetPasswordSheet({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -319,7 +319,7 @@ function AddAdminSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
         <View style={styles.formSheet}>
@@ -347,7 +347,7 @@ function AddAdminSheet({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

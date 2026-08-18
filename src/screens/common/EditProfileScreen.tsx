@@ -135,7 +135,7 @@ export default function EditProfileScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.avatarWrap}>
             <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.85}>

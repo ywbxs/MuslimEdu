@@ -1,28 +1,34 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Type,
+  Globe,
+  Palette,
+  CalendarDays,
+  CalendarClock,
+  ShieldCheck,
+  Mail,
+  Phone,
+  BellRing,
+  KeyRound,
+} from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
-import { useLocale, RTL_LOCALES } from '../../context/LocaleContext';
+import { useLocale } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
-import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
+import { INK, SUBTLE } from '../dashboards/DashboardShell';
+import { BRAND } from '../../theme/glass';
+import { Skeleton } from '../../components/Skeleton';
 import {
   UserSettings,
   UserSettingsOptions,
   fetchUserSettings,
   saveUserSettings,
-  updatePassword,
 } from '../../services/studentPortalService';
+import { AccountSettingField, AccountSettingOption } from './AccountSettingPickerScreen';
 
 /**
  * M5 student portal — generic account settings (theme, language, calendar,
@@ -30,47 +36,124 @@ import {
  * authenticated user, not just students. Backend: StudentPortalController::
  * settingsShow/settingsSave/passwordUpdate, verified live this session.
  *
- * Language changes are pushed into the app's existing i18n plumbing
- * (LocaleContext) immediately on save, instead of requiring a restart.
+ * Redesign: this used to be one long page of inline chip clusters for
+ * every setting, all batched behind a single "Save settings" button at
+ * the bottom. Rebuilt as a tappable list (icon, label, current value,
+ * chevron) - each row opens a small focused screen for just that one
+ * setting (AccountSettingPickerScreen, or ChangePasswordScreen for
+ * security) and applies instantly, the way Settings apps actually work.
+ * useFocusEffect re-fetches on return so this list always reflects
+ * whatever was just changed in one of those screens.
+ *
+ * Toggles (show email/phone) stay inline here rather than becoming their
+ * own screens - flipping a switch already IS the whole interaction, a
+ * dedicated wizard page for a single on/off choice would be friction with
+ * no benefit.
  */
 
 const BORDER = '#E4E9E5';
 const CANVAS = '#F5F7F6';
-const DANGER = '#BA1A1A';
+const EMERALD_SOFT = '#E5F8F5';
 
 function labelize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
 }
 
-// Proper display names for language codes (labelize() alone would show
-// Arabic as "Ar") - falls back to labelize() for any other code the
-// backend adds later.
 const LANGUAGE_LABELS: Record<string, string> = { en: 'English', ar: 'العربية' };
 function languageLabel(code: string) {
   return LANGUAGE_LABELS[code] ?? labelize(code);
+}
+
+function IconChevronLeft({ color }: { color: string }) {
+  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
+}
+function IconChevronRight({ color }: { color: string }) {
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
+}
+
+function Row({
+  icon,
+  title,
+  value,
+  onPress,
+  isLast,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value?: string;
+  onPress: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <TouchableOpacity style={[styles.row, !isLast && styles.rowDivider]} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.rowIconWrap}>{icon}</View>
+      <Text style={styles.rowTitle}>{title}</Text>
+      {value ? <Text style={styles.rowValue} numberOfLines={1}>{value}</Text> : null}
+      <IconChevronRight color={SUBTLE} />
+    </TouchableOpacity>
+  );
+}
+
+function SwitchRow({
+  icon,
+  title,
+  value,
+  onValueChange,
+  isLast,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.row, !isLast && styles.rowDivider]}>
+      <View style={styles.rowIconWrap}>{icon}</View>
+      <Text style={styles.rowTitle}>{title}</Text>
+      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: '#D8DED9', true: BRAND.emeraldDeep }} />
+    </View>
+  );
+}
+
+function SectionLabel({ title }: { title: string }) {
+  return <Text style={styles.sectionTitle}>{title}</Text>;
+}
+
+function ListSkeleton() {
+  return (
+    <View style={styles.content}>
+      {[0, 1].map((section) => (
+        <View key={section} style={{ marginBottom: 20 }}>
+          <Skeleton width={130} height={12} style={{ marginBottom: 10, borderRadius: 4 }} />
+          <View style={styles.card}>
+            {[0, 1, 2].map((row) => (
+              <View key={row} style={[styles.row, row !== 2 && styles.rowDivider]}>
+                <Skeleton width={30} height={30} style={{ borderRadius: 8 }} />
+                <Skeleton width="40%" height={13} style={{ borderRadius: 4, marginLeft: 12 }} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 export default function AccountSettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { t, isRTL, refresh: refreshLocale } = useLocale();
+  const { t } = useLocale();
   const { scale, setScale } = useDisplayScale();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     setError(null);
     try {
       const data = await fetchUserSettings(token);
@@ -83,272 +166,200 @@ export default function AccountSettingsScreen() {
     }
   }, [token, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
-  const patch = (fields: Partial<UserSettings>) => {
-    setSettings((prev) => (prev ? { ...prev, ...fields } : prev));
+  const openPicker = (settingField: AccountSettingField | 'display_scale', title: string, pickerOptions: AccountSettingOption[], currentKey: string) => {
+    (navigation as any).navigate('AccountSettingPicker', { settingField, title, options: pickerOptions, currentKey });
   };
 
-  const onSave = async () => {
+  const toggleField = async (field: 'show_email' | 'show_phone', value: boolean) => {
     if (!token || !settings) return;
-    setSaving(true);
+    const previous = settings[field];
+    setSettings({ ...settings, [field]: value });
     try {
-      // Capture RTL-ness before the switch - I18nManager only takes full
-      // visual effect on the next app launch (see LocaleContext.refresh),
-      // so a flip needs its own "restart to apply" message rather than
-      // the normal saved alert alone.
-      const wasRTL = isRTL;
-      await saveUserSettings(token, settings);
-      await refreshLocale(settings.language);
-      const willBeRTL = RTL_LOCALES.has(settings.language);
-
-      if (willBeRTL !== wasRTL) {
-        Alert.alert(
-          t('account_settings.restart_required_title', 'Restart required'),
-          t(
-            'account_settings.restart_required_message',
-            'Your language was saved. Restart the app for the right-to-left layout to fully apply.',
-          ),
-        );
-      } else {
-        Alert.alert(t('account_settings.saved_title', 'Saved'), t('account_settings.saved_message', 'Your settings have been updated.'));
-      }
-    } catch (e: any) {
-      Alert.alert(
-        t('account_settings.save_error_title', 'Could not save'),
-        e?.message ?? t('common.try_again', 'Please try again.'),
-      );
-    } finally {
-      setSaving(false);
+      await saveUserSettings(token, { [field]: value });
+    } catch {
+      // Roll back - the row's own switch is the only feedback needed for
+      // a failed instant-apply toggle, no separate error screen for this.
+      setSettings((prev) => (prev ? { ...prev, [field]: previous } : prev));
     }
   };
 
-  const onChangePassword = async () => {
-    if (!token) return;
-    if (!currentPassword || !newPassword) {
-      Alert.alert(
-        t('account_settings.missing_fields_title', 'Missing fields'),
-        t('account_settings.missing_fields_message', 'Enter your current password and a new password.'),
-      );
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert(
-        t('account_settings.password_mismatch_title', "Passwords don't match"),
-        t('account_settings.password_mismatch_message', 'Re-type the new password so both fields match.'),
-      );
-      return;
-    }
-    setChangingPassword(true);
-    try {
-      await updatePassword(token, currentPassword, newPassword);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      Alert.alert(
-        t('account_settings.password_updated_title', 'Password updated'),
-        t('account_settings.password_updated_message', 'Your password has been changed.'),
-      );
-    } catch (e: any) {
-      Alert.alert(
-        t('account_settings.password_error_title', 'Could not change password'),
-        e?.message ?? t('common.try_again', 'Please try again.'),
-      );
-    } finally {
-      setChangingPassword(false);
-    }
-  };
+  const header = (
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
+        <IconChevronLeft color={BRAND.emeraldDeep} />
+      </TouchableOpacity>
+      <View style={styles.headerText}>
+        <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
+        <Text style={styles.headerSub}>
+          {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
+        </Text>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={EMERALD} size="large" />
-        <Text style={styles.centerText}>{t('account_settings.loading', 'Loading your settings…')}</Text>
+      <View style={styles.flex}>
+        {header}
+        <ScrollView><ListSkeleton /></ScrollView>
       </View>
     );
   }
 
   if (error || !settings || !options) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
-        <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
-        </TouchableOpacity>
+      <View style={styles.flex}>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
+          <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  const ChipGroup = ({
-    optionsList,
-    value,
-    onSelect,
-    labelFor = labelize,
-  }: {
-    optionsList: string[];
-    value: string;
-    onSelect: (v: string) => void;
-    labelFor?: (opt: string) => string;
-  }) => (
-    <View style={styles.chipRow}>
-      {optionsList.map((opt) => (
-        <TouchableOpacity
-          key={opt}
-          style={[styles.chip, value === opt && styles.chipActive]}
-          onPress={() => onSelect(opt)}
-        >
-          <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{labelFor(opt)}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  // Arabic is always offered here even if the backend's own options list
-  // hasn't been updated to include it yet - same "ship ahead, backend
-  // catches up" convention used elsewhere in this app, and a missing
-  // 'ar' here would otherwise silently mean no RTL option ever appears.
   const languageOptions = Array.from(new Set([...options.languages, 'en', 'ar']));
+  const displayScaleOpt = DISPLAY_SCALE_OPTIONS.find((o) => Math.abs(o.value - scale) < 0.001) ?? DISPLAY_SCALE_OPTIONS[1];
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChevron}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-          <Text style={styles.headerSub}>
-            {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-          </Text>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>{t('account_settings.accessibility_section', 'Accessibility')}</Text>
+    <View style={styles.flex}>
+      {header}
+      <ScrollView contentContainerStyle={styles.content}>
+        <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
-          <Text style={styles.label}>{t('account_settings.display_size_label', 'Text & display size')}</Text>
-          <View style={styles.chipRow}>
-            {DISPLAY_SCALE_OPTIONS.map((opt) => {
-              const selected = Math.abs(opt.value - scale) < 0.001;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  onPress={() => setScale(opt.value)}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>
-                    {t(`accessibility.size.${opt.key}`, opt.label)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>{t('account_settings.language_appearance_section', 'Language & appearance')}</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>{t('account_settings.language_label', 'Language')}</Text>
-          <ChipGroup optionsList={languageOptions} value={settings.language} onSelect={(v) => patch({ language: v })} labelFor={languageLabel} />
-
-          <Text style={styles.label}>{t('account_settings.theme_label', 'Theme')}</Text>
-          <ChipGroup optionsList={options.themes} value={settings.theme} onSelect={(v) => patch({ theme: v })} />
-
-          <Text style={styles.label}>{t('account_settings.calendar_label', 'Calendar')}</Text>
-          <ChipGroup
-            optionsList={options.calendar_types}
-            value={settings.calendar_type}
-            onSelect={(v) => patch({ calendar_type: v })}
+          <Row
+            icon={<Type size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.display_size_label', 'Text & display size')}
+            value={t(`accessibility.size.${displayScaleOpt.key}`, displayScaleOpt.label)}
+            isLast
+            onPress={() =>
+              openPicker(
+                'display_scale',
+                t('account_settings.display_size_label', 'Text & display size'),
+                DISPLAY_SCALE_OPTIONS.map((o) => ({ key: o.key, label: t(`accessibility.size.${o.key}`, o.label) })),
+                displayScaleOpt.key,
+              )
+            }
           />
+        </View>
 
-          <Text style={styles.label}>{t('account_settings.date_format_label', 'Date format')}</Text>
-          <ChipGroup
-            optionsList={options.date_formats}
+        <SectionLabel title={t('account_settings.language_appearance_section', 'Language & appearance')} />
+        <View style={styles.card}>
+          <Row
+            icon={<Globe size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.language_label', 'Language')}
+            value={languageLabel(settings.language)}
+            onPress={() =>
+              openPicker(
+                'language',
+                t('account_settings.language_label', 'Language'),
+                languageOptions.map((code) => ({ key: code, label: languageLabel(code) })),
+                settings.language,
+              )
+            }
+          />
+          <Row
+            icon={<Palette size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.theme_label', 'Theme')}
+            value={labelize(settings.theme)}
+            onPress={() =>
+              openPicker(
+                'theme',
+                t('account_settings.theme_label', 'Theme'),
+                options.themes.map((v) => ({ key: v, label: labelize(v) })),
+                settings.theme,
+              )
+            }
+          />
+          <Row
+            icon={<CalendarDays size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.calendar_label', 'Calendar')}
+            value={labelize(settings.calendar_type)}
+            onPress={() =>
+              openPicker(
+                'calendar_type',
+                t('account_settings.calendar_label', 'Calendar'),
+                options.calendar_types.map((v) => ({ key: v, label: labelize(v) })),
+                settings.calendar_type,
+              )
+            }
+          />
+          <Row
+            icon={<CalendarClock size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.date_format_label', 'Date format')}
             value={settings.date_format}
-            onSelect={(v) => patch({ date_format: v })}
+            isLast
+            onPress={() =>
+              openPicker(
+                'date_format',
+                t('account_settings.date_format_label', 'Date format'),
+                options.date_formats.map((v) => ({ key: v, label: v })),
+                settings.date_format,
+              )
+            }
           />
         </View>
 
-        <Text style={styles.sectionTitle}>{t('account_settings.privacy_section', 'Privacy')}</Text>
+        <SectionLabel title={t('account_settings.privacy_section', 'Privacy')} />
         <View style={styles.card}>
-          <Text style={styles.label}>{t('account_settings.profile_visibility_label', 'Profile visibility')}</Text>
-          <ChipGroup
-            optionsList={options.profile_visibility}
-            value={settings.profile_visibility}
-            onSelect={(v) => patch({ profile_visibility: v })}
+          <Row
+            icon={<ShieldCheck size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.profile_visibility_label', 'Profile visibility')}
+            value={labelize(settings.profile_visibility)}
+            onPress={() =>
+              openPicker(
+                'profile_visibility',
+                t('account_settings.profile_visibility_label', 'Profile visibility'),
+                options.profile_visibility.map((v) => ({ key: v, label: labelize(v) })),
+                settings.profile_visibility,
+              )
+            }
           />
-
-          <View style={styles.switchRow}>
-            <Text style={styles.rowTitle}>{t('account_settings.show_email_label', 'Show email on my profile')}</Text>
-            <Switch
-              value={settings.show_email}
-              onValueChange={(v) => patch({ show_email: v })}
-              trackColor={{ false: '#D8DED9', true: EMERALD }}
-            />
-          </View>
-          <View style={styles.switchRow}>
-            <Text style={styles.rowTitle}>{t('account_settings.show_phone_label', 'Show phone on my profile')}</Text>
-            <Switch
-              value={settings.show_phone}
-              onValueChange={(v) => patch({ show_phone: v })}
-              trackColor={{ false: '#D8DED9', true: EMERALD }}
-            />
-          </View>
-
-          <Text style={styles.label}>{t('account_settings.digest_emails_label', 'Digest emails')}</Text>
-          <ChipGroup
-            optionsList={options.digest_frequency}
-            value={settings.digest_frequency}
-            onSelect={(v) => patch({ digest_frequency: v })}
+          <SwitchRow
+            icon={<Mail size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.show_email_label', 'Show email on my profile')}
+            value={settings.show_email}
+            onValueChange={(v) => toggleField('show_email', v)}
+          />
+          <SwitchRow
+            icon={<Phone size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.show_phone_label', 'Show phone on my profile')}
+            value={settings.show_phone}
+            onValueChange={(v) => toggleField('show_phone', v)}
+          />
+          <Row
+            icon={<BellRing size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.digest_emails_label', 'Digest emails')}
+            value={labelize(settings.digest_frequency)}
+            isLast
+            onPress={() =>
+              openPicker(
+                'digest_frequency',
+                t('account_settings.digest_emails_label', 'Digest emails'),
+                options.digest_frequency.map((v) => ({ key: v, label: labelize(v) })),
+                settings.digest_frequency,
+              )
+            }
           />
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={onSave} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.saveBtnText}>{t('account_settings.save_settings', 'Save settings')}</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.sectionTitle}>{t('account_settings.password_section', 'Password')}</Text>
+        <SectionLabel title={t('account_settings.security_section', 'Security')} />
         <View style={styles.card}>
-          <Text style={styles.label}>{t('account_settings.current_password_label', 'Current password')}</Text>
-          <TextInput
-            style={styles.input}
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            secureTextEntry
-            placeholder={t('account_settings.current_password_label', 'Current password')}
-            placeholderTextColor={SUBTLE}
+          <Row
+            icon={<KeyRound size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            title={t('account_settings.change_password', 'Change password')}
+            isLast
+            onPress={() => (navigation as any).navigate('ChangePassword')}
           />
-          <Text style={styles.label}>{t('account_settings.new_password_label', 'New password')}</Text>
-          <TextInput
-            style={styles.input}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            placeholder={t('account_settings.new_password_label', 'New password')}
-            placeholderTextColor={SUBTLE}
-          />
-          <Text style={styles.label}>{t('account_settings.confirm_password_label', 'Confirm new password')}</Text>
-          <TextInput
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            placeholder={t('account_settings.confirm_password_placeholder', 'Re-type new password')}
-            placeholderTextColor={SUBTLE}
-          />
-          <TouchableOpacity style={styles.saveBtnInline} onPress={onChangePassword} disabled={changingPassword}>
-            {changingPassword ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.saveBtnText}>{t('account_settings.change_password', 'Change password')}</Text>
-            )}
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -357,46 +368,44 @@ export default function AccountSettingsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CANVAS },
-  center: { flex: 1, backgroundColor: CANVAS, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   centerText: { marginTop: 12, fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 20 },
   errorTitle: { fontSize: 18, fontWeight: '700', color: INK },
-  retryBtn: { marginTop: 20, backgroundColor: EMERALD, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
+  retryBtn: { marginTop: 20, backgroundColor: BRAND.emeraldDeep, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
   retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    shadowColor: '#0B1F14',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
-  backChevron: { fontSize: 26, lineHeight: 28, color: EMERALD, marginTop: -3 },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4 },
+  content: { padding: 16 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4, marginLeft: 4 },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 16 },
-  rowTitle: { fontSize: 14, fontWeight: '700', color: INK, flex: 1, paddingRight: 12 },
-
-  label: { fontSize: 12.5, fontWeight: '700', color: INK, marginTop: 12, marginBottom: 8 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: '#F1F3F2' },
-  chipActive: { backgroundColor: EMERALD },
-  chipText: { fontSize: 12.5, fontWeight: '700', color: SUBTLE },
-  chipTextActive: { color: '#FFFFFF' },
-
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
-
-  input: { marginTop: 8, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: INK, backgroundColor: '#FAFBFA' },
-
-  saveBtn: { backgroundColor: EMERALD, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  saveBtnInline: { marginTop: 16, backgroundColor: EMERALD, borderRadius: 12, height: 46, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginBottom: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14 },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  rowIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: EMERALD_SOFT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rowTitle: { fontSize: 14.5, fontWeight: '600', color: INK, flex: 1 },
+  rowValue: { fontSize: 13.5, color: SUBTLE, marginRight: 6, maxWidth: 120 },
 });

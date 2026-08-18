@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, FileText, Folder, Mic, SquarePen, Star, Trash2, Upload, WifiOff, Wrench } from 'lucide-react-native';
@@ -579,7 +579,7 @@ export default function ExaminationsScreen() {
       </View>
 
       {/* Create/edit exam modal */}
-      <Modal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
+      <KeyboardAwareModal visible={formVisible} animationType="slide" transparent onRequestClose={() => setFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -656,10 +656,10 @@ export default function ExaminationsScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Grading modal */}
-      <Modal visible={gradingVisible} animationType="slide" transparent onRequestClose={() => setGradingVisible(false)}>
+      <KeyboardAwareModal visible={gradingVisible} animationType="slide" transparent onRequestClose={() => setGradingVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{gradingExam?.title ?? t('examinations.grade_exam', 'Grade Exam')}</Text>
@@ -731,7 +731,7 @@ export default function ExaminationsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

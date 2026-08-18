@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, Polyline, Polygon } from 'react-native-svg';
-import { ArrowRight, Bell, Calendar, Camera, ChartNoAxesColumn, ChevronDown, ChevronRight, CircleCheck, Clock, FileText, IdCard, Mail, Settings, Star, User } from 'lucide-react-native';
+import { ArrowRight, Award, Bell, Calendar, Camera, ChartNoAxesColumn, ChevronDown, ChevronRight, CircleCheck, Clock, FileText, IdCard, Mail, Settings, Star, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE, GLASS_BG, GLASS_BORDER, GLASS_DIVIDER, GLASS_ICON_BG } from './DashboardShell';
@@ -80,6 +80,9 @@ function UploadDocumentIcon({ color = EMERALD, size = 20 }: { color?: string; si
 }
 function StarIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
   return <Star size={size} color={color} strokeWidth={2} />;
+}
+function AwardIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
+  return <Award size={size} color={color} strokeWidth={2} />;
 }
 function CheckCircleIcon({ color = EMERALD, size = 20 }: { color?: string; size?: number }) {
   return <CircleCheck size={size} color={color} strokeWidth={2} />;
@@ -289,6 +292,13 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             description: t('student_dashboard.my_grades_desc', 'See your grades and GPA by subject'),
             icon: (c: string) => <StarIcon color={c} size={20} />,
             onPress: () => (navigation as any).navigate('AcademicHub', { initialTab: 'grades' }),
+          },
+          {
+            key: 'quarterlyReport',
+            title: t('student_dashboard.quarterly_report_title', 'Quarterly Report'),
+            description: t('student_dashboard.quarterly_report_desc', 'Your Q1-Q4 grades and general average'),
+            icon: (c: string) => <AwardIcon color={c} size={20} />,
+            onPress: () => (navigation as any).navigate('StudentQuarterlyReport'),
           },
         ]
       : []),

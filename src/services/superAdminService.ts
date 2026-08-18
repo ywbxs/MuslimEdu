@@ -176,6 +176,37 @@ export interface ActivityLogResult {
   total: number;
 }
 
+// --- Subscription packages (plans) + per-school fee management ---
+
+export type PackageInterval = 'days' | 'monthly' | 'yearly' | 'life_time';
+
+export interface SubscriptionPackage {
+  id: number;
+  name: string;
+  price: number;
+  package_type: string;
+  interval: PackageInterval;
+  days: number;
+  student_limit: string | null;
+  features: string[];
+  status: 0 | 1;
+  description: string | null;
+}
+
+export interface SchoolSubscription {
+  school_id: number;
+  active: boolean;
+  reason: 'no_subscription' | 'expired' | null;
+  package: string | null;
+  package_id: number | null;
+  expire_date: string | number | null;
+  student_limit: string | number | null;
+  paid_amount: number | string | null;
+  payment_method: string | null;
+  date_added: string | number | null;
+  features: string[];
+}
+
 // --- Dashboard ---
 
 export async function fetchDashboardOverview(token: string): Promise<DashboardOverview> {
@@ -364,4 +395,123 @@ export async function fetchActivityLog(
     action: opts.action,
     page: opts.page,
   });
+}
+
+// --- Subscription packages (plans) ---
+
+export async function fetchPackages(token: string): Promise<SubscriptionPackage[]> {
+  const data = await authedPost('/superadmin_package_list', token, {});
+  return data.packages;
+}
+
+export interface PackageCreateInput {
+  name: string;
+  price: number;
+  package_type: string;
+  interval: PackageInterval;
+  days?: number;
+  student_limit?: string;
+  features?: string[];
+  description?: string;
+}
+
+export async function createPackage(token: string, input: PackageCreateInput): Promise<SubscriptionPackage> {
+  const data = await authedPost('/superadmin_package_create', token, input);
+  return data.package;
+}
+
+export interface PackageUpdateInput {
+  package_id: number;
+  name?: string;
+  price?: number;
+  package_type?: string;
+  interval?: PackageInterval;
+  days?: number;
+  student_limit?: string;
+  features?: string[];
+  description?: string;
+}
+
+export async function updatePackage(token: string, input: PackageUpdateInput): Promise<SubscriptionPackage> {
+  const data = await authedPost('/superadmin_package_update', token, input);
+  return data.package;
+}
+
+export async function setPackageStatus(token: string, packageId: number, status: 0 | 1): Promise<SubscriptionPackage> {
+  const data = await authedPost('/superadmin_package_set_status', token, { package_id: packageId, status });
+  return data.package;
+}
+
+// --- Per-school subscription (fee management) ---
+
+export async function fetchSchoolSubscription(token: string, schoolId: number): Promise<SchoolSubscription> {
+  const data = await authedPost('/superadmin_school_subscription', token, { school_id: schoolId });
+  return data.subscription;
+}
+
+export interface SchoolSubscriptionSetInput {
+  school_id: number;
+  package_id: number;
+  paid_amount?: number;
+  payment_method?: string;
+  student_limit?: string;
+  expire_date?: number;
+}
+
+export async function setSchoolSubscription(
+  token: string,
+  input: SchoolSubscriptionSetInput,
+): Promise<SchoolSubscription> {
+  const data = await authedPost('/superadmin_school_subscription_set', token, input);
+  return data.subscription;
+}
+
+// --- Self-serve subscription requests (admin-submitted, superadmin review) ---
+
+export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SubscriptionRequest {
+  id: number;
+  school: { id: number; title: string } | null;
+  package: { id: number; name: string; price: number } | null;
+  requested_by: { id: number; name: string } | null;
+  payment_reference: string | null;
+  status: SubscriptionRequestStatus;
+  reason: string | null;
+  reviewed_by: { id: number; name: string } | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export async function fetchSubscriptionRequests(token: string): Promise<SubscriptionRequest[]> {
+  const data = await authedPost('/superadmin_subscription_request_list', token, {});
+  return data.requests;
+}
+
+export interface SubscriptionRequestApproveInput {
+  request_id: number;
+  paid_amount?: number;
+  payment_method?: string;
+  student_limit?: string;
+  expire_date?: number;
+}
+
+export async function approveSubscriptionRequest(
+  token: string,
+  input: SubscriptionRequestApproveInput,
+): Promise<SubscriptionRequest> {
+  const data = await authedPost('/superadmin_subscription_request_approve', token, input);
+  return data.request;
+}
+
+export async function rejectSubscriptionRequest(
+  token: string,
+  requestId: number,
+  reason?: string,
+): Promise<SubscriptionRequest> {
+  const data = await authedPost('/superadmin_subscription_request_reject', token, {
+    request_id: requestId,
+    reason,
+  });
+  return data.request;
 }
