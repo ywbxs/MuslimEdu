@@ -262,6 +262,21 @@ export default function EnrollmentWorkflowDetailScreen() {
     }
   };
 
+  // "No classes/sections found" dead-ended here before - the admin had to
+  // back out, find Classes & Sections in the menu, create one, then start
+  // this whole placement flow over. These jump straight to that screen
+  // instead, same as the class/section pickers used to require just to
+  // discover nothing existed yet.
+  const goAddClass = () => {
+    setPlaceModalVisible(false);
+    (navigation as any).navigate('CreateClass');
+  };
+
+  const goAddSection = () => {
+    setPlaceModalVisible(false);
+    (navigation as any).navigate('SectionForm', { classId: selectedClass?.id });
+  };
+
   const openPaymentModal = (payment: WorkflowPayment) => {
     setActivePayment(payment);
     setPaymentStatus(payment.status);
@@ -584,11 +599,23 @@ export default function EnrollmentWorkflowDetailScreen() {
                 keyExtractor={(item) => item.id.toString()}
                 style={{ maxHeight: 320 }}
                 ListEmptyComponent={
-                  <Text style={styles.emptyHistoryText}>
-                    {placeStep === 'class'
-                      ? t('enrollment_workflow_detail.no_classes', 'No classes found.')
-                      : t('enrollment_workflow_detail.no_sections', 'No sections found for this class.')}
-                  </Text>
+                  <View style={styles.emptyPickerWrap}>
+                    <Text style={styles.emptyHistoryText}>
+                      {placeStep === 'class'
+                        ? t('enrollment_workflow_detail.no_classes', 'No classes found.')
+                        : t('enrollment_workflow_detail.no_sections', 'No sections found for this class.')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.addEmptyButton}
+                      onPress={placeStep === 'class' ? goAddClass : goAddSection}
+                    >
+                      <Text style={styles.addEmptyButtonText}>
+                        {placeStep === 'class'
+                          ? t('enrollment_workflow_detail.add_class', '+ Add Class')
+                          : t('enrollment_workflow_detail.add_section', '+ Add Section')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 }
                 renderItem={({ item }) => (
                   <TouchableOpacity
@@ -794,6 +821,14 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       marginBottom: 12,
     },
     emptyHistoryText: { fontSize: 13.5, color: theme.textSecondary },
+    emptyPickerWrap: { alignItems: 'center', paddingVertical: 12, gap: 12 },
+    addEmptyButton: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: RADIUS.sm,
+    },
+    addEmptyButtonText: { color: theme.onAccent, fontWeight: '700', fontSize: 13.5 },
     historyRow: { flexDirection: 'row', marginBottom: 18 },
     historyDot: {
       width: 8,
