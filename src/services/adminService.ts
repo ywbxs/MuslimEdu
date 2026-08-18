@@ -427,7 +427,7 @@ export interface ClassReferenceData {
   semester_terms: NamedOption[];
 }
 
-export type ClassShift = 'morning' | 'afternoon' | 'evening';
+export type ClassShift = 'morning' | 'afternoon' | 'evening' | 'full_day';
 export type ClassType = 'face-to-face' | 'online' | 'hybrid';
 export type ClassStatus = 'active' | 'pending' | 'closed' | 'archived';
 

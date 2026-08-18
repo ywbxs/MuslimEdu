@@ -83,6 +83,11 @@ function formatDateTime(value: string | null | undefined): string {
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+// "full_day" -> "full day" (textTransform: capitalize takes it the rest of the way to "Full Day").
+function formatShift(shift: string): string {
+  return shift.replace(/_/g, ' ');
+}
+
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
@@ -326,7 +331,7 @@ const ClassDetailScreen = () => {
   const basicRows = [
     { label: t('class_detail.grade_level', 'Grade Level'), value: String(classData.grade_level), icon: <GraduationCap size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
     { label: t('class_detail.class_type', 'Class Type'), value: classData.class_type, icon: <Layers size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
-    { label: t('class_detail.shift', 'Shift'), value: classData.shift, icon: <Sun size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
+    { label: t('class_detail.shift', 'Shift'), value: formatShift(classData.shift), icon: <Sun size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
     classData.department ? { label: t('class_detail.department', 'Department'), value: classData.department } : null,
     classData.curriculum ? { label: t('class_detail.curriculum', 'Curriculum'), value: classData.curriculum } : null,
     classData.section ? { label: t('class_detail.section', 'Section'), value: classData.section } : null,
@@ -385,7 +390,7 @@ const ClassDetailScreen = () => {
             </View>
             <View style={styles.metaChip}>
               <Sun size={13} color={theme.textSecondary} strokeWidth={2.2} />
-              <Text style={styles.metaChipText}>{classData.shift}</Text>
+              <Text style={styles.metaChipText}>{formatShift(classData.shift)}</Text>
             </View>
             {classData.school_year ? (
               <View style={styles.metaChip}>

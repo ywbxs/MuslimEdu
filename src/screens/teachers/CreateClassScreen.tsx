@@ -50,11 +50,11 @@ import { Room as FacilityRoom, listRooms } from '../../services/academicFaciliti
  * Now reads `token` from useAuth() like every other screen in the app.
  */
 
-const SHIFTS: ClassShift[] = ['morning', 'afternoon', 'evening'];
+const SHIFTS: ClassShift[] = ['morning', 'afternoon', 'evening', 'full_day'];
 const CLASS_TYPES: ClassType[] = ['face-to-face', 'online', 'hybrid'];
 const STATUSES: ClassStatus[] = ['active', 'pending', 'closed', 'archived'];
 
-const SHIFT_FALLBACKS: Record<ClassShift, string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+const SHIFT_FALLBACKS: Record<ClassShift, string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', full_day: 'Full Day' };
 const CLASS_TYPE_FALLBACKS: Record<ClassType, string> = { 'face-to-face': 'Face-to-face', online: 'Online', hybrid: 'Hybrid' };
 const STATUS_FALLBACKS: Record<ClassStatus, string> = { active: 'Active', pending: 'Pending', closed: 'Closed', archived: 'Archived' };
 

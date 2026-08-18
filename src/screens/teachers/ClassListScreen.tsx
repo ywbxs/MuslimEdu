@@ -72,6 +72,11 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// "full_day" -> "full day" (textTransform: capitalize on the chip takes it the rest of the way to "Full Day").
+function formatShift(shift: string): string {
+  return shift.replace(/_/g, ' ');
+}
+
 const ClassListScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -206,7 +211,7 @@ const ClassListScreen = () => {
           </View>
           <View style={styles.metaChip}>
             <IconSun color={theme.textSecondary} />
-            <Text style={styles.metaChipText}>{item.shift}</Text>
+            <Text style={styles.metaChipText}>{formatShift(item.shift)}</Text>
           </View>
           {item.school_year ? (
             <View style={styles.metaChip}>
