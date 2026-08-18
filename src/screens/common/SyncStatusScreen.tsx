@@ -20,6 +20,12 @@ import { QueuedAction, QueuedActionKind } from '../../services/offlineQueue';
  * side, rather than tracking a separate parallel log. Reachable from both
  * AdminDashboard and TeacherDashboard, since both roles' data flows feed
  * into the same underlying caches/queue.
+ *
+ * Grouped-list layout (one elevated card per section, flat divider rows
+ * inside) instead of a separate floating card per item - the same iOS
+ * Settings pattern the admin menu redesign already uses, so a downloads
+ * list this size reads as one system, not a stack of individually-shadowed
+ * tiles competing for attention.
  */
 
 const ACTION_LABELS: Record<QueuedActionKind, string> = {
@@ -37,13 +43,13 @@ function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconDownload({ color }: { color: string }) {
-  return <Download size={20} color={color} strokeWidth={2} />;
+  return <Download size={18} color={color} strokeWidth={2} />;
 }
 function IconUpload({ color }: { color: string }) {
-  return <Upload size={20} color={color} strokeWidth={2} />;
+  return <Upload size={18} color={color} strokeWidth={2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return <CircleCheck size={16} color={color} strokeWidth={2} />;
+  return <CircleCheck size={20} color={color} strokeWidth={2} />;
 }
 
 function formatWhen(ms: number, t: (k: string, f: string) => string): string {
@@ -132,22 +138,24 @@ export default function SyncStatusScreen() {
           </View>
         ) : (
           <>
-            {datasets.map((d) => (
-              <View key={d.key} style={styles.itemCard}>
-                <View style={styles.itemIconWrap}>
-                  <IconDownload color={theme.accent} />
+            <View style={styles.groupCard}>
+              {datasets.map((d, idx) => (
+                <View key={d.key} style={[styles.row, idx > 0 && styles.rowDivider]}>
+                  <View style={styles.rowIconWrap}>
+                    <IconDownload color={theme.accent} />
+                  </View>
+                  <View style={styles.rowTextWrap}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>{d.label}</Text>
+                    <Text style={styles.rowMeta}>
+                      {d.count > 1
+                        ? t('sync_status.snapshots', '{count} snapshots · {size}').replace('{count}', String(d.count)).replace('{size}', formatBytes(d.bytes))
+                        : formatBytes(d.bytes)}
+                    </Text>
+                  </View>
+                  <IconCheck color={theme.success} />
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.itemTitle}>{d.label}</Text>
-                  <Text style={styles.itemMeta}>
-                    {d.count > 1
-                      ? t('sync_status.snapshots', '{count} snapshots · {size}').replace('{count}', String(d.count)).replace('{size}', formatBytes(d.bytes))
-                      : formatBytes(d.bytes)}
-                  </Text>
-                </View>
-                <IconCheck color={theme.success} />
-              </View>
-            ))}
+              ))}
+            </View>
             <Text style={styles.totalText}>
               {t('sync_status.total_cached', 'Total cached: {size}').replace('{size}', formatBytes(totalBytes))}
             </Text>
@@ -164,26 +172,28 @@ export default function SyncStatusScreen() {
             <Text style={styles.emptyText}>{t('sync_status.all_synced', 'Everything is synced - nothing waiting to upload.')}</Text>
           </View>
         ) : (
-          pendingByKind.map(([kind, list]) => (
-            <View key={kind} style={styles.itemCard}>
-              <View style={[styles.itemIconWrap, { backgroundColor: theme.dangerSoft }]}>
-                <IconUpload color={theme.danger} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.itemTitle}>{ACTION_LABELS[kind] ?? kind}</Text>
-                <Text style={styles.itemMeta}>
-                  {t('sync_status.pending_count', '{count} pending · oldest {when}')
-                    .replace('{count}', String(list.length))
-                    .replace('{when}', formatWhen(Math.min(...list.map((a) => a.createdAt)), t))}
-                </Text>
-                {list.some((a) => a.lastError) ? (
-                  <Text style={styles.errorText} numberOfLines={2}>
-                    {list.find((a) => a.lastError)?.lastError}
+          <View style={styles.groupCard}>
+            {pendingByKind.map(([kind, list], idx) => (
+              <View key={kind} style={[styles.row, idx > 0 && styles.rowDivider]}>
+                <View style={[styles.rowIconWrap, { backgroundColor: theme.dangerSoft }]}>
+                  <IconUpload color={theme.danger} />
+                </View>
+                <View style={styles.rowTextWrap}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>{ACTION_LABELS[kind] ?? kind}</Text>
+                  <Text style={styles.rowMeta}>
+                    {t('sync_status.pending_count', '{count} pending · oldest {when}')
+                      .replace('{count}', String(list.length))
+                      .replace('{when}', formatWhen(Math.min(...list.map((a) => a.createdAt)), t))}
                   </Text>
-                ) : null}
+                  {list.some((a) => a.lastError) ? (
+                    <Text style={styles.errorText} numberOfLines={2}>
+                      {list.find((a) => a.lastError)?.lastError}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </ScrollView>
       <BottomNavBar />
@@ -209,53 +219,74 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
 
+    // Fully-rounded pill, not just a rounded rectangle - the app's own
+    // "state" affordance elsewhere (status pills on SubscriptionStatusCard,
+    // badges) is always a true pill; this banner is the same idea scaled up.
     connectionBanner: {
       flexDirection: 'row',
       alignItems: 'center',
       marginHorizontal: 16,
       marginTop: 12,
-      padding: 12,
-      borderRadius: RADIUS.md,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: RADIUS.pill,
     },
     connectionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-    connectionText: { fontSize: 13, fontWeight: '700', flex: 1 },
+    connectionText: { fontSize: 14, fontWeight: '700', flex: 1 },
     syncNowBtn: { backgroundColor: theme.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 7, minWidth: 80, alignItems: 'center' },
     syncNowText: { fontSize: 12, fontWeight: '700', color: theme.onAccent },
 
     content: { padding: 16, paddingBottom: 40 },
-    sectionLabel: { fontSize: 13, fontWeight: '700', color: theme.textPrimary, marginBottom: 4 },
-    sectionHelper: { fontSize: 12, color: theme.textSecondary, lineHeight: 17, marginBottom: 12 },
+    // Uppercase, letter-spaced eyebrow - the same section-header convention
+    // as every other grouped list in the app (e.g. the admin menu's PEOPLE /
+    // ACADEMICS labels), instead of this screen's own plain bold caption.
+    sectionLabel: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      marginBottom: 4,
+    },
+    sectionHelper: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18, marginBottom: 12 },
 
     emptyCard: {
       backgroundColor: theme.surface,
-      borderRadius: RADIUS.md,
+      borderRadius: RADIUS.lg,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 16,
     },
     emptyText: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18 },
 
-    itemCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    // One elevated card per section - rows inside are flat, separated by a
+    // hairline only, same as the admin menu's groupCard/row pattern.
+    groupCard: {
       backgroundColor: theme.surface,
       borderRadius: RADIUS.lg,
       borderWidth: 1,
       borderColor: theme.border,
-      padding: 14,
-      marginBottom: 10,
-      ...theme.elevation2,
+      ...theme.elevation1,
     },
-    itemIconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    rowDivider: { borderTopWidth: 1, borderTopColor: theme.border },
+    rowIconWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
       backgroundColor: theme.accentSoft,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    itemTitle: { fontSize: 14, fontWeight: '700', color: theme.textPrimary, marginBottom: 2 },
-    itemMeta: { fontSize: 11.5, color: theme.textSecondary },
+    rowTextWrap: { flex: 1 },
+    rowTitle: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
+    rowMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
     errorText: { fontSize: 11, color: theme.danger, marginTop: 3 },
-    totalText: { fontSize: 11.5, color: theme.textMuted, textAlign: 'right', marginTop: 2 },
+    totalText: { fontSize: 12, color: theme.textMuted, textAlign: 'right', marginTop: 8 },
   });
