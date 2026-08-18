@@ -31,6 +31,7 @@ import {
   createClassRecord,
   updateClassRecord,
 } from '../../services/adminService';
+import { Room as FacilityRoom, listRooms } from '../../services/academicFacilitiesService';
 
 /**
  * Wizard rebuild of the old single long form - four short steps (Basics,
@@ -147,9 +148,26 @@ export default function CreateClassScreen() {
   const [reference, setReference] = useState<ClassReferenceData>({
     departments: [], campuses: [], curricula: [], school_years: [], semester_terms: [],
   });
+  // Rooms actually set up under Academic Facilities (Building > Room, with
+  // floor already attached) - picking one fills room_number/building/floor
+  // together instead of the admin retyping a building name/floor that may
+  // not match what Facilities has, or duplicate-with-a-typo. classes.
+  // room_number/building/floor stay plain strings on the backend (no
+  // room_id FK there yet), so this is a fill-in shortcut, not a hard link -
+  // manual entry still works for schools that haven't set up Facilities.
+  const [rooms, setRooms] = useState<FacilityRoom[]>([]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const pickRoom = (room: FacilityRoom) => {
+    setForm((prev) => ({
+      ...prev,
+      room_number: room.code || room.name,
+      building: room.building?.name ?? prev.building,
+      floor: room.floor_number != null ? String(room.floor_number) : prev.floor,
+    }));
   };
 
   useEffect(() => {
@@ -157,8 +175,12 @@ export default function CreateClassScreen() {
     (async () => {
       try {
         setLoading(true);
-        const ref = await fetchClassReferenceData(token);
+        const [ref, roomList] = await Promise.all([
+          fetchClassReferenceData(token),
+          listRooms(token).catch(() => []),
+        ]);
         setReference(ref);
+        setRooms(roomList);
 
         if (isEditing && classId) {
           const record = await fetchClassRecordDetail(token, classId);
@@ -499,6 +521,30 @@ export default function CreateClassScreen() {
               keyboardType="number-pad"
               placeholderTextColor={theme.textMuted}
             />
+
+            {rooms.length > 0 ? (
+              <>
+                <Text style={styles.label}>
+                  {t('create_class.pick_room_label', 'Pick a room from Facilities (optional)')}
+                </Text>
+                <View style={styles.chipGrid}>
+                  {rooms.map((room) => {
+                    const selected = form.room_number === (room.code || room.name);
+                    return (
+                      <TouchableOpacity
+                        key={room.id}
+                        style={[styles.chip, selected && styles.chipSelected]}
+                        onPress={() => pickRoom(room)}
+                      >
+                        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                          {room.name}{room.building?.name ? ` · ${room.building.name}` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
             <Text style={styles.label}>{t('create_class.room_number_label', 'Room Number (optional)')}</Text>
             <TextInput
