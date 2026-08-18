@@ -29,6 +29,7 @@ import {
 } from '../../services/teacherClassService';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
+import { EmptyState } from '../../components/EmptyState';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { RADIUS } from '../../theme/glass';
@@ -417,12 +418,32 @@ export default function SectionStudentsScreen() {
       </View>
 
       {roster ? (
-        <View style={styles.summaryBar}>
-          <Text style={styles.summaryText}>
-            {t('section_students.enrolled_count', '{current}{capacity} students enrolled')
-              .replace('{current}', String(roster.current_enrollment))
-              .replace('{capacity}', roster.capacity ? ` / ${roster.capacity}` : '')}
-          </Text>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryTop}>
+            <Text style={styles.summaryValue}>
+              {roster.current_enrollment}
+              {roster.capacity ? <Text style={styles.summaryValueMuted}>{` / ${roster.capacity}`}</Text> : null}
+            </Text>
+            <Text style={styles.summaryLabel}>{t('section_students.students_enrolled', 'students enrolled')}</Text>
+          </View>
+          {roster.capacity ? (
+            <View style={styles.summaryBarTrack}>
+              <View
+                style={[
+                  styles.summaryBarFill,
+                  {
+                    width: `${Math.min(100, Math.round((roster.current_enrollment / roster.capacity) * 100))}%`,
+                    backgroundColor:
+                      roster.current_enrollment / roster.capacity > 0.9
+                        ? theme.danger
+                        : roster.current_enrollment / roster.capacity > 0.75
+                        ? theme.warning
+                        : theme.success,
+                  },
+                ]}
+              />
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -440,10 +461,14 @@ export default function SectionStudentsScreen() {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
           ListEmptyComponent={
             !error ? (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>{t('section_students.empty_title', 'No students enrolled yet')}</Text>
-                <Text style={styles.emptyDesc}>{t('section_students.empty_desc', 'Tap the + button to add students to this section.')}</Text>
-              </View>
+              <EmptyState
+                icon="🧑‍🎓"
+                title={t('section_students.empty_title', 'No students enrolled yet')}
+                subtitle={t('section_students.empty_desc', 'Add students from this school to get this section started.')}
+                actionLabel={t('section_students.add_students', 'Add Students')}
+                onAction={() => setAddVisible(true)}
+                colors={theme}
+              />
             ) : null
           }
           ListHeaderComponent={
@@ -504,8 +529,22 @@ const makeStyles = (theme: AcademicGlassTheme) =>
   backButton: { width: 32 },
   addButton: { width: 32, alignItems: 'flex-end' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: theme.textPrimary, marginHorizontal: 8 },
-  summaryBar: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border },
-  summaryText: { fontSize: 13, color: theme.textSecondary, fontWeight: '600' },
+  summaryCard: {
+    backgroundColor: theme.surface,
+    borderRadius: RADIUS.xl ?? 20,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    ...theme.elevation1,
+  },
+  summaryTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 },
+  summaryValue: { fontSize: 22, fontWeight: '800', color: theme.textPrimary },
+  summaryValueMuted: { fontSize: 15, fontWeight: '700', color: theme.textSecondary },
+  summaryLabel: { fontSize: 12.5, color: theme.textSecondary, fontWeight: '600' },
+  summaryBarTrack: { height: 7, backgroundColor: theme.border, borderRadius: 4, overflow: 'hidden' },
+  summaryBarFill: { height: '100%', borderRadius: 4 },
   listContent: { padding: 16 },
   row: {
     flexDirection: 'row',
@@ -520,7 +559,15 @@ const makeStyles = (theme: AcademicGlassTheme) =>
   },
   rowName: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
   rowEmail: { fontSize: 12.5, color: theme.textSecondary, marginTop: 3 },
-  iconButton: { padding: 6, marginLeft: 4 },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.surfaceVariant,
+    marginLeft: 8,
+  },
   emptyWrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.textPrimary, marginBottom: 8 },
   emptyDesc: { fontSize: 13.5, color: theme.textSecondary, textAlign: 'center', lineHeight: 19 },
