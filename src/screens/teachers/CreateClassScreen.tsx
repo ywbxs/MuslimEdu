@@ -10,7 +10,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -26,10 +26,12 @@ import {
   ClassShift,
   ClassType,
   ClassStatus,
+  ClassSectionOption,
   fetchClassReferenceData,
   fetchClassRecordDetail,
   createClassRecord,
   updateClassRecord,
+  fetchSectionsForClass,
 } from '../../services/adminService';
 import { Room as FacilityRoom, listRooms } from '../../services/academicFacilitiesService';
 
@@ -156,6 +158,23 @@ export default function CreateClassScreen() {
   // room_id FK there yet), so this is a fill-in shortcut, not a hard link -
   // manual entry still works for schools that haven't set up Facilities.
   const [rooms, setRooms] = useState<FacilityRoom[]>([]);
+  // Real Section records (SectionListScreen/SectionForm) belong to a class,
+  // so they can only be fetched/created once the class itself exists. For a
+  // brand-new class this stays empty and the field falls back to free text.
+  const [classSections, setClassSections] = useState<ClassSectionOption[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+
+  const loadClassSections = async () => {
+    if (!token || !classId) return;
+    try {
+      setSectionsLoading(true);
+      setClassSections(await fetchSectionsForClass(token, classId));
+    } catch {
+      // Silent - falls back to the free-text field.
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -183,7 +202,7 @@ export default function CreateClassScreen() {
         setRooms(roomList);
 
         if (isEditing && classId) {
-          const record = await fetchClassRecordDetail(token, classId);
+          const [record] = await Promise.all([fetchClassRecordDetail(token, classId), loadClassSections()]);
           setForm({
             class_code: record.class_code ?? '',
             name: record.name ?? '',
@@ -219,6 +238,14 @@ export default function CreateClassScreen() {
       }
     })();
   }, [token, isEditing, classId, t]);
+
+  // Refresh the real Section list when coming back from SectionForm (e.g.
+  // after adding one via the "+ Add Section" button below).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isEditing && classId) loadClassSections();
+    }, [isEditing, classId, token])
+  );
 
   const stepKey = STEP_ORDER[step];
   const isLastStep = step === STEP_ORDER.length - 1;
@@ -420,6 +447,50 @@ export default function CreateClassScreen() {
                 />
               </View>
             </View>
+
+            {isEditing && classId ? (
+              classSections.length > 0 ? (
+                <>
+                  <Text style={styles.label}>{t('create_class.pick_section_label', 'Or pick an existing section')}</Text>
+                  <View style={styles.chipGrid}>
+                    {classSections.map((sec) => {
+                      const selected = form.section === sec.name;
+                      return (
+                        <TouchableOpacity
+                          key={sec.id}
+                          style={[styles.chip, selected && styles.chipSelected]}
+                          onPress={() => set('section', sec.name)}
+                        >
+                          <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{sec.name}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    <TouchableOpacity
+                      style={styles.addSectionChip}
+                      onPress={() => (navigation as any).navigate('SectionForm', { classId })}
+                    >
+                      <Text style={styles.addSectionChipText}>{t('create_class.add_section', '+ Add Section')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : !sectionsLoading ? (
+                <View style={styles.emptySectionBox}>
+                  <Text style={styles.emptySectionText}>
+                    {t('create_class.no_sections_yet', "This class doesn't have any sections yet.")}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptySectionButton}
+                    onPress={() => (navigation as any).navigate('SectionForm', { classId })}
+                  >
+                    <Text style={styles.emptySectionButtonText}>{t('create_class.add_section', '+ Add Section')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            ) : (
+              <Text style={styles.emptyOptionsText}>
+                {t('create_class.sections_after_create', 'Sections can be added once this class is created.')}
+              </Text>
+            )}
           </>
         ) : null}
 
@@ -780,7 +851,35 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     chipSelected: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
     chipText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
     chipTextSelected: { color: theme.accentSoftText ?? theme.accent },
-    emptyOptionsText: { fontSize: 12.5, color: theme.textMuted, lineHeight: 18 },
+    emptyOptionsText: { fontSize: 12.5, color: theme.textMuted, lineHeight: 18, marginTop: 16 },
+
+    addSectionChip: {
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.accent,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: RADIUS.pill ?? 999,
+    },
+    addSectionChipText: { fontSize: 13, fontWeight: '700', color: theme.accent },
+
+    emptySectionBox: {
+      marginTop: 16,
+      padding: 16,
+      borderRadius: RADIUS.md ?? 14,
+      backgroundColor: theme.surfaceVariant,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    emptySectionText: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18, marginBottom: 12 },
+    emptySectionButton: {
+      alignSelf: 'flex-start',
+      backgroundColor: theme.accent,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: RADIUS.pill ?? 999,
+    },
+    emptySectionButtonText: { color: theme.onAccent, fontSize: 13, fontWeight: '700' },
 
     iosPickerWrap: { backgroundColor: theme.surface, borderRadius: RADIUS.sm, marginTop: 4 },
     iosPickerDone: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 6 },

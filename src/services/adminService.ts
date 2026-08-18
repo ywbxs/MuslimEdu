@@ -505,3 +505,15 @@ export async function updateClassRecord(
   const data = await authedPost('/admin_classes_update', token, { class_id: classId, ...input });
   return data.class as ClassRecord;
 }
+
+export interface ClassSectionOption {
+  id: number;
+  name: string;
+}
+
+/** POST /admin_sections_list scoped to one class - for the Basics step's Section picker. */
+export async function fetchSectionsForClass(token: string, classId: number): Promise<ClassSectionOption[]> {
+  const data = await authedPost('/admin_sections_list', token, { class_id: classId, status: 'active' });
+  const sections: any[] = data.sections ?? [];
+  return sections.map((s) => ({ id: s.id, name: s.name }));
+}
