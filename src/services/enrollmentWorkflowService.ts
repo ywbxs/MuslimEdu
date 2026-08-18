@@ -248,6 +248,13 @@ export async function startEnrollmentWorkflow(
   return data.record;
 }
 
+/** POST /admin_enrollment_workflow_delete - removes the workflow record (and its history)
+    entirely, so a duplicate or a student an admin wants to fully restart can be cleared out.
+    Does not touch the student's actual class/section placement. */
+export async function deleteEnrollmentWorkflow(token: string, recordId: number): Promise<void> {
+  await authedPost('/admin_enrollment_workflow_delete', token, { record_id: recordId });
+}
+
 export async function advanceEnrollmentWorkflow(
   token: string,
   recordId: number,

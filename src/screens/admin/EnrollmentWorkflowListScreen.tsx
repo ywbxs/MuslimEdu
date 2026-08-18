@@ -13,7 +13,7 @@ import {
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Layers, TriangleAlert } from 'lucide-react-native';
+import { ChevronLeft, Layers, TriangleAlert, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { can } from '../../services/permissions';
@@ -29,6 +29,7 @@ import {
   WorkflowRecord,
   fetchEnrollmentWorkflowList,
   startEnrollmentWorkflow,
+  deleteEnrollmentWorkflow,
 } from '../../services/enrollmentWorkflowService';
 import { fetchAcademicSessions, pickCurrentSession, AcademicSession } from '../../services/academicSessionService';
 import { fetchStudents, StudentSummary } from '../../services/adminService';
@@ -70,6 +71,9 @@ function IconLayers({ color }: { color: string }) {
 function IconAlertTriangle({ color }: { color: string }) {
   return <TriangleAlert size={12} color={color} strokeWidth={2} />;
 }
+function IconTrash({ color }: { color: string }) {
+  return <Trash2 size={15} color={color} strokeWidth={2.1} />;
+}
 
 export default function EnrollmentWorkflowListScreen() {
   const navigation = useNavigation();
@@ -98,6 +102,7 @@ export default function EnrollmentWorkflowListScreen() {
   const [students, setStudents] = useState<StudentSummary[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [starting, setStarting] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -184,6 +189,33 @@ export default function EnrollmentWorkflowListScreen() {
     }
   };
 
+  const handleDelete = (item: WorkflowRecord) => {
+    const studentName = item.student?.name ?? t('enrollment_workflow_list.student_fallback', 'Student #{id}').replace('{id}', String(item.user_id));
+    Alert.alert(
+      t('enrollment_workflow_list.delete_title', 'Delete Enrollment Record'),
+      t('enrollment_workflow_list.delete_message', 'Delete {name}\'s enrollment record? This removes it entirely so they can be started fresh - it does not remove them from any class/section they were already placed in.').replace('{name}', studentName),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            setDeletingId(item.id);
+            try {
+              await deleteEnrollmentWorkflow(token, item.id);
+              load();
+            } catch (err) {
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('enrollment_workflow_list.delete_error', 'Could not delete the record.'));
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderRecord = (item: WorkflowRecord) => {
     const statusColor =
       item.status === 'completed' ? theme.success : item.status === 'withdrawn' ? theme.danger : theme.accent;
@@ -200,9 +232,25 @@ export default function EnrollmentWorkflowListScreen() {
       >
         <View style={styles.cardTop}>
           <UserAvatar name={studentName} photo={item.student?.photo ?? null} size={44} ringColor={theme.border} dotColor={statusColor} />
-          <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
-            {workflowStatusLabel(item.status)}
-          </Text>
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusBg }]}>
+              {workflowStatusLabel(item.status)}
+            </Text>
+            {canStart ? (
+              <TouchableOpacity
+                style={styles.deleteIconButton}
+                hitSlop={8}
+                disabled={deletingId === item.id}
+                onPress={() => handleDelete(item)}
+              >
+                {deletingId === item.id ? (
+                  <ActivityIndicator size="small" color={theme.danger} />
+                ) : (
+                  <IconTrash color={theme.danger} />
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         <Text style={styles.studentName} numberOfLines={1}>{studentName}</Text>
@@ -245,7 +293,7 @@ export default function EnrollmentWorkflowListScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
             <IconChevronLeft color={theme.textPrimary} />
           </TouchableOpacity>
@@ -261,7 +309,7 @@ export default function EnrollmentWorkflowListScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
@@ -377,7 +425,7 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingBottom: 10,
       backgroundColor: theme.surface,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -467,6 +515,14 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       gap: 5,
     },
     warnChipText: { fontSize: 11, fontWeight: '600', color: theme.danger },
+    deleteIconButton: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.dangerSoft,
+    },
 
     modalContainer: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
     modalContent: {
