@@ -261,6 +261,13 @@ function ScheduleEditSheet({
   const [teacherId, setTeacherId] = useState<number | null>(editingRow?.teacher_id ?? null);
   const [subjectId, setSubjectId] = useState<number | null>(editingRow?.subject_id ?? null);
   const [roomId, setRoomId] = useState<number | null>(editingRow?.room_id ?? null);
+  // A schedule row only stores section_id (the class is implied through it),
+  // but picking straight from a flat list of section names ("A", "B") gave no
+  // clue which class each one belonged to. Class is picked first here purely
+  // to narrow the section list - it's never sent to the backend.
+  const classIdOfSection = (id: number | null) =>
+    id == null ? null : pickers.sections.find((s) => s.id === id)?.class_id ?? null;
+  const [classId, setClassId] = useState<number | null>(classIdOfSection(editingRow?.section_id ?? null));
 
   React.useEffect(() => {
     if (visible) {
@@ -273,8 +280,26 @@ function ScheduleEditSheet({
       setTeacherId(editingRow?.teacher_id ?? null);
       setSubjectId(editingRow?.subject_id ?? null);
       setRoomId(editingRow?.room_id ?? null);
+      setClassId(classIdOfSection(editingRow?.section_id ?? null));
     }
-  }, [visible, editingRow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, editingRow, pickers.sections]);
+
+  // Distinct classes, derived from the sections themselves - no extra fetch.
+  const classOptions = React.useMemo(() => {
+    const seen = new Map<number, { id: number; name: string }>();
+    pickers.sections.forEach((s) => {
+      if (s.class_id != null && !seen.has(s.class_id)) {
+        seen.set(s.class_id, { id: s.class_id, name: s.class_name ?? `Class ${s.class_id}` });
+      }
+    });
+    return Array.from(seen.values());
+  }, [pickers.sections]);
+
+  const sectionsForClass = React.useMemo(
+    () => (classId == null ? [] : pickers.sections.filter((s) => s.class_id === classId)),
+    [pickers.sections, classId]
+  );
 
   const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
   const canSave = !!sectionId && timeValid;
@@ -288,10 +313,14 @@ function ScheduleEditSheet({
       content: (
         <>
           <BentoOptionGrid
-            label={t('admin_class_schedule.section_label', 'Class Section')}
-            options={pickers.sections}
-            value={sectionId}
-            onChange={setSectionId}
+            label={t('admin_class_schedule.class_label', 'Class')}
+            options={classOptions}
+            value={classId}
+            onChange={(id) => {
+              setClassId(id);
+              // Drop a section from the previously selected class.
+              if (classIdOfSection(sectionId) !== id) setSectionId(null);
+            }}
             icon={(color) => <IconLayers color={color} />}
             styles={styles}
             theme={theme}
@@ -312,6 +341,33 @@ function ScheduleEditSheet({
               </View>
             }
           />
+          {classId != null ? (
+            <BentoOptionGrid
+              label={t('admin_class_schedule.section_label', 'Class Section')}
+              options={sectionsForClass}
+              value={sectionId}
+              onChange={setSectionId}
+              icon={(color) => <IconLayers color={color} />}
+              styles={styles}
+              theme={theme}
+              emptyState={
+                <View style={styles.emptyPickerWrap}>
+                  <Text style={styles.emptyPickerText}>
+                    {t('admin_class_schedule.no_sections_in_class', 'This class has no sections yet - add one first.')}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyPickerButton}
+                    onPress={() => {
+                      onClose();
+                      (navigation as any).navigate('SectionForm', { classId });
+                    }}
+                  >
+                    <Text style={styles.emptyPickerButtonText}>{t('admin_class_schedule.add_section', '+ Add Section')}</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
+          ) : null}
           <BentoOptionGrid
             label={t('admin_class_schedule.subject_label', 'Subject')}
             options={pickers.subjects}
@@ -424,6 +480,7 @@ function ScheduleEditSheet({
       isValid: canSave,
       content: (
         <View>
+          <SummaryRow label={t('admin_class_schedule.class_label', 'Class')} value={findOptionName(classOptions, classId) ?? '—'} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.section_label', 'Class Section')} value={findOptionName(pickers.sections, sectionId) ?? '—'} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.subject_label', 'Subject')} value={findOptionName(pickers.subjects, subjectId) ?? t('common.none', 'None')} styles={styles} />
           <SummaryRow label={t('admin_class_schedule.teacher_label', 'Teacher')} value={findOptionName(pickers.teachers, teacherId) ?? t('admin_class_schedule.unassigned', 'Unassigned')} styles={styles} />
@@ -557,16 +614,7 @@ export default function AdminClassScheduleScreen() {
           listRooms(token),
         ]);
         setRows(schedules);
-        setPickers({
-          // Section name alone ("A") is ambiguous once a school has more
-          // than one class - prefix with the class name so the picker (and
-          // the Review & Save summary, which reads the same .name) always
-          // shows which class a section actually belongs to.
-          sections: sections.map((s) => ({ ...s, name: s.class_name ? `${s.class_name} · ${s.name}` : s.name })),
-          teachers: teacherData.teachers,
-          subjects,
-          rooms,
-        });
+        setPickers({ sections, teachers: teacherData.teachers, subjects, rooms });
       } catch (err) {
         setError(err instanceof Error ? err.message : t('admin_class_schedule.load_error', 'Could not load the schedule.'));
       } finally {
