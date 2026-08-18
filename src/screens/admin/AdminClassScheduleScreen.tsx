@@ -23,6 +23,8 @@ import {
   Day,
   listSchedules,
   saveSchedule,
+  updateSchedule,
+  setScheduleStatus,
   deleteSchedule,
 } from '../../services/academicScheduleService';
 import { fetchAllSections, fetchClassTeacherAssignments, SectionOption, AssignableTeacher } from '../../services/teacherClassService';
@@ -590,7 +592,7 @@ export default function AdminClassScheduleScreen() {
     if (!token || !args.sectionId) return;
     setIsSaving(true);
     try {
-      await saveSchedule(token, {
+      const input = {
         code: args.code || `${args.startTime}-${args.endTime}`,
         day_of_week: args.dayOfWeek,
         starts_at: args.startTime,
@@ -599,7 +601,14 @@ export default function AdminClassScheduleScreen() {
         teacher_id: args.teacherId,
         subject_id: args.subjectId,
         room_id: args.roomId,
-      });
+      };
+      const saved =
+        editingRow && editingRow !== 'new' ? await updateSchedule(token, editingRow.id, input) : await saveSchedule(token, input);
+      // Publish immediately - every row is created as 'draft' server-side
+      // and "my schedule" (teacher/student) only ever shows published
+      // rows, so without this an assigned slot would never actually
+      // reach the teacher/student screens.
+      await setScheduleStatus(token, saved.id, 'published');
       setEditingRow(null);
       await load({ silent: true });
     } catch (err) {

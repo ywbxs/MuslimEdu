@@ -122,6 +122,50 @@ export async function saveSchedule(
   return fromBackendSchedule(data.schedule);
 }
 
+/** POST /admin_schedule_update - same shape as saveSchedule, plus the row id. */
+export async function updateSchedule(
+  token: string,
+  id: number,
+  input: {
+    code: string;
+    day_of_week: Day;
+    starts_at: string;
+    ends_at: string;
+    room_id?: number | null;
+    section_id?: number | null;
+    teacher_id?: number | null;
+    subject_id?: number | null;
+  },
+): Promise<AcademicSchedule> {
+  const data = await schedulePost(token, 'admin_schedule_update', {
+    id,
+    period_label: input.code,
+    day_of_week: DAY_TO_INT[input.day_of_week],
+    start_time: input.starts_at,
+    end_time: input.ends_at,
+    room_id: input.room_id ?? undefined,
+    section_id: input.section_id ?? undefined,
+    teacher_id: input.teacher_id ?? undefined,
+    subject_id: input.subject_id ?? undefined,
+  });
+  return fromBackendSchedule(data.schedule);
+}
+
+/**
+ * POST /admin_schedule_status - every schedule row is created as 'draft'
+ * server-side (AcademicScheduleController::store always sets status =>
+ * 'draft'), and `mine()` (my_schedules, what TeacherMyScheduleScreen and
+ * StudentScheduleScreen read) only ever returns status = 'published' rows.
+ * The admin builder never called this endpoint, so a slot an admin created
+ * or assigned a teacher/room to would sit as an invisible draft forever -
+ * "my schedule" would never show it. Called right after create/update below
+ * so a saved slot is immediately visible instead of requiring a manual
+ * separate publish step that no UI here exposes.
+ */
+export async function setScheduleStatus(token: string, id: number, status: 'draft' | 'published' | 'archived'): Promise<void> {
+  await schedulePost(token, 'admin_schedule_status', { id, status });
+}
+
 /** POST /admin_schedule_delete */
 export async function deleteSchedule(token: string, id: number): Promise<void> {
   await schedulePost(token, 'admin_schedule_delete', { id });
