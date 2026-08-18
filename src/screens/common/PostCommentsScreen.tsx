@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Animated,
   PanResponder,
@@ -33,6 +32,7 @@ import {
   toggleCommentLike,
 } from '../../services/postService';
 import { isOppositeGender } from '../../utils/genderGuard';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 
 const EMERALD = '#1FAE64';
 const INK = '#1C1C1E';
@@ -105,6 +105,7 @@ export default function PostCommentsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLocale();
+  const { inset, onLayout } = useKeyboardInset();
   const postId = (route.params as any)?.postId as number;
 
   const [comments, setComments] = useState<PostComment[]>([]);
@@ -311,7 +312,15 @@ export default function PostCommentsScreen() {
   );
 
   return (
-    <View style={styles.root}>
+    // paddingBottom is what lifts the sheet clear of the keyboard: `root`
+    // is justifyContent:'flex-end', and padding on a flex-end container
+    // moves its child up by exactly that much. The KeyboardAvoidingView
+    // that used to be inside `sheet` could never have worked - `sheet` has
+    // a fixed height:'85%', so shrinking a child of it just left dead space
+    // inside the sheet while the sheet itself stayed put. See
+    // useKeyboardInset. The sheet's 85% now resolves against the space left
+    // over above the keyboard, so it shrinks to fit instead of overflowing.
+    <View style={[styles.root, { paddingBottom: inset }]} onLayout={onLayout}>
       {/* Tapping the backdrop (the part of the previous screen still
           visible above the sheet - RootNavigator presents this route as
           presentation: 'transparentModal') dismisses the same way dragging
@@ -323,16 +332,7 @@ export default function PostCommentsScreen() {
       </Animated.View>
 
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          // 'height' on Android, not undefined - this screen is presented
-          // as a native-stack modal, which on Android renders outside the
-          // Activity's own window, so windowSoftInputMode="adjustResize"
-          // never resizes it the way a normal pushed screen gets resized.
-          // Left to `undefined` the keyboard just overlaps the composer
-          // instead of pushing it up - RN has to drive the resize itself.
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <View style={styles.flex}>
           {/* Drag handle only - no close X. Dragging down (or tapping the
               backdrop above) is how this sheet dismisses. panHandlers are
               scoped to just this small zone, not the whole sheet, so
@@ -407,7 +407,7 @@ export default function PostCommentsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Animated.View>
 
       <UserProfileModal

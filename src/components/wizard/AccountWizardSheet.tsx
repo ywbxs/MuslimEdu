@@ -7,13 +7,13 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
-  KeyboardAvoidingView,
   Platform,
   BackHandler,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { COLORS, RADIUS, GLASS, BRAND } from '../../theme/glass';
 import { WizardStepHeader } from './WizardKit';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -40,26 +40,20 @@ export interface WizardStepDef {
  * A multi-step bottom sheet for the "Add {role}" account-creation forms
  * (Teacher/Cashier/Registrar).
  *
- * Deliberately NOT built on RN's <Modal>. A <Modal> renders into a
- * *separate* native Android Dialog window, not the Activity's own window -
- * and Android's keyboard resize behavior for a secondary Dialog window is
- * notoriously unreliable (well past a RN-specific quirk; it's a long-
- * standing platform pain point independent of KeyboardAvoidingView's
- * behavior prop, edge-to-edge, or any padding math layered on top - none of
- * that has anything real to react to when the window it's measuring never
- * meaningfully resizes). Every *other* keyboard-avoiding screen in this app
- * (SchoolRegistrationScreen, AdmissionScreen, etc.) is a plain full-screen
- * view with KeyboardAvoidingView at the screen level, in the Activity's own
- * window - and those work. So this sheet is just an absolutely-positioned
+ * Deliberately NOT built on RN's <Modal>: a Modal renders into a separate
+ * native Android Dialog window, which made it that much harder to reason
+ * about keyboard behavior. This is just an absolutely-positioned
  * full-screen overlay rendered as the last child of whatever screen owns it
  * (AdminTeacherListScreen / RegistrarAccountsScreen / CashierAccountsScreen
- * all already render it last, so it paints on top of everything else there
- * by normal paint order - no elevation/zIndex needed), with the exact same
- * KeyboardAvoidingView pattern that already works everywhere else. Only
- * mounted while `visible`, so there's no separate window's worth of native
- * back-button handling to replace - just a BackHandler subscription for the
- * Android hardware back button, which <Modal> used to give for free via
- * onRequestClose.
+ * all already render it last, so it paints on top by normal paint order -
+ * no elevation/zIndex needed). Only mounted while `visible`, so the one
+ * thing <Modal> did give for free and has to be replaced is Android
+ * hardware-back handling - hence the BackHandler subscription.
+ *
+ * Keyboard avoidance is `paddingBottom: inset` on the flex-end backdrop
+ * (see useKeyboardInset), NOT a KeyboardAvoidingView - a KAV genuinely
+ * cannot work in a bottom sheet like this one, because its shrink and the
+ * flex-end re-anchor cancel each other out exactly.
  */
 export default function AccountWizardSheet({
   visible,
@@ -82,6 +76,7 @@ export default function AccountWizardSheet({
 }) {
   const [step, setStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
+  const { inset, onLayout, availableHeight } = useKeyboardInset();
 
   useEffect(() => {
     if (visible) {
@@ -129,69 +124,68 @@ export default function AccountWizardSheet({
 
   if (!visible || !current) return null;
 
+  // Cap the sheet to whatever room is actually left above the keyboard, not
+  // just the at-rest 88% - otherwise a tall step would extend up past the
+  // top of the screen once the keyboard takes half of it.
+  const sheetMaxHeight = Math.min(MAX_SHEET_HEIGHT, availableHeight ?? MAX_SHEET_HEIGHT);
+
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <View style={styles.backdrop}>
+    <View style={StyleSheet.absoluteFill} onLayout={onLayout}>
+      {/* paddingBottom (not a KeyboardAvoidingView) is what lifts the sheet:
+          this backdrop is justifyContent:'flex-end', and padding on a
+          flex-end container moves its child up by exactly that much. A
+          KeyboardAvoidingView here did nothing at all - see
+          useKeyboardInset's comment for why shrink + flex-end cancel out. */}
+      <View style={[styles.backdrop, { paddingBottom: inset }]}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoider}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          pointerEvents="box-none"
-        >
-          <View style={[styles.sheet, { maxHeight: MAX_SHEET_HEIGHT }]}>
-            <View style={styles.handle} />
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>{title}</Text>
-              <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.closeBtn} disabled={finishing}>
-                <CloseIcon color={SUBTLE} />
-              </TouchableOpacity>
-            </View>
-
-            <WizardStepHeader step={step + 1} labels={steps.map((s) => s.label)} />
-
-            <ScrollView
-              style={styles.stepScroll}
-              contentContainerStyle={styles.stepScrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {current.render()}
-            </ScrollView>
-
-            {stepError ? <Text style={styles.stepErrorText}>{stepError}</Text> : null}
-
-            <View style={styles.actions}>
-              {step > 0 ? (
-                <TouchableOpacity style={styles.backStepBtn} onPress={goBack} disabled={finishing} activeOpacity={0.85}>
-                  <Text style={styles.backStepBtnText}>Back</Text>
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity
-                style={[styles.continueBtn, finishing && styles.continueBtnDisabled]}
-                onPress={goNext}
-                disabled={finishing}
-                activeOpacity={0.85}
-              >
-                {finishing ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.continueBtnText}>{isLastStep ? finishLabel : 'Continue'}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+          <View style={styles.handle} />
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>{title}</Text>
+            <TouchableOpacity onPress={handleClose} hitSlop={12} style={styles.closeBtn} disabled={finishing}>
+              <CloseIcon color={SUBTLE} />
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+
+          <WizardStepHeader step={step + 1} labels={steps.map((s) => s.label)} />
+
+          <ScrollView
+            style={styles.stepScroll}
+            contentContainerStyle={styles.stepScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {current.render()}
+          </ScrollView>
+
+          {stepError ? <Text style={styles.stepErrorText}>{stepError}</Text> : null}
+
+          <View style={styles.actions}>
+            {step > 0 ? (
+              <TouchableOpacity style={styles.backStepBtn} onPress={goBack} disabled={finishing} activeOpacity={0.85}>
+                <Text style={styles.backStepBtnText}>Back</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.continueBtn, finishing && styles.continueBtnDisabled]}
+              onPress={goNext}
+              disabled={finishing}
+              activeOpacity={0.85}
+            >
+              {finishing ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.continueBtnText}>{isLastStep ? finishLabel : 'Continue'}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // flex:1 so KeyboardAvoidingView's "height" behavior has the full backdrop
-  // height as a stable reference frame to shrink from, and justifyContent
-  // keeps the sheet pinned to the bottom - same as every other Modal-free
-  // KeyboardAvoidingView in this app.
-  keyboardAvoider: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: GLASS_SURFACE_STRONG,
