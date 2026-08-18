@@ -33,6 +33,9 @@ export interface AcademicSchedule {
   teacher_id?: number | null;
   subject_id?: number | null;
   meeting_type?: string;
+  /** 'draft' | 'published' | 'archived'. Only 'published' rows are ever
+      returned by my_schedules, i.e. are visible to teachers/students. */
+  status?: string;
   // Denormalized display names - resolved server-side so teacher/student
   // views can show real names without calling admin-only lookup
   // endpoints (admin_sections_list, admin_class_teacher_list, etc.).
@@ -77,6 +80,7 @@ function fromBackendSchedule(row: any): AcademicSchedule {
     teacher_id: row.teacher_id ?? null,
     subject_id: row.subject_id ?? null,
     meeting_type: row.status,
+    status: row.status,
     room_name: row.room_name ?? null,
     section_name: row.section_name ?? null,
     teacher_name: row.teacher_name ?? null,

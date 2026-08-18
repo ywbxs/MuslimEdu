@@ -599,6 +599,7 @@ export default function AdminClassScheduleScreen() {
 
   const [editingRow, setEditingRow] = useState<AcademicSchedule | null | 'new'>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -706,6 +707,30 @@ export default function AdminClassScheduleScreen() {
   const sheetVisible = editingRow !== null;
   const sheetRow = editingRow === 'new' ? null : editingRow;
 
+  // Rows the backend created as 'draft'. my_schedules (the teacher/student
+  // "My Schedule" screens) only ever returns 'published' rows, so a draft is
+  // invisible to everyone it was made for - and nothing in the app used to
+  // show that, or offer any way to fix it.
+  const draftRows = rows.filter((r) => r.status && r.status !== 'published');
+
+  const publishAllDrafts = async () => {
+    if (!token || draftRows.length === 0) return;
+    setIsPublishing(true);
+    try {
+      for (const row of draftRows) {
+        await setScheduleStatus(token, row.id, 'published');
+      }
+      await load({ silent: true });
+    } catch (err) {
+      Alert.alert(
+        t('common.error', 'Error'),
+        err instanceof Error ? err.message : t('admin_class_schedule.publish_error', 'Could not publish the schedule.')
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
@@ -736,6 +761,29 @@ export default function AdminClassScheduleScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {!isLoading && draftRows.length > 0 ? (
+        <View style={styles.publishBanner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.publishBannerTitle}>
+              {t('admin_class_schedule.drafts_title', '{n} slot(s) not published').replace('{n}', String(draftRows.length))}
+            </Text>
+            <Text style={styles.publishBannerDesc}>
+              {t(
+                'admin_class_schedule.drafts_desc',
+                'Teachers and students cannot see these yet. Publish to make them appear in My Schedule.'
+              )}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.publishButton} onPress={publishAllDrafts} disabled={isPublishing}>
+            {isPublishing ? (
+              <ActivityIndicator size="small" color={theme.onAccent} />
+            ) : (
+              <Text style={styles.publishButtonText}>{t('admin_class_schedule.publish', 'Publish')}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {isLoading ? (
         <View style={styles.listContent}>
@@ -795,6 +843,13 @@ export default function AdminClassScheduleScreen() {
                     <IconClock color={theme.textSecondary} />
                     <Text style={[styles.badgeText, styles.badgeTextSchedule]}>{dayLabel(t, item.day_of_week)}</Text>
                   </View>
+                  {item.status && item.status !== 'published' ? (
+                    <View style={[styles.badge, styles.badgeDraft]}>
+                      <Text style={[styles.badgeText, styles.badgeTextDraft]}>
+                        {t('admin_class_schedule.draft', 'Draft - not visible')}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </TouchableOpacity>
@@ -820,6 +875,31 @@ export default function AdminClassScheduleScreen() {
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: theme.background },
+    publishBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginHorizontal: 16,
+      marginTop: 12,
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: 'rgba(245,158,11,0.12)',
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
+    publishBannerTitle: { fontSize: 13.5, fontWeight: '800', color: theme.textPrimary },
+    publishBannerDesc: { fontSize: 11.5, color: theme.textSecondary, marginTop: 3, lineHeight: 16 },
+    publishButton: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      minWidth: 84,
+      alignItems: 'center',
+    },
+    publishButtonText: { color: theme.onAccent, fontWeight: '800', fontSize: 13 },
+    badgeDraft: { backgroundColor: 'rgba(245,158,11,0.12)' },
+    badgeTextDraft: { color: theme.warning, fontWeight: '700' },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
