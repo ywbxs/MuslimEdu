@@ -503,7 +503,7 @@ export default function CreateClassScreen() {
 
             <ChipField
               label={t('create_class.school_year_label', 'School Year') + ' *'}
-              options={reference.school_years.map((sy) => ({ id: sy.id, name: sy.title || sy.name || String(sy.id) }))}
+              options={reference.school_years.map((sy) => ({ id: sy.id, name: sy.session_title || sy.title || sy.name || String(sy.id) }))}
               value={form.school_year_id}
               onChange={(v) => set('school_year_id', v)}
               theme={theme}

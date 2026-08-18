@@ -421,7 +421,9 @@ export interface ClassReferenceData {
   departments: NamedOption[];
   campuses: NamedOption[];
   curricula: NamedOption[];
-  school_years: { id: number; title?: string; name?: string }[];
+  // Backend (Session model) only ever sends session_title - title/name
+  // are kept here only as a defensive fallback, never the real field.
+  school_years: { id: number; session_title?: string; title?: string; name?: string }[];
   semester_terms: NamedOption[];
 }
 
