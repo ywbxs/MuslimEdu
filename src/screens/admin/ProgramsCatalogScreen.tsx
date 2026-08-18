@@ -11,30 +11,21 @@ import GlassBackground from '../../components/glass/GlassBackground';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
-import {
-  Program,
-  Subject,
-  fetchPrograms,
-  deleteProgram,
-  fetchSubjectsCatalog,
-  deleteSubject,
-} from '../../services/adminAcademicCatalogService';
+import { Subject, fetchSubjectsCatalog, deleteSubject } from '../../services/adminAcademicCatalogService';
 
 /**
- * Admin: spec §4.3/§4.6 Programs + §4.7 Subject catalog.
+ * Admin: spec §4.7 Subject catalog.
  *
- * Same "backend already existed, no RN consumer yet" situation as
- * GradingSystemsScreen (see Status 11 build-next). One hub screen with a
- * segmented tab, same way AcademicHubScreen switches tabs client-side
- * rather than being two separate always-mounted screens - Programs and
- * Subjects are both short catalog lists for a school, not paginated
- * tables, so a single fetch-on-tab-focus screen is enough.
- *
- * Subjects shown here are catalog subjects (class_id null) only - the
- * existing "assign a subject to a class" flow is untouched and separate.
+ * Used to be a two-tab hub (Programs relabeled "Section/Class" + Subjects),
+ * but Program isn't the real class/section entity - it's a separate,
+ * lighter-weight track/grouping concept (still used by Curriculum's and
+ * Org Structure's own pickers via ProgramForm, just not surfaced as its own
+ * tab here anymore). Having it labeled "Section/Class" next to the real
+ * Classes & Sections tile (CreateClassScreen, wired to grade levels,
+ * shifts, capacity, rooms) was two different things claiming the same
+ * name - dropped the tab so "Section/Class" only ever means the real one.
+ * This screen is Subjects only now.
  */
-
-type Tab = 'programs' | 'subjects';
 
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
@@ -48,8 +39,6 @@ export default function ProgramsCatalogScreen() {
   const { token } = useAuth();
   const { t } = useLocale();
 
-  const [tab, setTab] = useState<Tab>('programs');
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +47,7 @@ export default function ProgramsCatalogScreen() {
     if (!token) return;
     try {
       setError(null);
-      const [p, s] = await Promise.all([fetchPrograms(token), fetchSubjectsCatalog(token)]);
-      setPrograms(p);
-      setSubjects(s);
+      setSubjects(await fetchSubjectsCatalog(token));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('programs_catalog.load_error', 'Failed to load the catalog.'));
     } finally {
@@ -73,31 +60,6 @@ export default function ProgramsCatalogScreen() {
       load();
     }, [load])
   );
-
-  const handleDeleteProgram = (program: Program) => {
-    Alert.alert(
-      t('programs_catalog.delete_program_title', 'Delete Section/Class'),
-      t('programs_catalog.delete_message', 'Delete "{name}"? This can\'t be undone.').replace('{name}', program.name),
-      [
-        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-        {
-          text: t('programs_catalog.delete', 'Delete'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!token) return;
-            try {
-              await deleteProgram(token, program.id);
-              load();
-            } catch (err) {
-              // Backend blocks deletion while subjects are still assigned to
-              // it - surface that message as-is.
-              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('programs_catalog.delete_program_error', 'Failed to delete program.'));
-            }
-          },
-        },
-      ],
-    );
-  };
 
   const handleDeleteSubject = (subject: Subject) => {
     Alert.alert(
@@ -123,45 +85,6 @@ export default function ProgramsCatalogScreen() {
       ],
     );
   };
-
-  const renderProgram = ({ item }: { item: Program }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-        {item.code ? (
-          <View style={styles.codeChip}>
-            <Text style={styles.codeChipText}>{item.code}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.metaRow}>
-        {item.duration_terms ? (
-          <View style={styles.typeChip}>
-            <Text style={styles.typeChipText}>{t('programs_catalog.terms', '{n} terms').replace('{n}', String(item.duration_terms))}</Text>
-          </View>
-        ) : null}
-        {item.status === 'inactive' ? (
-          <View style={styles.inactiveChip}>
-            <Text style={styles.inactiveChipText}>{t('programs_catalog.inactive', 'Inactive')}</Text>
-          </View>
-        ) : null}
-      </View>
-      {item.description ? (
-        <Text style={styles.scaleStatus} numberOfLines={2}>{item.description}</Text>
-      ) : null}
-      <View style={styles.cardFooter}>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => (navigation as any).navigate('ProgramForm', { programId: item.id })}
-        >
-          <Text style={styles.editButtonText}>{t('common.edit', 'Edit')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteProgram(item)}>
-          <Text style={styles.deleteButtonText}>{t('programs_catalog.delete', 'Delete')}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   const renderSubject = ({ item }: { item: Subject }) => (
     <View style={styles.card}>
@@ -222,14 +145,9 @@ export default function ProgramsCatalogScreen() {
       <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
         <IconChevronLeft color={theme.textPrimary} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Section/Class & Subject')}</Text>
+      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Subjects')}</Text>
       {!loading ? (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() =>
-            (navigation as any).navigate(tab === 'programs' ? 'ProgramForm' : 'SubjectForm')
-          }
-        >
+        <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('SubjectForm')}>
           <Text style={styles.addButtonText}>{t('programs_catalog.add', '+ Add')}</Text>
         </TouchableOpacity>
       ) : (
@@ -248,31 +166,10 @@ export default function ProgramsCatalogScreen() {
     );
   }
 
-  const data = tab === 'programs' ? programs : subjects;
-
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
       {header}
-
-      <View style={styles.tabRow}>
-        <TouchableOpacity
-          style={[styles.tabButton, tab === 'programs' && styles.tabButtonActive]}
-          onPress={() => setTab('programs')}
-        >
-          <Text style={[styles.tabButtonText, tab === 'programs' && styles.tabButtonTextActive]}>
-            {t('programs_catalog.tab_programs', 'Section/Class ({n})').replace('{n}', String(programs.length))}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, tab === 'subjects' && styles.tabButtonActive]}
-          onPress={() => setTab('subjects')}
-        >
-          <Text style={[styles.tabButtonText, tab === 'subjects' && styles.tabButtonTextActive]}>
-            {t('programs_catalog.tab_subjects', 'Subjects ({n})').replace('{n}', String(subjects.length))}
-          </Text>
-        </TouchableOpacity>
-      </View>
 
       {error ? (
         <View style={styles.errorBanner}>
@@ -283,41 +180,22 @@ export default function ProgramsCatalogScreen() {
         </View>
       ) : null}
 
-      {tab === 'programs' ? (
-        <FlatList
-          data={programs}
-          renderItem={renderProgram}
-          keyExtractor={(item) => `program-${item.id}`}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <EmptyState
-              icon="🏫"
-              title={t('programs_catalog.empty_programs_title', 'No sections/classes yet')}
-              subtitle={t('programs_catalog.empty_programs_subtitle', 'Add a section/class (e.g. Hifz, Alimiyyah) to start organizing subjects under it.')}
-              actionLabel={t('programs_catalog.empty_programs_action', 'Add Section/Class')}
-              onAction={() => (navigation as any).navigate('ProgramForm')}
-              colors={theme}
-            />
-          }
-        />
-      ) : (
-        <FlatList
-          data={subjects}
-          renderItem={renderSubject}
-          keyExtractor={(item) => `subject-${item.id}`}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <EmptyState
-              icon="📖"
-              title={t('programs_catalog.empty_subjects_title', 'No subjects yet')}
-              subtitle={t('programs_catalog.empty_subjects_subtitle', 'Add a subject to the catalog so it can be used in curricula and assigned to classes.')}
-              actionLabel={t('programs_catalog.empty_subjects_action', 'Add Subject')}
-              onAction={() => (navigation as any).navigate('SubjectForm')}
-              colors={theme}
-            />
-          }
-        />
-      )}
+      <FlatList
+        data={subjects}
+        renderItem={renderSubject}
+        keyExtractor={(item) => `subject-${item.id}`}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <EmptyState
+            icon="📖"
+            title={t('programs_catalog.empty_subjects_title', 'No subjects yet')}
+            subtitle={t('programs_catalog.empty_subjects_subtitle', 'Add a subject to the catalog so it can be used in curricula and assigned to classes.')}
+            actionLabel={t('programs_catalog.empty_subjects_action', 'Add Subject')}
+            onAction={() => (navigation as any).navigate('SubjectForm')}
+            colors={theme}
+          />
+        }
+      />
       <BottomNavBar />
     </View>
   );
@@ -347,25 +225,6 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderRadius: 6,
     },
     addButtonText: { color: theme.onAccent, fontWeight: '600', fontSize: 14 },
-
-    tabRow: {
-      flexDirection: 'row',
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      gap: 8,
-    },
-    tabButton: {
-      flex: 1,
-      paddingVertical: 9,
-      borderRadius: RADIUS.sm,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.surface,
-      alignItems: 'center',
-    },
-    tabButtonActive: { backgroundColor: theme.accentSoft, borderColor: theme.accent },
-    tabButtonText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
-    tabButtonTextActive: { color: theme.accentSoftText },
 
     errorBanner: {
       flexDirection: 'row',

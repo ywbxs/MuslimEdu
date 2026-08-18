@@ -497,8 +497,8 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     {
       key: 'programsSubjects',
       category: 'academics',
-      title: t('admin_dashboard.programs_subjects_title', 'Section/Class & Subject'),
-      desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's section/class and subject catalog"),
+      title: t('admin_dashboard.programs_subjects_title', 'Subjects'),
+      desc: t('admin_dashboard.programs_subjects_desc', "Manage the school's subject catalog"),
       variant: 'soft',
       route: 'ProgramsCatalog',
       icon: (c) => <CatalogIcon color={c} />,
