@@ -1020,12 +1020,14 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
               rather than a daily habit, so they stay secondary. */}
           {!isSearching && hero ? (
             <TouchableOpacity activeOpacity={0.92} style={styles.heroCard} onPress={() => openItem(hero)}>
-              <View style={styles.heroIcon}>{hero.icon('#FFFFFF')}</View>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroIcon}>{hero.icon('#FFFFFF')}</View>
+                <View style={styles.heroArrow}>
+                  <ArrowRightIcon color="#FFFFFF" size={17} />
+                </View>
+              </View>
               <Text style={styles.heroTitle}>{hero.title}</Text>
               <Text style={styles.heroDesc}>{hero.desc}</Text>
-              <View style={styles.heroArrow}>
-                <ArrowRightIcon color="#FFFFFF" size={17} />
-              </View>
             </TouchableOpacity>
           ) : null}
 
@@ -1243,24 +1245,32 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: '#0F7A3D',
     borderRadius: 26,
-    padding: 22,
+    padding: 20,
     marginBottom: 12,
   },
+  // Icon + arrow share one row (icon square left, arrow circle right) instead
+  // of the arrow floating absolutely at the bottom - that left a dead gap of
+  // plain green between the icon and the title. Icon is a rounded square now,
+  // not a circle, so it matches every other icon tile in the redesign
+  // (secondary cards, grouped-list rows) instead of being the one shape that
+  // doesn't match.
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   heroIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
   },
   heroTitle: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
-  heroDesc: { fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 19, paddingRight: 50 },
+  heroDesc: { fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 19 },
   heroArrow: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
