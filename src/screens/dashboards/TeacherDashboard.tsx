@@ -458,7 +458,7 @@ export default function TeacherDashboard({ footer }: TeacherDashboardProps = {})
           }}
         >
           {/* Greeting */}
-          <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+          <View style={[styles.headerRow, { paddingTop: insets.top }]}>
             <View>
               <Text style={styles.greetingSmall}>{t('teacher_dashboard.greeting', 'Assalamu Alaykum,')}</Text>
               <Text style={styles.greetingName}>{user?.name}</Text>

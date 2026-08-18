@@ -190,7 +190,7 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
         <IconChevronLeft color={BRAND.emeraldDeep} />
       </TouchableOpacity>

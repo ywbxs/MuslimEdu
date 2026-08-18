@@ -28,7 +28,7 @@ export default function AcademicUnavailableScreen({ onBack }: { onBack?: () => v
 
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         {onBack ? (
           <TouchableOpacity onPress={onBack} hitSlop={10} style={styles.backButton}>
             <BackArrowIcon />

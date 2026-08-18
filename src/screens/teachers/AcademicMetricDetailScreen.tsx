@@ -62,7 +62,7 @@ export default function AcademicMetricDetailScreen() {
 
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
           <IconChevronLeft color={BRAND.emeraldDeep} />
         </TouchableOpacity>

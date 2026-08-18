@@ -741,7 +741,7 @@ export default function PendingRegistrationsScreen() {
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
 
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
           <ChevronLeft size={22} color={INK} strokeWidth={2.1} />
         </TouchableOpacity>

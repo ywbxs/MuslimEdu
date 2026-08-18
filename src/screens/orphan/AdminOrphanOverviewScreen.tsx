@@ -414,7 +414,7 @@ export default function AdminOrphanOverviewScreen() {
   return (
     <View style={styles.flex}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
           <ChevronLeftIcon color={EMERALD} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>

@@ -152,7 +152,7 @@ export default function SubscriptionDetailsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.roundBtn}>
           <ChevronLeftIcon color={INK} />
         </TouchableOpacity>

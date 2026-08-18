@@ -327,7 +327,7 @@ export default function SetupChecklistScreen({ isGate = false, onAllComplete }: 
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
 
-      <View style={[styles.chrome, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.chrome, { paddingTop: insets.top }]}>
         <View style={styles.chromeRow}>
           {!isGate && step === 0 ? (
             <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.roundBtn}>

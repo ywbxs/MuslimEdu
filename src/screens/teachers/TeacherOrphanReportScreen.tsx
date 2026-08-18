@@ -464,7 +464,7 @@ export default function TeacherOrphanReportScreen() {
     return (
       <View style={styles.flex}>
         <GlassBackground variant="canvas" />
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
             <ChevronLeft size={22} color={EMERALD} strokeWidth={2.4} />
             <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
@@ -501,7 +501,7 @@ export default function TeacherOrphanReportScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
           <ChevronLeft size={22} color={EMERALD} strokeWidth={2.4} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>

@@ -143,7 +143,7 @@ export default function PrayerTimesDetailScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
