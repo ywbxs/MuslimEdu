@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
@@ -27,6 +27,7 @@ import { EmptyState } from '../../components/EmptyState';
 // search + status filter bar; the enrollment bar is lifted straight from
 // ClassListScreen.tsx since sections carry the same capacity/enrollment shape.
 const SectionListScreen = () => {
+  const { token, user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const { classId: routeClassId } = route.params || {};
@@ -43,28 +44,20 @@ const SectionListScreen = () => {
   const [statusFilter, setStatusFilter] = useState('active');
   const [classFilter, setClassFilter] = useState(routeClassId || null); // null = all classes
   const [classModalVisible, setClassModalVisible] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  // Was read from AsyncStorage('userRole'), which the real auth flow never
+  // writes to (the token lives in the Keychain, not AsyncStorage) - always
+  // NaN, so the admin-only actions this gates were permanently hidden.
+  const userRole = user?.role_id ?? null;
 
   useFocusEffect(
     useCallback(() => {
-      getStoredUserRole();
       fetchClasses();
       fetchSections();
     }, [searchTerm, statusFilter, classFilter])
   );
 
-  const getStoredUserRole = async () => {
-    try {
-      const role = await AsyncStorage.getItem('userRole');
-      setUserRole(parseInt(role));
-    } catch (error) {
-      console.error('Error getting user role:', error);
-    }
-  };
-
   const fetchClasses = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_classes_list`,
         { per_page: 500, sort_by: 'name', sort_order: 'asc' },
@@ -84,7 +77,6 @@ const SectionListScreen = () => {
   const fetchSections = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('token');
 
       const response = await axios.post(
         `${API_BASE_URL}/admin_sections_list`,
@@ -138,7 +130,6 @@ const SectionListScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('token');
               await axios.post(
                 `${API_BASE_URL}/admin_sections_delete`,
                 { section_id: section.id },

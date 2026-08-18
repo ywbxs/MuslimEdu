@@ -202,7 +202,7 @@ export const ACADEMIC_ROUTES: ReadonlySet<string> = new Set([
 /** Admin dashboard tile keys that map onto the routes above. */
 export const ACADEMIC_ADMIN_TILE_KEYS: ReadonlySet<string> = new Set([
   'setupChecklist',
-  'classes', 'classSchedule', 'academicSetup', 'gradingSystems', 'examCategories',
+  'classes', 'classesSections', 'classSchedule', 'academicSetup', 'gradingSystems', 'examCategories',
   'gradebookReview', 'announcementReview', 'lessonPlanReview',
   'assessmentReview', 'assessmentGrades', 'materialsReview',
   'programsSubjects', 'timetableConflicts', 'attendanceConfig',

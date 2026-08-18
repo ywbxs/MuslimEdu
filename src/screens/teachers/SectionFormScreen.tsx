@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
@@ -31,6 +31,7 @@ const labelize = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCa
 // class picker only appears when creating a new section; once a section
 // exists, its class is shown read-only.
 const SectionFormScreen = () => {
+  const { token, user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAcademicGlassTheme();
@@ -72,7 +73,6 @@ const SectionFormScreen = () => {
 
   const fetchClasses = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_classes_list`,
         { per_page: 500, sort_by: 'name', sort_order: 'asc' },
@@ -91,7 +91,6 @@ const SectionFormScreen = () => {
 
   const fetchTeachers = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       // Reused, same as DepartmentFormScreen's head-of-department picker.
       const response = await axios.post(
         `${API_BASE_URL}/admin_class_teacher_list`,
@@ -111,7 +110,6 @@ const SectionFormScreen = () => {
 
   const fetchSection = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_sections_list`,
         {},
@@ -173,7 +171,6 @@ const SectionFormScreen = () => {
 
     try {
       setSubmitting(true);
-      const token = await AsyncStorage.getItem('token');
 
       const sharedPayload = {
         name: formData.name,

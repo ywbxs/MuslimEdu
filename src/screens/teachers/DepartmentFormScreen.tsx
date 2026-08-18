@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
@@ -27,6 +27,7 @@ const labelize = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCa
 // Create + edit in one screen, same as the pattern CreateClassScreen set for
 // the module: modal-based pickers for anything that isn't free text.
 const DepartmentFormScreen = () => {
+  const { token, user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAcademicGlassTheme();
@@ -66,7 +67,6 @@ const DepartmentFormScreen = () => {
 
   const fetchFaculties = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_faculty_list`,
         {},
@@ -85,7 +85,6 @@ const DepartmentFormScreen = () => {
 
   const fetchCampuses = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_campuses_list`,
         { status: 'active' },
@@ -104,7 +103,6 @@ const DepartmentFormScreen = () => {
 
   const fetchTeachers = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       // Reuses the existing class-teacher-assign endpoint purely for its
       // "eligible teachers" list - same id/name shape we need here.
       const response = await axios.post(
@@ -126,7 +124,6 @@ const DepartmentFormScreen = () => {
   const fetchDepartment = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_departments_list`,
         {},
@@ -183,7 +180,6 @@ const DepartmentFormScreen = () => {
 
     try {
       setSubmitting(true);
-      const token = await AsyncStorage.getItem('token');
 
       const payload = {
         name: formData.name,

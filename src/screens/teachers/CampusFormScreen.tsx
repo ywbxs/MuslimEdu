@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
@@ -25,6 +25,7 @@ const labelize = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCa
 
 // Create + edit in one screen, same pattern as DepartmentFormScreen.tsx.
 const CampusFormScreen = () => {
+  const { token, user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAcademicGlassTheme();
@@ -58,7 +59,6 @@ const CampusFormScreen = () => {
   const fetchCampus = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/admin_campuses_list`,
         {},
@@ -115,7 +115,6 @@ const CampusFormScreen = () => {
 
     try {
       setSubmitting(true);
-      const token = await AsyncStorage.getItem('token');
 
       const payload = {
         name: formData.name,

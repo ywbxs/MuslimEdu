@@ -335,6 +335,15 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       icon: (c) => <IdCardIcon color={c} />,
     },
     {
+      key: 'classesSections',
+      category: 'academics',
+      title: t('admin_dashboard.classes_sections_title', 'Classes & Sections'),
+      desc: t('admin_dashboard.classes_sections_desc', 'Create classes and sections for this school'),
+      variant: 'soft',
+      route: 'ClassList',
+      icon: (c) => <BookIcon color={c} />,
+    },
+    {
       key: 'classes',
       category: 'academics',
       title: t('admin_dashboard.classes_title', 'Academic'),
