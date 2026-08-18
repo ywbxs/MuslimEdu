@@ -557,7 +557,16 @@ export default function AdminClassScheduleScreen() {
           listRooms(token),
         ]);
         setRows(schedules);
-        setPickers({ sections, teachers: teacherData.teachers, subjects, rooms });
+        setPickers({
+          // Section name alone ("A") is ambiguous once a school has more
+          // than one class - prefix with the class name so the picker (and
+          // the Review & Save summary, which reads the same .name) always
+          // shows which class a section actually belongs to.
+          sections: sections.map((s) => ({ ...s, name: s.class_name ? `${s.class_name} · ${s.name}` : s.name })),
+          teachers: teacherData.teachers,
+          subjects,
+          rooms,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : t('admin_class_schedule.load_error', 'Could not load the schedule.'));
       } finally {
