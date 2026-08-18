@@ -34,21 +34,11 @@ export default function SyncStatusCard() {
   );
 
   const hasPending = actions.length > 0;
-
-  const tint = isOnline ? theme.success : theme.danger;
-  // A paler wash (not the same theme.successSoft/dangerSoft the status pill
-  // below already uses) so the card's own background and the pill inside it
-  // stay visually distinct instead of the pill disappearing into a
-  // same-color card.
-  const cardTint = tint + '14';
+  const statusColor = isOnline ? STATUS_GREEN : STATUS_RED;
 
   return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: cardTint, borderColor: tint + '33' }]}
-      activeOpacity={0.85}
-      onPress={() => (navigation as any).navigate('SyncStatus')}
-    >
-      <View style={[styles.iconWrap, { backgroundColor: tint }]}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => (navigation as any).navigate('SyncStatus')}>
+      <View style={[styles.iconWrap, { backgroundColor: statusColor }]}>
         <CircleCheck size={18} color="#FFFFFF" strokeWidth={1.8} />
       </View>
       <View style={styles.textWrap}>
@@ -56,8 +46,11 @@ export default function SyncStatusCard() {
           <Text style={styles.title} numberOfLines={1}>
             {t('sync_status_card.title', 'Offline & Sync')}
           </Text>
-          <View style={[styles.pill, { backgroundColor: isOnline ? theme.successSoft : theme.dangerSoft }]}>
-            <Text style={[styles.pillText, { color: isOnline ? theme.success : theme.danger }]}>
+          {/* Black pill (not theme.successSoft/dangerSoft's pastel fill) so
+              it reads as its own chip against the card's own black, not a
+              lighter patch sitting oddly on top of it. */}
+          <View style={styles.pill}>
+            <Text style={[styles.pillText, { color: statusColor }]}>
               {isOnline ? t('sync_status.online', 'Online') : t('sync_status.offline', 'Offline')}
             </Text>
           </View>
@@ -73,21 +66,27 @@ export default function SyncStatusCard() {
           <Text style={styles.badgeText}>{actions.length}</Text>
         </View>
       ) : (
-        <ChevronRight size={18} color={theme.textMuted} strokeWidth={2} />
+        <ChevronRight size={18} color="rgba(255,255,255,0.5)" strokeWidth={2} />
       )}
     </TouchableOpacity>
   );
 }
+
+// Kept local and fixed-dark, same as the dashboard's other black cards
+// (the hero greeting, the school identity card before its own redesign) -
+// this row is deliberately always black regardless of light/dark theme,
+// not derived from theme.surface/theme.border.
+const CARD_BLACK = '#111214';
+const STATUS_GREEN = '#34D399';
+const STATUS_RED = '#F87171';
 
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: theme.surface,
+      backgroundColor: CARD_BLACK,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: theme.border,
       padding: 12,
       marginHorizontal: 16,
       marginBottom: 12,
@@ -103,18 +102,18 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     textWrap: { flex: 1 },
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    title: { fontSize: 13, fontWeight: '700', color: theme.textPrimary, flexShrink: 1 },
-    subtitle: { fontSize: 11, color: theme.textSecondary, marginTop: 1 },
-    pill: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
+    title: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', flexShrink: 1 },
+    subtitle: { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 1 },
+    pill: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: 'rgba(255,255,255,0.1)' },
     pillText: { fontSize: 10, fontWeight: '700' },
     badge: {
       minWidth: 22,
       height: 22,
       borderRadius: 11,
-      backgroundColor: theme.dangerSoft,
+      backgroundColor: STATUS_RED,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 6,
     },
-    badgeText: { fontSize: 11, fontWeight: '700', color: theme.danger },
+    badgeText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   });
