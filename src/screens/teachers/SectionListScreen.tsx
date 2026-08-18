@@ -8,9 +8,9 @@ import {
   RefreshControl,
   Alert,
   FlatList,
-  Modal,
   StyleSheet,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -352,7 +352,7 @@ const SectionListScreen = () => {
         }
       />
 
-      <Modal
+      <KeyboardAwareModal
         visible={classModalVisible}
         transparent
         animationType="slide"
@@ -393,7 +393,7 @@ const SectionListScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 };

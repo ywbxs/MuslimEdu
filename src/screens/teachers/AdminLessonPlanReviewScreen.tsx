@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -268,7 +269,7 @@ export default function AdminLessonPlanReviewScreen() {
         )}
       />
 
-      <Modal visible={!!decidingPlan} transparent animationType="fade" onRequestClose={() => setDecidingPlan(null)}>
+      <KeyboardAwareModal visible={!!decidingPlan} transparent animationType="fade" onRequestClose={() => setDecidingPlan(null)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
@@ -304,7 +305,7 @@ export default function AdminLessonPlanReviewScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

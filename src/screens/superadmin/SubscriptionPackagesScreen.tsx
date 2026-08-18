@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, CreditCard, Plus, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -226,7 +226,7 @@ function PackageSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={handleClose} />
         <View style={styles.formSheet}>
@@ -320,7 +320,7 @@ function PackageSheet({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

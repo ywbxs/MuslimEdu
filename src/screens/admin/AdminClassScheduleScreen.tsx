@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
   ActivityIndicator,
   TextInput,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ban, BookOpen, Check, ChevronLeft, Clock, DoorOpen, Layers, Plus, Trash2, User, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -429,7 +429,7 @@ function ScheduleEditSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
@@ -489,7 +489,7 @@ function ScheduleEditSheet({
           )}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

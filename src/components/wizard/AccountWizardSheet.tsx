@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   ScrollView,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Dimensions,
 } from 'react-native';
+import KeyboardAwareModal from '../KeyboardAwareModal';
 import { X } from 'lucide-react-native';
 import { COLORS, RADIUS, GLASS, BRAND } from '../../theme/glass';
 import { WizardStepHeader } from './WizardKit';
@@ -20,11 +18,16 @@ const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 // A real pixel cap, not a Yoga percentage - '88%' needs an ancestor with a
-// definite height to resolve against, and this sheet's parent
-// (KeyboardAvoidingView, at rest with no keyboard open) doesn't have one,
-// so the percentage was resolving unreliably and clipping content (the
-// second field in a step would just never render) instead of the
-// ScrollView below scrolling to reveal it.
+// definite height to resolve against, and the backdrop this sits in doesn't
+// give one, so the percentage resolved unreliably and clipped content (the
+// second field in a step would just never render) instead of the ScrollView
+// below scrolling to reveal it.
+//
+// This stays a cap on the *rest* height only. When the keyboard is open,
+// KeyboardAwareModal pads the whole modal area down by the keyboard height,
+// and the sheet's own flex layout (ScrollView flexShrink) takes it from
+// there - so the sheet ends up sitting on top of the keyboard with its
+// fields scrollable, rather than being cut off behind it.
 const MAX_SHEET_HEIGHT = Dimensions.get('window').height * 0.88;
 
 function CloseIcon({ color }: { color: string }) {
@@ -111,30 +114,20 @@ export default function AccountWizardSheet({
   if (!current) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         {/* Absolutely positioned (not a flex sibling) so it doesn't compete
-            with the KeyboardAvoidingView below for vertical space - see that
-            view's comment for why it needs the full backdrop height to
-            itself. Renders first, so the sheet still draws on top of it. */}
+            with the view below for vertical space. Renders first, so the
+            sheet still draws on top of it. */}
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
-        {/* behavior="height" computes its shrink amount as (its own last-
-            measured layout height) minus (keyboard height). Without an
-            explicit flex:1 here, that measured height was just this view's
-            shrink-wrapped content height (i.e. the sheet's own height) -
-            often *smaller* than the keyboard itself, so the subtraction
-            went to ~0 and the whole sheet visually collapsed to just its
-            handle/header the moment a field was focused. flex:1 gives it
-            the full backdrop height as a stable reference instead;
-            justifyContent keeps the sheet pinned to the bottom the same as
-            before, and pointerEvents="box-none" lets taps in the now-larger
-            empty area above the sheet still reach the dismiss overlay
-            underneath. */}
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoider}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          pointerEvents="box-none"
-        >
+        {/* KeyboardAwareModal (wrapping this whole tree) already pads the
+            modal's content area by the keyboard height - a
+            KeyboardAvoidingView here would double up on that padding and
+            push the sheet too far. This just keeps the sheet pinned to the
+            bottom of whatever room KeyboardAwareModal left; pointerEvents
+            lets taps in the empty area above the sheet still reach the
+            dismiss overlay underneath. */}
+        <View style={styles.keyboardAvoider} pointerEvents="box-none">
           <View style={[styles.sheet, { maxHeight: MAX_SHEET_HEIGHT }]}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
@@ -177,16 +170,16 @@ export default function AccountWizardSheet({
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
 const styles = StyleSheet.create({
-  // flex:1 + justifyContent so this has a stable full-height layout frame
-  // for "height" behavior's math (see the render-time comment) while still
-  // keeping the sheet pinned to the bottom.
+  // flex:1 to take the rest of the backdrop (now that the dismiss overlay
+  // is absolutely positioned instead of a competing flex sibling), and
+  // justifyContent to keep the sheet pinned to the bottom.
   keyboardAvoider: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
   sheet: {

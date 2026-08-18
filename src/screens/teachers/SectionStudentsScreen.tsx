@@ -6,11 +6,11 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeftRight, Check, ChevronLeft, Plus, Search, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -141,7 +141,7 @@ function AddStudentsModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.flex}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.backButton}>
@@ -223,7 +223,7 @@ function AddStudentsModal({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -275,7 +275,7 @@ function TransferModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.flex}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.backButton}>
@@ -326,7 +326,7 @@ function TransferModal({
           />
         )}
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

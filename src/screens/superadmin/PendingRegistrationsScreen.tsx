@@ -7,7 +7,6 @@ import {
   Image,
   Alert,
   FlatList,
-  Modal,
   TextInput,
   ActivityIndicator,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -373,7 +373,7 @@ function ApproveSheet({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
         <View style={styles.sheet}>
@@ -488,7 +488,7 @@ function ApproveSheet({
           </View>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -514,7 +514,7 @@ function RejectSheet({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
       <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.sheetBackdrop}>
           <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
@@ -573,7 +573,7 @@ function RejectSheet({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -582,7 +582,7 @@ function RejectSheet({
 function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => void }) {
   const approved = result?.kind === 'approved';
   return (
-    <Modal visible={!!result} transparent animationType="fade" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={!!result} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.resultBackdrop}>
         <View style={styles.resultCard}>
           <View style={[styles.sheetIcon, { backgroundColor: approved ? EMERALD_SOFT : DANGER_SOFT }]}>
@@ -641,7 +641,7 @@ function ResultSheet({ result, onClose }: { result: ResultState; onClose: () => 
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

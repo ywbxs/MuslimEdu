@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   FlatList,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -356,7 +356,7 @@ const CurriculumFormScreen = () => {
       </View>
 
       {/* Department modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'department_id'}
         transparent
         animationType="slide"
@@ -394,10 +394,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Program modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'program_id'}
         transparent
         animationType="slide"
@@ -435,10 +435,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* School Year modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'effective_school_year_id'}
         transparent
         animationType="slide"
@@ -480,10 +480,10 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Status modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'status'}
         transparent
         animationType="slide"
@@ -509,7 +509,7 @@ const CurriculumFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
       </ScrollView>
     </>
   );

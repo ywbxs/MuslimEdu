@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, CircleCheck, CircleX, Clock, Inbox, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -191,7 +191,7 @@ function ApproveSheet({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
         <View style={styles.formSheet}>
@@ -222,7 +222,7 @@ function ApproveSheet({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 
@@ -246,7 +246,7 @@ function RejectSheet({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={close}>
+    <KeyboardAwareModal visible={!!item} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={close} />
         <View style={styles.formSheet}>
@@ -295,7 +295,7 @@ function RejectSheet({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

@@ -5,12 +5,12 @@ import {
   TouchableOpacity,
   FlatList,
   TextInput,
-  Modal,
   ScrollView,
   ActivityIndicator,
   Alert,
   StyleSheet,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Layers, TriangleAlert } from 'lucide-react-native';
@@ -324,7 +324,7 @@ export default function EnrollmentWorkflowListScreen() {
       </ScrollView>
       <BottomNavBar />
 
-      <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
+      <KeyboardAwareModal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{t('enrollment_workflow_list.modal_title', 'Start Enrollment Workflow')}</Text>
@@ -364,7 +364,7 @@ export default function EnrollmentWorkflowListScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
   Animated,
   Platform,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { Check, ChevronLeft, ChevronRight, FileText, Search, SlidersHorizontal, User, Users, X } from 'lucide-react-native';
@@ -126,7 +126,7 @@ function FilterSheet({
     { key: 'missing', label: t('teacher_orphan_overview.filter_missing', 'Missing') },
   ];
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.flex1} activeOpacity={1} onPress={onClose} />
         <View style={styles.filterSheet}>
@@ -164,7 +164,7 @@ function FilterSheet({
           })}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

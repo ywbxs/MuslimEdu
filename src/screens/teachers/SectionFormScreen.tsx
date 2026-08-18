@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   FlatList,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -356,7 +356,7 @@ const SectionFormScreen = () => {
       </View>
 
       {/* Class modal (create only) */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'class_id'}
         transparent
         animationType="slide"
@@ -388,10 +388,10 @@ const SectionFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Adviser modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'class_teacher_id'}
         transparent
         animationType="slide"
@@ -429,10 +429,10 @@ const SectionFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Status modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'status'}
         transparent
         animationType="slide"
@@ -458,7 +458,7 @@ const SectionFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
       </ScrollView>
     </>
   );

@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import subjectLoadingService, {
   BasketEntry,
   EligibilityVerdict,
@@ -417,7 +417,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
         </TouchableOpacity>
       </View>
 
-      <Modal visible={!!overrideTarget} transparent animationType={'fade'}>
+      <KeyboardAwareModal visible={!!overrideTarget} transparent animationType={'fade'}>
         <View style={s.modalWrap}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>{t('subject_loading.override_modal_title', 'Authorise an exception')}</Text>
@@ -449,7 +449,7 @@ export default function SubjectLoadingBuilderScreen({navigation, route}: Props) 
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </SafeAreaView>
   );
 }

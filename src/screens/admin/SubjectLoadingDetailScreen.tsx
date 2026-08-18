@@ -10,7 +10,6 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import subjectLoadingService, {
   SubjectLoading,
 } from '../../services/subjectLoadingService';
@@ -274,7 +274,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
         ) : null}
       </View>
 
-      <Modal visible={!!reasonOpen} transparent animationType={'fade'}>
+      <KeyboardAwareModal visible={!!reasonOpen} transparent animationType={'fade'}>
         <View style={s.modalWrap}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>
@@ -302,7 +302,7 @@ export default function SubjectLoadingDetailScreen({navigation, route}: Props) {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </SafeAreaView>
   );
 }

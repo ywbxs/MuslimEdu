@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Modal,
 } from 'react-native';
+import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -607,7 +607,7 @@ export default function SchoolRegistrationScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <Modal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
+      <KeyboardAwareModal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
         <View style={sheet.backdrop}>
           <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
           <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -640,7 +640,7 @@ export default function SchoolRegistrationScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

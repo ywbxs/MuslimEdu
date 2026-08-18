@@ -6,11 +6,11 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
   ActivityIndicator,
   TextInput,
   ScrollView,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Check, ChevronLeft, ChevronRight, Search, User, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -80,7 +80,7 @@ function TeacherPicker({
 }) {
   const { t } = useLocale();
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
@@ -132,7 +132,7 @@ function TeacherPicker({
           )}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

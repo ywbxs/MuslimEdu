@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -278,7 +278,7 @@ const GradeLevelFormScreen = () => {
         </View>
 
         {/* Educational stage modal */}
-        <Modal
+        <KeyboardAwareModal
           visible={activeModal === 'education_stage'}
           transparent
           animationType="slide"
@@ -304,10 +304,10 @@ const GradeLevelFormScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </KeyboardAwareModal>
 
         {/* Status modal */}
-        <Modal
+        <KeyboardAwareModal
           visible={activeModal === 'status'}
           transparent
           animationType="slide"
@@ -333,7 +333,7 @@ const GradeLevelFormScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </KeyboardAwareModal>
       </ScrollView>
     </>
   );

@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   FlatList,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -549,7 +549,7 @@ const CreateClassScreen = () => {
       </View>
 
       {/* Dropdowns Modals */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'department_id'}
         transparent
         animationType="slide"
@@ -578,9 +578,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'campus_id'}
         transparent
         animationType="slide"
@@ -609,9 +609,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'curriculum_id'}
         transparent
         animationType="slide"
@@ -640,9 +640,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'school_year_id'}
         transparent
         animationType="slide"
@@ -671,9 +671,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'shift'}
         transparent
         animationType="slide"
@@ -701,9 +701,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'class_type'}
         transparent
         animationType="slide"
@@ -731,9 +731,9 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'status'}
         transparent
         animationType="slide"
@@ -761,7 +761,7 @@ const CreateClassScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
       </ScrollView>
     </>
   );

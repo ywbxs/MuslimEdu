@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   Switch,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -308,7 +308,7 @@ const CampusFormScreen = () => {
         </View>
 
         {/* Status modal */}
-        <Modal
+        <KeyboardAwareModal
           visible={activeModal === 'status'}
           transparent
           animationType="slide"
@@ -334,7 +334,7 @@ const CampusFormScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </KeyboardAwareModal>
       </ScrollView>
     </>
   );

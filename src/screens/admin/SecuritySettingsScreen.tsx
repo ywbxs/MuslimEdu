@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -285,7 +285,7 @@ export default function SecuritySettingsScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={disableVisible} animationType="slide" transparent onRequestClose={() => setDisableVisible(false)}>
+      <KeyboardAwareModal visible={disableVisible} animationType="slide" transparent onRequestClose={() => setDisableVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('security_settings.disable_two_factor', 'Disable two-factor authentication')}</Text>
@@ -315,7 +315,7 @@ export default function SecuritySettingsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

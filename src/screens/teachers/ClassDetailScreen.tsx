@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Alert,
   StyleSheet,
-  Modal,
   TextInput,
   RefreshControl,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
@@ -561,7 +561,7 @@ const ClassDetailScreen = () => {
       </ScrollView>
       <BottomNavBar />
 
-      <Modal visible={duplicateModalVisible} transparent animationType="fade" onRequestClose={() => setDuplicateModalVisible(false)}>
+      <KeyboardAwareModal visible={duplicateModalVisible} transparent animationType="fade" onRequestClose={() => setDuplicateModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('class_detail.duplicate_modal_title', 'Duplicate Class')}</Text>
@@ -604,7 +604,7 @@ const ClassDetailScreen = () => {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 };

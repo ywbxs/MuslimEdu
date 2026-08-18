@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Modal,
   FlatList,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -382,7 +382,7 @@ const DepartmentFormScreen = () => {
       </View>
 
       {/* Campus modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'campus_id'}
         transparent
         animationType="slide"
@@ -411,10 +411,10 @@ const DepartmentFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Faculty/College/Institute modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'faculty_id'}
         transparent
         animationType="slide"
@@ -443,10 +443,10 @@ const DepartmentFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* School Level modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'school_level'}
         transparent
         animationType="slide"
@@ -472,10 +472,10 @@ const DepartmentFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Head of Department modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'head_of_department_id'}
         transparent
         animationType="slide"
@@ -513,10 +513,10 @@ const DepartmentFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Status modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={activeModal === 'status'}
         transparent
         animationType="slide"
@@ -542,7 +542,7 @@ const DepartmentFormScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
       </ScrollView>
     </>
   );

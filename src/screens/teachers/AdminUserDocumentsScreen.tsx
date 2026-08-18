@@ -8,9 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Modal,
   Linking,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
@@ -190,7 +190,7 @@ export default function AdminUserDocumentsScreen() {
         </TouchableOpacity>
       ) : null}
 
-      <Modal visible={titleModalVisible} transparent animationType="fade" onRequestClose={() => setTitleModalVisible(false)}>
+      <KeyboardAwareModal visible={titleModalVisible} transparent animationType="fade" onRequestClose={() => setTitleModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('admin_user_documents.name_this_document', 'Name this document')}</Text>
@@ -227,7 +227,7 @@ export default function AdminUserDocumentsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

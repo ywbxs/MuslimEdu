@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Modal,
   FlatList,
   Alert,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -507,7 +507,7 @@ export default function EnrollmentWorkflowDetailScreen() {
         )}
       </ScrollView>
 
-      <Modal
+      <KeyboardAwareModal
         visible={advanceModalVisible}
         transparent
         animationType="slide"
@@ -556,9 +556,9 @@ export default function EnrollmentWorkflowDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={placeModalVisible}
         transparent
         animationType="slide"
@@ -607,9 +607,9 @@ export default function EnrollmentWorkflowDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
-      <Modal
+      <KeyboardAwareModal
         visible={paymentModalVisible}
         transparent
         animationType="slide"
@@ -713,7 +713,7 @@ export default function EnrollmentWorkflowDetailScreen() {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, CircleCheck, Paperclip } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -202,7 +203,7 @@ export default function TeacherAssessmentGradingScreen() {
         />
       )}
 
-      <Modal visible={!!active} transparent animationType="fade" onRequestClose={() => setActive(null)}>
+      <KeyboardAwareModal visible={!!active} transparent animationType="fade" onRequestClose={() => setActive(null)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: '100%' }}>
@@ -267,7 +268,7 @@ export default function TeacherAssessmentGradingScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </GlassBackground>
   );
 }

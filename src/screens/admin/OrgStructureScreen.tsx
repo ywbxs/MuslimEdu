@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -387,7 +387,7 @@ export default function OrgStructureScreen() {
       </View>
 
       {/* Faculty form modal */}
-      <Modal visible={facultyFormVisible} animationType="slide" transparent onRequestClose={() => setFacultyFormVisible(false)}>
+      <KeyboardAwareModal visible={facultyFormVisible} animationType="slide" transparent onRequestClose={() => setFacultyFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingFaculty ? t('common.edit', 'Edit') : t('org_structure.new_faculty', 'New Faculty / College / Institute')}</Text>
@@ -421,10 +421,10 @@ export default function OrgStructureScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Stream form modal */}
-      <Modal visible={streamFormVisible} animationType="slide" transparent onRequestClose={() => setStreamFormVisible(false)}>
+      <KeyboardAwareModal visible={streamFormVisible} animationType="slide" transparent onRequestClose={() => setStreamFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingStream ? t('common.edit', 'Edit') : t('org_structure.new_stream', 'New Stream / Specialization')}</Text>
@@ -492,7 +492,7 @@ export default function OrgStructureScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }

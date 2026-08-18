@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
@@ -505,7 +505,7 @@ export default function CurriculumVersionsScreen() {
       </View>
 
       {/* Version form modal */}
-      <Modal visible={versionFormVisible} animationType="slide" transparent onRequestClose={() => setVersionFormVisible(false)}>
+      <KeyboardAwareModal visible={versionFormVisible} animationType="slide" transparent onRequestClose={() => setVersionFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingVersion ? t('curriculum_versions.edit_version', 'Edit Version') : t('curriculum_versions.new_version', 'New Version')}</Text>
@@ -535,10 +535,10 @@ export default function CurriculumVersionsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       {/* Competency form modal */}
-      <Modal visible={competencyFormVisible} animationType="slide" transparent onRequestClose={() => setCompetencyFormVisible(false)}>
+      <KeyboardAwareModal visible={competencyFormVisible} animationType="slide" transparent onRequestClose={() => setCompetencyFormVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingCompetency ? t('curriculum_versions.edit_competency', 'Edit Competency') : t('curriculum_versions.new_competency', 'New Competency')}</Text>
@@ -581,7 +581,7 @@ export default function CurriculumVersionsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
 
       <BottomNavBar />
     </View>

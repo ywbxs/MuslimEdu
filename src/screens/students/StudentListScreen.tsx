@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Modal,
   Platform,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Calendar, Check, ChevronLeft, ChevronRight, Funnel, Layers, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -101,7 +101,7 @@ function FilterSheet({
   ];
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={styles.sheetBackdropTouch} activeOpacity={1} onPress={onClose} />
         <View style={styles.filterSheet}>
@@ -139,7 +139,7 @@ function FilterSheet({
           })}
         </View>
       </View>
-    </Modal>
+    </KeyboardAwareModal>
   );
 }
 

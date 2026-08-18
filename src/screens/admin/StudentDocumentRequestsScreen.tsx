@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -290,7 +290,7 @@ export default function StudentDocumentRequestsScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={rejectVisible} animationType="slide" transparent onRequestClose={() => setRejectVisible(false)}>
+      <KeyboardAwareModal visible={rejectVisible} animationType="slide" transparent onRequestClose={() => setRejectVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
@@ -324,7 +324,7 @@ export default function StudentDocumentRequestsScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardAwareModal>
     </View>
   );
 }
