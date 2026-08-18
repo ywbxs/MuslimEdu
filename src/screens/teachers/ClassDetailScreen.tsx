@@ -13,23 +13,88 @@ import {
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import axios from 'axios';
-import { ChevronLeft } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Layers,
+  GraduationCap,
+  Clock,
+  Sun,
+  Building2,
+  MapPin,
+  Users,
+  Copy,
+  Archive,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react-native';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
+import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
 
+interface ClassDetail {
+  id: number;
+  class_code: string;
+  name: string;
+  status: string;
+  description: string | null;
+  current_enrollment: number;
+  max_capacity: number;
+  available_slots: number | null;
+  enrollment_percentage: number | null;
+  grade_level: number;
+  class_type: string;
+  shift: string;
+  department: string | null;
+  curriculum: string | null;
+  section: string | null;
+  room_number: string | null;
+  building: string | null;
+  floor: string | null;
+  school_year: string | null;
+  semester_term: string | null;
+  start_date: string;
+  end_date: string;
+  created_by: string | null;
+  created_at: string | null;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+
+// Backend sends full ISO timestamps ("2026-08-17T18:00:00.000000Z") even
+// for date-only fields - just the calendar date, no time.
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
+function IconChevronRight({ color }: { color: string }) {
+  return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
+}
+function IconPencil({ color }: { color: string }) {
+  return <Pencil size={18} color={color} strokeWidth={2.2} />;
+}
 
 const ClassDetailScreen = () => {
-  const route = useRoute();
+  const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { classId } = route.params;
@@ -39,7 +104,7 @@ const ClassDetailScreen = () => {
   const { t } = useLocale();
   const isAdminRole = user?.role === 'admin' || user?.role === 'superadmin';
 
-  const [classData, setClassData] = useState(null);
+  const [classData, setClassData] = useState<ClassDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -47,114 +112,98 @@ const ClassDetailScreen = () => {
   const [newClassCode, setNewClassCode] = useState('');
   const [newClassName, setNewClassName] = useState('');
 
+  const authedPost = useCallback(
+    async (path: string, body: Record<string, any>) => {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errors = data?.errors ? Object.values(data.errors).flat().join('\n') : null;
+        throw new Error(errors || data?.message || `Request failed (${response.status})`);
+      }
+      return data;
+    },
+    [token]
+  );
+
+  const fetchClassDetail = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!token) return;
+      try {
+        if (!opts.silent) setLoading(true);
+        const data = await authedPost('/admin_classes_detail', { class_id: classId });
+        setClassData(data.class ?? null);
+      } catch (err) {
+        Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_detail.load_error', 'Failed to load class details'));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [token, classId, authedPost, t]
+  );
+
   useFocusEffect(
     useCallback(() => {
       fetchClassDetail();
-    }, [classId, token])
+    }, [fetchClassDetail])
   );
-
-  const fetchClassDetail = async ({ silent = false } = {}) => {
-    if (!token) return;
-    try {
-      if (!silent) setLoading(true);
-
-      const response = await axios.post(
-        `${API_BASE_URL}/admin_classes_detail`,
-        { class_id: classId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      setClassData(response.data.class);
-    } catch (error) {
-      console.error('Error fetching class detail:', error);
-      Alert.alert(t('common.error', 'Error'), t('class_detail.load_error', 'Failed to load class details'));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchClassDetail({ silent: true });
   };
 
-  const handleArchiveClass = async () => {
+  const handleArchiveClass = () => {
     Alert.alert(
       t('class_detail.archive_confirm_title', 'Archive Class'),
       t('class_detail.archive_confirm_message', 'Are you sure you want to archive this class?'),
       [
-        { text: t('common.cancel', 'Cancel'), onPress: () => {}, style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
           text: t('class_detail.archive', 'Archive'),
+          style: 'destructive',
           onPress: async () => {
             try {
               setActionLoading(true);
-
-              await axios.post(
-                `${API_BASE_URL}/admin_classes_archive`,
-                { class_id: classId },
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                  },
-                }
-              );
-
+              await authedPost('/admin_classes_archive', { class_id: classId });
               Alert.alert(t('common.success', 'Success'), t('class_detail.archive_success', 'Class archived successfully'));
               navigation.goBack();
-            } catch (error) {
-              console.error('Error archiving class:', error);
-              Alert.alert(t('common.error', 'Error'), t('class_detail.archive_error', 'Failed to archive class'));
+            } catch (err) {
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_detail.archive_error', 'Failed to archive class'));
             } finally {
               setActionLoading(false);
             }
           },
-          style: 'destructive',
         },
       ]
     );
   };
 
-  const handleDeleteClass = async () => {
+  const handleDeleteClass = () => {
     Alert.alert(
       t('class_detail.delete_confirm_title', 'Delete Class'),
       t('class_detail.delete_confirm_message', 'Are you sure you want to delete this class?'),
       [
-        { text: t('common.cancel', 'Cancel'), onPress: () => {}, style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
           text: t('common.delete', 'Delete'),
+          style: 'destructive',
           onPress: async () => {
             try {
               setActionLoading(true);
-
-              await axios.post(
-                `${API_BASE_URL}/admin_classes_delete`,
-                { class_id: classId },
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                  },
-                }
-              );
-
+              await authedPost('/admin_classes_delete', { class_id: classId });
               Alert.alert(t('common.success', 'Success'), t('class_detail.delete_success', 'Class deleted successfully'));
               navigation.goBack();
-            } catch (error) {
-              console.error('Error deleting class:', error);
-              Alert.alert(t('common.error', 'Error'), t('class_detail.delete_error', 'Failed to delete class'));
+            } catch (err) {
+              Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_detail.delete_error', 'Failed to delete class'));
             } finally {
               setActionLoading(false);
             }
           },
-          style: 'destructive',
         },
       ]
     );
@@ -163,23 +212,11 @@ const ClassDetailScreen = () => {
   const handleRestoreClass = async () => {
     try {
       setActionLoading(true);
-
-      await axios.post(
-        `${API_BASE_URL}/admin_classes_restore`,
-        { class_id: classId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
+      await authedPost('/admin_classes_restore', { class_id: classId });
       Alert.alert(t('common.success', 'Success'), t('class_detail.restore_success', 'Class restored successfully'));
       fetchClassDetail();
-    } catch (error) {
-      console.error('Error restoring class:', error);
-      Alert.alert(t('common.error', 'Error'), t('class_detail.restore_error', 'Failed to restore class'));
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_detail.restore_error', 'Failed to restore class'));
     } finally {
       setActionLoading(false);
     }
@@ -196,60 +233,63 @@ const ClassDetailScreen = () => {
       Alert.alert(t('class_detail.missing_info_title', 'Missing info'), t('class_detail.missing_info_message', 'Please enter both a class code and a name for the copy.'));
       return;
     }
-
     try {
       setActionLoading(true);
-
-      const response = await axios.post(
-        `${API_BASE_URL}/admin_classes_duplicate`,
-        {
-          class_id: classId,
-          new_class_code: newClassCode.trim(),
-          new_name: newClassName.trim(),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
+      const data = await authedPost('/admin_classes_duplicate', {
+        class_id: classId,
+        new_class_code: newClassCode.trim(),
+        new_name: newClassName.trim(),
+      });
       setDuplicateModalVisible(false);
-      const newClass = response.data.class;
+      const newClass = data.class;
       Alert.alert(t('common.success', 'Success'), t('class_detail.duplicate_success', 'Class duplicated successfully'), [
         {
           text: t('class_detail.view_copy', 'View Copy'),
-          onPress: () => newClass?.id && navigation.push('ClassDetail', { classId: newClass.id }),
+          onPress: () => newClass?.id && (navigation as any).push('ClassDetail', { classId: newClass.id }),
         },
         { text: t('common.ok', 'OK'), style: 'cancel' },
       ]);
-    } catch (error) {
-      console.error('Error duplicating class:', error);
-      const message = error?.response?.data?.errors?.new_class_code?.[0] || t('class_detail.duplicate_error', 'Failed to duplicate class');
-      Alert.alert(t('common.error', 'Error'), message);
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), err instanceof Error ? err.message : t('class_detail.duplicate_error', 'Failed to duplicate class'));
     } finally {
       setActionLoading(false);
     }
   };
 
+  const header = (title: string) => (
+    <View style={[styles.navHeader, { paddingTop: insets.top + 12 }]}>
+      <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+        <IconChevronLeft color={theme.textPrimary} />
+      </TouchableOpacity>
+      <Text style={styles.navHeaderTitle}>{title}</Text>
+      {isAdminRole && classData ? (
+        <TouchableOpacity
+          onPress={() => (navigation as any).navigate('EditClass', { classId })}
+          hitSlop={10}
+          style={styles.headerSpacer}
+        >
+          <IconPencil color={theme.accent} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.flexContainer}>
-        <View style={[styles.navHeader, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.navHeaderTitle}>{t('class_detail.header_title', 'Class Details')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        {header(t('class_detail.header_title', 'Class Details'))}
         <View style={styles.container}>
-          <View style={styles.headerCard}>
-            <Skeleton width={70} height={14} style={{ marginBottom: 8 }} baseColor={theme.skeletonBase} />
-            <Skeleton width="55%" height={24} baseColor={theme.skeletonBase} />
+          <View style={styles.heroCard}>
+            <Skeleton width={56} height={56} borderRadius={28} baseColor={theme.skeletonBase} />
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Skeleton width="65%" height={20} style={{ marginBottom: 8 }} baseColor={theme.skeletonBase} />
+              <Skeleton width="40%" height={13} baseColor={theme.skeletonBase} />
+            </View>
           </View>
           {[0, 1, 2].map((key) => (
-            <View key={key} style={styles.section}>
+            <View key={key} style={styles.groupCard}>
               <Skeleton width="40%" height={16} style={{ marginBottom: 14 }} baseColor={theme.skeletonBase} />
               <Skeleton width="100%" height={14} style={{ marginBottom: 10 }} baseColor={theme.skeletonBase} />
               <Skeleton width="100%" height={14} style={{ marginBottom: 10 }} baseColor={theme.skeletonBase} />
@@ -265,13 +305,7 @@ const ClassDetailScreen = () => {
   if (!classData) {
     return (
       <View style={styles.flexContainer}>
-        <View style={[styles.navHeader, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.navHeaderTitle}>{t('class_detail.header_title', 'Class Details')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        {header(t('class_detail.header_title', 'Class Details'))}
         <View style={styles.container}>
           <EmptyState
             icon="🔍"
@@ -286,284 +320,189 @@ const ClassDetailScreen = () => {
   }
 
   const badge = statusColors(theme, classData.status);
-  const occupancyColor =
-    classData.enrollment_percentage > 90
-      ? theme.danger
-      : classData.enrollment_percentage > 75
-      ? theme.warning
-      : theme.success;
+  const pct = classData.enrollment_percentage ?? 0;
+  const occupancyColor = pct > 90 ? theme.danger : pct > 75 ? theme.warning : theme.success;
+
+  const basicRows = [
+    { label: t('class_detail.grade_level', 'Grade Level'), value: String(classData.grade_level), icon: <GraduationCap size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
+    { label: t('class_detail.class_type', 'Class Type'), value: classData.class_type, icon: <Layers size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
+    { label: t('class_detail.shift', 'Shift'), value: classData.shift, icon: <Sun size={16} color={theme.textSecondary} strokeWidth={2.1} /> },
+    classData.department ? { label: t('class_detail.department', 'Department'), value: classData.department } : null,
+    classData.curriculum ? { label: t('class_detail.curriculum', 'Curriculum'), value: classData.curriculum } : null,
+    classData.section ? { label: t('class_detail.section', 'Section'), value: classData.section } : null,
+  ].filter(Boolean) as { label: string; value: string; icon?: React.ReactNode }[];
+
+  const locationRows = [
+    classData.room_number ? { label: t('class_detail.room_number', 'Room Number'), value: classData.room_number } : null,
+    classData.building ? { label: t('class_detail.building', 'Building'), value: classData.building } : null,
+    classData.floor ? { label: t('class_detail.floor', 'Floor'), value: classData.floor } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  const academicRows = [
+    classData.school_year ? { label: t('class_detail.school_year', 'School Year'), value: classData.school_year } : null,
+    classData.semester_term ? { label: t('class_detail.semester_term', 'Semester/Term'), value: classData.semester_term } : null,
+    { label: t('class_detail.start_date', 'Start Date'), value: formatDate(classData.start_date) },
+    { label: t('class_detail.end_date', 'End Date'), value: formatDate(classData.end_date) },
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  const metadataRows = [
+    classData.created_by ? { label: t('class_detail.created_by', 'Created By'), value: classData.created_by } : null,
+    classData.created_at ? { label: t('class_detail.created_at', 'Created At'), value: formatDateTime(classData.created_at) } : null,
+    classData.updated_by ? { label: t('class_detail.updated_by', 'Updated By'), value: classData.updated_by } : null,
+    classData.updated_at ? { label: t('class_detail.updated_at', 'Updated At'), value: formatDateTime(classData.updated_at) } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
 
   return (
     <View style={styles.flexContainer}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.navHeader, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.navHeaderTitle}>Class Details</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={theme.accent}
-          colors={[theme.accent]}
-        />
-      }
-    >
-      {/* Header Card */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.classCode}>{classData.class_code}</Text>
-            <Text style={styles.className}>{classData.name}</Text>
+      {header(t('class_detail.header_title', 'Class Details'))}
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} colors={[theme.accent]} />}
+      >
+        {/* Hero card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroTop}>
+            <View style={styles.gradeBadge}>
+              <Text style={styles.gradeBadgeText}>{classData.grade_level}</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={styles.className} numberOfLines={1}>{classData.name}</Text>
+              <Text style={styles.classCode}>{classData.class_code}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: badge.backgroundColor }]}>
+              <Text style={[styles.statusText, { color: badge.color }]}>
+                {t(`class_detail.status_${classData.status}`, classData.status)}
+              </Text>
+            </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: badge.backgroundColor }]}>
-            <Text style={[styles.statusText, { color: badge.color }]}>
-              {t(`class_detail.status_${classData.status}`, classData.status)}
-            </Text>
+
+          <View style={styles.metaRow}>
+            <View style={styles.metaChip}>
+              <Layers size={13} color={theme.textSecondary} strokeWidth={2.2} />
+              <Text style={styles.metaChipText}>{classData.class_type}</Text>
+            </View>
+            <View style={styles.metaChip}>
+              <Sun size={13} color={theme.textSecondary} strokeWidth={2.2} />
+              <Text style={styles.metaChipText}>{classData.shift}</Text>
+            </View>
+            {classData.school_year ? (
+              <View style={styles.metaChip}>
+                <Clock size={13} color={theme.textSecondary} strokeWidth={2.2} />
+                <Text style={styles.metaChipText}>{classData.school_year}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {classData.description ? <Text style={styles.description}>{classData.description}</Text> : null}
+        </View>
+
+        {/* Enrollment card */}
+        <View style={styles.groupCard}>
+          <Text style={styles.sectionTitle}>{t('class_detail.enrollment_title', 'Enrollment')}</Text>
+          <View style={styles.enrollmentRow}>
+            <View style={styles.enrollmentStat}>
+              <Text style={styles.statValue}>{classData.current_enrollment}</Text>
+              <Text style={styles.statLabel}>{t('class_detail.current', 'Current')}</Text>
+            </View>
+            <View style={styles.enrollmentStat}>
+              <Text style={styles.statValue}>{classData.max_capacity}</Text>
+              <Text style={styles.statLabel}>{t('class_detail.capacity', 'Capacity')}</Text>
+            </View>
+            <View style={styles.enrollmentStat}>
+              <Text style={styles.statValue}>{classData.available_slots ?? 0}</Text>
+              <Text style={styles.statLabel}>{t('class_detail.available', 'Available')}</Text>
+            </View>
+            <View style={styles.enrollmentStat}>
+              <Text style={[styles.statValue, { color: occupancyColor }]}>{pct}%</Text>
+              <Text style={styles.statLabel}>{t('class_detail.occupancy', 'Occupancy')}</Text>
+            </View>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: occupancyColor }]} />
           </View>
         </View>
 
-        {classData.description && (
-          <Text style={styles.description}>{classData.description}</Text>
-        )}
-      </View>
+        {/* Basic information */}
+        <GroupCard title={t('class_detail.basic_info_title', 'Basic Information')} rows={basicRows} styles={styles} />
 
-      {/* Enrollment Card */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('class_detail.enrollment_title', 'Enrollment')}</Text>
-        <View style={styles.enrollmentCard}>
-          <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>{t('class_detail.current', 'Current')}</Text>
-            <Text style={styles.statValue}>{classData.current_enrollment}</Text>
-          </View>
-          <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>{t('class_detail.capacity', 'Capacity')}</Text>
-            <Text style={styles.statValue}>{classData.max_capacity}</Text>
-          </View>
-          <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>{t('class_detail.available', 'Available')}</Text>
-            <Text style={styles.statValue}>{classData.available_slots || 0}</Text>
-          </View>
-          <View style={styles.enrollmentStat}>
-            <Text style={styles.statLabel}>{t('class_detail.occupancy', 'Occupancy')}</Text>
-            <Text style={[styles.statValue, { color: occupancyColor }]}>
-              {classData.enrollment_percentage || 0}%
-            </Text>
-          </View>
-        </View>
+        {/* Location */}
+        {locationRows.length > 0 ? (
+          <GroupCard title={t('class_detail.location_title', 'Location')} rows={locationRows} styles={styles} icon={<MapPin size={16} color={theme.textSecondary} strokeWidth={2.1} />} />
+        ) : null}
 
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${classData.enrollment_percentage || 0}%`,
-                backgroundColor: occupancyColor,
-              },
-            ]}
-          />
-        </View>
-      </View>
+        {/* Academic information */}
+        <GroupCard title={t('class_detail.academic_info_title', 'Academic Information')} rows={academicRows} styles={styles} />
 
-      {/* Basic Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('class_detail.basic_info_title', 'Basic Information')}</Text>
+        {/* Admin actions */}
+        {isAdminRole ? (
+          <View style={styles.groupCard}>
+            <Text style={styles.sectionTitle}>{t('class_detail.actions_title', 'Actions')}</Text>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('class_detail.grade_level', 'Grade Level:')}</Text>
-          <Text style={styles.infoValue}>{classData.grade_level}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('class_detail.class_type', 'Class Type:')}</Text>
-          <Text style={styles.infoValue}>{classData.class_type}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('class_detail.shift', 'Shift:')}</Text>
-          <Text style={styles.infoValue}>{classData.shift}</Text>
-        </View>
-
-        {classData.department && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.department', 'Department:')}</Text>
-            <Text style={styles.infoValue}>{classData.department}</Text>
-          </View>
-        )}
-
-        {classData.curriculum && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.curriculum', 'Curriculum:')}</Text>
-            <Text style={styles.infoValue}>{classData.curriculum}</Text>
-          </View>
-        )}
-
-        {classData.section && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.section', 'Section:')}</Text>
-            <Text style={styles.infoValue}>{classData.section}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Location Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('class_detail.location_title', 'Location')}</Text>
-
-        {classData.room_number && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.room_number', 'Room Number:')}</Text>
-            <Text style={styles.infoValue}>{classData.room_number}</Text>
-          </View>
-        )}
-
-        {classData.building && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.building', 'Building:')}</Text>
-            <Text style={styles.infoValue}>{classData.building}</Text>
-          </View>
-        )}
-
-        {classData.floor && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.floor', 'Floor:')}</Text>
-            <Text style={styles.infoValue}>{classData.floor}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Academic Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('class_detail.academic_info_title', 'Academic Information')}</Text>
-
-        {classData.school_year && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.school_year', 'School Year:')}</Text>
-            <Text style={styles.infoValue}>{classData.school_year}</Text>
-          </View>
-        )}
-
-        {classData.semester_term && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.semester_term', 'Semester/Term:')}</Text>
-            <Text style={styles.infoValue}>{classData.semester_term}</Text>
-          </View>
-        )}
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('class_detail.start_date', 'Start Date:')}</Text>
-          <Text style={styles.infoValue}>{classData.start_date}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('class_detail.end_date', 'End Date:')}</Text>
-          <Text style={styles.infoValue}>{classData.end_date}</Text>
-        </View>
-      </View>
-
-      {/* Admin Actions */}
-      {isAdminRole && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('class_detail.actions_title', 'Actions')}</Text>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('EditClass', { classId })}
-            disabled={actionLoading}
-          >
-            <Text style={styles.actionButtonText}>{t('class_detail.edit_class', 'Edit Class')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryButton]}
-            onPress={() => navigation.navigate('SectionList', { classId })}
-            disabled={actionLoading}
-          >
-            <Text style={styles.actionButtonText}>{t('class_detail.manage_students', 'Manage Students')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryButton]}
-            onPress={openDuplicateModal}
-            disabled={actionLoading}
-          >
-            <Text style={styles.actionButtonText}>{t('class_detail.duplicate_class', 'Duplicate Class')}</Text>
-          </TouchableOpacity>
-
-          {classData.status === 'archived' ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.successButton]}
-              onPress={handleRestoreClass}
+            <ActionRow
+              styles={styles}
+              icon={<Pencil size={17} color={theme.textPrimary} strokeWidth={2.1} />}
+              label={t('class_detail.edit_class', 'Edit Class')}
+              onPress={() => (navigation as any).navigate('EditClass', { classId })}
               disabled={actionLoading}
-            >
-              <Text style={styles.actionButtonText}>{t('class_detail.restore_class', 'Restore Class')}</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.warningButton]}
-              onPress={handleArchiveClass}
+            />
+            <ActionRow
+              styles={styles}
+              icon={<Users size={17} color={theme.textPrimary} strokeWidth={2.1} />}
+              label={t('class_detail.manage_sections', 'Sections')}
+              onPress={() => (navigation as any).navigate('SectionList', { classId })}
               disabled={actionLoading}
-            >
-              <Text style={styles.actionButtonText}>{t('class_detail.archive_class', 'Archive Class')}</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.dangerButton]}
-            onPress={handleDeleteClass}
-            disabled={actionLoading}
-          >
-            <Text style={styles.actionButtonText}>{t('class_detail.delete_class', 'Delete Class')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Metadata */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('class_detail.metadata_title', 'Metadata')}</Text>
-
-        {classData.created_by && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.created_by', 'Created By:')}</Text>
-            <Text style={styles.infoValue}>{classData.created_by}</Text>
+            />
+            <ActionRow
+              styles={styles}
+              icon={<Copy size={17} color={theme.textPrimary} strokeWidth={2.1} />}
+              label={t('class_detail.duplicate_class', 'Duplicate Class')}
+              onPress={openDuplicateModal}
+              disabled={actionLoading}
+            />
+            {classData.status === 'archived' ? (
+              <ActionRow
+                styles={styles}
+                icon={<RotateCcw size={17} color={theme.success} strokeWidth={2.1} />}
+                label={t('class_detail.restore_class', 'Restore Class')}
+                onPress={handleRestoreClass}
+                disabled={actionLoading}
+                tone="success"
+              />
+            ) : (
+              <ActionRow
+                styles={styles}
+                icon={<Archive size={17} color={theme.warning} strokeWidth={2.1} />}
+                label={t('class_detail.archive_class', 'Archive Class')}
+                onPress={handleArchiveClass}
+                disabled={actionLoading}
+                tone="warning"
+              />
+            )}
+            <ActionRow
+              styles={styles}
+              icon={<Trash2 size={17} color={theme.danger} strokeWidth={2.1} />}
+              label={t('class_detail.delete_class', 'Delete Class')}
+              onPress={handleDeleteClass}
+              disabled={actionLoading}
+              tone="danger"
+              last
+            />
           </View>
-        )}
+        ) : null}
 
-        {classData.created_at && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.created_at', 'Created At:')}</Text>
-            <Text style={styles.infoValue}>{classData.created_at}</Text>
-          </View>
-        )}
+        {/* Metadata */}
+        {metadataRows.length > 0 ? <GroupCard title={t('class_detail.metadata_title', 'Metadata')} rows={metadataRows} styles={styles} /> : null}
 
-        {classData.updated_by && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.updated_by', 'Updated By:')}</Text>
-            <Text style={styles.infoValue}>{classData.updated_by}</Text>
-          </View>
-        )}
-
-        {classData.updated_at && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('class_detail.updated_at', 'Updated At:')}</Text>
-            <Text style={styles.infoValue}>{classData.updated_at}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.bottomSpacer} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
       <BottomNavBar />
 
-      <KeyboardAwareModal visible={duplicateModalVisible} transparent animationType="fade" onRequestClose={() => setDuplicateModalVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+      <KeyboardAwareModal visible={duplicateModalVisible} transparent animationType="slide" onRequestClose={() => setDuplicateModalVisible(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setDuplicateModalVisible(false)}>
+          <TouchableOpacity style={styles.modalCard} activeOpacity={1} onPress={() => {}}>
+            <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{t('class_detail.duplicate_modal_title', 'Duplicate Class')}</Text>
             <Text style={styles.modalLabel}>{t('class_detail.new_class_code_label', 'New Class Code')}</Text>
             <TextInput
@@ -583,42 +522,84 @@ const ClassDetailScreen = () => {
               placeholderTextColor={theme.textMuted}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => setDuplicateModalVisible(false)}
-                disabled={actionLoading}
-              >
+              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => setDuplicateModalVisible(false)} disabled={actionLoading}>
                 <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalConfirmButton]}
-                onPress={handleDuplicateClass}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator color={theme.onAccent} size="small" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>{t('class_detail.duplicate', 'Duplicate')}</Text>
-                )}
+              <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={handleDuplicateClass} disabled={actionLoading}>
+                {actionLoading ? <ActivityIndicator color={theme.onAccent} size="small" /> : <Text style={styles.modalConfirmText}>{t('class_detail.duplicate', 'Duplicate')}</Text>}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </KeyboardAwareModal>
     </View>
   );
 };
 
+function GroupCard({
+  title,
+  rows,
+  styles,
+}: {
+  title: string;
+  rows: { label: string; value: string; icon?: React.ReactNode }[];
+  styles: ReturnType<typeof makeStyles>;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.groupCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {rows.map((row, i) => (
+        <View key={row.label} style={[styles.infoRow, i === rows.length - 1 && styles.infoRowLast]}>
+          <Text style={styles.infoLabel}>{row.label}</Text>
+          <Text style={styles.infoValue} numberOfLines={1}>{row.value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ActionRow({
+  styles,
+  icon,
+  label,
+  onPress,
+  disabled,
+  tone,
+  last,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  tone?: 'success' | 'warning' | 'danger';
+  last?: boolean;
+}) {
+  const textStyle = [
+    styles.actionRowLabel,
+    tone === 'success' && styles.actionRowLabelSuccess,
+    tone === 'warning' && styles.actionRowLabelWarning,
+    tone === 'danger' && styles.actionRowLabelDanger,
+  ];
+  return (
+    <TouchableOpacity
+      style={[styles.actionRow, last && styles.actionRowLast]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <View style={styles.actionRowIcon}>{icon}</View>
+      <Text style={textStyle}>{label}</Text>
+      <IconChevronRight color="#9aa3ab" />
+    </TouchableOpacity>
+  );
+}
+
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
-    flexContainer: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
+    container: { flex: 1, backgroundColor: theme.background },
+    flexContainer: { flex: 1, backgroundColor: theme.background },
     navHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -628,206 +609,139 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    navHeaderTitle: {
-      flex: 1,
-      marginLeft: 8,
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.textPrimary,
-    },
-    backButton: {
-      width: 32,
-    },
-    headerSpacer: {
-      width: 32,
-    },
-    headerCard: {
+    navHeaderTitle: { flex: 1, marginLeft: 8, fontSize: 17, fontWeight: '700', color: theme.textPrimary },
+    backButton: { width: 32 },
+    headerSpacer: { width: 32, alignItems: 'flex-end' },
+
+    heroCard: {
       backgroundColor: theme.surface,
+      borderRadius: RADIUS.xl ?? 20,
+      margin: 16,
+      marginBottom: 0,
       padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...theme.elevation2,
     },
-    headerTop: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 12,
-    },
-    classCode: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.accentSoftText,
-      marginBottom: 4,
-    },
-    className: {
-      fontSize: 22,
-      fontWeight: '700',
-      color: theme.textPrimary,
-    },
-    statusBadge: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-    },
-    statusText: {
-      fontSize: 12,
-      fontWeight: '600',
-      textTransform: 'capitalize',
-    },
-    description: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      lineHeight: 20,
-    },
-    section: {
-      backgroundColor: theme.surface,
-      marginTop: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.textPrimary,
-      marginBottom: 12,
-    },
-    enrollmentCard: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginBottom: 12,
-    },
-    enrollmentStat: {
+    heroTop: { flexDirection: 'row', alignItems: 'center' },
+    gradeBadge: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.accentSoft,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    statLabel: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginBottom: 4,
+    gradeBadgeText: { fontSize: 20, fontWeight: '800', color: theme.accentSoftText },
+    className: { fontSize: 19, fontWeight: '800', color: theme.textPrimary },
+    classCode: { fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, marginTop: 2 },
+    statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.pill },
+    statusText: { fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
+    description: { fontSize: 13.5, color: theme.textSecondary, lineHeight: 19, marginTop: 14 },
+
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+    metaChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: theme.surfaceVariant,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: RADIUS.pill,
     },
-    statValue: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.textPrimary,
+    metaChipText: { fontSize: 11.5, fontWeight: '600', color: theme.textSecondary, textTransform: 'capitalize' },
+
+    groupCard: {
+      backgroundColor: theme.surface,
+      borderRadius: RADIUS.xl ?? 20,
+      marginHorizontal: 16,
+      marginTop: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...theme.elevation1,
     },
-    progressBar: {
-      height: 8,
-      backgroundColor: theme.border,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      borderRadius: 4,
-    },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: theme.textPrimary, marginBottom: 8 },
+
+    enrollmentRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 14, marginTop: 6 },
+    enrollmentStat: { alignItems: 'center' },
+    statValue: { fontSize: 19, fontWeight: '800', color: theme.textPrimary },
+    statLabel: { fontSize: 11.5, color: theme.textSecondary, marginTop: 3 },
+    progressBar: { height: 7, backgroundColor: theme.border, borderRadius: 4, overflow: 'hidden' },
+    progressFill: { height: '100%', borderRadius: 4 },
+
     infoRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 10,
+      paddingVertical: 11,
       borderBottomWidth: 1,
       borderBottomColor: theme.surfaceVariant,
     },
-    infoLabel: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    infoValue: {
-      fontSize: 14,
-      color: theme.textPrimary,
-      fontWeight: '600',
-    },
-    actionButton: {
-      backgroundColor: theme.accent,
-      paddingVertical: 12,
-      borderRadius: 8,
+    infoRowLast: { borderBottomWidth: 0, paddingBottom: 2 },
+    infoLabel: { fontSize: 13.5, color: theme.textSecondary, fontWeight: '500' },
+    infoValue: { fontSize: 13.5, color: theme.textPrimary, fontWeight: '600', flex: 1, marginLeft: 16, textAlign: 'right', textTransform: 'capitalize' },
+
+    actionRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8,
+      paddingVertical: 13,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.surfaceVariant,
+      gap: 12,
     },
-    secondaryButton: {
-      backgroundColor: theme.scheme === 'dark' ? '#4c46c9' : '#6366f1',
-    },
-    warningButton: {
-      backgroundColor: theme.warning,
-    },
-    successButton: {
-      backgroundColor: theme.success,
-    },
-    dangerButton: {
-      backgroundColor: theme.danger,
-    },
-    actionButtonText: {
-      color: theme.onAccent,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    bottomSpacer: {
-      height: 20,
-    },
-    modalBackdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+    actionRowLast: { borderBottomWidth: 0, paddingBottom: 2 },
+    actionRowIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.surfaceVariant,
+      alignItems: 'center',
       justifyContent: 'center',
-      alignItems: 'center',
-      padding: 24,
     },
+    actionRowLabel: { flex: 1, fontSize: 14.5, fontWeight: '600', color: theme.textPrimary },
+    actionRowLabelSuccess: { color: theme.success },
+    actionRowLabelWarning: { color: theme.warning },
+    actionRowLabelDanger: { color: theme.danger },
+
+    bottomSpacer: { height: 20 },
+
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
     modalCard: {
-      width: '100%',
       backgroundColor: theme.surface,
-      borderRadius: 14,
+      borderTopLeftRadius: RADIUS.xl,
+      borderTopRightRadius: RADIUS.xl,
       padding: 20,
+      paddingTop: 6,
     },
-    modalTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.textPrimary,
-      marginBottom: 16,
+    modalHandle: {
+      width: 40,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: theme.borderStrong,
+      alignSelf: 'center',
+      marginBottom: 14,
     },
-    modalLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      marginBottom: 6,
-    },
+    modalTitle: { fontSize: 17, fontWeight: '700', color: theme.textPrimary, marginBottom: 16 },
+    modalLabel: { fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 6 },
     modalInput: {
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 8,
+      borderRadius: RADIUS.sm,
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 14,
       color: theme.textPrimary,
       marginBottom: 14,
     },
-    modalActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginTop: 4,
-    },
-    modalButton: {
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-      borderRadius: 8,
-      marginLeft: 10,
-      minWidth: 90,
-      alignItems: 'center',
-    },
-    modalCancelButton: {
-      backgroundColor: theme.surfaceVariant,
-    },
-    modalCancelText: {
-      color: theme.textPrimary,
-      fontWeight: '600',
-    },
-    modalConfirmButton: {
-      backgroundColor: theme.accent,
-    },
-    modalConfirmText: {
-      color: theme.onAccent,
-      fontWeight: '600',
-    },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 },
+    modalButton: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: RADIUS.pill, marginLeft: 10, minWidth: 90, alignItems: 'center' },
+    modalCancelButton: { backgroundColor: theme.surfaceVariant },
+    modalCancelText: { color: theme.textPrimary, fontWeight: '600' },
+    modalConfirmButton: { backgroundColor: theme.accent },
+    modalConfirmText: { color: theme.onAccent, fontWeight: '600' },
   });
 
 export default ClassDetailScreen;
