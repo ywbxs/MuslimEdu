@@ -941,6 +941,10 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
   // `undefined` (old cached token from before this field existed) is
   // treated as complete - same fail-open default the backend uses for
   // legacy schools. See AcademicSetupWizardScreen + AuthContext.updateUser.
+  // MainTabs.tsx now checks this same flag (and the fuller Setup Checklist
+  // gate) before AdminDashboard ever mounts, so this should be unreachable
+  // in practice - kept as a defensive fallback in case something else ever
+  // renders AdminDashboard directly.
   if (user?.academic_setup_completed === false) {
     return <AcademicSetupWizardScreen />;
   }
