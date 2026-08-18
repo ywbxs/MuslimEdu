@@ -35,10 +35,21 @@ export default function SyncStatusCard() {
 
   const hasPending = actions.length > 0;
 
+  const tint = isOnline ? theme.success : theme.danger;
+  // A paler wash (not the same theme.successSoft/dangerSoft the status pill
+  // below already uses) so the card's own background and the pill inside it
+  // stay visually distinct instead of the pill disappearing into a
+  // same-color card.
+  const cardTint = tint + '14';
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => (navigation as any).navigate('SyncStatus')}>
-      <View style={[styles.iconWrap, { backgroundColor: isOnline ? theme.successSoft : theme.dangerSoft }]}>
-        <CircleCheck size={18} color={isOnline ? theme.success : theme.danger} strokeWidth={1.8} />
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: cardTint, borderColor: tint + '33' }]}
+      activeOpacity={0.85}
+      onPress={() => (navigation as any).navigate('SyncStatus')}
+    >
+      <View style={[styles.iconWrap, { backgroundColor: tint }]}>
+        <CircleCheck size={18} color="#FFFFFF" strokeWidth={1.8} />
       </View>
       <View style={styles.textWrap}>
         <View style={styles.titleRow}>
