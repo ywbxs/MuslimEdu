@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BookOpen, Calendar, Check, ChevronLeft, ChevronRight, CircleDollarSign, GraduationCap, Heart, Users } from 'lucide-react-native';
+import { BookOpen, Check, ChevronLeft, ChevronRight, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, Sun, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
@@ -28,11 +28,15 @@ const WHITE = '#FFFFFF';
 const FAINT = 'rgba(255,255,255,0.65)';
 const GLASS_FILL = 'rgba(255,255,255,0.14)';
 
+// Wayfinding tints for the Highlights grid - each tile its own color,
+// same reasoning as every other multi-tile grid in this redesign, rather
+// than four cards all sharing the one brand accent.
+const GOLD = '#D4A64A';
+const ORANGE = '#FF9F0A';
+const BLUE = '#0A84FF';
+
 function BackIcon() {
-  return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
-}
-function CalendarIcon({ color = EMERALD, size = 22 }: { color?: string; size?: number }) {
-  return <Calendar size={size} color={color} strokeWidth={2} />;
+  return <ChevronLeft size={20} color={INK} strokeWidth={2.4} />;
 }
 function CheckIcon({ color = EMERALD, size = 16 }: { color?: string; size?: number }) {
   return <Check size={size} color={color} strokeWidth={2.6} />;
@@ -71,9 +75,11 @@ function timingMinutes(t: PrayerTiming): number {
  * The "long" prayer-times widget - a pushed screen (this codebase's Modal
  * usage is reserved for small transient confirmations, not full detail
  * views; a tap-to-see-more from the feed always pushes, e.g.
- * PostComments/ImageViewer). Mirrors the reference screenshot: date card,
- * big "Currently {prayer}" countdown hero, full prayer list with
- * checkmarks for passed prayers, and a prev/today/next day switcher.
+ * PostComments/ImageViewer). iOS large-title header, a dark gradient
+ * "Currently {prayer}" countdown hero, a Highlights grid (Hijri date,
+ * sunrise, location, today's prayed count - all real data, no invented
+ * metrics), the full prayer list with a prev/today/next day switcher, and
+ * a Services grid for features that don't exist yet.
  */
 export default function PrayerTimesDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -147,16 +153,19 @@ export default function PrayerTimesDetailScreen() {
 
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
   const locationLabel = location?.kind === 'coords' ? 'Current Location' : schoolName ?? location?.address ?? null;
+  const dailyPrayers = result ? result.timings.filter((t) => t.name !== 'Sunrise') : [];
+  const passedCount = isToday ? dailyPrayers.filter((t) => timingMinutes(t) <= nowMinutes).length : 0;
+  const sunrise = result?.timings.find((t) => t.name === 'Sunrise') ?? null;
 
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
           <BackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Prayer Times</Text>
-        <View style={{ width: 22 }} />
+        <Text style={styles.largeTitle}>Prayer Times</Text>
+        {result ? <Text style={styles.largeSubtitle}>{result.gregorianLabel}</Text> : null}
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -170,17 +179,6 @@ export default function PrayerTimesDetailScreen() {
           </View>
         ) : result ? (
           <>
-            <View style={styles.dateCard}>
-              <View style={styles.dateIconBox}>
-                <CalendarIcon />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.dateGregorian}>{result.gregorianLabel}</Text>
-                {!!result.hijriLabel && <Text style={styles.dateHijri}>{result.hijriLabel}</Text>}
-                {!!locationLabel && <Text style={styles.dateAddress}>{locationLabel}</Text>}
-              </View>
-            </View>
-
             {isToday && next ? (
               <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
                 <View style={styles.heroTopRow}>
@@ -199,6 +197,38 @@ export default function PrayerTimesDetailScreen() {
                 </View>
               </LinearGradient>
             ) : null}
+
+            <Text style={styles.sectionLabel}>Highlights</Text>
+            <View style={styles.highlightsGrid}>
+              <View style={styles.highlightTile}>
+                <View style={[styles.highlightIconWrap, { backgroundColor: GOLD + '1F' }]}>
+                  <Moon size={17} color={GOLD} strokeWidth={1.8} />
+                </View>
+                <Text style={styles.highlightValue} numberOfLines={1}>{result.hijriLabel || '—'}</Text>
+                <Text style={styles.highlightLabel}>Hijri Date</Text>
+              </View>
+              <View style={styles.highlightTile}>
+                <View style={[styles.highlightIconWrap, { backgroundColor: ORANGE + '1F' }]}>
+                  <Sun size={17} color={ORANGE} strokeWidth={1.8} />
+                </View>
+                <Text style={styles.highlightValue}>{sunrise?.timeLabel ?? '—'}</Text>
+                <Text style={styles.highlightLabel}>Sunrise</Text>
+              </View>
+              <View style={styles.highlightTile}>
+                <View style={[styles.highlightIconWrap, { backgroundColor: BLUE + '1F' }]}>
+                  <MapPin size={17} color={BLUE} strokeWidth={1.8} />
+                </View>
+                <Text style={styles.highlightValue} numberOfLines={1}>{locationLabel ?? 'Unknown'}</Text>
+                <Text style={styles.highlightLabel}>Location</Text>
+              </View>
+              <View style={styles.highlightTile}>
+                <View style={[styles.highlightIconWrap, { backgroundColor: COLORS.emeraldSoft }]}>
+                  <CircleCheck size={17} color={EMERALD} strokeWidth={1.8} />
+                </View>
+                <Text style={styles.highlightValue}>{isToday ? `${passedCount}/${dailyPrayers.length}` : dailyPrayers.length}</Text>
+                <Text style={styles.highlightLabel}>{isToday ? 'Prayed Today' : 'Prayers Listed'}</Text>
+              </View>
+            </View>
 
             <Text style={styles.sectionLabel}>Prayer Times</Text>
             <View style={styles.daySwitcher}>
@@ -263,38 +293,47 @@ export default function PrayerTimesDetailScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
-  header: {
-    flexDirection: 'row',
+  // iOS large-title header - back button sits above the title instead of
+  // pinning it to a fixed-height centered row, so the title itself can be
+  // as big as the rest of the app's large titles (admin menu, wizard steps).
+  header: { paddingHorizontal: 20, paddingBottom: 16 },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EEF0F2',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+    justifyContent: 'center',
+    marginBottom: 10,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
-  body: { padding: 16, paddingBottom: 40 },
+  largeTitle: { fontSize: 30, fontWeight: '800', color: INK, letterSpacing: -0.4 },
+  largeSubtitle: { fontSize: 14, color: SUBTLE, fontWeight: '600', marginTop: 3 },
+  body: { padding: 16, paddingTop: 4, paddingBottom: 40 },
   centerFill: { paddingVertical: 80, alignItems: 'center' },
   errorText: { color: COLORS.danger, fontSize: 14, textAlign: 'center' },
 
-  dateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Apple Weather-style "Highlights" - a 2x2 grid of small tiles, each its
+  // own tinted icon, a big value, and a caption. Real data only (Hijri
+  // date, sunrise, location, today's count) - no filler metrics invented
+  // just to fill a fourth cell.
+  highlightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  highlightTile: {
+    width: '48%',
     backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: RADIUS.lg,
+    padding: 14,
     ...SHADOW.level1,
   },
-  dateIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: COLORS.emeraldSoft,
+  highlightIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 10,
   },
-  dateGregorian: { fontSize: 15.5, fontWeight: '700', color: INK },
-  dateHijri: { fontSize: 12.5, color: EMERALD, fontWeight: '600', marginTop: 2 },
-  dateAddress: { fontSize: 11.5, color: SUBTLE, marginTop: 2 },
+  highlightValue: { fontSize: 16.5, fontWeight: '800', color: INK },
+  highlightLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '600', marginTop: 2 },
 
   heroCard: {
     borderRadius: RADIUS.lg,
