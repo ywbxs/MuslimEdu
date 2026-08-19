@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Sunrise as SunriseIcon, Sunset, Users, Volume2 } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, ChevronRight, Circle, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Sunrise as SunriseIcon, Sunset, Users, Volume2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
@@ -12,7 +12,6 @@ import {
   formatCountdown,
   PrayerTimesResult,
   NextPrayerInfo,
-  PrayerTiming,
   PrayerLocation,
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
@@ -29,9 +28,8 @@ const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 // Wayfinding tints for the Highlights grid - each tile its own color,
 // same reasoning as every other multi-tile grid in this redesign, rather
-// than four cards all sharing the one brand accent.
+// than both tiles sharing the one brand accent.
 const GOLD = '#D4A64A';
-const ORANGE = '#FF9F0A';
 const BLUE = '#0A84FF';
 
 // --- Depth layer sizing (mirrors the admin menu's parallax hero) ---------
@@ -85,7 +83,6 @@ function ChevronRightIcon({ color = INK, size = 18 }: { color?: string; size?: n
 // Isha).
 const PRAYER_ICON: Record<string, (color: string) => React.ReactElement> = {
   Fajr: (c) => <SunriseIcon size={20} color={c} strokeWidth={1.8} />,
-  Sunrise: (c) => <SunriseIcon size={20} color={c} strokeWidth={1.8} />,
   Dhuhr: (c) => <Sun size={20} color={c} strokeWidth={1.8} />,
   Asr: (c) => <Circle size={20} color={c} strokeWidth={1.8} />,
   Maghrib: (c) => <Sunset size={20} color={c} strokeWidth={1.8} />,
@@ -111,10 +108,6 @@ function addDays(d: Date, n: number): Date {
   c.setDate(c.getDate() + n);
   return c;
 }
-function timingMinutes(t: PrayerTiming): number {
-  const [h, m] = t.time24.split(':').map((n) => parseInt(n, 10));
-  return h * 60 + m;
-}
 
 /**
  * The "long" prayer-times widget - a pushed screen with the same parallax
@@ -139,10 +132,12 @@ export default function PrayerTimesDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [next, setNext] = useState<NextPrayerInfo | null>(null);
-  // Bumped on retry-tap to force the fetch effect below to re-run (it's
-  // otherwise keyed only on token/selectedDate, neither of which changes
-  // when the user just wants to try again after a timeout/error).
+  // Bumped on retry-tap (and after a manual location change) to force the
+  // fetch effect below to re-run - it's otherwise keyed only on
+  // token/selectedDate, neither of which changes for either of those.
   const [reloadKey, setReloadKey] = useState(0);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [addressInput, setAddressInput] = useState('');
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   // Measure the real height instead of guessing it - same reasoning as
@@ -222,12 +217,39 @@ export default function PrayerTimesDetailScreen() {
     };
   }, [result, isToday]);
 
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
   const locationLabel = location?.kind === 'coords' ? 'Current Location' : schoolName ?? location?.address ?? null;
+  // Sunrise isn't a prayer - excluded from the list below (it always was
+  // from the countdown logic; now it's dropped from what's rendered too).
   const dailyPrayers = result ? result.timings.filter((t) => t.name !== 'Sunrise') : [];
-  const passedCount = isToday ? dailyPrayers.filter((t) => timingMinutes(t) <= nowMinutes).length : 0;
-  const sunrise = result?.timings.find((t) => t.name === 'Sunrise') ?? null;
   const sky = getSkyPalette(new Date().getHours());
+
+  const openLocationModal = () => {
+    setAddressInput(location?.kind === 'address' ? location.address : '');
+    setLocationModalVisible(true);
+  };
+  const saveAddressLocation = () => {
+    const trimmed = addressInput.trim();
+    if (!trimmed) return;
+    setLocation({ kind: 'address', address: trimmed });
+    setSchoolName(null);
+    setLocationModalVisible(false);
+    setReloadKey((k) => k + 1);
+  };
+  const useGpsLocation = () => {
+    setLocation(null);
+    setSchoolName(null);
+    setLocationModalVisible(false);
+    setReloadKey((k) => k + 1);
+  };
+  const showHijriDetail = () => {
+    if (!result) return;
+    Alert.alert(
+      'Hijri Date',
+      result.hijriLabel
+        ? `${result.hijriLabel}\n\nGregorian: ${result.gregorianLabel}`
+        : 'Hijri date is not available right now.',
+    );
+  };
 
   const bgTranslateY = scrollY.interpolate({
     inputRange: [0, heroHeight],
@@ -299,24 +321,11 @@ export default function PrayerTimesDetailScreen() {
                   <Text style={styles.heroRetryBtnText}>Try Again</Text>
                 </TouchableOpacity>
               </View>
-            ) : result ? (
-              <>
-                <View style={styles.heroTopRow}>
-                  <Text style={styles.heroDateText}>{result.gregorianLabel}</Text>
-                  {isToday && next ? (
-                    <View style={styles.heroNextMini}>
-                      <Text style={styles.heroNextMiniLabel}>Next</Text>
-                      <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                {isToday && next ? (
-                  <View style={styles.heroCenter}>
-                    <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
-                    <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
-                  </View>
-                ) : null}
-              </>
+            ) : result && isToday && next ? (
+              <View style={styles.heroCenter}>
+                <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
+                <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
+              </View>
             ) : null}
           </View>
         </View>
@@ -328,34 +337,20 @@ export default function PrayerTimesDetailScreen() {
             <>
               <Text style={styles.sectionLabel}>Highlights</Text>
               <View style={styles.highlightsGrid}>
-                <View style={styles.highlightTile}>
+                <TouchableOpacity style={styles.highlightTile} activeOpacity={0.8} onPress={showHijriDetail}>
                   <View style={[styles.highlightIconWrap, { backgroundColor: GOLD + '1F' }]}>
                     <Moon size={17} color={GOLD} strokeWidth={1.8} />
                   </View>
                   <Text style={styles.highlightValue} numberOfLines={1}>{result.hijriLabel || '—'}</Text>
                   <Text style={styles.highlightLabel}>Hijri Date</Text>
-                </View>
-                <View style={styles.highlightTile}>
-                  <View style={[styles.highlightIconWrap, { backgroundColor: ORANGE + '1F' }]}>
-                    <Sun size={17} color={ORANGE} strokeWidth={1.8} />
-                  </View>
-                  <Text style={styles.highlightValue}>{sunrise?.timeLabel ?? '—'}</Text>
-                  <Text style={styles.highlightLabel}>Sunrise</Text>
-                </View>
-                <View style={styles.highlightTile}>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.highlightTile} activeOpacity={0.8} onPress={openLocationModal}>
                   <View style={[styles.highlightIconWrap, { backgroundColor: BLUE + '1F' }]}>
                     <MapPin size={17} color={BLUE} strokeWidth={1.8} />
                   </View>
                   <Text style={styles.highlightValue} numberOfLines={1}>{locationLabel ?? 'Unknown'}</Text>
                   <Text style={styles.highlightLabel}>Location</Text>
-                </View>
-                <View style={styles.highlightTile}>
-                  <View style={[styles.highlightIconWrap, { backgroundColor: COLORS.emeraldSoft }]}>
-                    <CircleCheck size={17} color={EMERALD} strokeWidth={1.8} />
-                  </View>
-                  <Text style={styles.highlightValue}>{isToday ? `${passedCount}/${dailyPrayers.length}` : dailyPrayers.length}</Text>
-                  <Text style={styles.highlightLabel}>{isToday ? 'Prayed Today' : 'Prayers Listed'}</Text>
-                </View>
+                </TouchableOpacity>
               </View>
 
               <Text style={styles.sectionLabel}>Prayer Times</Text>
@@ -372,7 +367,7 @@ export default function PrayerTimesDetailScreen() {
               </View>
 
               <View style={styles.listCard}>
-                {result.timings.map((t, i) => {
+                {dailyPrayers.map((t, i) => {
                   const isCurrent = isToday && next?.current.name === t.name;
                   const rowColor = isCurrent ? EMERALD : SUBTLE;
                   const iconRenderer = PRAYER_ICON[t.name] ?? PRAYER_ICON.Dhuhr;
@@ -385,7 +380,7 @@ export default function PrayerTimesDetailScreen() {
                         <Text style={[styles.rowTime, isCurrent && styles.rowTimeCurrent]}>{t.time24}</Text>
                         <Volume2 size={16} color={rowColor} strokeWidth={1.8} style={styles.rowVolumeIcon} />
                       </View>
-                      {i < result.timings.length - 1 ? <View style={styles.rowDivider} /> : null}
+                      {i < dailyPrayers.length - 1 ? <View style={styles.rowDivider} /> : null}
                     </React.Fragment>
                   );
                 })}
@@ -412,6 +407,44 @@ export default function PrayerTimesDetailScreen() {
           ) : null}
         </View>
       </Animated.ScrollView>
+
+      <Modal
+        visible={locationModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Change Location</Text>
+            <Text style={styles.modalSubtitle}>Prayer times will sync to wherever you set here.</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Manila, Philippines"
+              placeholderTextColor={SUBTLE}
+              value={addressInput}
+              onChangeText={setAddressInput}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={saveAddressLocation}
+            />
+            <TouchableOpacity
+              style={[styles.modalPrimaryBtn, !addressInput.trim() && styles.modalPrimaryBtnDisabled]}
+              onPress={saveAddressLocation}
+              activeOpacity={0.85}
+              disabled={!addressInput.trim()}
+            >
+              <Text style={styles.modalPrimaryBtnText}>Save Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalSecondaryBtn} onPress={useGpsLocation} activeOpacity={0.85}>
+              <Text style={styles.modalSecondaryBtnText}>Use My Current Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setLocationModalVisible(false)} activeOpacity={0.7}>
+              <Text style={styles.modalCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -449,8 +482,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '800', color: WHITE, letterSpacing: -0.3 },
 
   heroContent: { paddingHorizontal: 20, paddingBottom: 28, minHeight: 56 },
-  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroDateText: { fontSize: 15, fontWeight: '700', color: WHITE },
   heroErrorWrap: { alignItems: 'center', paddingVertical: 4 },
   heroErrorText: { fontSize: 14, color: WHITE, textAlign: 'center' },
   heroRetryBtn: {
@@ -462,14 +493,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   heroRetryBtnText: { color: WHITE, fontSize: 13.5, fontWeight: '700' },
-  // Minimal by design - a small right-aligned label + one line, not a
-  // second hero block competing with the centered countdown below.
-  heroNextMini: { alignItems: 'flex-end' },
-  heroNextMiniLabel: { color: FAINT, fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroNextMiniValue: { color: WHITE, fontSize: 13, fontWeight: '700', marginTop: 2 },
-  // The countdown is the hero's single highlight - centered, large, and
-  // the only thing besides the date/next-mini row on this gradient.
-  heroCenter: { alignItems: 'center', justifyContent: 'center', marginTop: 26, paddingBottom: 4 },
+  // The countdown is the hero's only content now - centered, large, and
+  // nothing else competing with it on the gradient.
+  heroCenter: { alignItems: 'center', justifyContent: 'center', marginTop: 10, paddingBottom: 4 },
   heroCountdownLabel: { color: FAINT, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   heroCountdown: { color: WHITE, fontSize: 42, fontWeight: '800', letterSpacing: 1, marginTop: 6 },
 
@@ -495,10 +521,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
 
-  // Apple Weather-style "Highlights" - a 2x2 grid of small tiles, each its
-  // own tinted icon, a big value, and a caption. Real data only (Hijri
-  // date, sunrise, location, today's count) - no filler metrics invented
-  // just to fill a fourth cell.
+  // Apple Weather-style "Highlights" - tinted-icon tiles with a big value
+  // and a caption, both tappable: Hijri Date pops the full date, Location
+  // opens the change-location sheet.
   highlightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   highlightTile: {
     width: '48%',
@@ -599,4 +624,45 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   soonPillText: { fontSize: 9.5, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.4 },
+
+  // Change-location sheet, opened by tapping the Location highlight tile.
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(13,20,18,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: 22,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: INK },
+  modalSubtitle: { fontSize: 13, color: SUBTLE, marginTop: 4, marginBottom: 16, lineHeight: 18 },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: INK,
+    marginBottom: 14,
+  },
+  modalPrimaryBtn: {
+    backgroundColor: EMERALD,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  modalPrimaryBtnDisabled: { opacity: 0.45 },
+  modalPrimaryBtnText: { color: '#FFFFFF', fontSize: 14.5, fontWeight: '700' },
+  modalSecondaryBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  modalSecondaryBtnText: { color: INK, fontSize: 14.5, fontWeight: '700' },
+  modalCancelBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+  modalCancelBtnText: { color: SUBTLE, fontSize: 14, fontWeight: '600' },
 });
