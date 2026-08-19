@@ -18,9 +18,10 @@ import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../service
 import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
+import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
+import { GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -66,9 +67,11 @@ function EmptyIcon() {
 const TeacherRow = React.memo(function TeacherRow({
   item,
   onPress,
+  showReportStatus,
 }: {
   item: TeacherOverview;
   onPress: (item: TeacherOverview) => void;
+  showReportStatus: boolean;
 }) {
   const { t } = useLocale();
   return (
@@ -78,11 +81,14 @@ const TeacherRow = React.memo(function TeacherRow({
         photo={item.photo}
         size={48}
         ringColor={HAIRLINE}
-        dotColor={item.submitted ? EMERALD : DANGER}
+        dotColor={showReportStatus ? (item.submitted ? EMERALD : DANGER) : null}
       />
       <View style={[styles.flex1, { marginLeft: 14 }]}>
         <Text style={styles.rowName} numberOfLines={1}>{item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}</Text>
-        {item.submitted ? (
+        {/* Monthly report submission only exists for orphan schools (see
+            MonthlyReportsCard) - showing this pill to every school implied a
+            report obligation that doesn't apply to them. */}
+        {!showReportStatus ? null : item.submitted ? (
           <View style={[styles.statusPill, styles.statusPillOk]}>
             <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
             <Text style={styles.statusPillTextOk} numberOfLines={1}>
@@ -107,11 +113,13 @@ const TeacherRow = React.memo(function TeacherRow({
 function TeacherActionModal({
   visible,
   teacher,
+  showReport,
   onClose,
   onSelect,
 }: {
   visible: boolean;
   teacher: TeacherOverview | null;
+  showReport: boolean;
   onClose: () => void;
   onSelect: (action: 'profile' | 'documents' | 'report') => void;
 }) {
@@ -119,7 +127,10 @@ function TeacherActionModal({
   const options: { key: 'profile' | 'documents' | 'report'; label: string; desc: string; icon: (c: string) => React.ReactElement }[] = [
     { key: 'profile', label: t('admin_teacher_list.action_profile', 'Profile'), desc: t('admin_teacher_list.action_profile_desc', 'View contact info and role details'), icon: (c) => <IdCardIcon color={c} /> },
     { key: 'documents', label: t('admin_teacher_list.action_documents', 'Documents'), desc: t('admin_teacher_list.action_documents_desc', 'ID, certificates, and other files'), icon: (c) => <DocumentIcon color={c} /> },
-    { key: 'report', label: t('admin_teacher_list.action_report', 'Monthly Report'), desc: t('admin_teacher_list.action_report_desc', 'View this teacher\u2019s report history'), icon: (c) => <ReportIcon color={c} /> },
+    // Monthly Report is an orphan-school-only feature (see MonthlyReportsCard).
+    ...(showReport
+      ? [{ key: 'report' as const, label: t('admin_teacher_list.action_report', 'Monthly Report'), desc: t('admin_teacher_list.action_report_desc', 'View this teacher\u2019s report history'), icon: (c: string) => <ReportIcon color={c} /> }]
+      : []),
   ];
 
   return (
@@ -346,8 +357,12 @@ function AddTeacherSheet({
 export default function AdminTeacherListScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLocale();
+  // Monthly report tracking only exists for orphan schools - every other
+  // school type has no such report to submit, so the status pill/dot and
+  // the "Monthly Report" action are hidden for them entirely.
+  const showReportStatus = isOrphanSchoolUser(user);
 
   const [teachers, setTeachers] = useState<TeacherOverview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -467,7 +482,7 @@ export default function AdminTeacherListScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-          renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
+          renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} showReportStatus={showReportStatus} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyIcon />
@@ -483,6 +498,7 @@ export default function AdminTeacherListScreen() {
       <TeacherActionModal
         visible={!!selectedTeacher}
         teacher={selectedTeacher}
+        showReport={showReportStatus}
         onClose={() => setSelectedTeacher(null)}
         onSelect={handleSelect}
       />
@@ -529,7 +545,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: HAIRLINE,
@@ -539,7 +555,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 6,
-  ...SHADOW.level1,
   },
   searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },
 
@@ -547,13 +562,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: HAIRLINE,
     padding: 16,
     marginBottom: 12,
-  ...SHADOW.level2,
   },
   rowName: { fontSize: 15.5, fontWeight: '700', color: INK },
   statusPill: {
