@@ -29,19 +29,6 @@ const GOLD = '#D4A64A';
 const ORANGE = '#FF9F0A';
 const BLUE = '#0A84FF';
 
-// The hero card is a plain outlined card like every other one on this
-// screen (no photo, no solid fill) - the only thing that varies is a soft
-// tinted "glow" keyed to whichever prayer is current, echoing that
-// period's sky color (indigo predawn, gold sunrise, dark blue night...).
-const GLOW_COLORS: Record<string, string> = {
-  Fajr: '#5E5CE6',
-  Sunrise: '#FF9F0A',
-  Dhuhr: '#FFD60A',
-  Asr: '#FF9F0A',
-  Maghrib: '#FF453A',
-  Isha: '#0A1F44',
-};
-
 function BackIcon() {
   return <ChevronLeft size={20} color={INK} strokeWidth={2.4} />;
 }
@@ -174,7 +161,6 @@ export default function PrayerTimesDetailScreen() {
   const dailyPrayers = result ? result.timings.filter((t) => t.name !== 'Sunrise') : [];
   const passedCount = isToday ? dailyPrayers.filter((t) => timingMinutes(t) <= nowMinutes).length : 0;
   const sunrise = result?.timings.find((t) => t.name === 'Sunrise') ?? null;
-  const glowColor = (next && GLOW_COLORS[next.current.name]) || EMERALD;
 
   return (
     <View style={styles.flex}>
@@ -184,7 +170,6 @@ export default function PrayerTimesDetailScreen() {
           <BackIcon />
         </TouchableOpacity>
         <Text style={styles.largeTitle}>Prayer Times</Text>
-        {result ? <Text style={styles.largeSubtitle}>{result.gregorianLabel}</Text> : null}
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -199,21 +184,17 @@ export default function PrayerTimesDetailScreen() {
         ) : result ? (
           <>
             {isToday && next ? (
-              <View style={[styles.heroCardShadow, { shadowColor: glowColor }]}>
-                <View style={[styles.heroCard, { backgroundColor: glowColor + '14', borderColor: glowColor + '40' }]}>
-                  <View style={styles.heroTopRow}>
-                    <View style={[styles.heroBadge, { backgroundColor: glowColor + '22' }]}>
-                      <Text style={[styles.heroBadgeText, { color: glowColor }]}>Currently {next.current.name}</Text>
-                    </View>
-                    <View style={styles.heroNextMini}>
-                      <Text style={styles.heroNextMiniLabel}>Next</Text>
-                      <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
-                    </View>
+              <View style={styles.heroCard}>
+                <View style={styles.heroTopRow}>
+                  <Text style={styles.heroDateText}>{result.gregorianLabel}</Text>
+                  <View style={styles.heroNextMini}>
+                    <Text style={styles.heroNextMiniLabel}>Next</Text>
+                    <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
                   </View>
-                  <View style={styles.heroCenter}>
-                    <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
-                    <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
-                  </View>
+                </View>
+                <View style={styles.heroCenter}>
+                  <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
+                  <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
                 </View>
               </View>
             ) : null}
@@ -323,7 +304,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   largeTitle: { fontSize: 30, fontWeight: '800', color: INK, letterSpacing: -0.4 },
-  largeSubtitle: { fontSize: 14, color: SUBTLE, fontWeight: '600', marginTop: 3 },
   body: { padding: 16, paddingTop: 4, paddingBottom: 40 },
   centerFill: { paddingVertical: 80, alignItems: 'center' },
   errorText: { color: COLORS.danger, fontSize: 14, textAlign: 'center' },
@@ -352,23 +332,19 @@ const styles = StyleSheet.create({
   highlightValue: { fontSize: 16.5, fontWeight: '800', color: INK },
   highlightLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '600', marginTop: 2 },
 
-  // Shadow lives on an outer wrapper so its color (the per-prayer glow) is
-  // never clipped by the inner card's own border radius.
-  heroCardShadow: {
+  // Plain outlined card like every other tile on this screen - no fill,
+  // just a border, matching highlightTile/listCard/serviceTile.
+  heroCard: {
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: 'transparent',
+    padding: 20,
+    paddingVertical: 24,
     marginBottom: 20,
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
   },
-  // Plain outlined card like every other tile on this screen - no white
-  // fill, just a border - with an inline backgroundColor/borderColor wash
-  // of that prayer's glow color layered on top (see GLOW_COLORS).
-  heroCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: 20, paddingVertical: 24 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroBadge: { flexDirection: 'row', alignItems: 'center', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  heroBadgeText: { fontSize: 13, fontWeight: '700' },
+  heroDateText: { fontSize: 15, fontWeight: '700', color: INK },
   // Minimal by design - a small right-aligned label + one line, not a
   // second hero block competing with the centered countdown below.
   heroNextMini: { alignItems: 'flex-end' },
