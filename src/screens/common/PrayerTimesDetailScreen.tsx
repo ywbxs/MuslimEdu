@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { Calendar, Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { BookOpen, Calendar, Check, ChevronLeft, ChevronRight, CircleDollarSign, GraduationCap, Heart, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
@@ -43,6 +43,14 @@ function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: nu
 function ChevronRightIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
   return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
 }
+
+const SERVICES: Array<{ key: string; label: string; icon: (color: string) => React.ReactElement }> = [
+  { key: 'quran', label: 'Quran', icon: (c) => <BookOpen size={22} color={c} strokeWidth={1.8} /> },
+  { key: 'dua', label: 'Dua', icon: (c) => <Heart size={22} color={c} strokeWidth={1.8} /> },
+  { key: 'zakat', label: 'Zakat', icon: (c) => <CircleDollarSign size={22} color={c} strokeWidth={1.8} /> },
+  { key: 'volunteer', label: 'Volunteer', icon: (c) => <Users size={22} color={c} strokeWidth={1.8} /> },
+  { key: 'courses', label: 'Courses', icon: (c) => <GraduationCap size={22} color={c} strokeWidth={1.8} /> },
+];
 
 function startOfDay(d: Date): Date {
   const c = new Date(d);
@@ -228,6 +236,24 @@ export default function PrayerTimesDetailScreen() {
                 );
               })}
             </View>
+
+            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Services</Text>
+            <View style={styles.servicesGrid}>
+              {SERVICES.map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  style={styles.serviceTile}
+                  activeOpacity={0.8}
+                  onPress={() => Alert.alert(s.label, "We're still building this - check back soon.")}
+                >
+                  <View style={styles.serviceIconWrap}>{s.icon(EMERALD)}</View>
+                  <Text style={styles.serviceLabel} numberOfLines={1}>{s.label}</Text>
+                  <View style={styles.soonPill}>
+                    <Text style={styles.soonPillText}>Soon</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </>
         ) : null}
       </ScrollView>
@@ -358,4 +384,38 @@ const styles = StyleSheet.create({
   nowTagText: { color: WHITE, fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   rowTime: { fontSize: 14, fontWeight: '700', color: SUBTLE },
   rowTimePassed: { color: BRAND.emeraldDeep },
+
+  // Not-yet-built features get their own honest "Soon" pill rather than
+  // being left off the page or pretending to work - same light-card
+  // language as the rest of the screen (no separate dark section).
+  servicesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  serviceTile: {
+    width: '31%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    ...SHADOW.level1,
+  },
+  serviceIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.emeraldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  serviceLabel: { fontSize: 12.5, fontWeight: '700', color: INK },
+  soonPill: {
+    marginTop: 6,
+    backgroundColor: '#EEF0F2',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  soonPillText: { fontSize: 9.5, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.4 },
 });
