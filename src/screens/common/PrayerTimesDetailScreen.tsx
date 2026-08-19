@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BookOpen, Check, ChevronLeft, ChevronRight, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, Sun, Users } from 'lucide-react-native';
+import { BookOpen, Check, ChevronLeft, ChevronRight, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
@@ -50,6 +50,7 @@ function ChevronRightIcon({ color = INK, size = 18 }: { color?: string; size?: n
 
 const SERVICES: Array<{ key: string; label: string; icon: (color: string) => React.ReactElement }> = [
   { key: 'quran', label: 'Quran', icon: (c) => <BookOpen size={22} color={c} strokeWidth={1.8} /> },
+  { key: 'hadith', label: 'Hadith', icon: (c) => <NotebookText size={22} color={c} strokeWidth={1.8} /> },
   { key: 'dua', label: 'Dua', icon: (c) => <Heart size={22} color={c} strokeWidth={1.8} /> },
   { key: 'zakat', label: 'Zakat', icon: (c) => <CircleDollarSign size={22} color={c} strokeWidth={1.8} /> },
   { key: 'volunteer', label: 'Volunteer', icon: (c) => <Users size={22} color={c} strokeWidth={1.8} /> },
