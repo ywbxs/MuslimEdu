@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 import { BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Sunrise as SunriseIcon, Sunset, Users, Volume2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
@@ -22,11 +21,13 @@ import GlassBackground from '../../components/glass/GlassBackground';
 const EMERALD = COLORS.emerald;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
-const GRADIENT_TOP = '#0F3D2E';
-const GRADIENT_BOTTOM = '#062318';
 const WHITE = '#FFFFFF';
-const FAINT = 'rgba(255,255,255,0.65)';
-const GLASS_FILL = 'rgba(255,255,255,0.14)';
+const DARK_CHIP = 'rgba(0,0,0,0.32)';
+// Solid Apple-yellow wash over the hero photo, at 60% so the desert-sunset
+// background still reads through while dark ink text stays legible on top.
+const HERO_OVERLAY = 'rgba(255,204,0,0.6)';
+const HERO_MUTED = 'rgba(28,28,30,0.6)';
+const PRAYER_HERO_BG = require('../../assets/images/prayer-hero-sunset.jpg');
 
 // Wayfinding tints for the Highlights grid - each tile its own color,
 // same reasoning as every other multi-tile grid in this redesign, rather
@@ -191,22 +192,27 @@ export default function PrayerTimesDetailScreen() {
         ) : result ? (
           <>
             {isToday && next ? (
-              <LinearGradient colors={[GRADIENT_TOP, GRADIENT_BOTTOM]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-                <View style={styles.heroTopRow}>
-                  <View style={styles.heroBadge}>
-                    <Text style={styles.heroBadgeText}>Currently {next.current.name}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
-                    <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
+              <View style={styles.heroCardShadow}>
+                <View style={styles.heroCard}>
+                  <Image source={PRAYER_HERO_BG} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                  <View style={styles.heroOverlay} />
+                  <View style={styles.heroContent}>
+                    <View style={styles.heroTopRow}>
+                      <View style={styles.heroBadge}>
+                        <Text style={styles.heroBadgeText}>Currently {next.current.name}</Text>
+                      </View>
+                      <View style={styles.heroNextMini}>
+                        <Text style={styles.heroNextMiniLabel}>Next</Text>
+                        <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.heroCenter}>
+                      <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
+                      <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.heroCenter}>
-                  <Text style={styles.heroNextLabel}>Next Prayer</Text>
-                  <Text style={styles.heroNextName}>{next.next.name}</Text>
-                  <Text style={styles.heroNextTime}>{next.next.timeLabel}</Text>
-                </View>
-              </LinearGradient>
+              </View>
             ) : null}
 
             <Text style={styles.sectionLabel}>Highlights</Text>
@@ -343,25 +349,34 @@ const styles = StyleSheet.create({
   highlightValue: { fontSize: 16.5, fontWeight: '800', color: INK },
   highlightLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '600', marginTop: 2 },
 
-  heroCard: {
+  // Shadow lives on an outer wrapper, not the clipped card itself - Android
+  // (and iOS) both cut elevation/shadow off at overflow: hidden, and the
+  // photo needs that clip to respect the card's rounded corners.
+  heroCardShadow: {
     borderRadius: RADIUS.lg,
-    padding: 20,
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 7,
   },
+  heroCard: { borderRadius: RADIUS.lg, overflow: 'hidden' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: HERO_OVERLAY },
+  heroContent: { padding: 20, paddingVertical: 24 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: GLASS_FILL, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  heroBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: DARK_CHIP, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   heroBadgeText: { color: WHITE, fontSize: 13, fontWeight: '700' },
-  heroCountdownLabel: { color: FAINT, fontSize: 10.5 },
-  heroCountdown: { color: WHITE, fontSize: 20, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
-  heroCenter: { alignItems: 'center', marginTop: 22, paddingBottom: 4 },
-  heroNextLabel: { color: FAINT, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroNextName: { color: WHITE, fontSize: 32, fontWeight: '800', marginTop: 6 },
-  heroNextTime: { color: FAINT, fontSize: 16, fontWeight: '600', marginTop: 2 },
+  // Minimal by design - a small right-aligned label + one line, not a
+  // second hero block competing with the centered countdown below.
+  heroNextMini: { alignItems: 'flex-end' },
+  heroNextMiniLabel: { color: HERO_MUTED, fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroNextMiniValue: { color: INK, fontSize: 13, fontWeight: '700', marginTop: 2 },
+  // The countdown is the hero's single highlight - centered, large, and
+  // the only thing besides the badge/next-mini row on this card.
+  heroCenter: { alignItems: 'center', justifyContent: 'center', marginTop: 30, paddingBottom: 6 },
+  heroCountdownLabel: { color: HERO_MUTED, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  heroCountdown: { color: INK, fontSize: 42, fontWeight: '800', letterSpacing: 1, marginTop: 6 },
 
   sectionLabel: {
     fontSize: 12,
