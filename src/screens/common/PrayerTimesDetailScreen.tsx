@@ -16,7 +16,7 @@ import {
   PrayerLocation,
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
 const EMERALD = COLORS.emerald;
@@ -283,7 +283,7 @@ export default function PrayerTimesDetailScreen() {
                   activeOpacity={0.8}
                   onPress={() => Alert.alert(s.label, "We're still building this - check back soon.")}
                 >
-                  <View style={styles.serviceIconWrap}>{s.icon(EMERALD)}</View>
+                  <View style={styles.serviceIconWrap}>{s.icon(INK)}</View>
                   <Text style={styles.serviceLabel} numberOfLines={1}>{s.label}</Text>
                   <View style={styles.soonPill}>
                     <Text style={styles.soonPillText}>Soon</Text>
@@ -326,10 +326,11 @@ const styles = StyleSheet.create({
   highlightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   highlightTile: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     padding: 14,
-    ...SHADOW.level1,
   },
   highlightIconWrap: {
     width: 32,
@@ -376,14 +377,13 @@ const styles = StyleSheet.create({
   daySwitcher: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingVertical: 8,
     paddingHorizontal: 8,
     marginBottom: 14,
-    ...SHADOW.level1,
   },
   dayArrow: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
   dayPill: { flex: 1, alignItems: 'center' },
@@ -393,10 +393,11 @@ const styles = StyleSheet.create({
   // shadowed card per row - six stacked shadows read as visual noise for
   // a list this uniform; elevation belongs to the card as a whole.
   listCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     overflow: 'hidden',
-    ...SHADOW.level1,
   },
   row: {
     flexDirection: 'row',
@@ -424,20 +425,19 @@ const styles = StyleSheet.create({
   servicesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   serviceTile: {
     width: '31%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingVertical: 16,
     paddingHorizontal: 8,
     alignItems: 'center',
-    ...SHADOW.level1,
   },
   serviceIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: COLORS.emeraldSoft,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
