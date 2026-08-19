@@ -29,9 +29,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const HERO_HEIGHT = 430;
 const PARALLAX_FACTOR = 0.5; // background travels at half the content's scroll speed
 
-const DARK_TOP = '#123F2E';
-const DARK_BOTTOM = '#04140D';
-const PALE_GREEN = '#8FD9AE';
+// Same hero gradient + icon tint as AdminDashboard's dark hero, so every
+// role's hero reads as one consistent design instead of each screen
+// picking its own shade of dark green.
+const DARK_TOP = '#1C1C1E';
+const DARK_BOTTOM = '#000000';
+const PALE_GREEN = '#7FD9A8';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
