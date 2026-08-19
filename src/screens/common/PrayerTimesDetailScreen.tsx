@@ -139,6 +139,10 @@ export default function PrayerTimesDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [next, setNext] = useState<NextPrayerInfo | null>(null);
+  // Bumped on retry-tap to force the fetch effect below to re-run (it's
+  // otherwise keyed only on token/selectedDate, neither of which changes
+  // when the user just wants to try again after a timeout/error).
+  const [reloadKey, setReloadKey] = useState(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   // Measure the real height instead of guessing it - same reasoning as
@@ -151,20 +155,36 @@ export default function PrayerTimesDetailScreen() {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
+    // A stuck native call (most commonly the Android location-permission
+    // dialog never getting answered) previously left this screen spinning
+    // forever with no error and no way out except backing all the way out
+    // of the screen. This hard timeout guarantees the loading state always
+    // resolves one way or another within LOAD_TIMEOUT_MS, and the retry
+    // button below gives a way to try again without leaving the screen.
+    let timedOut = false;
     setLoading(true);
     setError(null);
+
+    const LOAD_TIMEOUT_MS = 15000;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      if (!cancelled) {
+        setError("This is taking longer than expected. Check your connection and location permission, then try again.");
+        setLoading(false);
+      }
+    }, LOAD_TIMEOUT_MS);
 
     (async () => {
       try {
         let loc = location;
         if (!loc) {
           const coords = await getCurrentCoordinates();
-          if (cancelled) return;
+          if (cancelled || timedOut) return;
           if (coords) {
             loc = { kind: 'coords', latitude: coords.latitude, longitude: coords.longitude };
           } else {
             const branding = await fetchMySchoolBranding(token);
-            if (cancelled) return;
+            if (cancelled || timedOut) return;
             const addr = branding.address ?? branding.name ?? '';
             if (!addr) throw new Error('No location available - GPS denied and no school address on file.');
             loc = { kind: 'address', address: addr };
@@ -173,19 +193,21 @@ export default function PrayerTimesDetailScreen() {
           setLocation(loc);
         }
         const res = await fetchPrayerTimes(token, loc, selectedDate);
-        if (!cancelled) setResult(res);
+        if (!cancelled && !timedOut) setResult(res);
       } catch (err: any) {
-        if (!cancelled) setError(err?.message ?? 'Could not load prayer times.');
+        if (!cancelled && !timedOut) setError(err?.message ?? 'Could not load prayer times.');
       } finally {
-        if (!cancelled) setLoading(false);
+        clearTimeout(timeoutId);
+        if (!cancelled && !timedOut) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, selectedDate]);
+  }, [token, selectedDate, reloadKey]);
 
   useEffect(() => {
     if (!result || !isToday) {
@@ -271,7 +293,12 @@ export default function PrayerTimesDetailScreen() {
             {loading && !result ? (
               <ActivityIndicator color={WHITE} />
             ) : error && !result ? (
-              <Text style={styles.heroErrorText}>{error}</Text>
+              <View style={styles.heroErrorWrap}>
+                <Text style={styles.heroErrorText}>{error}</Text>
+                <TouchableOpacity style={styles.heroRetryBtn} onPress={() => setReloadKey((k) => k + 1)} activeOpacity={0.8}>
+                  <Text style={styles.heroRetryBtnText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
             ) : result ? (
               <>
                 <View style={styles.heroTopRow}>
@@ -424,7 +451,17 @@ const styles = StyleSheet.create({
   heroContent: { paddingHorizontal: 20, paddingBottom: 28, minHeight: 56 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroDateText: { fontSize: 15, fontWeight: '700', color: WHITE },
+  heroErrorWrap: { alignItems: 'center', paddingVertical: 4 },
   heroErrorText: { fontSize: 14, color: WHITE, textAlign: 'center' },
+  heroRetryBtn: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+  },
+  heroRetryBtnText: { color: WHITE, fontSize: 13.5, fontWeight: '700' },
   // Minimal by design - a small right-aligned label + one line, not a
   // second hero block competing with the centered countdown below.
   heroNextMini: { alignItems: 'flex-end' },
