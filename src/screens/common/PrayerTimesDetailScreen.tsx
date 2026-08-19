@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BookOpen, Check, ChevronLeft, ChevronRight, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Users } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Sunrise as SunriseIcon, Sunset, Users, Volume2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
 import {
@@ -16,7 +16,7 @@ import {
   PrayerLocation,
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
-import { COLORS, RADIUS, SHADOW, BRAND } from '../../theme/glass';
+import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
 const EMERALD = COLORS.emerald;
@@ -38,15 +38,25 @@ const BLUE = '#0A84FF';
 function BackIcon() {
   return <ChevronLeft size={20} color={INK} strokeWidth={2.4} />;
 }
-function CheckIcon({ color = EMERALD, size = 16 }: { color?: string; size?: number }) {
-  return <Check size={size} color={color} strokeWidth={2.6} />;
-}
 function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
   return <ChevronLeft size={size} color={color} strokeWidth={2.2} />;
 }
 function ChevronRightIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
   return <ChevronRight size={size} color={color} strokeWidth={2.2} />;
 }
+
+// One icon per prayer name - distinct wayfinding shape rather than a
+// generic bullet, matching the reference list (dawn glyph for Fajr, full
+// sun for Dhuhr, plain circle for Asr, sunset for Maghrib, crescent for
+// Isha).
+const PRAYER_ICON: Record<string, (color: string) => React.ReactElement> = {
+  Fajr: (c) => <SunriseIcon size={20} color={c} strokeWidth={1.8} />,
+  Sunrise: (c) => <SunriseIcon size={20} color={c} strokeWidth={1.8} />,
+  Dhuhr: (c) => <Sun size={20} color={c} strokeWidth={1.8} />,
+  Asr: (c) => <Circle size={20} color={c} strokeWidth={1.8} />,
+  Maghrib: (c) => <Sunset size={20} color={c} strokeWidth={1.8} />,
+  Isha: (c) => <Moon size={20} color={c} strokeWidth={1.8} />,
+};
 
 const SERVICES: Array<{ key: string; label: string; icon: (color: string) => React.ReactElement }> = [
   { key: 'quran', label: 'Quran', icon: (c) => <BookOpen size={22} color={c} strokeWidth={1.8} /> },
@@ -246,21 +256,17 @@ export default function PrayerTimesDetailScreen() {
 
             <View style={styles.listCard}>
               {result.timings.map((t, i) => {
-                const passed = isToday && timingMinutes(t) <= nowMinutes;
                 const isCurrent = isToday && next?.current.name === t.name;
+                const rowColor = isCurrent ? BLUE : SUBTLE;
+                const iconRenderer = PRAYER_ICON[t.name] ?? PRAYER_ICON.Dhuhr;
                 return (
                   <React.Fragment key={t.name}>
-                    <View style={[styles.row, isCurrent && styles.rowCurrent]}>
-                      <View style={[styles.rowCheck, passed && styles.rowCheckDone]}>
-                        {passed ? <CheckIcon color={WHITE} size={14} /> : null}
-                      </View>
-                      <Text style={[styles.rowName, passed && styles.rowNamePassed]}>{t.name}</Text>
-                      {isCurrent ? (
-                        <View style={styles.nowTag}>
-                          <Text style={styles.nowTagText}>NOW</Text>
-                        </View>
-                      ) : null}
-                      <Text style={[styles.rowTime, passed && styles.rowTimePassed]}>{t.timeLabel}</Text>
+                    <View style={styles.row}>
+                      <View style={[styles.rowAccentBar, isCurrent && styles.rowAccentBarActive]} />
+                      <View style={styles.rowIconWrap}>{iconRenderer(rowColor)}</View>
+                      <Text style={[styles.rowName, isCurrent && styles.rowNameCurrent]}>{t.name}</Text>
+                      <Text style={[styles.rowTime, isCurrent && styles.rowTimeCurrent]}>{t.time24}</Text>
+                      <Volume2 size={16} color={rowColor} strokeWidth={1.8} style={styles.rowVolumeIcon} />
                     </View>
                     {i < result.timings.length - 1 ? <View style={styles.rowDivider} /> : null}
                   </React.Fragment>
@@ -398,32 +404,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  rowCurrent: { backgroundColor: COLORS.emeraldSoft },
-  rowDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: 52 },
-  rowCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  // Solid filled circle rather than an outline + green check - reads as a
-  // completed state at a glance and keeps the check icon's white-on-fill
-  // contrast well above the 3:1 UI-graphics minimum (outline + green-on-
-  // white check previously measured 2.88:1).
-  rowCheckDone: { backgroundColor: BRAND.emeraldDeep, borderColor: BRAND.emeraldDeep },
-  rowName: { flex: 1, fontSize: 15, fontWeight: '600', color: INK },
-  // BRAND.emeraldDeep, not COLORS.emerald - the lighter emerald measured
-  // 2.44:1 against the emeraldSoft tint (fails WCAG AA's 4.5:1); deep
-  // emerald measures 5.42:1 against white/near-white.
-  rowNamePassed: { color: BRAND.emeraldDeep, fontWeight: '700' },
-  nowTag: { backgroundColor: BRAND.emeraldDeep, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, marginRight: 10 },
-  nowTagText: { color: WHITE, fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
-  rowTime: { fontSize: 14, fontWeight: '700', color: SUBTLE },
-  rowTimePassed: { color: BRAND.emeraldDeep },
+  rowDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: 16 },
+  // A left accent bar rather than a tinted row background - only the
+  // currently-active prayer gets it, everything else (passed or upcoming)
+  // reads uniformly muted, matching the reference list's single-highlight
+  // treatment instead of the old checkmark/"passed" state per row.
+  rowAccentBar: { width: 3, height: 28, borderRadius: 2, backgroundColor: 'transparent', marginRight: 13 },
+  rowAccentBarActive: { backgroundColor: BLUE },
+  rowIconWrap: { width: 24, alignItems: 'center', marginRight: 12 },
+  rowName: { flex: 1, fontSize: 15.5, fontWeight: '600', color: SUBTLE },
+  rowNameCurrent: { color: BLUE, fontWeight: '800' },
+  rowTime: { fontSize: 14.5, fontWeight: '700', color: SUBTLE, fontVariant: ['tabular-nums'] },
+  rowTimeCurrent: { color: BLUE },
+  rowVolumeIcon: { marginLeft: 12 },
 
   // Not-yet-built features get their own honest "Soon" pill rather than
   // being left off the page or pretending to work - same light-card
