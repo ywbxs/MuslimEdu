@@ -257,7 +257,7 @@ export default function PrayerTimesDetailScreen() {
             <View style={styles.listCard}>
               {result.timings.map((t, i) => {
                 const isCurrent = isToday && next?.current.name === t.name;
-                const rowColor = isCurrent ? BLUE : SUBTLE;
+                const rowColor = isCurrent ? EMERALD : SUBTLE;
                 const iconRenderer = PRAYER_ICON[t.name] ?? PRAYER_ICON.Dhuhr;
                 return (
                   <React.Fragment key={t.name}>
@@ -410,12 +410,12 @@ const styles = StyleSheet.create({
   // reads uniformly muted, matching the reference list's single-highlight
   // treatment instead of the old checkmark/"passed" state per row.
   rowAccentBar: { width: 3, height: 28, borderRadius: 2, backgroundColor: 'transparent', marginRight: 13 },
-  rowAccentBarActive: { backgroundColor: BLUE },
+  rowAccentBarActive: { backgroundColor: EMERALD },
   rowIconWrap: { width: 24, alignItems: 'center', marginRight: 12 },
   rowName: { flex: 1, fontSize: 15.5, fontWeight: '600', color: SUBTLE },
-  rowNameCurrent: { color: BLUE, fontWeight: '800' },
+  rowNameCurrent: { color: EMERALD, fontWeight: '800' },
   rowTime: { fontSize: 14.5, fontWeight: '700', color: SUBTLE, fontVariant: ['tabular-nums'] },
-  rowTimeCurrent: { color: BLUE },
+  rowTimeCurrent: { color: EMERALD },
   rowVolumeIcon: { marginLeft: 12 },
 
   // Not-yet-built features get their own honest "Soon" pill rather than
