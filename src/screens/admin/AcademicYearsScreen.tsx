@@ -297,13 +297,12 @@ const makeStyles = (theme: AcademicGlassTheme) =>
 
     listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
     card: {
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: RADIUS.lg,
       padding: 14,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.border,
-      ...theme.elevation2,
     },
     cardHeader: {
       flexDirection: 'row',

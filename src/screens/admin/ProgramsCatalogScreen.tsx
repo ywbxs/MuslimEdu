@@ -6,7 +6,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
-import { RADIUS } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
@@ -241,13 +241,12 @@ const makeStyles = (theme: AcademicGlassTheme) =>
 
     listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
     card: {
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: RADIUS.lg,
       padding: 14,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: theme.border,
-      ...theme.elevation2,
+      borderColor: COLORS.border,
     },
     cardHeader: {
       flexDirection: 'row',

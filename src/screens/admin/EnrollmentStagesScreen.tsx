@@ -152,8 +152,8 @@ export default function EnrollmentStagesScreen() {
         onPress={() => (navigation as any).navigate('EnrollmentStageForm', { stageId: item.id })}
       >
         <View style={styles.tileTop}>
-          <View style={[styles.iconWrap, item.is_terminal && { backgroundColor: theme.accent }]}>
-            {item.is_terminal ? <IconFlag color={theme.onAccent} /> : <IconMilestone color={theme.accent} />}
+          <View style={styles.iconWrap}>
+            {item.is_terminal ? <IconFlag color={theme.textPrimary} /> : <IconMilestone color={theme.textPrimary} />}
           </View>
           <View style={styles.reorderCol}>
             <TouchableOpacity hitSlop={8} disabled={index === 0 || busy} onPress={() => move(index, -1)}>
@@ -315,19 +315,18 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     tile: {
       width: '47%',
       minHeight: 180,
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: RADIUS.lg,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 14,
-      ...theme.elevation2,
     },
     tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
     iconWrap: {
       width: 42,
       height: 42,
       borderRadius: 21,
-      backgroundColor: theme.accentSoft,
+      backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
     },

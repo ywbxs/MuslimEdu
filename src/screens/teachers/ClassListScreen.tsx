@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { API_BASE_URL } from '../../config/api';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
-import { RADIUS } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
@@ -251,7 +251,7 @@ const ClassListScreen = () => {
 
         <View style={styles.cardFooter}>
           <TouchableOpacity style={styles.sectionsButton} onPress={() => handleSectionsPress(item.id)}>
-            <IconLayers color={theme.accent} />
+            <IconLayers color={COLORS.ink} />
             <Text style={styles.sectionsButtonText}>{t('class_list.sections', 'Sections')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => handleClassPress(item.id)}>
@@ -436,13 +436,12 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     listContainer: { paddingHorizontal: 16, paddingVertical: 12 },
 
     classCard: {
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: RADIUS.xl ?? 20,
       padding: 16,
       marginBottom: 14,
       borderWidth: 1,
       borderColor: theme.border,
-      ...theme.elevation2,
     },
     cardTopRow: { flexDirection: 'row', alignItems: 'center' },
     gradeBadge: {

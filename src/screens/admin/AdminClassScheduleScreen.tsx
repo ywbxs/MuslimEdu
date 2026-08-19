@@ -722,7 +722,7 @@ export default function AdminClassScheduleScreen() {
           </Text>
         </View>
         <TouchableOpacity onPress={() => setEditingRow('new')} hitSlop={10} style={styles.addButton}>
-          <IconPlus color={theme.accent} />
+          <IconPlus color={theme.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -839,7 +839,7 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: 16,
       padding: 14,
       marginBottom: 10,

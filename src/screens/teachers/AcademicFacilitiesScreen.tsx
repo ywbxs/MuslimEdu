@@ -6,7 +6,7 @@ import { Building2, ChevronLeft, DoorOpen } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
-import { RADIUS } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { BentoGrid } from '../../components/glass/BentoGridCard';
 import { Skeleton } from '../../components/Skeleton';
@@ -185,8 +185,8 @@ export default function AcademicFacilitiesScreen() {
                   onPress={() => setSelected(b.id === selected ? undefined : b.id)}
                   onLongPress={() => (navigation as any).navigate('BuildingForm', { buildingId: b.id })}
                 >
-                  <View style={[styles.iconWrap, isSelected && { backgroundColor: theme.accent }]}>
-                    <IconBuilding color={isSelected ? theme.onAccent : theme.accent} />
+                  <View style={styles.iconWrap}>
+                    <IconBuilding color={COLORS.ink} />
                   </View>
                   <Text style={styles.codeBadge}>{b.code}</Text>
                   <Text style={styles.tileTitle} numberOfLines={1}>{b.name}</Text>
@@ -242,7 +242,7 @@ export default function AcademicFacilitiesScreen() {
                 onPress={() => (navigation as any).navigate('RoomForm', { buildingId: r.building_id, roomId: r.id })}
               >
                 <View style={styles.iconWrap}>
-                  <IconDoor color={theme.accent} />
+                  <IconDoor color={COLORS.ink} />
                 </View>
                 <Text style={styles.codeBadge}>{r.code}</Text>
                 <Text style={styles.tileTitle} numberOfLines={1}>{r.name}</Text>
@@ -312,19 +312,18 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     tile: {
       width: '47%',
       minHeight: 150,
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: RADIUS.lg,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: COLORS.border,
       padding: 14,
-      ...theme.elevation2,
     },
     tileSelected: { borderColor: theme.accent, borderWidth: 2 },
     iconWrap: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.accentSoft,
+      backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 8,

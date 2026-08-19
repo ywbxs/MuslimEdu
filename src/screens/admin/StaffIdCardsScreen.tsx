@@ -15,7 +15,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
+import { COLORS, RADIUS, SPACING, BRAND } from '../../theme/glass';
 
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: COLORS.emeraldSoft,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -350,12 +350,11 @@ const styles = StyleSheet.create({
   listCardWrap: {
     flex: 1,
     marginHorizontal: SPACING.md,
-    backgroundColor: SURFACE,
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
-    ...SHADOW.level1,
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: BORDER },

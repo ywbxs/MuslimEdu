@@ -16,7 +16,6 @@ import GlassBackground from '../../components/glass/GlassBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
-const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const SURFACE = COLORS.surface;
@@ -275,7 +274,7 @@ export default function StudentIdCardsScreen() {
                 >
                   {isSelectMode ? (
                     <View style={styles.checkBadge}>
-                      <IconCheckCircle color={BRAND.emeraldDeep} filled={isChecked} />
+                      <IconCheckCircle color={INK} filled={isChecked} />
                     </View>
                   ) : null}
                   <UserAvatar name={item.name} photo={item.photo} size={44} dotColor={null} />
@@ -422,7 +421,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -437,12 +436,11 @@ const styles = StyleSheet.create({
   listCardWrap: {
     flex: 1,
     marginHorizontal: SPACING.md,
-    backgroundColor: SURFACE,
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
-    ...SHADOW.level1,
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: BORDER },

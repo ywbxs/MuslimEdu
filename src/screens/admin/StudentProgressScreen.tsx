@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
+import { COLORS } from '../../theme/glass';
 import {
   MemorizationDraft,
   MemorizationRecord,
@@ -544,10 +545,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
 
-  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
+  emptyCard: { backgroundColor: 'transparent', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: COLORS.border },
   emptyText: { fontSize: 13.5, color: SUBTLE, lineHeight: 20, textAlign: 'center' },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 12 },
+  card: { backgroundColor: 'transparent', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowTitle: { fontSize: 15, fontWeight: '700', color: INK, flex: 1, paddingRight: 10 },
   rowSub: { fontSize: 12, color: SUBTLE, marginTop: 3 },

@@ -160,7 +160,7 @@ export default function StudentStaffCodeSetupScreen() {
       <GlassBackground variant="canvas" />
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={EMERALD} />
+          <ChevronLeftIcon color={INK} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>

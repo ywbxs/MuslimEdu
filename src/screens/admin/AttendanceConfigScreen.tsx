@@ -453,10 +453,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
 
-  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
+  emptyCard: { backgroundColor: 'transparent', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
   emptyText: { fontSize: 13.5, color: SUBTLE, lineHeight: 20, textAlign: 'center' },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 12 },
+  card: { backgroundColor: 'transparent', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 12 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   flexCol: { flex: 1, paddingRight: 14 },
   rowTitle: { fontSize: 15, fontWeight: '700', color: INK },
