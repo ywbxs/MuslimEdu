@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDollarSign, GraduationCap, Heart, MapPin, Moon, NotebookText, Sun, Sunrise as SunriseIcon, Sunset, Users, Volume2 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMySchoolBranding } from '../../services/academicSetupService';
@@ -16,11 +17,15 @@ import {
 } from '../../services/prayerTimesService';
 import { getCurrentCoordinates } from '../../utils/geolocation';
 import { COLORS, RADIUS } from '../../theme/glass';
-import GlassBackground from '../../components/glass/GlassBackground';
+import HeroGlow from '../../components/HeroGlow';
 
 const EMERALD = COLORS.emerald;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
+const WHITE = '#FFFFFF';
+const FAINT = 'rgba(255,255,255,0.68)';
+const HERO_GLASS_BG = 'rgba(255,255,255,0.16)';
+const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 // Wayfinding tints for the Highlights grid - each tile its own color,
 // same reasoning as every other multi-tile grid in this redesign, rather
@@ -29,8 +34,43 @@ const GOLD = '#D4A64A';
 const ORANGE = '#FF9F0A';
 const BLUE = '#0A84FF';
 
+// --- Depth layer sizing (mirrors the admin menu's parallax hero) ---------
+// The gradient hero is a separate Animated layer BEHIND the scroll content.
+// It travels at half speed (parallax) and fades to nothing as you scroll,
+// so the canvas body panel visibly slides up and over it - same trick
+// AdminDashboard uses for its dark hero.
+const HERO_HEIGHT = 230;
+const PARALLAX_FACTOR = 0.5;
+
+// The hero's gradient + glow sync to the real clock instead of one fixed
+// color - dark blue at night, gold in the morning, sky blue at midday,
+// amber in the afternoon, deep orange at sunset. Same "read the sky" idea
+// as the per-prayer row icons below, just applied to the whole hero.
+interface SkyPalette {
+  top: string;
+  bottom: string;
+  glowTop: string;
+  glowBottom: string;
+}
+const SKY_NIGHT: SkyPalette = { top: '#050B18', bottom: '#0A1F44', glowTop: '#3A63C8', glowBottom: '#16234A' };
+const SKY_DAWN: SkyPalette = { top: '#151640', bottom: '#3B2E63', glowTop: '#5E5CE6', glowBottom: '#8B5CF6' };
+const SKY_MORNING: SkyPalette = { top: '#FFD60A', bottom: '#FF9F0A', glowTop: '#FFE066', glowBottom: '#FFB84D' };
+const SKY_MIDDAY: SkyPalette = { top: '#3FA9F5', bottom: '#0A84FF', glowTop: '#7FC8FF', glowBottom: '#3F8FE0' };
+const SKY_AFTERNOON: SkyPalette = { top: '#FF9F0A', bottom: '#FF7A3D', glowTop: '#FFC069', glowBottom: '#FF7A3D' };
+const SKY_SUNSET: SkyPalette = { top: '#FF7A3D', bottom: '#8A2E12', glowTop: '#FF8A5B', glowBottom: '#6E2410' };
+
+function getSkyPalette(hour: number): SkyPalette {
+  if (hour < 4) return SKY_NIGHT;
+  if (hour < 6) return SKY_DAWN;
+  if (hour < 11) return SKY_MORNING;
+  if (hour < 16) return SKY_MIDDAY;
+  if (hour < 18) return SKY_AFTERNOON;
+  if (hour < 20) return SKY_SUNSET;
+  return SKY_NIGHT;
+}
+
 function BackIcon() {
-  return <ChevronLeft size={20} color={INK} strokeWidth={2.4} />;
+  return <ChevronLeft size={20} color={WHITE} strokeWidth={2.4} />;
 }
 function ChevronLeftIcon({ color = INK, size = 18 }: { color?: string; size?: number }) {
   return <ChevronLeft size={size} color={color} strokeWidth={2.2} />;
@@ -77,14 +117,13 @@ function timingMinutes(t: PrayerTiming): number {
 }
 
 /**
- * The "long" prayer-times widget - a pushed screen (this codebase's Modal
- * usage is reserved for small transient confirmations, not full detail
- * views; a tap-to-see-more from the feed always pushes, e.g.
- * PostComments/ImageViewer). iOS large-title header, a dark gradient
- * "Currently {prayer}" countdown hero, a Highlights grid (Hijri date,
- * sunrise, location, today's prayed count - all real data, no invented
- * metrics), the full prayer list with a prev/today/next day switcher, and
- * a Services grid for features that don't exist yet.
+ * The "long" prayer-times widget - a pushed screen with the same parallax
+ * hero the admin menu uses: a dark/glowing gradient layer (synced to the
+ * real time of day) sits behind the scroll content and fades out as you
+ * scroll, while a canvas-colored body panel rides up over it starting at
+ * the Highlights section. The back button + title sit in one compact row
+ * over the gradient (no card chrome), and the countdown floats directly on
+ * it the same way the admin menu's greeting floats on its own hero.
  */
 export default function PrayerTimesDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -101,6 +140,11 @@ export default function PrayerTimesDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [next, setNext] = useState<NextPrayerInfo | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  // Measure the real height instead of guessing it - same reasoning as
+  // AdminDashboard's heroHeight (dynamic hero content shouldn't leave a
+  // gap between the gradient layer and the body panel's rounded corner).
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
 
   const isToday = startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime();
 
@@ -161,152 +205,258 @@ export default function PrayerTimesDetailScreen() {
   const dailyPrayers = result ? result.timings.filter((t) => t.name !== 'Sunrise') : [];
   const passedCount = isToday ? dailyPrayers.filter((t) => timingMinutes(t) <= nowMinutes).length : 0;
   const sunrise = result?.timings.find((t) => t.name === 'Sunrise') ?? null;
+  const sky = getSkyPalette(new Date().getHours());
+
+  const bgTranslateY = scrollY.interpolate({
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
+    extrapolate: 'clamp',
+  });
+  const bgOpacity = scrollY.interpolate({
+    inputRange: [0, heroHeight * 0.6, heroHeight],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
-          <BackIcon />
-        </TouchableOpacity>
-        <Text style={styles.largeTitle}>Prayer Times</Text>
-      </View>
+      {/* Background depth layer - slower + fading, sits BEHIND the scroll view */}
+      <Animated.View
+        style={[
+          styles.bgLayer,
+          { height: heroHeight, opacity: bgOpacity, transform: [{ translateY: bgTranslateY }], backgroundColor: sky.bottom },
+        ]}
+        pointerEvents="none"
+        renderToHardwareTextureAndroid
+      >
+        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+          <Defs>
+            <LinearGradient id="prayerHeroGrad" x1="0" y1="0" x2="0.4" y2="1">
+              <Stop offset="0" stopColor={sky.top} />
+              <Stop offset="1" stopColor={sky.bottom} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#prayerHeroGrad)" />
+        </Svg>
+        <HeroGlow topRightColor={sky.glowTop} bottomLeftColor={sky.glowBottom} />
+      </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.body}>
-        {loading && !result ? (
-          <View style={styles.centerFill}>
-            <ActivityIndicator color={EMERALD} />
+      <Animated.ScrollView
+        style={styles.scrollFlex}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
+        scrollEventThrottle={16}
+      >
+        <View
+          onLayout={(e) => {
+            const measured = e.nativeEvent.layout.height;
+            if (Math.abs(measured - heroHeight) > 1) setHeroHeight(measured);
+          }}
+        >
+          {/* Back button + title in one row (foreground, scrolls at normal
+              speed over the gradient), not the old stacked large-title. */}
+          <View style={[styles.headerRow, { paddingTop: insets.top }]}>
+            <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
+              <BackIcon />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Prayer Times</Text>
           </View>
-        ) : error && !result ? (
-          <View style={styles.centerFill}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : result ? (
-          <>
-            {isToday && next ? (
-              <View style={styles.heroCard}>
+
+          {/* Countdown floats directly on the gradient - no card chrome,
+              same as the admin menu's greeting/avatar row on its hero. */}
+          <View style={styles.heroContent}>
+            {loading && !result ? (
+              <ActivityIndicator color={WHITE} />
+            ) : error && !result ? (
+              <Text style={styles.heroErrorText}>{error}</Text>
+            ) : result ? (
+              <>
                 <View style={styles.heroTopRow}>
                   <Text style={styles.heroDateText}>{result.gregorianLabel}</Text>
-                  <View style={styles.heroNextMini}>
-                    <Text style={styles.heroNextMiniLabel}>Next</Text>
-                    <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
-                  </View>
-                </View>
-                <View style={styles.heroCenter}>
-                  <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
-                  <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
-                </View>
-              </View>
-            ) : null}
-
-            <Text style={styles.sectionLabel}>Highlights</Text>
-            <View style={styles.highlightsGrid}>
-              <View style={styles.highlightTile}>
-                <View style={[styles.highlightIconWrap, { backgroundColor: GOLD + '1F' }]}>
-                  <Moon size={17} color={GOLD} strokeWidth={1.8} />
-                </View>
-                <Text style={styles.highlightValue} numberOfLines={1}>{result.hijriLabel || '—'}</Text>
-                <Text style={styles.highlightLabel}>Hijri Date</Text>
-              </View>
-              <View style={styles.highlightTile}>
-                <View style={[styles.highlightIconWrap, { backgroundColor: ORANGE + '1F' }]}>
-                  <Sun size={17} color={ORANGE} strokeWidth={1.8} />
-                </View>
-                <Text style={styles.highlightValue}>{sunrise?.timeLabel ?? '—'}</Text>
-                <Text style={styles.highlightLabel}>Sunrise</Text>
-              </View>
-              <View style={styles.highlightTile}>
-                <View style={[styles.highlightIconWrap, { backgroundColor: BLUE + '1F' }]}>
-                  <MapPin size={17} color={BLUE} strokeWidth={1.8} />
-                </View>
-                <Text style={styles.highlightValue} numberOfLines={1}>{locationLabel ?? 'Unknown'}</Text>
-                <Text style={styles.highlightLabel}>Location</Text>
-              </View>
-              <View style={styles.highlightTile}>
-                <View style={[styles.highlightIconWrap, { backgroundColor: COLORS.emeraldSoft }]}>
-                  <CircleCheck size={17} color={EMERALD} strokeWidth={1.8} />
-                </View>
-                <Text style={styles.highlightValue}>{isToday ? `${passedCount}/${dailyPrayers.length}` : dailyPrayers.length}</Text>
-                <Text style={styles.highlightLabel}>{isToday ? 'Prayed Today' : 'Prayers Listed'}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.sectionLabel}>Prayer Times</Text>
-            <View style={styles.daySwitcher}>
-              <TouchableOpacity style={styles.dayArrow} hitSlop={10} onPress={() => setSelectedDate((d) => addDays(d, -1))}>
-                <ChevronLeftIcon />
-              </TouchableOpacity>
-              <View style={styles.dayPill}>
-                <Text style={styles.dayPillText}>{isToday ? `Today, ${result.gregorianLabel.split(', ')[1] ?? result.gregorianLabel}` : result.gregorianLabel}</Text>
-              </View>
-              <TouchableOpacity style={styles.dayArrow} hitSlop={10} onPress={() => setSelectedDate((d) => addDays(d, 1))}>
-                <ChevronRightIcon />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.listCard}>
-              {result.timings.map((t, i) => {
-                const isCurrent = isToday && next?.current.name === t.name;
-                const rowColor = isCurrent ? EMERALD : SUBTLE;
-                const iconRenderer = PRAYER_ICON[t.name] ?? PRAYER_ICON.Dhuhr;
-                return (
-                  <React.Fragment key={t.name}>
-                    <View style={styles.row}>
-                      <View style={[styles.rowAccentBar, isCurrent && styles.rowAccentBarActive]} />
-                      <View style={styles.rowIconWrap}>{iconRenderer(rowColor)}</View>
-                      <Text style={[styles.rowName, isCurrent && styles.rowNameCurrent]}>{t.name}</Text>
-                      <Text style={[styles.rowTime, isCurrent && styles.rowTimeCurrent]}>{t.time24}</Text>
-                      <Volume2 size={16} color={rowColor} strokeWidth={1.8} style={styles.rowVolumeIcon} />
+                  {isToday && next ? (
+                    <View style={styles.heroNextMini}>
+                      <Text style={styles.heroNextMiniLabel}>Next</Text>
+                      <Text style={styles.heroNextMiniValue}>{next.next.name} · {next.next.timeLabel}</Text>
                     </View>
-                    {i < result.timings.length - 1 ? <View style={styles.rowDivider} /> : null}
-                  </React.Fragment>
-                );
-              })}
-            </View>
-
-            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Services</Text>
-            <View style={styles.servicesGrid}>
-              {SERVICES.map((s) => (
-                <TouchableOpacity
-                  key={s.key}
-                  style={styles.serviceTile}
-                  activeOpacity={0.8}
-                  onPress={() => Alert.alert(s.label, "We're still building this - check back soon.")}
-                >
-                  <View style={styles.serviceIconWrap}>{s.icon(INK)}</View>
-                  <Text style={styles.serviceLabel} numberOfLines={1}>{s.label}</Text>
-                  <View style={styles.soonPill}>
-                    <Text style={styles.soonPillText}>Soon</Text>
+                  ) : null}
+                </View>
+                {isToday && next ? (
+                  <View style={styles.heroCenter}>
+                    <Text style={styles.heroCountdownLabel}>Next Prayer In</Text>
+                    <Text style={styles.heroCountdown}>{formatCountdown(next.msRemaining)}</Text>
                   </View>
+                ) : null}
+              </>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Canvas body panel - rounded top edge rides up over the gradient
+            layer as you scroll, starting right at Highlights. */}
+        <View style={styles.body}>
+          {result ? (
+            <>
+              <Text style={styles.sectionLabel}>Highlights</Text>
+              <View style={styles.highlightsGrid}>
+                <View style={styles.highlightTile}>
+                  <View style={[styles.highlightIconWrap, { backgroundColor: GOLD + '1F' }]}>
+                    <Moon size={17} color={GOLD} strokeWidth={1.8} />
+                  </View>
+                  <Text style={styles.highlightValue} numberOfLines={1}>{result.hijriLabel || '—'}</Text>
+                  <Text style={styles.highlightLabel}>Hijri Date</Text>
+                </View>
+                <View style={styles.highlightTile}>
+                  <View style={[styles.highlightIconWrap, { backgroundColor: ORANGE + '1F' }]}>
+                    <Sun size={17} color={ORANGE} strokeWidth={1.8} />
+                  </View>
+                  <Text style={styles.highlightValue}>{sunrise?.timeLabel ?? '—'}</Text>
+                  <Text style={styles.highlightLabel}>Sunrise</Text>
+                </View>
+                <View style={styles.highlightTile}>
+                  <View style={[styles.highlightIconWrap, { backgroundColor: BLUE + '1F' }]}>
+                    <MapPin size={17} color={BLUE} strokeWidth={1.8} />
+                  </View>
+                  <Text style={styles.highlightValue} numberOfLines={1}>{locationLabel ?? 'Unknown'}</Text>
+                  <Text style={styles.highlightLabel}>Location</Text>
+                </View>
+                <View style={styles.highlightTile}>
+                  <View style={[styles.highlightIconWrap, { backgroundColor: COLORS.emeraldSoft }]}>
+                    <CircleCheck size={17} color={EMERALD} strokeWidth={1.8} />
+                  </View>
+                  <Text style={styles.highlightValue}>{isToday ? `${passedCount}/${dailyPrayers.length}` : dailyPrayers.length}</Text>
+                  <Text style={styles.highlightLabel}>{isToday ? 'Prayed Today' : 'Prayers Listed'}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.sectionLabel}>Prayer Times</Text>
+              <View style={styles.daySwitcher}>
+                <TouchableOpacity style={styles.dayArrow} hitSlop={10} onPress={() => setSelectedDate((d) => addDays(d, -1))}>
+                  <ChevronLeftIcon />
                 </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        ) : null}
-      </ScrollView>
+                <View style={styles.dayPill}>
+                  <Text style={styles.dayPillText}>{isToday ? `Today, ${result.gregorianLabel.split(', ')[1] ?? result.gregorianLabel}` : result.gregorianLabel}</Text>
+                </View>
+                <TouchableOpacity style={styles.dayArrow} hitSlop={10} onPress={() => setSelectedDate((d) => addDays(d, 1))}>
+                  <ChevronRightIcon />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.listCard}>
+                {result.timings.map((t, i) => {
+                  const isCurrent = isToday && next?.current.name === t.name;
+                  const rowColor = isCurrent ? EMERALD : SUBTLE;
+                  const iconRenderer = PRAYER_ICON[t.name] ?? PRAYER_ICON.Dhuhr;
+                  return (
+                    <React.Fragment key={t.name}>
+                      <View style={styles.row}>
+                        <View style={[styles.rowAccentBar, isCurrent && styles.rowAccentBarActive]} />
+                        <View style={styles.rowIconWrap}>{iconRenderer(rowColor)}</View>
+                        <Text style={[styles.rowName, isCurrent && styles.rowNameCurrent]}>{t.name}</Text>
+                        <Text style={[styles.rowTime, isCurrent && styles.rowTimeCurrent]}>{t.time24}</Text>
+                        <Volume2 size={16} color={rowColor} strokeWidth={1.8} style={styles.rowVolumeIcon} />
+                      </View>
+                      {i < result.timings.length - 1 ? <View style={styles.rowDivider} /> : null}
+                    </React.Fragment>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Services</Text>
+              <View style={styles.servicesGrid}>
+                {SERVICES.map((s) => (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={styles.serviceTile}
+                    activeOpacity={0.8}
+                    onPress={() => Alert.alert(s.label, "We're still building this - check back soon.")}
+                  >
+                    <View style={styles.serviceIconWrap}>{s.icon(INK)}</View>
+                    <Text style={styles.serviceLabel} numberOfLines={1}>{s.label}</Text>
+                    <View style={styles.soonPill}>
+                      <Text style={styles.soonPillText}>Soon</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          ) : null}
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
-  // iOS large-title header - back button sits above the title instead of
-  // pinning it to a fixed-height centered row, so the title itself can be
-  // as big as the rest of the app's large titles (admin menu, wizard steps).
-  header: { paddingHorizontal: 20, paddingBottom: 16 },
+
+  bgLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: 'hidden',
+    // Animated transforms on Android can promote a view to its own layer and
+    // paint above later siblings; explicit zIndex keeps this behind content.
+    zIndex: 0,
+    elevation: 0,
+  },
+  scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
+  scrollContent: { paddingBottom: 40 },
+
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, marginBottom: 18 },
   backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#EEF0F2',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: HERO_GLASS_BG,
+    borderWidth: 1,
+    borderColor: HERO_GLASS_BORDER,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
-  largeTitle: { fontSize: 30, fontWeight: '800', color: INK, letterSpacing: -0.4 },
-  body: { padding: 16, paddingTop: 4, paddingBottom: 40 },
-  centerFill: { paddingVertical: 80, alignItems: 'center' },
-  errorText: { color: COLORS.danger, fontSize: 14, textAlign: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: WHITE, letterSpacing: -0.3 },
+
+  heroContent: { paddingHorizontal: 20, paddingBottom: 28, minHeight: 56 },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  heroDateText: { fontSize: 15, fontWeight: '700', color: WHITE },
+  heroErrorText: { fontSize: 14, color: WHITE, textAlign: 'center' },
+  // Minimal by design - a small right-aligned label + one line, not a
+  // second hero block competing with the centered countdown below.
+  heroNextMini: { alignItems: 'flex-end' },
+  heroNextMiniLabel: { color: FAINT, fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroNextMiniValue: { color: WHITE, fontSize: 13, fontWeight: '700', marginTop: 2 },
+  // The countdown is the hero's single highlight - centered, large, and
+  // the only thing besides the date/next-mini row on this gradient.
+  heroCenter: { alignItems: 'center', justifyContent: 'center', marginTop: 26, paddingBottom: 4 },
+  heroCountdownLabel: { color: FAINT, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  heroCountdown: { color: WHITE, fontSize: 42, fontWeight: '800', letterSpacing: 1, marginTop: 6 },
+
+  // The panel that scrolls up over the gradient layer. Its rounded top +
+  // opaque canvas background is what visually "covers" the hero as you
+  // scroll - same idea as AdminDashboard's white body panel.
+  body: {
+    backgroundColor: COLORS.canvas,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 16,
+    paddingTop: 26,
+    marginTop: 4,
+    minHeight: 420,
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SUBTLE,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
 
   // Apple Weather-style "Highlights" - a 2x2 grid of small tiles, each its
   // own tinted icon, a big value, and a caption. Real data only (Hijri
@@ -332,38 +482,6 @@ const styles = StyleSheet.create({
   highlightValue: { fontSize: 16.5, fontWeight: '800', color: INK },
   highlightLabel: { fontSize: 11.5, color: SUBTLE, fontWeight: '600', marginTop: 2 },
 
-  // Plain outlined card like every other tile on this screen - no fill,
-  // just a border, matching highlightTile/listCard/serviceTile.
-  heroCard: {
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'transparent',
-    padding: 20,
-    paddingVertical: 24,
-    marginBottom: 20,
-  },
-  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroDateText: { fontSize: 15, fontWeight: '700', color: INK },
-  // Minimal by design - a small right-aligned label + one line, not a
-  // second hero block competing with the centered countdown below.
-  heroNextMini: { alignItems: 'flex-end' },
-  heroNextMiniLabel: { color: SUBTLE, fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroNextMiniValue: { color: INK, fontSize: 13, fontWeight: '700', marginTop: 2 },
-  // The countdown is the hero's single highlight - centered, large, and
-  // the only thing besides the badge/next-mini row on this card.
-  heroCenter: { alignItems: 'center', justifyContent: 'center', marginTop: 30, paddingBottom: 6 },
-  heroCountdownLabel: { color: SUBTLE, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  heroCountdown: { color: INK, fontSize: 42, fontWeight: '800', letterSpacing: 1, marginTop: 6 },
-
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: SUBTLE,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
   // Lighter than the old solid-dark-green bar - the hero card right above
   // already carries that weight; repeating it here read as two stacked
   // slabs of the same heavy material back to back.
