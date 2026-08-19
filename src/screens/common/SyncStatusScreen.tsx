@@ -20,6 +20,12 @@ import { QueuedAction, QueuedActionKind } from '../../services/offlineQueue';
  * side, rather than tracking a separate parallel log. Reachable from both
  * AdminDashboard and TeacherDashboard, since both roles' data flows feed
  * into the same underlying caches/queue.
+ *
+ * Each dataset/action kind gets its own tinted card - a wayfinding color per
+ * category (Students blue, School Branding gold, Fees emerald, etc.) rather
+ * than every "downloaded" row sharing one accent tint and every "pending"
+ * row sharing one danger tint. The tint is a fixed lookup, not derived from
+ * the accent, so it stays legible in both themes without recomputing.
  */
 
 const ACTION_LABELS: Record<QueuedActionKind, string> = {
@@ -33,17 +39,76 @@ const ACTION_LABELS: Record<QueuedActionKind, string> = {
   admin_document_reject: 'Document Rejected',
 };
 
+// A named palette (not "the accent at different opacities") so each card
+// reads as its own category at a glance - same reasoning as the admin
+// menu's per-row icon tints. Kept local to this screen; nothing here is the
+// app's brand accent (that stays theme.accent/theme.success elsewhere).
+const TINT = {
+  blue: '#0A84FF',
+  indigo: '#5E5CE6',
+  teal: '#2FA9B8',
+  orange: '#FF9F0A',
+  pink: '#FF3B72',
+  purple: '#BF5AF2',
+  gray: '#8E8E93',
+  gold: '#D4A64A',
+  emerald: '#1FAE64',
+} as const;
+type Tint = keyof typeof TINT;
+
+// Every prefix scanCachedDatasets can return (see utils/syncStatus.ts) -
+// grouped by what kind of data it is, not by which role sees it.
+const DATASET_TINTS: Record<string, Tint> = {
+  '@students_cache_v1': 'blue',
+  '@student_enrollment_status_cache_v1': 'teal',
+  '@attendance_roster_cache_v1': 'indigo',
+  '@school_branding_cache_v1': 'gold',
+  '@my_schedule_cache_v1': 'indigo',
+  '@student_academic_cache_v1': 'purple',
+  '@student_progress_cache_v1': 'emerald',
+  '@student_identity_cache_v1': 'purple',
+  '@student_portal_cache_v1': 'blue',
+  '@announcement_cache_v1': 'orange',
+  '@chat_cache_v1': 'blue',
+  '@post_cache_v1': 'pink',
+  '@material_cache_v1': 'teal',
+  '@examination_cache_v1': 'purple',
+  '@assessment_cache_v1': 'purple',
+  '@fee_cache_v1': 'gold',
+  '@academic_calendar_cache_v1': 'indigo',
+  '@memorization_cache_v1': 'emerald',
+  '@behavior_cache_v1': 'orange',
+  '@teacher_class_cache_v1': 'blue',
+  '@teacher_gradebook_cache_v1': 'purple',
+  '@teacher_student_progress_cache_v1': 'teal',
+  '@teacher_orphan_cache_v1': 'pink',
+  '@orphan_cache_v1': 'pink',
+  '@lesson_plan_cache_v1': 'teal',
+  '@student_document_upload_cache_v1': 'gray',
+};
+
+const PENDING_TINTS: Partial<Record<QueuedActionKind, Tint>> = {
+  orphan_report_submit: 'pink',
+  teacher_orphan_report_submit: 'pink',
+  attendance_submit: 'indigo',
+  attendance_scan: 'teal',
+  examination_save: 'purple',
+  examination_results_save: 'purple',
+  admin_document_issue: 'blue',
+  admin_document_reject: 'orange',
+};
+
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconDownload({ color }: { color: string }) {
-  return <Download size={20} color={color} strokeWidth={2} />;
+  return <Download size={18} color={color} strokeWidth={2} />;
 }
 function IconUpload({ color }: { color: string }) {
-  return <Upload size={20} color={color} strokeWidth={2} />;
+  return <Upload size={18} color={color} strokeWidth={2} />;
 }
 function IconCheck({ color }: { color: string }) {
-  return <CircleCheck size={16} color={color} strokeWidth={2} />;
+  return <CircleCheck size={20} color={color} strokeWidth={2} />;
 }
 
 function formatWhen(ms: number, t: (k: string, f: string) => string): string {
@@ -98,7 +163,7 @@ export default function SyncStatusScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>
@@ -132,22 +197,27 @@ export default function SyncStatusScreen() {
           </View>
         ) : (
           <>
-            {datasets.map((d) => (
-              <View key={d.key} style={styles.itemCard}>
-                <View style={styles.itemIconWrap}>
-                  <IconDownload color={theme.accent} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.itemTitle}>{d.label}</Text>
-                  <Text style={styles.itemMeta}>
-                    {d.count > 1
-                      ? t('sync_status.snapshots', '{count} snapshots · {size}').replace('{count}', String(d.count)).replace('{size}', formatBytes(d.bytes))
-                      : formatBytes(d.bytes)}
-                  </Text>
-                </View>
-                <IconCheck color={theme.success} />
-              </View>
-            ))}
+            <View style={{ gap: 10 }}>
+              {datasets.map((d) => {
+                const tint = TINT[DATASET_TINTS[d.key] ?? 'emerald'];
+                return (
+                  <View key={d.key} style={[styles.itemCard, { backgroundColor: tint + '14', borderColor: tint + '33' }]}>
+                    <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
+                      <IconDownload color="#FFFFFF" />
+                    </View>
+                    <View style={styles.itemTextWrap}>
+                      <Text style={styles.itemTitle} numberOfLines={1}>{d.label}</Text>
+                      <Text style={styles.itemMeta}>
+                        {d.count > 1
+                          ? t('sync_status.snapshots', '{count} snapshots · {size}').replace('{count}', String(d.count)).replace('{size}', formatBytes(d.bytes))
+                          : formatBytes(d.bytes)}
+                      </Text>
+                    </View>
+                    <IconCheck color={tint} />
+                  </View>
+                );
+              })}
+            </View>
             <Text style={styles.totalText}>
               {t('sync_status.total_cached', 'Total cached: {size}').replace('{size}', formatBytes(totalBytes))}
             </Text>
@@ -164,26 +234,32 @@ export default function SyncStatusScreen() {
             <Text style={styles.emptyText}>{t('sync_status.all_synced', 'Everything is synced - nothing waiting to upload.')}</Text>
           </View>
         ) : (
-          pendingByKind.map(([kind, list]) => (
-            <View key={kind} style={styles.itemCard}>
-              <View style={[styles.itemIconWrap, { backgroundColor: theme.dangerSoft }]}>
-                <IconUpload color={theme.danger} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.itemTitle}>{ACTION_LABELS[kind] ?? kind}</Text>
-                <Text style={styles.itemMeta}>
-                  {t('sync_status.pending_count', '{count} pending · oldest {when}')
-                    .replace('{count}', String(list.length))
-                    .replace('{when}', formatWhen(Math.min(...list.map((a) => a.createdAt)), t))}
-                </Text>
-                {list.some((a) => a.lastError) ? (
-                  <Text style={styles.errorText} numberOfLines={2}>
-                    {list.find((a) => a.lastError)?.lastError}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-          ))
+          <View style={{ gap: 10 }}>
+            {pendingByKind.map(([kind, list]) => {
+              const hasError = list.some((a) => a.lastError);
+              const tint = hasError ? theme.danger : TINT[PENDING_TINTS[kind] ?? 'gray'];
+              return (
+                <View key={kind} style={[styles.itemCard, { backgroundColor: tint + '14', borderColor: tint + '33' }]}>
+                  <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
+                    <IconUpload color="#FFFFFF" />
+                  </View>
+                  <View style={styles.itemTextWrap}>
+                    <Text style={styles.itemTitle} numberOfLines={1}>{ACTION_LABELS[kind] ?? kind}</Text>
+                    <Text style={styles.itemMeta}>
+                      {t('sync_status.pending_count', '{count} pending · oldest {when}')
+                        .replace('{count}', String(list.length))
+                        .replace('{when}', formatWhen(Math.min(...list.map((a) => a.createdAt)), t))}
+                    </Text>
+                    {hasError ? (
+                      <Text style={styles.errorText} numberOfLines={2}>
+                        {list.find((a) => a.lastError)?.lastError}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
       <BottomNavBar />
@@ -209,53 +285,67 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
 
+    // Fully-rounded pill, not just a rounded rectangle - the app's own
+    // "state" affordance elsewhere (status pills on SubscriptionStatusCard,
+    // badges) is always a true pill; this banner is the same idea scaled up.
     connectionBanner: {
       flexDirection: 'row',
       alignItems: 'center',
       marginHorizontal: 16,
       marginTop: 12,
-      padding: 12,
-      borderRadius: RADIUS.md,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: RADIUS.pill,
     },
     connectionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-    connectionText: { fontSize: 13, fontWeight: '700', flex: 1 },
+    connectionText: { fontSize: 14, fontWeight: '700', flex: 1 },
     syncNowBtn: { backgroundColor: theme.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 7, minWidth: 80, alignItems: 'center' },
     syncNowText: { fontSize: 12, fontWeight: '700', color: theme.onAccent },
 
     content: { padding: 16, paddingBottom: 40 },
-    sectionLabel: { fontSize: 13, fontWeight: '700', color: theme.textPrimary, marginBottom: 4 },
-    sectionHelper: { fontSize: 12, color: theme.textSecondary, lineHeight: 17, marginBottom: 12 },
+    // Uppercase, letter-spaced eyebrow - the same section-header convention
+    // as every other grouped list in the app (e.g. the admin menu's PEOPLE /
+    // ACADEMICS labels), instead of this screen's own plain bold caption.
+    sectionLabel: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      marginBottom: 4,
+    },
+    sectionHelper: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18, marginBottom: 12 },
 
     emptyCard: {
       backgroundColor: theme.surface,
-      borderRadius: RADIUS.md,
+      borderRadius: RADIUS.lg,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 16,
     },
     emptyText: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18 },
 
+    // Each row is its own tinted card (soft category-colored background +
+    // matching hairline) instead of a shared white list - the color itself
+    // is the wayfinding, not just the icon square inside it.
     itemCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: theme.surface,
+      gap: 12,
       borderRadius: RADIUS.lg,
       borderWidth: 1,
-      borderColor: theme.border,
-      padding: 14,
-      marginBottom: 10,
-      ...theme.elevation2,
+      padding: 12,
     },
     itemIconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.accentSoft,
+      width: 38,
+      height: 38,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    itemTitle: { fontSize: 14, fontWeight: '700', color: theme.textPrimary, marginBottom: 2 },
-    itemMeta: { fontSize: 11.5, color: theme.textSecondary },
+    itemTextWrap: { flex: 1 },
+    itemTitle: { fontSize: 14.5, fontWeight: '700', color: theme.textPrimary },
+    itemMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
     errorText: { fontSize: 11, color: theme.danger, marginTop: 3 },
-    totalText: { fontSize: 11.5, color: theme.textMuted, textAlign: 'right', marginTop: 2 },
+    totalText: { fontSize: 12, color: theme.textMuted, textAlign: 'right', marginTop: 8 },
   });

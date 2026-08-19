@@ -174,6 +174,7 @@ import SubscriptionPackagesScreen from '../screens/superadmin/SubscriptionPackag
 import SchoolSubscriptionScreen from '../screens/superadmin/SchoolSubscriptionScreen';
 import SubscriptionRequestsScreen from '../screens/superadmin/SubscriptionRequestsScreen';
 import SubscribeScreen from '../screens/admin/SubscribeScreen';
+import SubscriptionDetailsScreen from '../screens/admin/SubscriptionDetailsScreen';
 import { ACADEMIC_ROUTES, isOrphanSchoolUser } from '../utils/orphanSchool';
 
 const Stack = createNativeStackNavigator();
@@ -758,6 +759,7 @@ export default function RootNavigator() {
       <Stack.Screen name="SuperAdminSchoolSubscription" component={SchoolSubscriptionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SuperAdminSubscriptionRequests" component={SubscriptionRequestsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SubscribeRequest" component={SubscribeScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SubscriptionDetails" component={SubscriptionDetailsScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
       </NavigationContainer>
     </Animated.View>

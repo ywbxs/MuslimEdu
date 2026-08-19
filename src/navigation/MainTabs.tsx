@@ -15,10 +15,13 @@ import AdmissionScreen from '../screens/admin/AdmissionScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import TeacherAttendanceClassesScreen from '../screens/teachers/TeacherAttendanceClassesScreen';
 import EnrollmentStatusScreen from '../screens/student/EnrollmentStatusScreen';
+import SetupChecklistScreen from '../screens/admin/SetupChecklistScreen';
+import AcademicSetupWizardScreen from '../screens/admin/AcademicSetupWizardScreen';
 import {
   fetchStudentEnrollmentWorkflowStatus,
   StudentEnrollmentWorkflowStatus,
 } from '../services/enrollmentWorkflowService';
+import { runSetupChecklistChecks } from '../hooks/useSetupChecklistProgress';
 import { isOrphanSchoolUser } from '../utils/orphanSchool';
 
 // Teal/mint palette matching the login + feed redesign - see
@@ -291,10 +294,102 @@ function useEnrollmentGate(
   return [completed, applyStatus];
 }
 
+const ADMIN_SETUP_GATE_CACHE_KEY = '@admin_setup_gate_completed_v1';
+
+/**
+ * Same cache-first, fail-closed-only-without-a-cache shape as
+ * useEnrollmentGate above, gating a non-orphan admin's whole app behind
+ * SetupChecklistScreen until every readiness check passes.
+ *
+ * The one thing this adds beyond useEnrollmentGate: `hasError` from
+ * runSetupChecklistChecks. A single flaky request among the 9 checks must
+ * never be read as "not complete" for an admin who was previously confirmed
+ * done - that would lock a fully set-up school out of the entire app over
+ * a dropped connection. On an errored check, this keeps the last cached
+ * verdict (or fails closed only if there's no cache yet at all).
+ *
+ * `markComplete` lets SetupChecklistScreen itself flip the gate open the
+ * instant its own (richer, per-item) load() sees every item done, instead
+ * of waiting for this hook's independent recheck to notice.
+ */
+function useAdminSetupGate(userId: number | null, token: string | null): [boolean | null, () => void] {
+  const [completed, setCompleted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!userId || !token) {
+      setCompleted(true);
+      return;
+    }
+    let cancelled = false;
+    const cacheKey = `${ADMIN_SETUP_GATE_CACHE_KEY}:${userId}`;
+    setCompleted(null);
+
+    (async () => {
+      let hasCachedVerdict = false;
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached !== null) {
+          hasCachedVerdict = true;
+          if (!cancelled) setCompleted(cached === '1');
+        }
+      } catch {
+        // Best-effort cache read - fall through to the live check.
+      }
+
+      try {
+        const { doneCount, total, hasError } = await runSetupChecklistChecks(token);
+        if (cancelled) return;
+        if (hasError) {
+          if (!hasCachedVerdict) setCompleted(false);
+          return;
+        }
+        const isComplete = total > 0 && doneCount >= total;
+        setCompleted(isComplete);
+        AsyncStorage.setItem(cacheKey, isComplete ? '1' : '0').catch(() => {});
+      } catch {
+        if (!cancelled && !hasCachedVerdict) setCompleted(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, token]);
+
+  const markComplete = useCallback(() => {
+    setCompleted(true);
+    if (userId) {
+      AsyncStorage.setItem(`${ADMIN_SETUP_GATE_CACHE_KEY}:${userId}`, '1').catch(() => {});
+    }
+  }, [userId]);
+
+  return [completed, markComplete];
+}
+
 export default function MainTabs() {
   const { user, token } = useAuth();
   const isGatedStudent = !!user && user.role === 'student' && !isOrphanSchoolUser(user);
   const [gateCompleted, applyGateStatus] = useEnrollmentGate(isGatedStudent ? user!.id : null, token);
+
+  // Orphan schools have no class/section/schedule concept at all - the same
+  // reason AdminDashboard.tsx already hides every academic tile (including
+  // Setup Checklist itself) for them via ACADEMIC_ADMIN_TILE_KEYS. Gating
+  // them behind a checklist built around class-based setup would strand
+  // them permanently, since most of those 9 checks can never pass for a
+  // school type that doesn't use them. Superadmin is exempt too - it
+  // manages the whole platform, not one school's academic setup.
+  const isGatedAdmin = !!user && user.role === 'admin' && !isOrphanSchoolUser(user);
+  // The one-time institution bootstrap (type/profile/first academic year)
+  // has to happen BEFORE the fuller 9-item checklist below - Academic Year
+  // is one of those 9 checks, so a school that hasn't even chosen an
+  // institution type yet can't pass it. Only start the checklist gate's own
+  // checks once this earlier flag is already true, so a brand-new admin
+  // sees AcademicSetupWizardScreen first, exactly as before this change.
+  const needsAcademicBootstrap = isGatedAdmin && user!.academic_setup_completed === false;
+  const [setupCompleted, markSetupComplete] = useAdminSetupGate(
+    isGatedAdmin && !needsAcademicBootstrap ? user!.id : null,
+    token,
+  );
 
   if (!user) return null;
 
@@ -306,6 +401,22 @@ export default function MainTabs() {
     // or its initial load if the gate's own check failed) unlock the gate
     // too, instead of the two staying out of sync.
     return <EnrollmentStatusScreen onStatusLoaded={applyGateStatus} />;
+  }
+
+  if (needsAcademicBootstrap) {
+    return <AcademicSetupWizardScreen />;
+  }
+
+  if (isGatedAdmin && setupCompleted !== true) {
+    // Same reasoning as the student gate above: null (still determining)
+    // and false (confirmed incomplete) both show the Setup Assistant -
+    // SetupChecklistScreen already renders its own "checking…" state per
+    // item while its first load() is in flight. isGate hides the header's
+    // back button and BottomNavBar (nothing to go back to, and those
+    // buttons would be an escape hatch around this exact lock) in favor of
+    // a small Log Out link, and disables "Skip" entirely - every item is
+    // required before the rest of the app opens up.
+    return <SetupChecklistScreen isGate onAllComplete={markSetupComplete} />;
   }
 
   const isAdminRole = user.role === 'admin' || user.role === 'superadmin';

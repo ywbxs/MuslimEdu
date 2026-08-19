@@ -145,7 +145,7 @@ function AddStudentsModal({
   return (
     <KeyboardAwareModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.flex}>
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.backButton}>
             <IconClose color={theme.textPrimary} />
           </TouchableOpacity>
@@ -280,7 +280,7 @@ function TransferModal({
   return (
     <KeyboardAwareModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.flex}>
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.backButton}>
             <IconClose color={theme.textPrimary} />
           </TouchableOpacity>
@@ -405,7 +405,7 @@ export default function SectionStudentsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
           <IconChevronLeft color={theme.textPrimary} />
         </TouchableOpacity>

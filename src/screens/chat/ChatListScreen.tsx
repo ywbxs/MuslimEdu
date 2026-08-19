@@ -140,7 +140,7 @@ export default function ChatListScreen() {
 
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.headerTitle}>{t('chat_list.title', 'Messages')}</Text>
         <TouchableOpacity
           style={styles.newMessageBtn}

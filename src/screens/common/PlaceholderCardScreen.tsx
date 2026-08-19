@@ -21,7 +21,7 @@ export default function PlaceholderCardScreen({ title, emoji, description }: Pla
   const { t } = useLocale();
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
 

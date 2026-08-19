@@ -177,7 +177,7 @@ export default function TrashScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
           <ChevronLeftIcon color={EMERALD} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>

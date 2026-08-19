@@ -70,7 +70,7 @@ export default function TeacherOrphanChildReportDetailScreen() {
 
   return (
     <View style={styles.flex}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>

@@ -590,7 +590,7 @@ export default function AdmissionScreen() {
       <GlassBackground variant="canvas" />
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <TouchableOpacity
             onPress={goBack}

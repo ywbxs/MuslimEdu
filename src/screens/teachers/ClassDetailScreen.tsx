@@ -262,7 +262,7 @@ const ClassDetailScreen = () => {
   };
 
   const header = (title: string) => (
-    <View style={[styles.navHeader, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.navHeader, { paddingTop: insets.top }]}>
       <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
         <IconChevronLeft color={theme.textPrimary} />
       </TouchableOpacity>

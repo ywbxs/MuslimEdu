@@ -18,6 +18,7 @@ export default function SubscriptionStatusCard({
   loadFailed = false,
   onRetry,
   onSubscribePress,
+  onDetailsPress,
 }: {
   status: AdminSubscriptionStatus | null;
   // True once the fetch has actually errored (endpoint missing/500/network) -
@@ -28,6 +29,10 @@ export default function SubscriptionStatusCard({
   // Navigates to SubscribeScreen - only used to make the card tappable
   // while there's no active plan and no request already pending.
   onSubscribePress?: () => void;
+  // Navigates to SubscriptionDetailsScreen - makes the card tappable while
+  // there IS an active plan, so an admin can see days remaining, renew, or
+  // browse other packages instead of the card being inert once subscribed.
+  onDetailsPress?: () => void;
 }) {
   const { t } = useLocale();
 
@@ -117,12 +122,14 @@ export default function SubscriptionStatusCard({
   }
 
   const showSubscribeCta = !status.active && !!onSubscribePress;
-  const Container = showSubscribeCta ? TouchableOpacity : View;
+  const showDetailsCta = status.active && !!onDetailsPress;
+  const isTappable = showSubscribeCta || showDetailsCta;
+  const Container = isTappable ? TouchableOpacity : View;
 
   return (
     <Container
       style={styles.card}
-      {...(showSubscribeCta ? { activeOpacity: 0.75, onPress: onSubscribePress } : {})}
+      {...(isTappable ? { activeOpacity: 0.75, onPress: showDetailsCta ? onDetailsPress : onSubscribePress } : {})}
     >
       <View style={styles.iconWrap}>
         <CreditCard size={18} color={COLORS.emerald} strokeWidth={1.8} />
@@ -143,7 +150,7 @@ export default function SubscriptionStatusCard({
               : t('subscription_card.contact_owner', 'Contact your account owner to activate a plan.'))}
         </Text>
       </View>
-      {showSubscribeCta ? <ChevronRight size={18} color={COLORS.subtle} strokeWidth={2} /> : null}
+      {isTappable ? <ChevronRight size={18} color={COLORS.subtle} strokeWidth={2} /> : null}
     </Container>
   );
 }

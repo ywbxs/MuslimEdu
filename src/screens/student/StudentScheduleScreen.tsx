@@ -355,7 +355,7 @@ export default function StudentScheduleScreen() {
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
 
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} hitSlop={10}>
           <IconChevronLeft color={EMERALD} />
         </TouchableOpacity>

@@ -27,17 +27,27 @@ interface HeroGlowProps {
    * background). */
   topRight?: boolean;
   bottomLeft?: boolean;
+  /** Override the two greens - e.g. Prayer Times syncs these to the current
+   * time of day (dark blue at night, gold in the morning...) instead of the
+   * fixed brand green every other hero uses. */
+  topRightColor?: string;
+  bottomLeftColor?: string;
 }
 
-export default function HeroGlow({ topRight = true, bottomLeft = true }: HeroGlowProps) {
+export default function HeroGlow({
+  topRight = true,
+  bottomLeft = true,
+  topRightColor = TOP_RIGHT_COLOR,
+  bottomLeftColor = BOTTOM_LEFT_COLOR,
+}: HeroGlowProps) {
   return (
     <>
       {topRight && (
         <Svg width={TOP_RIGHT_SIZE} height={TOP_RIGHT_SIZE} style={styles.topRight} pointerEvents="none">
           <Defs>
             <RadialGradient id="heroGlowTopRight" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={TOP_RIGHT_COLOR} stopOpacity={0.55} />
-              <Stop offset="1" stopColor={TOP_RIGHT_COLOR} stopOpacity={0} />
+              <Stop offset="0" stopColor={topRightColor} stopOpacity={0.55} />
+              <Stop offset="1" stopColor={topRightColor} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={TOP_RIGHT_SIZE / 2} cy={TOP_RIGHT_SIZE / 2} r={TOP_RIGHT_SIZE / 2} fill="url(#heroGlowTopRight)" />
@@ -47,8 +57,8 @@ export default function HeroGlow({ topRight = true, bottomLeft = true }: HeroGlo
         <Svg width={BOTTOM_LEFT_SIZE} height={BOTTOM_LEFT_SIZE} style={styles.bottomLeft} pointerEvents="none">
           <Defs>
             <RadialGradient id="heroGlowBottomLeft" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0.4} />
-              <Stop offset="1" stopColor={BOTTOM_LEFT_COLOR} stopOpacity={0} />
+              <Stop offset="0" stopColor={bottomLeftColor} stopOpacity={0.4} />
+              <Stop offset="1" stopColor={bottomLeftColor} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={BOTTOM_LEFT_SIZE / 2} cy={BOTTOM_LEFT_SIZE / 2} r={BOTTOM_LEFT_SIZE / 2} fill="url(#heroGlowBottomLeft)" />
