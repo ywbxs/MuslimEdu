@@ -115,47 +115,6 @@ function GlassRow({
   );
 }
 
-function QuickActionCard({
-  icon,
-  title,
-  description,
-  badge,
-  solid,
-  onPress,
-}: {
-  icon: React.ReactElement;
-  title: string;
-  description: string;
-  badge?: number;
-  solid?: boolean;
-  onPress: () => void;
-}) {
-  const fg = solid ? '#FFFFFF' : EMERALD;
-  return (
-    <TouchableOpacity
-      style={[styles.quickCard, solid ? styles.quickCardSolid : styles.quickCardSoft]}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
-      <View style={[styles.quickIconWrap, solid ? styles.quickIconWrapSolid : styles.quickIconWrapSoft]}>
-        {icon}
-        {!!badge && badge > 0 ? (
-          <View style={styles.quickBadge}>
-            <Text style={styles.quickBadgeText}>{badge}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={[styles.quickTitle, solid ? styles.quickTitleSolid : null]}>{title}</Text>
-      <Text style={[styles.quickDescription, solid ? styles.quickDescriptionSolid : null]}>{description}</Text>
-      <View style={styles.quickArrowRow}>
-        <View style={[styles.quickArrowButton, solid ? styles.quickArrowButtonSolid : styles.quickArrowButtonSoft]}>
-          <ArrowRightIcon color={fg} size={16} />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 function StatItem({
   icon,
   value,
@@ -364,6 +323,13 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
     },
   ];
 
+  // Same hero + secondary + grouped-list split as AdminDashboard's "Manage"
+  // section - the first item stays the hero, the next two become the
+  // secondary bento, everything else groups into one list.
+  const quickActionHero = quickActions[0] ?? null;
+  const quickActionSecondary = quickActions.slice(1, 3);
+  const quickActionGrouped = quickActions.slice(3);
+
   // --- Overview stats: wired to real submission history (orphan-only). ---
   const history = status?.history ?? [];
   const reportsSubmitted = String(history.length);
@@ -533,31 +499,70 @@ export default function StudentDashboard({ footer }: StudentDashboardProps = {})
             "what's happening today" is the first thing a student sees. */}
         {!isOrphan && token ? <UpcomingClassesCard token={token} /> : null}
 
-        {/* Quick Actions */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>{t('student_dashboard.quick_actions', 'Quick Actions')}</Text>
-          <TouchableOpacity
-            style={styles.viewAllRow}
-            onPress={() => handlePlaceholderPress(t('student_dashboard.viewing_all_actions', 'Viewing all quick actions'))}
-          >
-            <Text style={styles.viewAllText}>{t('common.view_all', 'View All')}</Text>
-            <ChevronRightIcon color={EMERALD} size={15} />
-          </TouchableOpacity>
-        </View>
+        {/* Quick Actions - same content pattern as AdminDashboard's "Manage"
+            section now: a hero + secondary bento for the two most-reached-for
+            actions, everything else in a single Settings-style grouped
+            list, instead of a flat wall of equal-size cards. */}
+        <Text style={styles.sectionTitle}>{t('student_dashboard.quick_actions', 'Quick Actions')}</Text>
 
-        <View style={styles.quickRow}>
-          {quickActions.map((action, index) => (
-            <QuickActionCard
-              key={action.key}
-              icon={action.icon(index === 0 ? '#FFFFFF' : EMERALD)}
-              title={action.title}
-              description={action.description}
-              badge={action.badge}
-              solid={index === 0}
-              onPress={action.onPress}
-            />
-          ))}
-        </View>
+        {quickActionHero ? (
+          <TouchableOpacity activeOpacity={0.92} style={styles.heroCard} onPress={quickActionHero.onPress}>
+            <View style={styles.heroIcon}>{quickActionHero.icon('#FFFFFF')}</View>
+            <Text style={styles.heroTitle}>{quickActionHero.title}</Text>
+            <Text style={styles.heroDesc}>{quickActionHero.description}</Text>
+            <View style={styles.heroArrow}>
+              <ArrowRightIcon color="#FFFFFF" size={17} />
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+        {quickActionSecondary.length > 0 ? (
+          <View style={styles.secondaryRow}>
+            {quickActionSecondary.map((action) => (
+              <TouchableOpacity key={action.key} activeOpacity={0.88} style={styles.secondaryCard} onPress={action.onPress}>
+                <View style={styles.secondaryIcon}>
+                  {action.icon(EMERALD)}
+                  {!!action.badge && action.badge > 0 ? (
+                    <View style={styles.secondaryBadge}>
+                      <Text style={styles.secondaryBadgeText}>{action.badge}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.secondaryTitle} numberOfLines={1}>{action.title}</Text>
+                <Text style={styles.secondaryDesc} numberOfLines={2}>{action.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {quickActionGrouped.length > 0 ? (
+          <View style={styles.groupSection}>
+            <View style={styles.groupCard}>
+              {quickActionGrouped.map((action, idx) => (
+                <TouchableOpacity
+                  key={action.key}
+                  activeOpacity={0.7}
+                  style={[styles.row, idx > 0 && styles.rowDivider]}
+                  onPress={action.onPress}
+                >
+                  <View style={styles.rowIconWrap}>
+                    {action.icon(EMERALD)}
+                    {!!action.badge && action.badge > 0 ? (
+                      <View style={styles.rowBadge}>
+                        <Text style={styles.rowBadgeText}>{action.badge}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.rowTextWrap}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>{action.title}</Text>
+                    <Text style={styles.rowDesc} numberOfLines={1}>{action.description}</Text>
+                  </View>
+                  <ChevronRightIcon color={SUBTLE} size={15} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Enrollment status - has the school assigned this student a
             teacher/subject/room/schedule yet? Same gating as above. */}
@@ -711,67 +716,54 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  sectionTitle: { fontSize: 19, fontWeight: '700', color: INK },
-  viewAllRow: { flexDirection: 'row', alignItems: 'center' },
-  viewAllText: { fontSize: 13, fontWeight: '700', color: EMERALD, marginRight: 2 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 },
 
-  // Matches the "Manage" grid card design (AdminDashboard): big rounded
-  // icon badge, bold title + description, circular arrow button bottom
-  // right, and a solid-emerald variant for the single highlighted card.
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
-  quickCard: {
-    width: '48%',
-    borderRadius: 22,
-    padding: 16,
-    minHeight: 176,
-    marginBottom: 14,
+  // Same hero/secondary/grouped-list pattern as AdminDashboard's "Manage"
+  // section, CashierDashboard, RegistrarDashboard and SuperAdminDashboard -
+  // one shared visual language for every role's dashboard instead of a
+  // flat wall of equal-size cards.
+  heroCard: { backgroundColor: '#0F7A3D', borderRadius: 26, padding: 22, marginBottom: 12 },
+  heroIcon: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 18,
   },
-  quickCardSolid: { backgroundColor: EMERALD },
-  quickCardSoft: { backgroundColor: EMERALD_SOFT },
-  quickIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    position: 'relative',
+  heroTitle: { fontSize: 21, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
+  heroDesc: { fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 19, paddingRight: 50 },
+  heroArrow: {
+    position: 'absolute', right: 20, bottom: 20, width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
   },
-  quickIconWrapSolid: { backgroundColor: 'rgba(255,255,255,0.16)' },
-  quickIconWrapSoft: { backgroundColor: 'rgba(31,174,100,0.12)' },
-  quickBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: EMERALD,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
+
+  secondaryRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  secondaryCard: { flex: 1, backgroundColor: EMERALD_SOFT, borderRadius: 20, padding: 15 },
+  secondaryIcon: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(31,174,100,0.14)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12, position: 'relative',
   },
-  quickBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-  quickTitle: { fontSize: 18, fontWeight: '700', color: INK, marginBottom: 5 },
-  quickTitleSolid: { color: '#FFFFFF' },
-  quickDescription: { fontSize: 12.5, color: SUBTLE, lineHeight: 17 },
-  quickDescriptionSolid: { color: 'rgba(255,255,255,0.8)' },
-  quickArrowRow: { marginTop: 'auto', alignItems: 'flex-end' },
-  quickArrowButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
+  secondaryBadge: {
+    position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: EMERALD, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
   },
-  quickArrowButtonSolid: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  quickArrowButtonSoft: { backgroundColor: 'rgba(31,174,100,0.12)' },
+  secondaryBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
+  secondaryTitle: { fontSize: 14.5, fontWeight: '700', color: INK, marginBottom: 3 },
+  secondaryDesc: { fontSize: 11.5, color: SUBTLE, lineHeight: 15 },
+
+  groupSection: { marginBottom: 22 },
+  groupCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(17,24,39,0.06)' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  rowDivider: { borderTopWidth: 1, borderTopColor: 'rgba(17,24,39,0.06)' },
+  rowIconWrap: {
+    width: 38, height: 38, borderRadius: 12, backgroundColor: EMERALD_SOFT,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+  },
+  rowBadge: {
+    position: 'absolute', top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8,
+    backgroundColor: EMERALD, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+  },
+  rowBadgeText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '700' },
+  rowTextWrap: { flex: 1 },
+  rowTitle: { fontSize: 14.5, fontWeight: '600', color: INK },
+  rowDesc: { fontSize: 12, color: SUBTLE, marginTop: 1 },
 
   overviewCard: {
     backgroundColor: '#FFFFFF',
